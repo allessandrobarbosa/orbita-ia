@@ -106,7 +106,7 @@ export const USER_PROFILES: UserProfile[] = [
   }
 ];
 
-// Module Components imports
+// Module Components imports -
 import DashboardOverview from "./components/DashboardOverview";
 import BiModule from "./components/BiModule";
 import TcuModule from "./components/TcuModule";
