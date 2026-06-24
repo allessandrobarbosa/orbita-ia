@@ -82,6 +82,23 @@ export default function TcuModule({
     if (!text) return "";
     let clean = text;
 
+    // Strip HTML tags if present (detect by looking for < and >)
+    if (clean.includes("<") && clean.includes(">")) {
+      clean = clean.replace(/<br\s*\/?>/gi, "\n")
+                   .replace(/<\/p>/gi, "\n\n")
+                   .replace(/<p\b[^>]*>/gi, "")
+                   .replace(/<\/li>/gi, "\n")
+                   .replace(/<li\b[^>]*>/gi, "  • ")
+                   .replace(/<\/tr>/gi, "\n")
+                   .replace(/<td>|<\/td>|<th>|<\/th>/gi, " | ")
+                   .replace(/<[^>]*>/g, "")
+                   .replace(/&nbsp;/g, " ")
+                   .replace(/&amp;/g, "&")
+                   .replace(/&lt;/g, "<")
+                   .replace(/&gt;/g, ">")
+                   .replace(/&quot;/g, '"');
+    }
+
     // Convert standard Unicode Replacement Character and other weird placeholder characters to '?'
     // to normalize all encodings before passing through the targeted repairs
     clean = clean.replace(/[\uFFFD\u009d]/g, "?");
@@ -316,7 +333,6 @@ export default function TcuModule({
       numericValue = parseFloat(str.replace(/[^\d.-]/g, ""));
     }
     
-    if (isNaN(numericValue)) return "R$ 0,05"; // fallback or R$ 0,00
     if (isNaN(numericValue)) return "R$ 0,00";
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(numericValue);
   };
@@ -540,45 +556,38 @@ export default function TcuModule({
 
   // Communications parser and handlers
   const parseCommunicationsCSV = (csvText: string): ComunicacaoDemand[] => {
-    const lines = csvText.split(/\r?\n/);
+    if (!csvText || csvText.trim().length < 10) return [];
+
+    // Detect delimiter from the first line
+    const firstLineEnd = csvText.indexOf('\n');
+    const headerLine = firstLineEnd > 0 ? csvText.substring(0, firstLineEnd) : csvText;
+    const semiCount = (headerLine.match(/;/g) || []).length;
+    const commaCount = (headerLine.match(/,/g) || []).length;
+    const delimiter = semiCount > commaCount ? ";" : ",";
+
+    const allRows = parseCSVRobust(csvText, delimiter);
     const items: ComunicacaoDemand[] = [];
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    for (let i = 0; i < allRows.length; i++) {
+      const fields = allRows[i];
+      if (fields.length < 5) continue;
       
+      const comunicacao = fields[0] || "";
+      const destinatario = fields[1] || "";
+      const contato = fields[2] || "";
+      const unidadeEmitente = fields[3] || "";
+      const processo = fields[4] || "";
+      const dataExpedicao = fields[5] || "";
+      const dataResposta = fields[6] || "";
+
       // Skip header lines
-      if (line.toLowerCase().includes("comunicac") || line.toLowerCase().includes("destinat") || line.toLowerCase().includes("unidade emitente")) {
+      if (
+        comunicacao.toLowerCase().includes("comunicac") || 
+        destinatario.toLowerCase().includes("destinat") || 
+        unidadeEmitente.toLowerCase().includes("unidade emitente")
+      ) {
         continue;
       }
-      
-      // Split by semicolon, parsing quotes
-      const rawFields: string[] = [];
-      let inQuotes = false;
-      let currentField = "";
-      
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === ';' && !inQuotes) {
-          rawFields.push(currentField.trim());
-          currentField = "";
-        } else {
-          currentField += char;
-        }
-      }
-      rawFields.push(currentField.trim());
-
-      if (rawFields.length < 5) continue;
-
-      const comunicacao = rawFields[0] || "";
-      const destinatario = rawFields[1] || "";
-      const contato = rawFields[2] || "";
-      const unidadeEmitente = rawFields[3] || "";
-      const processo = rawFields[4] || "";
-      const dataExpedicao = rawFields[5] || "";
-      const dataResposta = rawFields[6] || "";
 
       // Extract year
       let ano = 2026;
@@ -613,77 +622,46 @@ export default function TcuModule({
 
   // TCE module parsers and helper functions
   const parseTcesCSV = (csvText: string): TceDemand[] => {
-    const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const items: TceDemand[] = [];
-    if (lines.length === 0) return [];
+    if (!csvText || csvText.trim().length < 10) return [];
 
-    let headerIdx = 0;
-    for (let i = 0; i < Math.min(lines.length, 5); i++) {
-      const lineLower = lines[i].toLowerCase();
+    // Split lines just for header/delimiter detection
+    const tempLines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (tempLines.length === 0) return [];
+    let headerText = tempLines[0];
+    for (let i = 0; i < Math.min(tempLines.length, 5); i++) {
+      const lineLower = tempLines[i].toLowerCase();
       if (lineLower.includes("processo") || lineLower.includes("tce") || lineLower.includes("motivo") || lineLower.includes("debito") || lineLower.includes("dbito") || lineLower.includes("instaur")) {
-        headerIdx = i;
+        headerText = tempLines[i];
+        break;
+      }
+    }
+    const semicolonCount = (headerText.match(/;/g) || []).length;
+    const commaCount = (headerText.match(/,/g) || []).length;
+    const delimiter = semicolonCount >= commaCount ? ";" : ",";
+
+    const allRows = parseCSVRobust(csvText, delimiter);
+    const items: TceDemand[] = [];
+    if (allRows.length < 2) return [];
+
+    let headerRowIdx = 0;
+    for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+      const rowJoined = allRows[i].join(" ").toLowerCase();
+      if (rowJoined.includes("processo") || rowJoined.includes("tce") || rowJoined.includes("motivo") || rowJoined.includes("debito") || rowJoined.includes("dbito") || rowJoined.includes("instaur")) {
+        headerRowIdx = i;
         break;
       }
     }
 
-    // Dynamic Delimiter Detection
-    const headerLine = lines[headerIdx] || "";
-    const semicolonCount = (headerLine.match(/;/g) || []).length;
-    const commaCount = (headerLine.match(/,/g) || []).length;
-    const delimiter = semicolonCount >= commaCount ? ";" : ",";
-
-    const splitCSVLine = (line: string): string[] => {
-      const rawFields: string[] = [];
-      let inQuotes = false;
-      let currentField = "";
-      
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === delimiter && !inQuotes) {
-          rawFields.push(currentField.trim());
-          currentField = "";
-        } else {
-          currentField += char;
-        }
-      }
-      rawFields.push(currentField.trim());
-
-      // Clean up surrounding quotes from fields
-      return rawFields.map(f => {
-        let val = f;
-        if (val.startsWith('"') && val.endsWith('"')) {
-          val = val.substring(1, val.length - 1);
-        }
-        return val.trim();
-      });
-    };
-
-    const headers = splitCSVLine(lines[headerIdx]);
-    
-    const getHeaderClean = (h: string): string => {
-      if (!h) return "";
-      return h.toLowerCase()
-        .replace(/[áàâãä]/g, "a")
-        .replace(/[éèêë]/g, "e")
-        .replace(/[íìîï]/g, "i")
-        .replace(/[óòôõö]/g, "o")
-        .replace(/[úùûü]/g, "u")
-        .replace(/ç/g, "c")
-        .replace(/[^a-z0-9]/g, "")
-        .trim();
-    };
-
-    const cleanedHeaders = headers.map(getHeaderClean);
+    const headers = allRows[headerRowIdx];
+    const normalizedHeaders = headers.map(normalizeHeaderName);
 
     const findIndexRobust = (keywords: string[], excludes?: string[]): number => {
       for (const kw of keywords) {
-        const cleanKw = getHeaderClean(kw);
-        const idx = cleanedHeaders.findIndex(ch => {
+        const cleanKw = normalizeHeaderName(kw);
+        const idx = normalizedHeaders.findIndex(ch => {
           if (!ch.includes(cleanKw)) return false;
           if (excludes) {
-            return !excludes.some(ex => ch.includes(getHeaderClean(ex)));
+            return !excludes.some(ex => ch.includes(normalizeHeaderName(ex)));
           }
           return true;
         });
@@ -700,20 +678,16 @@ export default function TcuModule({
     const colDebitoAtual = findIndexRobust(["debito atualizado com juros", "débito updated com juros", "débito atualizado com juros", "debito atualizado", "débito atualizado", "debitoatualizado"], ["data"]);
     const colDataAtual = findIndexRobust(["data atualizacao debito", "data da atualizacao do debito", "dataatualizacao", "data_atualizacao"]);
     const colPosicionamento = findIndexRobust(["ultimo posicionamento supervisor", "ultimo posicionamento", "último posicionamento", "posicionamento"]);
-    const colTC = cleanedHeaders.indexOf("tc");
+    const colTC = normalizedHeaders.indexOf("tc");
     const colEstado = findIndexRobust(["estado do processo", "estadoprocesso", "estado"]);
     const colSituacao = findIndexRobust(["situacao do processo", "situação do processo", "situacaoprocesso", "situacao", "situação"], ["inicio", "dano", "tce"]);
     const colJulgamento = findIndexRobust(["primeiro julgamento", "primeirojulgamento", "julgamento"]);
-    const colEncerramento = cleanedHeaders.indexOf("encerramento");
+    const colEncerramento = normalizedHeaders.indexOf("encerramento");
 
-    const startLine = headerIdx + 1;
+    const startRowIdx = headerRowIdx + 1;
 
-    for (let i = startLine; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      const fields = splitCSVLine(line);
-      // Ensure we have some content
+    for (let i = startRowIdx; i < allRows.length; i++) {
+      const fields = allRows[i];
       if (fields.length < 5) continue;
 
       const getFieldValue = (colIdx: number, fallback: string = ""): string => {
@@ -762,97 +736,71 @@ export default function TcuModule({
   };
 
   const parseTceAcordaoMappingsCSV = (csvText: string): TceAcordaoMapping[] => {
-    const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const items: TceAcordaoMapping[] = [];
-    if (lines.length === 0) return [];
+    if (!csvText || csvText.trim().length < 10) return [];
 
-    let headerIdx = 0;
-    for (let i = 0; i < Math.min(lines.length, 5); i++) {
-      const lineLower = lines[i].toLowerCase();
+    // Split lines just for header/delimiter detection
+    const tempLines = csvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (tempLines.length === 0) return [];
+    let headerText = tempLines[0];
+    for (let i = 0; i < Math.min(tempLines.length, 5); i++) {
+      const lineLower = tempLines[i].toLowerCase();
       if (lineLower.includes("acordao") || lineLower.includes("acrdo") || lineLower.includes("tce") || lineLower.includes("sess") || lineLower.includes("descr")) {
-        headerIdx = i;
+        headerText = tempLines[i];
+        break;
+      }
+    }
+    const semicolonCount = (headerText.match(/;/g) || []).length;
+    const commaCount = (headerText.match(/,/g) || []).length;
+    const delimiter = semicolonCount >= commaCount ? ";" : ",";
+
+    const allRows = parseCSVRobust(csvText, delimiter);
+    const items: TceAcordaoMapping[] = [];
+    if (allRows.length < 2) return [];
+
+    let headerRowIdx = 0;
+    for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+      const rowJoined = allRows[i].join(" ").toLowerCase();
+      if (rowJoined.includes("acordao") || rowJoined.includes("acrdo") || rowJoined.includes("tce") || rowJoined.includes("sess") || rowJoined.includes("descr")) {
+        headerRowIdx = i;
         break;
       }
     }
 
-    // Dynamic Delimiter Detection
-    const headerLine = lines[headerIdx] || "";
-    const semicolonCount = (headerLine.match(/;/g) || []).length;
-    const commaCount = (headerLine.match(/,/g) || []).length;
-    const delimiter = semicolonCount >= commaCount ? ";" : ",";
-
-    const splitCSVLine = (line: string): string[] => {
-      const rawFields: string[] = [];
-      let inQuotes = false;
-      let currentField = "";
-      
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-        } else if (char === delimiter && !inQuotes) {
-          rawFields.push(currentField.trim());
-          currentField = "";
-        } else {
-          currentField += char;
-        }
-      }
-      rawFields.push(currentField.trim());
-
-      // Clean up surrounding quotes from fields
-      return rawFields.map(f => {
-        let val = f;
-        if (val.startsWith('"') && val.endsWith('"')) {
-          val = val.substring(1, val.length - 1);
-        }
-        return val.trim();
-      });
-    };
-
-    const headers = splitCSVLine(lines[headerIdx]);
-    
-    const getHeaderClean = (h: string): string => {
-      if (!h) return "";
-      return h.toLowerCase()
-        .replace(/[áàâãä]/g, "a")
-        .replace(/[éèêë]/g, "e")
-        .replace(/[íìîï]/g, "i")
-        .replace(/[óòôõö]/g, "o")
-        .replace(/[úùûü]/g, "u")
-        .replace(/ç/g, "c")
-        .replace(/[^a-z0-9]/g, "")
-        .trim();
-    };
-
-    const cleanedHeaders = headers.map(getHeaderClean);
+    const headers = allRows[headerRowIdx];
+    const normalizedHeaders = headers.map(normalizeHeaderName);
 
     let colTCE = -1;
     let colAcordao = -1;
 
-    for (let i = 0; i < cleanedHeaders.length; i++) {
-      const ch = cleanedHeaders[i];
-      if (ch === "tce" || ch.includes("tce") || ch.includes("numero") || ch.includes("número")) {
+    for (let i = 0; i < normalizedHeaders.length; i++) {
+      const ch = normalizedHeaders[i];
+      if (ch === "TCE" || ch.includes("TCE") || ch.includes("NUMERO") || ch.includes("NUMEROANO") || ch.includes("PROCESSO")) {
         colTCE = i;
       }
-      if (ch.includes("acord") || ch.includes("acr") || ch.includes("desc")) {
+      if (ch.includes("ACORD") || ch.includes("ACR") || ch.includes("DESC") || ch.includes("DEPOIMENT")) {
         colAcordao = i;
       }
     }
 
-    if (colTCE === -1) colTCE = cleanedHeaders.length - 1; // Fallback to last column (standard)
-    if (colAcordao === -1) colAcordao = 2; // Fallback to index 2 (description)
+    // Fuzzy matching helpers
+    if (colTCE === -1) {
+      colTCE = findHeaderIdx(normalizedHeaders, "TCE", "NUMERO_ANO_TCE", "NUMERO_ANO", "PROCESSO");
+    }
+    if (colAcordao === -1) {
+      colAcordao = findHeaderIdx(normalizedHeaders, "ACORDAO", "ACORDAOREF", "REFERENCIA", "DESCRICAO");
+    }
 
-    const startLine = headerIdx + 1;
+    if (colTCE === -1) colTCE = normalizedHeaders.length - 1; // Fallback to last column (standard)
+    if (colAcordao === -1) colAcordao = Math.min(2, normalizedHeaders.length - 1); // Fallback
 
-    for (let i = startLine; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
+    const startRowIdx = headerRowIdx + 1;
 
-      const fields = splitCSVLine(line);
+    for (let i = startRowIdx; i < allRows.length; i++) {
+      const fields = allRows[i];
       if (fields.length < 2) continue;
 
-      let tceVal = fields[colTCE !== -1 ? colTCE : fields.length - 1]?.trim();
-      let acordaoVal = fields[colAcordao !== -1 ? colAcordao : 2]?.trim();
+      let tceVal = fields[colTCE]?.trim();
+      let acordaoVal = fields[colAcordao]?.trim();
 
       if (tceVal && acordaoVal) {
         // Normalize TCE Value: e.g. "3225|2025" -> "3225/2025"
@@ -1244,37 +1192,124 @@ export default function TcuModule({
     }
   };
 
-  // Helper to parse CSV formatted Acórdãos base file row-by-row
-  const parseAcordaosCSV = (csvText: string): any[] => {
-    const lines = csvText.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
-    if (lines.length < 2) return [];
+  // RFC 4180 compliant CSV parser that handles multiline fields (critical for ACORDAO inteiro teor)
+  // This parser reads character-by-character instead of splitting by newline first,
+  // so quoted fields containing line breaks are preserved intact.
+  const parseCSVRobust = (csvText: string, delimiter: string): string[][] => {
+    const rows: string[][] = [];
+    let currentField = "";
+    let currentRow: string[] = [];
+    let inQuotes = false;
 
-    // Detect delimiter: semicolon or comma
-    const headerLine = lines[0];
+    for (let i = 0; i < csvText.length; i++) {
+      const char = csvText[i];
+      const nextChar = csvText[i + 1];
+
+      if (inQuotes) {
+        if (char === '"' && nextChar === '"') {
+          currentField += '"'; // escaped quote ""
+          i++; // skip next quote
+        } else if (char === '"') {
+          // Check if this quote is followed by delimiter, newline, carriage return, or EOF
+          const isEndOfField = 
+            nextChar === delimiter || 
+            nextChar === '\r' || 
+            nextChar === '\n' || 
+            nextChar === undefined;
+          
+          if (isEndOfField) {
+            inQuotes = false; // end of quoted field
+          } else {
+            currentField += '"'; // unescaped quote inside HTML or text field
+          }
+        } else {
+          currentField += char; // preserve everything inside quotes, including newlines
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true; // start quoted field
+        } else if (char === delimiter) {
+          currentRow.push(currentField.trim());
+          currentField = "";
+        } else if (char === '\r' && nextChar === '\n') {
+          currentRow.push(currentField.trim());
+          if (currentRow.length > 0) rows.push(currentRow);
+          currentRow = [];
+          currentField = "";
+          i++; // skip \n after \r
+        } else if (char === '\n') {
+          currentRow.push(currentField.trim());
+          if (currentRow.length > 0) rows.push(currentRow);
+          currentRow = [];
+          currentField = "";
+        } else {
+          currentField += char;
+        }
+      }
+    }
+    // Push last field/row
+    if (currentField || currentRow.length > 0) {
+      currentRow.push(currentField.trim());
+      if (currentRow.some(f => f.length > 0)) rows.push(currentRow);
+    }
+    return rows;
+  };
+
+  // Fuzzy header matching: strips accents, spaces, underscores and special chars for comparison.
+  // This fixes TIPOPROCESSO not matching when CSV has "TIPO PROCESSO", "TIPO_PROCESSO", "TIPO DE PROCESSO", etc.
+  const normalizeHeaderName = (h: string): string => {
+    return (h || "").toUpperCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // strip accents
+      .replace(/[^A-Z0-9]/g, ""); // remove spaces, underscores, special chars
+  };
+
+  const findHeaderIdx = (normalizedHeaders: string[], ...candidates: string[]): number => {
+    for (const candidate of candidates) {
+      const cleanCandidate = normalizeHeaderName(candidate);
+      const idx = normalizedHeaders.findIndex(h => h === cleanCandidate || h.includes(cleanCandidate));
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+
+  // Helper to parse CSV formatted Acórdãos base file with RFC 4180 multiline support
+  const parseAcordaosCSV = (csvText: string): any[] => {
+    if (!csvText || csvText.trim().length < 10) return [];
+
+    // Detect delimiter from the first line (header)
+    const firstLineEnd = csvText.indexOf('\n');
+    const headerLine = firstLineEnd > 0 ? csvText.substring(0, firstLineEnd) : csvText;
     const semiCount = (headerLine.match(/;/g) || []).length;
     const commaCount = (headerLine.match(/,/g) || []).length;
     const delimiter = semiCount > commaCount ? ";" : ",";
 
-    // Split headers and clean them up
-    // Remove quotes, trim, uppercase
-    const headers = headerLine.split(delimiter).map(h => h.replace(/^["']|["']$/g, "").trim().toUpperCase());
+    // Parse entire CSV with multiline support
+    const allRows = parseCSVRobust(csvText, delimiter);
+    if (allRows.length < 2) return [];
 
-    // Map important indices
-    const idxNum = headers.indexOf("NUMACORDAO");
-    const idxAno = headers.indexOf("ANOACORDAO");
-    const idxAta = headers.indexOf("NUMATA");
-    const idxColegiado = headers.indexOf("COLEGIADO");
-    const idxSessao = headers.indexOf("DATASESSAO");
-    const idxRelator = headers.indexOf("RELATOR");
-    const idxSituacao = headers.indexOf("SITUACAO");
-    const idxProc = headers.indexOf("PROC");
-    const idxRelacionados = headers.indexOf("ACORDAOSRELACIONADOS");
-    const idxTipo = headers.indexOf("TIPOPROCESSO");
-    const idxEntidade = headers.indexOf("ENTIDADE");
-    const idxUT = headers.indexOf("UNIDADETECNICA");
-    const idxAssunto = headers.indexOf("ASSUNTO");
-    const idxAcordaoDoc = headers.indexOf("ACORDAO");
-    const idxDecisaoDoc = headers.indexOf("DECISAO");
+    // Extract and normalize headers
+    const rawHeaders = allRows[0].map(h => h.replace(/^["']|["']$/g, "").trim().toUpperCase());
+    const normalizedHeaders = rawHeaders.map(normalizeHeaderName);
+
+    // Map important indices using fuzzy matching for robustness
+    const idxNum = findHeaderIdx(normalizedHeaders, "NUMACORDAO", "NUM ACORDAO", "NUMEROACORDAO");
+    const idxAno = findHeaderIdx(normalizedHeaders, "ANOACORDAO", "ANO ACORDAO");
+    const idxAta = findHeaderIdx(normalizedHeaders, "NUMATA", "NUM ATA", "NUMEROATA");
+    const idxColegiado = findHeaderIdx(normalizedHeaders, "COLEGIADO");
+    const idxSessao = findHeaderIdx(normalizedHeaders, "DATASESSAO", "DATA SESSAO", "DATA DA SESSAO");
+    const idxRelator = findHeaderIdx(normalizedHeaders, "RELATOR");
+    const idxSituacao = findHeaderIdx(normalizedHeaders, "SITUACAO");
+    const idxProc = findHeaderIdx(normalizedHeaders, "PROC", "PROCESSO");
+    const idxRelacionados = findHeaderIdx(normalizedHeaders, "ACORDAOSRELACIONADOS", "ACORDAOS RELACIONADOS");
+    const idxTipo = findHeaderIdx(normalizedHeaders, "TIPOPROCESSO", "TIPO PROCESSO", "TIPO DE PROCESSO", "TIPO_PROCESSO", "TIPODEPROCESSO", "TIPO", "CLASSE", "CLASSEPROCESSO", "CLASSE PROCESSO", "CLASSE_PROCESSO", "NMCLASSE", "NM_CLASSE", "NATUREZA", "NATUREZAPROCESSO", "NATUREZA DO PROCESSO", "NATUREZA_PROCESSO");
+    const idxEntidade = findHeaderIdx(normalizedHeaders, "ENTIDADE");
+    const idxUT = findHeaderIdx(normalizedHeaders, "UNIDADETECNICA", "UNIDADE TECNICA");
+    const idxAssunto = findHeaderIdx(normalizedHeaders, "ASSUNTO");
+    const idxAcordaoDoc = findHeaderIdx(normalizedHeaders, "ACORDAO");
+    const idxDecisaoDoc = findHeaderIdx(normalizedHeaders, "DECISAO");
+    const idxInteressados = findHeaderIdx(normalizedHeaders, "INTERESSADOS", "INTERESSADO");
+    const idxSumario = findHeaderIdx(normalizedHeaders, "SUMARIO", "SUMÁRIO");
+    const idxTitulo = findHeaderIdx(normalizedHeaders, "TITULO");
 
     // If both NUMACORDAO and ANOACORDAO indices are missing, return empty to fallback to simple code list
     if (idxNum === -1 || idxAno === -1) {
@@ -1283,51 +1318,41 @@ export default function TcuModule({
 
     const items: any[] = [];
 
-    // Helper to split CSV line safely handling quotes
-    const parseLine = (line: string, delim: string): string[] => {
-      const result: string[] = [];
-      let current = "";
-      let inQuotes = false;
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        if (char === '"' || char === "'") {
-          inQuotes = !inQuotes;
-        } else if (char === delim && !inQuotes) {
-          result.push(current.trim());
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-      result.push(current.trim());
-      return result;
+    // Helper to get a clean field value from a row
+    const getField = (row: string[], idx: number): string | undefined => {
+      if (idx < 0 || idx >= row.length) return undefined;
+      const val = row[idx]?.replace(/^["']|["']$/g, "").trim();
+      return val || undefined;
     };
 
-    for (let i = 1; i < lines.length; i++) {
-      const row = parseLine(lines[i], delimiter);
+    for (let i = 1; i < allRows.length; i++) {
+      const row = allRows[i];
       if (row.length < Math.max(idxNum, idxAno) + 1) continue;
 
-      const numAcordaoVal = parseInt(row[idxNum]?.replace(/[^\d]/g, "") || "0");
-      const anoAcordaoVal = parseInt(row[idxAno]?.replace(/[^\d]/g, "") || "0");
+      const numAcordaoVal = parseInt(getField(row, idxNum)?.replace(/[^\d]/g, "") || "0");
+      const anoAcordaoVal = parseInt(getField(row, idxAno)?.replace(/[^\d]/g, "") || "0");
 
       if (!numAcordaoVal || !anoAcordaoVal) continue;
 
       const item: any = {
         NUMACORDAO: numAcordaoVal,
         ANOACORDAO: anoAcordaoVal,
-        NUMATA: idxAta >= 0 ? row[idxAta]?.replace(/^["']|["']$/g, "") : undefined,
-        COLEGIADO: idxColegiado >= 0 ? row[idxColegiado]?.replace(/^["']|["']$/g, "") : undefined,
-        DATASESSAO: idxSessao >= 0 ? row[idxSessao]?.replace(/^["']|["']$/g, "") : undefined,
-        RELATOR: idxRelator >= 0 ? row[idxRelator]?.replace(/^["']|["']$/g, "") : undefined,
-        SITUACAO: idxSituacao >= 0 ? row[idxSituacao]?.replace(/^["']|["']$/g, "") : undefined,
-        PROC: idxProc >= 0 ? row[idxProc]?.replace(/^["']|["']$/g, "") : undefined,
-        ACORDAOSRELACIONADOS: idxRelacionados >= 0 ? row[idxRelacionados]?.replace(/^["']|["']$/g, "") : undefined,
-        TIPOPROCESSO: idxTipo >= 0 ? row[idxTipo]?.replace(/^["']|["']$/g, "") : undefined,
-        ENTIDADE: idxEntidade >= 0 ? row[idxEntidade]?.replace(/^["']|["']$/g, "") : undefined,
-        UNIDADETECNICA: idxUT >= 0 ? row[idxUT]?.replace(/^["']|["']$/g, "") : undefined,
-        ASSUNTO: idxAssunto >= 0 ? row[idxAssunto]?.replace(/^["']|["']$/g, "") : undefined,
-        ACORDAO: idxAcordaoDoc >= 0 ? row[idxAcordaoDoc]?.replace(/^["']|["']$/g, "") : undefined,
-        DECISAO: idxDecisaoDoc >= 0 ? row[idxDecisaoDoc]?.replace(/^["']|["']$/g, "") : undefined
+        NUMATA: getField(row, idxAta),
+        COLEGIADO: getField(row, idxColegiado),
+        DATASESSAO: getField(row, idxSessao),
+        RELATOR: getField(row, idxRelator),
+        SITUACAO: getField(row, idxSituacao),
+        PROC: getField(row, idxProc),
+        ACORDAOSRELACIONADOS: getField(row, idxRelacionados),
+        TIPOPROCESSO: getField(row, idxTipo),
+        ENTIDADE: getField(row, idxEntidade),
+        UNIDADETECNICA: getField(row, idxUT),
+        ASSUNTO: getField(row, idxAssunto),
+        ACORDAO: getField(row, idxAcordaoDoc),
+        DECISAO: getField(row, idxDecisaoDoc),
+        INTERESSADOS: getField(row, idxInteressados),
+        SUMARIO: getField(row, idxSumario),
+        TITULO: getField(row, idxTitulo)
       };
 
       items.push(item);

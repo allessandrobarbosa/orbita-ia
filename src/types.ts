@@ -84,9 +84,14 @@ export interface SuperintendenciaRegional {
   endereco: string;
   contato: string;
   email: string;
+  substituto?: string;
+  emailSubstituto?: string;
+  cep?: string;
+  latitude?: number;
+  longitude?: number;
   demandasTCU: number;
   demandasCGU: number;
-  demandasEtica: number;
+  demandasEtica?: number;
   statusGeral: 'Regular' | 'Atenção' | 'Crítico';
 }
 

@@ -126,15 +126,12 @@ export default function DashboardOverview({
             </span>
           </div>
 
-          <div className="space-y-1.5">
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white flex flex-wrap items-center gap-x-3">
-              <span>ÓRBITA-AECI</span>
-              <span className="text-xs bg-white/10 text-slate-300 font-mono font-medium px-2 py-0.5 rounded border border-white/5">
-                V2.6.0
-              </span>
+          <div className="space-y-2">
+            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-amber-400 uppercase">
+              Sistema Integrado de Controle Interno e Auditoria Governamental
             </h1>
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-wide font-sans">
-              SISTEMA INTEGRADO DE CONTROLE INTERNO E AUDITORIA GOVERNAMENTAL - ASSESSORIA ESPECIAL DE CONTROLE INTERNO - AECI
+            <p className="text-[11px] text-slate-300 font-bold uppercase tracking-wide font-sans">
+              Assessoria Especial de Controle Interno — AECI • Versão 2.6.0
             </p>
           </div>
 

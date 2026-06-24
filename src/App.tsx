@@ -4,16 +4,16 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { 
-  Building2, 
-  Users, 
-  ShieldAlert, 
-  LayoutDashboard, 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  Building2,
+  Users,
+  ShieldAlert,
+  LayoutDashboard,
+  ChevronLeft,
+  ChevronRight,
   ChevronDown,
   Database,
-  Menu, 
+  Menu,
   UserCircle,
   HelpCircle,
   LogOut,
@@ -118,7 +118,7 @@ import SrteModule from "./components/SrteModule";
 import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "./types";
 
 export default function App() {
-  
+
   // States holding backend values
   const [acordaos, setAcordaos] = useState<AcordaoDemand[]>([]);
   const [comunicacoes, setComunicacoes] = useState<ComunicacaoDemand[]>([]);
@@ -154,18 +154,18 @@ export default function App() {
             return p;
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return USER_PROFILES;
   });
 
   // Active User profile and session locks
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => profiles[0] || USER_PROFILES[0]);
-  const [isLocked, setIsLocked] = useState<boolean>(false);
+  const [isLocked, setIsLocked] = useState<boolean>(true); // Gated by default
   const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
   const [isRegisteringUser, setIsRegisteringUser] = useState<boolean>(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState<boolean>(false);
-  const [authAlert, setAuthAlert] = useState<{title: string; message: string; sub: string} | null>(null);
+  const [authAlert, setAuthAlert] = useState<{ title: string; message: string; sub: string } | null>(null);
   const [authSuccessToast, setAuthSuccessToast] = useState<string | null>(null);
 
   const handleRegisterProfile = (newProfile: UserProfile) => {
@@ -181,7 +181,7 @@ export default function App() {
     if (currentUser.clearance === "ADMIN") return true;
     if (currentUser.clearance === "ETHICS" && module === "ETHICS") return true;
     if (currentUser.clearance === "SRTE" && module === "SRTE") return true;
-    
+
     // Trigger security modal feedback for unauthorized users
     setAuthAlert({
       title: "Interposição Governamental / Restrição de Acesso",
@@ -222,6 +222,23 @@ export default function App() {
   };
 
   useEffect(() => {
+    const checkActiveSession = async () => {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setCurrentUser(data.user);
+            setIsLocked(false);
+          } else {
+            setIsLocked(true);
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao verificar sessão ativa:", err);
+      }
+    };
+    checkActiveSession();
     fetchAllData();
   }, []);
 
@@ -238,13 +255,13 @@ export default function App() {
   // If session is locked, serve the secure lock face directly
   if (isLocked) {
     return (
-      <LockScreen 
+      <LockScreen
         profiles={profiles}
         onUnlock={(profile) => {
           setCurrentUser(profile);
           setIsLocked(false);
           setAuthSuccessToast(`Chave de acesso assinada para ${profile.name}!`);
-        }} 
+        }}
         onRegisterProfile={handleRegisterProfile}
       />
     );
@@ -605,25 +622,24 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased">
-      
+
       {/* 1. Header Federal Government Layout */}
       <header className="gov-header text-white border-b-2 gov-border-gold shadow-md no-print shrink-0">
         <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-black tracking-tight font-display text-white" style={{ fontFamily: '"Outfit", sans-serif' }}>
+                <h1 className="text-3xl font-black tracking-tight font-display text-white" style={{ fontFamily: '"Outfit", sans-serif' }}>
                   ÓRBITA-AECI
                 </h1>
               </div>
-              <p className="text-[10.5px] text-slate-300/90 tracking-wide font-sans mt-0.5">Sistema Integrado de Controle Interno e Auditoria Governamental</p>
-              <p className="text-[10.5px] text-slate-300/90 tracking-wide font-sans mt-0.5">Assessoria Especial de Controle Interno - AECI</p>
+              <p className="text-[11px] text-slate-300/90 tracking-wide font-sans mt-1">Assessoria Especial de Controle Interno</p>
             </div>
           </div>
 
           {/* Interactive User Controller Dropdown */}
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowUserDropdown(!showUserDropdown)}
               className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-slate-800/40 border border-white/10 hover:border-blue-400/40 transition cursor-pointer text-left focus:outline-hidden"
               id="btn-user-dropdown-toggle"
@@ -635,7 +651,7 @@ export default function App() {
                   {currentUser.badgeText}
                 </span>
               </div>
-              
+
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs border-2 select-none uppercase ${currentUser.avatarColor}`}>
                 {currentUser.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
               </div>
@@ -699,7 +715,10 @@ export default function App() {
 
                   {/* Trancar com senha */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      try {
+                        await fetch("/api/auth/logout", { method: "POST" });
+                      } catch (e) {}
                       setIsLocked(true);
                       setShowUserDropdown(false);
                     }}
@@ -710,7 +729,10 @@ export default function App() {
 
                   {/* Sair do Portal (Logout) */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
+                      try {
+                        await fetch("/api/auth/logout", { method: "POST" });
+                      } catch (e) {}
                       setIsLocked(true);
                       setShowUserDropdown(false);
                       setAuthSuccessToast("Sessão finalizada. Faça o login autenticado para retornar.");
@@ -746,11 +768,10 @@ export default function App() {
                   onClick={() => {
                     setActiveTab(moduleLink.id);
                   }}
-                  className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
-                    isSelected
+                  className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all border cursor-pointer ${isSelected
                       ? "bg-[#1351b4] text-white border-[#1351b4] font-extrabold shadow-md shadow-blue-950/45 scale-102"
                       : "bg-white/5 hover:bg-white/10 text-slate-100 border-white/10 hover:border-white/20"
-                  }`}
+                    }`}
                   title={moduleLink.title}
                 >
                   <ModuleIcon className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-blue-300"}`} />
@@ -764,10 +785,10 @@ export default function App() {
 
       {/* 3. Body Container - Direct full-width main view layout for a cleaner UX */}
       <div className="flex-1 flex overflow-hidden">
-        
+
         {/* Main content frame - Full Width */}
         <main className="flex-1 overflow-y-auto bg-slate-100 p-6 max-h-full">
-          
+
           {/* Quick loading placeholder */}
           {isLoading && acordaos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 space-y-3 font-sans h-full">
@@ -776,12 +797,12 @@ export default function App() {
             </div>
           ) : (
             <div className="max-w-7xl mx-auto pb-12">
-              
+
               {/* Tab selector content renderer */}
               {activeTab === "dashboard" && (
-                <DashboardOverview 
-                  stats={dashboardStats} 
-                  onNavigate={setActiveTab} 
+                <DashboardOverview
+                  stats={dashboardStats}
+                  onNavigate={setActiveTab}
                   acordaos={acordaos}
                   comunicacoes={comunicacoes}
                   tces={tces}
@@ -793,7 +814,7 @@ export default function App() {
               )}
 
               {activeTab === "bi" && (
-                <BiModule 
+                <BiModule
                   acordaos={acordaos}
                   comunicacoes={comunicacoes}
                   tces={tces}
@@ -805,7 +826,7 @@ export default function App() {
               )}
 
               {activeTab === "tcu" && (
-                <TcuModule 
+                <TcuModule
                   acordaos={acordaos}
                   onUpdateAcordao={handleUpdateAcordao}
                   onDeleteAcordao={handleDeleteAcordao}
@@ -827,7 +848,7 @@ export default function App() {
               )}
 
               {activeTab === "rol" && (
-                <RolModule 
+                <RolModule
                   rol={rolResponsaveis}
                   onAddRol={handleAddRol}
                   onUpdateRol={handleUpdateRol}
@@ -836,7 +857,7 @@ export default function App() {
               )}
 
               {activeTab === "etica" && (
-                <EticaModule 
+                <EticaModule
                   etica={comissaoEtica}
                   onAddEtica={handleAddEtica}
                   onUpdateEtica={handleUpdateEtica}
@@ -845,9 +866,12 @@ export default function App() {
               )}
 
               {activeTab === "srte" && (
-                <SrteModule 
+                <SrteModule
                   superintendencias={superintendencias}
                   onUpdateSrte={handleUpdateSrte}
+                  acordaos={acordaos}
+                  comunicacoes={comunicacoes}
+                  tces={tces}
                 />
               )}
 
@@ -913,7 +937,7 @@ export default function App() {
 
       {/* 1. Global User Profile Registration Modal */}
       {isRegisteringUser && (
-        <UserProfileRegistrationModal 
+        <UserProfileRegistrationModal
           onClose={() => setIsRegisteringUser(false)}
           onSave={handleRegisterProfile}
         />
@@ -921,7 +945,7 @@ export default function App() {
 
       {/* Admin Panel Modal */}
       {isAdminPanelOpen && (
-        <AdminPanelModal 
+        <AdminPanelModal
           onClose={() => setIsAdminPanelOpen(false)}
           onClearOlderAcordaos={handleClearOlderAcordaos}
           onResetDatabase={handleResetDatabase}
@@ -949,7 +973,7 @@ export default function App() {
               <p className="text-sm font-bold leading-normal text-slate-900">
                 {authAlert.message}
               </p>
-              
+
               <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
                 <p className="text-xs text-slate-650 flex items-start gap-2">
                   <span className="text-sm">ℹ️</span>
@@ -992,7 +1016,7 @@ export default function App() {
             <span className="text-xs font-black block tracking-tight">Portal Homologado</span>
             <span className="text-[10px] text-slate-300 block">{authSuccessToast}</span>
           </div>
-          <button 
+          <button
             onClick={() => setAuthSuccessToast(null)}
             className="ml-auto text-slate-400 hover:text-white"
           >
@@ -1008,12 +1032,12 @@ export default function App() {
 // --------------------------------------------------------------------------------
 // LockScreen component function
 // --------------------------------------------------------------------------------
-function LockScreen({ 
-  profiles, 
-  onUnlock, 
-  onRegisterProfile 
-}: { 
-  profiles: UserProfile[]; 
+function LockScreen({
+  profiles,
+  onUnlock,
+  onRegisterProfile
+}: {
+  profiles: UserProfile[];
   onUnlock: (profile: UserProfile) => void;
   onRegisterProfile: (profile: UserProfile) => void;
 }) {
@@ -1022,67 +1046,94 @@ function LockScreen({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [isRegisteringLock, setIsRegisteringLock] = useState<boolean>(false);
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (!selectedProfile) return;
-    if (selectedProfile.pin === pinCode || selectedProfile.clearance === "PUBLIC") {
-      onUnlock(selectedProfile);
-    } else {
-      setErrorMsg("Código de Assinatura Eletrônica Inválido para este Dirigente.");
-      setPinCode("");
+    try {
+      const res = await fetch("/api/auth/login-pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: selectedProfile.id, pin: pinCode })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onUnlock(data.user);
+      } else {
+        const data = await res.json();
+        setErrorMsg(data.error || "Código de Assinatura Eletrônica Inválido.");
+        setPinCode("");
+      }
+    } catch (err) {
+      // Offline fallback for local development without server
+      if (selectedProfile.pin === pinCode || selectedProfile.clearance === "PUBLIC") {
+        onUnlock(selectedProfile);
+      } else {
+        setErrorMsg("Erro de conexão com o servidor de autenticação.");
+        setPinCode("");
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#07162c] flex flex-col justify-between p-6 text-white font-sans antialiased relative overflow-hidden select-none">
-      {/* Visual background textures */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_50%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(212,175,55,0.08),transparent_50%)]" />
-      
-      {/* Header Gov emblem */}
-      <div className="max-w-7xl mx-auto w-full flex items-center justify-between opacity-80 border-b border-white/10 pb-4 relative z-10 text-[11px] tracking-wider text-slate-300">
-        <div className="flex items-center gap-2">
-          <span className="font-black text-white">BRASIL</span>
-          <span>|</span>
-          <span>CONTROLE INTERNO E AUDITORIA GOVERNAMENTAL</span>
-        </div>
-        <div>MINISTÉRIO DO TRABALHO E EMPREGO</div>
-      </div>
- 
-      {/* Main Lock Form Box */}
-      <div className="max-w-xl mx-auto w-full my-auto py-8 px-6 bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl relative z-10 flex flex-col items-center animate-fade-in">
-        
-        {/* Dynamic Glowing Logo */}
-        <div className="relative w-16 h-16 flex items-center justify-center bg-radial from-[#04244c] to-[#01142a] rounded-full border-2 border-amber-400 shadow-xl mb-6 select-none group">
-          <div className="absolute inset-1 rounded-full border border-dashed border-amber-300/40 animate-[spin_25s_linear_infinite]" />
-          <div className="absolute -inset-1.5 rounded-full border border-blue-500/10 animate-pulse pointer-events-none" />
-          <span className="text-2xl font-black text-amber-400 font-serif leading-none">✪</span>
-        </div>
+    <div className="min-h-screen bg-slate-100 flex flex-col justify-between text-slate-700 font-sans antialiased select-none">
 
-        <h1 className="text-2xl font-black tracking-tight text-center font-display" style={{ fontFamily: '"Outfit", sans-serif' }}>
-          Portal ÓRBITA<span className="text-amber-400">.MTE</span>
-        </h1>
-        <p className="text-xs text-slate-300 text-center mt-1.5 max-w-sm leading-relaxed">
-          Portal de Controle Interno e Auditoria do Ministério do Trabalho e Emprego
+      {/* Header Gov emblem */}
+      <div className="bg-white border-b border-slate-200 py-3 shadow-xs">
+        <div className="max-w-7xl mx-auto w-full px-4 flex items-center justify-between text-slate-500 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-black tracking-tight text-[#1351b4]">gov<span className="text-[#00c010]">.</span>br</span>
+            <span className="text-[10px] text-slate-400 pl-2 border-l border-slate-200 hidden sm:inline">Serviço de Autenticação Federada</span>
+          </div>
+          <div className="text-[10px] sm:text-xs">MINISTÉRIO DO TRABALHO E EMPREGO</div>
+        </div>
+      </div>
+
+      {/* Main Lock Form Box */}
+      <div className="max-w-md mx-auto w-full my-auto py-8 px-6 bg-white rounded-2xl border border-slate-200 shadow-lg flex flex-col items-center animate-fade-in">
+
+        <h2 className="text-xl font-extrabold text-slate-800 tracking-tight text-center" style={{ fontFamily: '"Outfit", sans-serif' }}>
+          Identifique-se no gov.br
+        </h2>
+        <p className="text-[11px] text-slate-500 text-center mt-1 max-w-xs leading-relaxed">
+          Portal ÓRBITA - Assessoria Especial de Controle Interno (MTE)
         </p>
 
         {/* Profile Card grid */}
         {!selectedProfile ? (
           <div className="mt-6 w-full space-y-4">
+            {/* Official gov.br Login button */}
+            <div className="w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/api/auth/govbr/login";
+                }}
+                className="w-full bg-[#1351b4] hover:bg-[#0c3c88] text-white font-extrabold text-xs py-3 px-5 rounded-xl flex items-center justify-center gap-2 transition duration-150 cursor-pointer shadow-xs"
+              >
+                Entrar com a conta gov.br
+              </button>
+            </div>
+
+            <div className="flex items-center w-full">
+              <div className="flex-1 border-t border-slate-200"></div>
+              <span className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">ou simule acesso local</span>
+              <div className="flex-1 border-t border-slate-200"></div>
+            </div>
+
             {/* Explanatory box for simulation login */}
-            <div className="bg-blue-500/10 border border-blue-400/20 p-3 rounded-2xl text-center">
-              <p className="text-[11px] text-blue-300 leading-normal font-medium">
-                🔐 <strong>Ambiente de Simulação de Auditoria (Demonstração)</strong>
-                <span className="block mt-0.5 text-[10px] text-slate-300 font-normal">
-                  Selecione o seu perfil de gestor ou cidadão abaixo. Insira o código PIN de assinatura correspondente na próxima tela para simular o nível de acesso.
+            <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-center">
+              <p className="text-[10px] text-blue-900 leading-normal font-medium">
+                🔐 <strong>Ambiente de Homologação Integrado</strong>
+                <span className="block mt-0.5 text-[9.5px] text-slate-600 font-normal">
+                  Selecione o seu perfil de gestor ou cidadão abaixo e forneça o PIN de assinatura local correspondente.
                 </span>
               </p>
             </div>
 
-            <span className="text-[10px] font-black text-amber-400 tracking-widest uppercase block text-center mb-1">
-              Selecione o seu perfil funcional de acesso:
+            <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block text-center mb-1">
+              Selecione seu perfil funcional:
             </span>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-1">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto pr-1">
               {profiles.map((profile) => (
                 <button
                   key={profile.id}
@@ -1095,60 +1146,57 @@ function LockScreen({
                       setSelectedProfile(profile);
                     }
                   }}
-                  className="p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-amber-400/50 hover:bg-slate-800/60 transition text-left flex items-start gap-3 cursor-pointer group"
+                  className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#1351b4]/40 hover:bg-slate-100 transition text-left flex items-start gap-2.5 cursor-pointer group"
                 >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs shrink-0 border uppercase ${profile.avatarColor}`}>
+                  <div className={`w-8.5 h-8.5 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 border uppercase text-white bg-[#1351b4] border-blue-400`}>
                     {profile.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
                   </div>
-                  <div className="overflow-hidden">
-                    <span className="block text-xs font-black text-white group-hover:text-amber-300 transition truncate">{profile.name}</span>
-                    <span className="block text-[10px] text-slate-300 truncate mt-0.5 leading-none">{profile.role}</span>
-                    <span className="inline-block mt-1 bg-white/10 text-slate-300 text-[8px] font-bold px-1.5 py-0.2 rounded">
-                      {profile.badgeText}
-                    </span>
+                  <div className="overflow-hidden min-w-0">
+                    <span className="block text-xs font-black text-slate-800 group-hover:text-[#1351b4] transition truncate">{profile.name}</span>
+                    <span className="block text-[9.5px] text-slate-500 truncate leading-none mt-0.5">{profile.role}</span>
                   </div>
                 </button>
               ))}
             </div>
 
             {/* Registration trigger from Lock screen */}
-            <div className="pt-2 border-t border-white/10 flex justify-center">
+            <div className="pt-3 border-t border-slate-200 flex justify-center">
               <button
                 type="button"
                 onClick={() => setIsRegisteringLock(true)}
-                className="px-4 py-2 border border-dashed border-amber-400/35 hover:border-amber-400/70 hover:bg-amber-400/5 text-amber-300 font-extrabold text-[11px] rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                className="px-4 py-2 border border-dashed border-[#1351b4]/35 hover:border-[#1351b4]/70 hover:bg-[#1351b4]/5 text-[#1351b4] font-extrabold text-[11px] rounded-xl flex items-center gap-1.5 transition cursor-pointer"
               >
-                <UserPlus className="w-3.5 h-3.5" /> Credenciar Novo Gestor (MTE)
+                <UserPlus className="w-3.5 h-3.5" /> Credenciar Novo Gestor
               </button>
             </div>
           </div>
         ) : (
           /* Profile PIN Form */
-          <div className="mt-8 w-full max-w-sm space-y-4 animate-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-[10px] ${selectedProfile.avatarColor}`}>
+          <div className="mt-6 w-full max-w-sm space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+              <div className="w-8.5 h-8.5 rounded-lg flex items-center justify-center font-bold text-[10px] text-white bg-[#1351b4]">
                 {selectedProfile.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
               </div>
-              <div className="overflow-hidden flex-1">
-                <span className="block text-xs font-black text-white">{selectedProfile.name}</span>
-                <span className="block text-[9px] text-slate-400 truncate mt-0.5">{selectedProfile.badgeText}</span>
+              <div className="overflow-hidden flex-1 min-w-0">
+                <span className="block text-xs font-black text-slate-800">{selectedProfile.name}</span>
+                <span className="block text-[9.5px] text-slate-500 truncate mt-0.5">{selectedProfile.badgeText}</span>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedProfile(null)}
-                className="text-slate-400 hover:text-white text-[10px] py-1 px-2 border border-white/10 rounded-lg hover:bg-white/5 transition"
+                className="text-slate-500 hover:text-[#1351b4] text-[10px] py-1 px-2 border border-slate-200 rounded-lg hover:bg-slate-100 transition"
               >
                 Alterar
               </button>
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-300 uppercase tracking-wider block">
+              <label className="text-[10px] font-black text-slate-600 uppercase tracking-wider block">
                 Código PIN de Assinatura Eletrônica (gov.br):
               </label>
               <div className="relative">
                 <input
                   type="password"
-                  placeholder="Seu código PIN de 4 dígitos"
+                  placeholder="PIN de 4 dígitos"
                   maxLength={4}
                   value={pinCode}
                   onChange={(e) => {
@@ -1159,37 +1207,37 @@ function LockScreen({
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleVerify();
                   }}
-                  className="w-full bg-slate-950/80 border border-white/15 focus:border-amber-400 focus:outline-hidden rounded-xl py-3 px-4 font-mono text-center text-lg tracking-widest text-amber-300"
+                  className="w-full bg-white border border-slate-300 focus:border-[#1351b4] focus:ring-1 focus:ring-[#1351b4] focus:outline-none rounded-xl py-3 px-4 font-mono text-center text-lg tracking-widest text-[#1351b4]"
                   autoFocus
                 />
                 <Key className="absolute right-3.5 top-3.5 w-4 h-4 text-slate-400 animate-pulse" />
               </div>
-              
+
               {/* PIN Assist */}
-              <div className="bg-amber-400/10 border border-amber-400/25 p-2 rounded-xl text-center">
-                <p className="text-[10.5px] text-amber-300 flex items-center justify-center gap-1 leading-tight">
-                  <Fingerprint className="w-3.5 h-3.5 inline shrink-0" />
-                  <span>Código PIN para <strong> {selectedProfile.name.split(" ")[0]} </strong> é <code className="bg-amber-400 text-slate-950 px-1 py-0.2 rounded font-black font-mono text-xs">{selectedProfile.pin}</code></span>
+              <div className="bg-amber-50 border border-amber-200 p-2.5 rounded-xl text-center">
+                <p className="text-[10px] text-amber-800 flex items-center justify-center gap-1 leading-tight font-medium">
+                  <Fingerprint className="w-3.5 h-3.5 inline shrink-0 text-amber-600" />
+                  <span>O PIN para <strong>{selectedProfile.name.split(" ")[0]}</strong> é <code className="bg-amber-100 border border-amber-300 text-amber-900 px-1 py-0.2 rounded font-black font-mono text-xs">{selectedProfile.pin}</code></span>
                 </p>
               </div>
 
               {errorMsg && (
-                <p className="text-[11px] text-rose-400 font-bold bg-rose-500/10 border border-rose-550/20 p-2.5 rounded-xl text-center">
+                <p className="text-[10.5px] text-rose-700 font-bold bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-center">
                   ⚠️ {errorMsg}
                 </p>
               )}
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2.5 pt-2">
               <button
                 onClick={() => setSelectedProfile(null)}
-                className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-xs transition cursor-pointer"
+                className="flex-grow py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition cursor-pointer"
               >
                 Voltar
               </button>
               <button
                 onClick={handleVerify}
-                className="flex-1 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                className="flex-grow py-2.5 rounded-xl bg-[#1351b4] hover:bg-[#0c3c88] text-white font-black text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <Unlock className="w-3.5 h-3.5 stroke-[2.5]" /> Validar e Entrar
               </button>
@@ -1199,7 +1247,7 @@ function LockScreen({
       </div>
 
       {isRegisteringLock && (
-        <UserProfileRegistrationModal 
+        <UserProfileRegistrationModal
           onClose={() => setIsRegisteringLock(false)}
           onSave={(newUser) => {
             onRegisterProfile(newUser);
@@ -1209,10 +1257,10 @@ function LockScreen({
       )}
 
       {/* Footer disclaimer */}
-      <div className="max-w-7xl mx-auto w-full text-center text-[10px] text-slate-400 opacity-65 flex flex-col sm:flex-row gap-2 justify-between items-center border-t border-white/10 pt-4 relative z-10">
+      <footer className="w-full text-center text-[10px] text-slate-400 py-4 border-t border-slate-200 flex flex-col sm:flex-row gap-2 justify-between items-center max-w-7xl mx-auto px-4">
         <span>© 2026 ORBITA.AECI — Ministério do Trabalho e Emprego</span>
-        <span>A segurança da informação federal está protegida em conformidade com as diretrizes do TCU.</span>
-      </div>
+        <span>Acesso protegido e auditado de acordo com as diretrizes do TCU.</span>
+      </footer>
     </div>
   );
 }
@@ -1220,12 +1268,12 @@ function LockScreen({
 // --------------------------------------------------------------------------------
 // UserProfileRegistrationModal component function
 // --------------------------------------------------------------------------------
-export function UserProfileRegistrationModal({ 
-  onClose, 
-  onSave 
-}: { 
-  onClose: () => void; 
-  onSave: (newUser: UserProfile) => void; 
+export function UserProfileRegistrationModal({
+  onClose,
+  onSave
+}: {
+  onClose: () => void;
+  onSave: (newUser: UserProfile) => void;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -1408,11 +1456,10 @@ export function UserProfileRegistrationModal({
                     key={level.id}
                     type="button"
                     onClick={() => setClearance(level.id as any)}
-                    className={`p-2.5 rounded-xl border text-left transition select-none flex flex-col justify-between ${
-                      clearance === level.id 
-                        ? "bg-blue-50/70 border-[#003366] ring-2 ring-blue-900/10" 
+                    className={`p-2.5 rounded-xl border text-left transition select-none flex flex-col justify-between ${clearance === level.id
+                        ? "bg-blue-50/70 border-[#003366] ring-2 ring-blue-900/10"
                         : "bg-slate-50 border-slate-200 hover:border-slate-350"
-                    }`}
+                      }`}
                   >
                     <span className="text-[11px] font-black text-slate-900 block">{level.label}</span>
                     <span className="text-[9px] text-slate-500 mt-0.5 block leading-tight">{level.desc}</span>
@@ -1516,8 +1563,8 @@ export function AdminPanelModal({
               </span>
             </div>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -1541,8 +1588,8 @@ export function AdminPanelModal({
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span>{adminStatusMsg}</span>
               </div>
-              <button 
-                onClick={() => setAdminStatusMsg(null)} 
+              <button
+                onClick={() => setAdminStatusMsg(null)}
                 className="text-emerald-600 hover:text-[#003366] font-extrabold text-[10px] uppercase tracking-wide px-1.5 cursor-pointer"
               >
                 Fechar
@@ -1551,7 +1598,7 @@ export function AdminPanelModal({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            
+
             {/* Action 1: Expurgar */}
             <div className="bg-slate-50 hover:bg-slate-100/30 border border-slate-200 rounded-2xl p-5 transition flex flex-col justify-between gap-4">
               <div>

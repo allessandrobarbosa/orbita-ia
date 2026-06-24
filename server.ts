@@ -1,13 +1,28 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+import session from "express-session";
+
+// Load environment variables
+dotenv.config();
+
+declare module 'express-session' {
+  interface SessionData {
+    user?: {
+      id: string;
+      name: string;
+      role: string;
+      email: string;
+      register: string;
+      clearance: string;
+      avatarColor: string;
+      badgeText: string;
+    };
+  }
+}
 
 // Standard types
 import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand } from "./src/types";
@@ -42,7 +57,7 @@ const SEED_ACORDAOS: AcordaoDemand[] = [
     RELATOR: "Ministro Benjamin Zymler",
     ASSUNTO: "Contratação emergencial de suporte técnico continuado de tecnologia de informação.",
     SUMARIO: "Representação com pedido de medida cautelar acerca de suposta irregularidade em dispensa de licitação. O Tribunal julgou parcialmente procedente, determinando o saneamento do Edital substitutivo e apuração dos atos da gestão no âmbito da AECI.",
-    ACORDAO: "VISTOS, relatados e discutidos estes autos de representação... ACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão da Primeira Câmara, ante as razões expostas pelo Relator, Ministro Benjamin Zymler, em:\n1. Conhecer da presente representação para, no mérito, julgá-la parcialmente procedente;\n2. Determinar à Assessoria Especial de Controle Interno do Ministério do Trabalho e Emprego (AECI-MTE) que apresente plano de monitoramento em 90 dias;\n3. Dar ciência ao órgão de que a dispensa de licitação fora do escopo estrito configurará reiteração passível de multa.",
+    ACORDAO: "VISTOS, relatados e discutidos estes autos de representação que tratam de contratação emergencial de suporte técnico continuado de tecnologia de informação. Considerando a instrução técnica de instrução processual e os pareceres da unidade técnica de controle externo. ACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão da Primeira Câmara, ante as razões expostas pelo Relator, Ministro Benjamin Zymler, em:\n1. Conhecer da presente representação para, no mérito, julgá-la parcialmente procedente;\n2. Determinar à Assessoria Especial de Controle Interno do Ministério do Trabalho e Emprego (AECI-MTE) que apresente plano de monitoramento em 90 dias;\n3. Dar ciência ao órgão de que a dispensa de licitação fora do escopo estrito configurará reiteração passível de multa.",
     DECISAO: "Procedência parcial do pleito com determinação de elaboração e apresentação à corte de plano de monitoramento em 90 dias no âmbito da AECI-MTE.",
     STATUS_MONITORAMENTO: "Em Análise",
     RESPONSAVEL_INTERNO: "Alessandro Barbosa (AECI-TCU)",
@@ -94,7 +109,7 @@ const SEED_ACORDAOS: AcordaoDemand[] = [
     RELATOR: "Ministro Jorge Oliveira",
     ASSUNTO: "Julgamento de regularidade das contas da AECI e do Gabinete do Ministro - Exercício 2023.",
     SUMARIO: "Exame das prestações de contas referente às diretrizes do acórdão de regulação geral da IN 84/TCU. O Tribunal julgou as contas regulares com ressalva, expedindo alertas para os controles de despesas correntes de viagens.",
-    ACORDAO: "VISTOS e relatados estes autos de contas anuais... ACORDAM os Ministros da Segunda Câmara em julgar as contas Regulares com Ressalva dos gestores indicados, com fulcro nos artigos 16 e 18 da Lei 8.443/92, expedindo recomendação de melhoria de rastreabilidade de passagens aéreas e diárias em 180 dias.",
+    ACORDAO: "VISTOS, relatados e discutidos estes autos de contas anuais que tratam do julgamento de regularidade das contas da AECI e do Gabinete do Ministro no exercício 2023. Considerando a instrução técnica de auditoria e os pareceres uniformes do controle externo. ACORDAM os Ministros da Segunda Câmara em julgar as contas Regulares com Ressalva dos gestores indicados, com fulcro nos artigos 16 e 18 da Lei 8.443/92, expedindo recomendação de melhoria de rastreabilidade de passagens aéreas e diárias em 180 dias.",
     DECISAO: "Regularidade com ressalva das contas dos gestores do MTE de 2023, recomendando implantação de sistemática de controle de passagens terrestres e aéreas.",
     STATUS_MONITORAMENTO: "Cumprido",
     RESPONSAVEL_INTERNO: "Jorge Luiz Santos (AECI)",
@@ -217,35 +232,466 @@ const SEED_COMISSAO_ETICA: ComissaoEticaDemand[] = [
   }
 ];
 
-// Seed 26 UF + DF for Superintendências Regionais do Trabalho (SRTEs)
 const SEED_SUPERINTENDENCIAS: SuperintendenciaRegional[] = [
-  { uf: "AC", capital: "Rio Branco", superintendente: "Antônio Santos", cargo: "Superintendente SRT-AC", endereco: "Rua Floriano Peixoto, 230 - Centro", contato: "(68) 3212-4000", email: "srte.ac@mte.gov.br", demandasTCU: 1, demandasCGU: 3, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "AL", capital: "Maceió", superintendente: "Maria Oliveira", cargo: "Superintendente SRT-AL", endereco: "Av. Fernandes Lima, 122 - Farol", contato: "(82) 3315-1100", email: "srte.al@mte.gov.br", demandasTCU: 0, demandasCGU: 2, demandasEtica: 1, statusGeral: "Regular" },
-  { uf: "AM", capital: "Manaus", superintendente: "Francisco Mendes", cargo: "Superintendente SRT-AM", endereco: "Av. André Araújo, 1500 - Aleixo", contato: "(92) 3621-8200", email: "srte.am@mte.gov.br", demandasTCU: 2, demandasCGU: 5, demandasEtica: 1, statusGeral: "Atenção" },
-  { uf: "AP", capital: "Macapá", superintendente: "Juliana Costa", cargo: "Superintendente SRT-AP", endereco: "Rua Hamilton Silva, 1420 - Centro", contato: "(96) 3223-5500", email: "srte.ap@mte.gov.br", demandasTCU: 0, demandasCGU: 1, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "BA", capital: "Salvador", superintendente: "José Carlos Silva", cargo: "Superintendente SRT-BA", endereco: "Av. Sete de Setembro, 234 - Campo Grande", contato: "(71) 3329-8400", email: "srte.ba@mte.gov.br", demandasTCU: 3, demandasCGU: 8, demandasEtica: 2, statusGeral: "Atenção" },
-  { uf: "CE", capital: "Fortaleza", superintendente: "Fabiano Rocha", cargo: "Superintendente SRT-CE", endereco: "Rua Tibúrcio Cavalcante, 1500 - Aldeota", contato: "(85) 3455-2100", email: "srte.ce@mte.gov.br", demandasTCU: 1, demandasCGU: 4, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "DF", capital: "Brasília", superintendente: "Paulo Henrique Sousa", cargo: "Superintendente SRT-DF", endereco: "W3 Norte, Quadra 509 - Asa Norte", contato: "(61) 3218-2000", email: "srte.df@mte.gov.br", demandasTCU: 5, demandasCGU: 12, demandasEtica: 3, statusGeral: "Crítico" },
-  { uf: "ES", capital: "Vitória", superintendente: "Renata Neves", cargo: "Superintendente SRT-ES", endereco: "Av. César Hilal, 1260 - Bento Ferreira", contato: "(27) 3223-8800", email: "srte.es@mte.gov.br", demandasTCU: 0, demandasCGU: 2, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "GO", capital: "Goiânia", superintendente: "Luiz Carlos Dias", cargo: "Superintendente SRT-GO", endereco: "Av. 85, nº 1420 - Setor Sul", contato: "(62) 3223-1122", email: "srte.go@mte.gov.br", demandasTCU: 1, demandasCGU: 3, demandasEtica: 1, statusGeral: "Regular" },
-  { uf: "MA", capital: "São Luís", superintendente: "Cláudio Sampaio", cargo: "Superintendente SRT-MA", endereco: "Rua do Sol, 234 - Centro", contato: "(98) 3232-4400", email: "srte.ma@mte.gov.br", demandasTCU: 2, demandasCGU: 6, demandasEtica: 1, statusGeral: "Atenção" },
-  { uf: "MG", capital: "Belo Horizonte", superintendente: "Alessandra Silveira", cargo: "Superintendente SRT-MG", endereco: "Rua Tamoios, 596 - Centro", contato: "(31) 3270-6100", email: "srte.mg@mte.gov.br", demandasTCU: 4, demandasCGU: 9, demandasEtica: 3, statusGeral: "Atenção" },
-  { uf: "MS", capital: "Campo Grande", superintendente: "Carlos Alberto", cargo: "Superintendente SRT-MS", endereco: "Rua 13 de Maio, 1234 - Centro", contato: "(67) 3316-2100", email: "srte.ms@mte.gov.br", demandasTCU: 1, demandasCGU: 2, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "MT", capital: "Cuiabá", superintendente: "Ewerton Garcia", cargo: "Superintendente SRT-MT", endereco: "Rua Historiador Rubens de Mendonça, 1200", contato: "(65) 3613-2200", email: "srte.mt@mte.gov.br", demandasTCU: 2, demandasCGU: 4, demandasEtica: 1, statusGeral: "Regular" },
-  { uf: "PA", capital: "Belém", superintendente: "Raimundo Ferreira", cargo: "Superintendente SRT-PA", endereco: "Travessa Nove de Janeiro, 1230", contato: "(91) 3223-8877", email: "srte.pa@mte.gov.br", demandasTCU: 3, demandasCGU: 7, demandasEtica: 2, statusGeral: "Crítico" },
-  { uf: "PB", capital: "João Pessoa", superintendente: "Gervásio Filho", cargo: "Superintendente SRT-PB", endereco: "Av. Getúlio Vargas, 201 - Centro", contato: "(83) 3218-1200", email: "srte.pb@mte.gov.br", demandasTCU: 0, demandasCGU: 3, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "PE", capital: "Recife", superintendente: "Clara Maria Santos", cargo: "Superintendente SRT-PE", endereco: "Av. Agamenon Magalhães, 2000", contato: "(81) 3419-5100", email: "srte.pe@mte.gov.br", demandasTCU: 2, demandasCGU: 6, demandasEtica: 1, statusGeral: "Regular" },
-  { uf: "PI", capital: "Teresina", superintendente: "Hugo Valério", cargo: "Superintendente SRT-PI", endereco: "Rua Areolino de Abreu, 1234 - Centro", contato: "(86) 3221-1100", email: "srte.pi@mte.gov.br", demandasTCU: 1, demandasCGU: 2, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "PR", capital: "Curitiba", superintendente: "Marcos Aurélio", cargo: "Superintendente SRT-PR", endereco: "Rua José Loureiro, 574 - Centro", contato: "(41) 3219-7500", email: "srte.pr@mte.gov.br", demandasTCU: 2, demandasCGU: 5, demandasEtica: 2, statusGeral: "Regular" },
-  { uf: "RJ", capital: "Rio de Janeiro", superintendente: "Fernanda Cristina", cargo: "Superintendente SRT-RJ", endereco: "Av. Presidente Antônio Carlos, 251", contato: "(21) 2212-3200", email: "srte.rj@mte.gov.br", demandasTCU: 4, demandasCGU: 10, demandasEtica: 3, statusGeral: "Crítico" },
-  { uf: "RN", capital: "Natal", superintendente: "Ricardo Wanderley", cargo: "Superintendente SRT-RN", endereco: "Av. Duque de Caxias, 123 - Ribeira", contato: "(84) 3220-4100", email: "srte.rn@mte.gov.br", demandasTCU: 0, demandasCGU: 2, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "RO", capital: "Porto Velho", superintendente: "Tito Livio", cargo: "Superintendente SRT-RO", endereco: "Av. Jorge Teixeira, 2244 - Liberdade", contato: "(69) 3217-1000", email: "srte.ro@mte.gov.br", demandasTCU: 1, demandasCGU: 3, demandasEtica: 1, statusGeral: "Regular" },
-  { uf: "RR", capital: "Boa Vista", superintendente: "Geandré Oliveira", cargo: "Superintendente SRT-RR", endereco: "Av. Ville Roy, 5500 - Canarinho", contato: "(95) 3624-9100", email: "srte.rr@mte.gov.br", demandasTCU: 0, demandasCGU: 2, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "RS", capital: "Porto Alegre", superintendente: "Sandra Regina", cargo: "Superintendente SRT-RS", endereco: "Av. Bahia, 560 - Navegantes", contato: "(51) 3211-1300", email: "srte.rs@mte.gov.br", demandasTCU: 2, demandasCGU: 6, demandasEtica: 2, statusGeral: "Regular" },
-  { uf: "SC", capital: "Florianópolis", superintendente: "Luiza Helena", cargo: "Superintendente SRT-SC", endereco: "Rua Rui Barbosa, 234 - Agronômica", contato: "(48) 3223-9100", email: "srte.sc@mte.gov.br", demandasTCU: 1, demandasCGU: 3, demandasEtica: 1, statusGeral: "Regular" },
-  { uf: "SE", capital: "Aracaju", superintendente: "Valter Santos", cargo: "Superintendente SRT-SE", endereco: "Rua Ministro Geraldo Barreto Sobral, 22", contato: "(79) 3214-8800", email: "srte.se@mte.gov.br", demandasTCU: 0, demandasCGU: 1, demandasEtica: 0, statusGeral: "Regular" },
-  { uf: "SP", capital: "São Paulo", superintendente: "Marcus Vinícius", cargo: "Superintendente SRT-SP", endereco: "Rua Martins Fontes, 109 - Centro", contato: "(11) 3150-8100", email: "srte.sp@mte.gov.br", demandasTCU: 6, demandasCGU: 14, demandasEtica: 4, statusGeral: "Crítico" },
-  { uf: "TO", capital: "Palmas", superintendente: "Reginaldo Bezerra", cargo: "Superintendente SRT-TO", endereco: "Quadra 104 Norte, Av. LO 02, Lt 12", contato: "(63) 3214-9900", email: "srte.to@mte.gov.br", demandasTCU: 1, demandasCGU: 2, demandasEtica: 0, statusGeral: "Regular" }
+  {
+    uf: "AC",
+    capital: "Rio Branco",
+    superintendente: "Leonardo Lani de Abreu",
+    cargo: "Superintendente SRT-AC",
+    endereco: "Rua Marechal Deodoro, 257",
+    contato: "(68) 3212-3330",
+    email: "leonardo.abreu@mtp.gov.br",
+    substituto: "Maria Clenilda Moura Xavier",
+    emailSubstituto: "maria.clenilda@mtp.gov.br",
+    cep: "69990-066",
+    latitude: -8.77,
+    longitude: -70.55,
+    demandasTCU: 1,
+    demandasCGU: 3,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "AL",
+    capital: "Maceió",
+    superintendente: "Cícero Pereira dos Santos Filho",
+    cargo: "Superintendente SRT-AL",
+    endereco: "Rua do Livramento, n° 148, Edf. Walmap - Centro",
+    contato: "(82) 3221-5421",
+    email: "cicero.pereira@mte.gov.br",
+    substituto: "Bruno Gabriel de Araujo",
+    emailSubstituto: "bruno.araujo@economia.gov.br",
+    cep: "57020-030",
+    latitude: -9.71,
+    longitude: -35.73,
+    demandasTCU: 0,
+    demandasCGU: 2,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "AP",
+    capital: "Macapá",
+    superintendente: "Michel Praranhos",
+    cargo: "Superintendente SRT-AP",
+    endereco: "Av. Salgado Filho 61; Santa Rita",
+    contato: "sem telefone",
+    email: "michel.paranhos@economia.gov.br",
+    substituto: "Marcos dos Santos Marinho",
+    emailSubstituto: "marcos.marinho@economia.gov.br",
+    cep: "68900-032",
+    latitude: -3.07,
+    longitude: -61.66,
+    demandasTCU: 0,
+    demandasCGU: 1,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "AM",
+    capital: "Manaus",
+    superintendente: "Maria Francinete Correia de Lima",
+    cargo: "Superintendente SRT-AM",
+    endereco: "Av. André Araújo, 140 – Aleixo",
+    contato: "sem telefone",
+    email: "maria.correia@economia.gov.br",
+    substituto: "Marcia Kristina Amazonas Prado",
+    emailSubstituto: "marcia.prado@economia.gov.br",
+    cep: "69060-001",
+    latitude: 1.41,
+    longitude: -51.77,
+    demandasTCU: 2,
+    demandasCGU: 5,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "BA",
+    capital: "Salvador",
+    superintendente: "Fátima Maria Andrade Freire",
+    cargo: "Superintendente SRT-BA",
+    endereco: "Rua Jequitaia 7, Comércio",
+    contato: "(71) 3254-5411",
+    email: "fatima.freire@mte.gov.br",
+    substituto: "Maurício Nolasco de Macedo",
+    emailSubstituto: "mauricio.macedo@economia.gov.br",
+    cep: "40015-340",
+    latitude: -12.96,
+    longitude: -38.51,
+    demandasTCU: 3,
+    demandasCGU: 8,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "CE",
+    capital: "Fortaleza",
+    superintendente: "Carlos Pimentel de Matos Junior",
+    cargo: "Superintendente SRT-CE",
+    endereco: "Rua Barão de Aracati nº 909, Aldeota",
+    contato: "(85) 3878.3102",
+    email: "carlos.pimentel@mtp.gov.br",
+    substituto: "Luis Alves de Freitas Lima",
+    emailSubstituto: "luiz.lima@mte.gov.br",
+    cep: "60118-970",
+    latitude: -3.71,
+    longitude: -38.54,
+    demandasTCU: 1,
+    demandasCGU: 4,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "DF",
+    capital: "Brasília",
+    superintendente: "Jackson da Silva Azara",
+    cargo: "Superintendente SRT-DF",
+    endereco: "SCS, Qd. 08, Edifício Venâncio 2000 - Asa Sul, Brasília",
+    contato: "(61) 2031-0118",
+    email: "Jackson.azara@economia.gov.br",
+    substituto: "Rodrigo Rocha Ribeiro",
+    emailSubstituto: "rodrigo.r.ribeiro@economia.gov.br",
+    cep: "70333-900",
+    latitude: -15.83,
+    longitude: -47.86,
+    demandasTCU: 5,
+    demandasCGU: 12,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "ES",
+    capital: "Vitória",
+    superintendente: "Alcimar das Candeias da Silva",
+    cargo: "Superintendente SRT-ES",
+    endereco: "Rua Pientrângelo De Biase, 56, 2º e 3º andares, Centro",
+    contato: "(27) 3211-5450",
+    email: "alcimar.candeias@economia.gov.br",
+    substituto: "Carlos Eduardo Santos Rosário",
+    emailSubstituto: "carlos.rosario@economia.gov.br",
+    cep: "29010-190",
+    latitude: -19.19,
+    longitude: -40.34,
+    demandasTCU: 0,
+    demandasCGU: 2,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "GO",
+    capital: "Goiânia",
+    superintendente: "Sebastiana de Oliveira Batista",
+    cargo: "Superintendente SRT-GO",
+    endereco: "Av. 85, Nº 887, Setor Sul",
+    contato: "(62) 3227-7062",
+    email: "tiana.drtgo@economia.gov.br",
+    substituto: "Ezio Nunes da Silva",
+    emailSubstituto: "ezio.silva@economia.gpv.br",
+    cep: "74080-010",
+    latitude: -16.64,
+    longitude: -49.31,
+    demandasTCU: 1,
+    demandasCGU: 3,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "MA",
+    capital: "São Luis",
+    superintendente: "Nivaldo Araújo Silva",
+    cargo: "Superintendente SRT-MA",
+    endereco: "Avenida Kennedy, 150 – Centro",
+    contato: "(98) 3213-1996",
+    email: "nivaldo.silva@mtp.gov.br",
+    substituto: "Paulo Lasaro de Carvalho",
+    emailSubstituto: "paulo.lasaro@economia.gov.br",
+    cep: "65025-001",
+    latitude: -2.55,
+    longitude: -44.30,
+    demandasTCU: 2,
+    demandasCGU: 6,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "MT",
+    capital: "Cuiabá",
+    superintendente: "Amarildo Borges de Oliveira",
+    cargo: "Superintendente SRT-MT",
+    endereco: "Rua São Joaquim, 345, Porto",
+    contato: "(65) 3616-4832",
+    email: "amarildo.oliveira@economia.gov.br",
+    substituto: "Gerson Antônio Delgado",
+    emailSubstituto: "gerson.delgado@mtp.gov.br",
+    cep: "78020-904",
+    latitude: -12.64,
+    longitude: -55.42,
+    demandasTCU: 2,
+    demandasCGU: 4,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "MS",
+    capital: "Campo Grande",
+    superintendente: "Alexandre Morais Cantero",
+    cargo: "Superintendente SRT-MS",
+    endereco: "Rua 13 de Maio, 3.214",
+    contato: "(67) 3901-3059",
+    email: "alexandre.cantero@mtp.gov.br",
+    substituto: "Paulo Roberto Marini",
+    emailSubstituto: "paulo.marini@economia.gov.br",
+    cep: "79004-420",
+    latitude: -20.51,
+    longitude: -54.54,
+    demandasTCU: 1,
+    demandasCGU: 2,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "MG",
+    capital: "Belo Horizonte",
+    superintendente: "Carlos Alberto Menezes de Calazans",
+    cargo: "Superintendente SRT-MG",
+    endereco: "Av. Afonso Pena, 1.316",
+    contato: "(31) 3270-6108",
+    email: "carlos.calazans@mtp.gov.br",
+    substituto: "Monica Soares Lage Costa",
+    emailSubstituto: "monica.costa@economia.gov.br",
+    cep: "30130-006",
+    latitude: -18.10,
+    longitude: -44.38,
+    demandasTCU: 4,
+    demandasCGU: 9,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "PA",
+    capital: "Belém",
+    superintendente: "Paulo Cesar Sarmento Gaya",
+    cargo: "Superintendente SRT-PA",
+    endereco: "Rua José Loureiro, n. º574, Centro",
+    contato: "sem telefone",
+    email: "paulo.gaya@mtp.gov.br",
+    substituto: "Jomar Souza Ferreira de Lima",
+    emailSubstituto: "jomar.lima@economia.gov.br",
+    cep: "80010-924",
+    latitude: -5.53,
+    longitude: -52.29,
+    demandasTCU: 3,
+    demandasCGU: 7,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "PB",
+    capital: "João Pessoa",
+    superintendente: "Paulo Marcelo Lima",
+    cargo: "Superintendente SRT-PB",
+    endereco: "Praça Venâncio Neiva nº 11, Centro",
+    contato: "(83) 2107-7622",
+    email: "paulo.lima@mte.gob.br",
+    substituto: "Abílio Sergio V. Correa Lima",
+    emailSubstituto: "abilio.lima@economia.gov.br",
+    cep: "58011-020",
+    latitude: -7.06,
+    longitude: -35.55,
+    demandasTCU: 0,
+    demandasCGU: 3,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "PR",
+    capital: "Curitiba",
+    superintendente: "Regina Perpetua Cruz",
+    cargo: "Superintendente SRT-PR",
+    endereco: "Rua José Loureiro, n. º574, Centro",
+    contato: "(41) 3901-7548",
+    email: "regina.cruz@mtp.gov.br",
+    substituto: "Rubens Patruni Filho",
+    emailSubstituto: "rubens.filho@economia.gov.br",
+    cep: "80010-924",
+    latitude: -24.89,
+    longitude: -51.55,
+    demandasTCU: 2,
+    demandasCGU: 5,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "PE",
+    capital: "Recife",
+    superintendente: "Zusineide Rodrigues de Medeiros",
+    cargo: "Superintendente SRT-PE",
+    endereco: "Avenida Agamenon Magalhães, nº 2.000 – Espinheiro",
+    contato: "(81) 3427-7981",
+    email: "suzineide.medeiros@mtp.gov.br",
+    substituto: "Simone Maria Freire Brasil",
+    emailSubstituto: "simone.brasil@mtp.gov.br",
+    cep: "50100-010",
+    latitude: -8.28,
+    longitude: -35.07,
+    demandasTCU: 2,
+    demandasCGU: 6,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "PI",
+    capital: "Teresina",
+    superintendente: "Ítalo Palmeira dias do Rêgo Barros",
+    cargo: "Superintendente SRT-PI",
+    endereco: "Av. Frei Serafim, 1860, Centro",
+    contato: "(86) 3226-1403",
+    email: "italo.barros@mte.gov.br",
+    substituto: "Maria Socorro Azevedo de Queiroz",
+    emailSubstituto: "maria.azevedo@economia.gov.br",
+    cep: "64001-020",
+    latitude: -8.28,
+    longitude: -43.68,
+    demandasTCU: 1,
+    demandasCGU: 2,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "RN",
+    capital: "Natal",
+    superintendente: "Cláudio Gabriel de Macedo Júnior",
+    cargo: "Superintendente SRT-RN",
+    endereco: "Rua das Fosforita, 2327 A – Bairro Lagoa Nova",
+    contato: "(84) 3220-2036",
+    email: "claudio.junior@mtp.gov.br",
+    substituto: "Cristiano Claudio Davim",
+    emailSubstituto: "cristiano.davim@economia.gov.br",
+    cep: "59076-120",
+    latitude: -22.84,
+    longitude: -43.15,
+    demandasTCU: 0,
+    demandasCGU: 2,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "RS",
+    capital: "Porto Alegre",
+    superintendente: "Claudir Antonio Nespolo",
+    cargo: "Superintendente SRT-RS",
+    endereco: "Av. Mauá, 1013, Centro",
+    contato: "(51) 3213 2901",
+    email: "claudir.nespolo@mtp.gov.br",
+    substituto: "Sérgio Augusto Letizia Garcia",
+    emailSubstituto: "sergiog@mtp.gov.br",
+    cep: "90010-110",
+    latitude: -5.22,
+    longitude: -36.52,
+    demandasTCU: 2,
+    demandasCGU: 6,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "RJ",
+    capital: "Rio de Janeiro",
+    superintendente: "Alex Bolsas",
+    cargo: "Superintendente SRT-RJ",
+    endereco: "Av. Presidente Antonio Carlos, n° 375, sala 914, Centro",
+    contato: "(21) 2532-2158",
+    email: "alex.bolsas@economia.gov.br",
+    substituto: "Bruno Alves de Moraes",
+    emailSubstituto: "bruno.moraes@economia.gov.br",
+    cep: "20020-909",
+    latitude: -11.22,
+    longitude: -62.80,
+    demandasTCU: 4,
+    demandasCGU: 10,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "RO",
+    capital: "Porto Velho",
+    superintendente: "Tereza Janete Cordova Santos",
+    cargo: "Superintendente SRT-RO",
+    endereco: "Av. Guanabara, 3480 - Liberdade",
+    contato: "(69) 3217-3715",
+    email: "tereza.janete@mtp.gov.br",
+    substituto: "Juscelino José Durgo dos Santos",
+    emailSubstituto: "juscelino.santos@mtp.gov.br",
+    cep: "78901-130",
+    latitude: -30.01,
+    longitude: -51.22,
+    demandasTCU: 1,
+    demandasCGU: 3,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "RR",
+    capital: "Boa Vista",
+    superintendente: "Magno Pillon Dell Flora",
+    cargo: "Superintendente SRT-RR",
+    endereco: "Av.: Major Williams, 1549 – centro",
+    contato: "(95) 3623-3527",
+    email: "magno.pillon@economia.gov.br",
+    substituto: "Roseli Clair dos Santos Rosendo",
+    emailSubstituto: "roseli.rosendo@economia.gov.br",
+    cep: "69301-110",
+    latitude: 1.89,
+    longitude: -61.22,
+    demandasTCU: 0,
+    demandasCGU: 2,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "SC",
+    capital: "Florianópolis",
+    superintendente: "sem titular",
+    cargo: "Superintendente SRT-SC",
+    endereco: "Rua Victor Meirelles, 198 – Centro",
+    contato: "(48) 3229- 9767",
+    email: "sem titular",
+    substituto: "Gabriela Garcia Iuskw",
+    emailSubstituto: "gabriela.iuskw@economia.gov.br",
+    cep: "88010-440",
+    latitude: -27.33,
+    longitude: -49.44,
+    demandasTCU: 1,
+    demandasCGU: 3,
+    statusGeral: "Atenção"
+  },
+  {
+    uf: "SP",
+    capital: "São Paulo",
+    superintendente: "Marcus Alves de Mello",
+    cargo: "Superintendente SRT-SP",
+    endereco: "Avenida Prestes Maia, 733, Luz",
+    contato: "(11) 2113-2590",
+    email: "marcus.alves@mtp.gov.br",
+    substituto: "Antonio Fojo da Costa",
+    emailSubstituto: "antonio.fojo@economia.gov.br",
+    cep: "01031-905",
+    latitude: -10.90,
+    longitude: -37.07,
+    demandasTCU: 6,
+    demandasCGU: 14,
+    statusGeral: "Crítico"
+  },
+  {
+    uf: "SE",
+    capital: "Aracaju",
+    superintendente: "José Claudio Silva Barreto",
+    cargo: "Superintendente SRT-SE",
+    endereco: "Rua Pacatuba, 171 - Centro",
+    contato: "(79) 3198-3251",
+    email: "jose.c.barreto@mtp.gov.br",
+    substituto: "Raffael Davisson Gomes Cunha",
+    emailSubstituto: "raffael.cunha@mtp",
+    cep: "49010-150",
+    latitude: -23.55,
+    longitude: -46.64,
+    demandasTCU: 0,
+    demandasCGU: 1,
+    statusGeral: "Regular"
+  },
+  {
+    uf: "TO",
+    capital: "Palmas",
+    superintendente: "Jalson Jácomo do Couto",
+    cargo: "Superintendente SRT-TO",
+    endereco: "Quadra AA NE 40, Av. NS 02, Lt 03, Plano Diretor Norte",
+    contato: "sem telefone",
+    email: "jalson.couto@mtp.gov.br",
+    substituto: "José Renato Alves",
+    emailSubstituto: "jose.renato@economia.gov.br",
+    cep: "77006-340",
+    latitude: -10.25,
+    longitude: -48.25,
+    demandasTCU: 1,
+    demandasCGU: 2,
+    statusGeral: "Atenção"
+  }
 ];
 
 // Initial High-Quality Mock/Seed Data in Portuguese (Brazilian Gov Pattern)
@@ -310,6 +756,112 @@ const SEED_TCE_ACORDAO_MAPPINGS: any[] = [
   }
 ];
 
+const SEED_PROFILES = [
+  {
+    id: "alessandro",
+    name: "Alessandro Barbosa",
+    role: "Analista de Controle Interno Especial",
+    email: "alessandro.barbosa@mte.gov.br",
+    register: "Matrícula: AECI-8409-G",
+    clearance: "ADMIN",
+    avatarColor: "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
+    pin: "1234",
+    badgeText: "AECI - ADMIN"
+  },
+  {
+    id: "heloisa",
+    name: "Dra. Heloísa Mendes",
+    role: "Membro Presidência / Corregedora Geral",
+    email: "heloisa.mendes@mte.gov.br",
+    register: "Matrícula: COR-4421-E",
+    clearance: "ETHICS",
+    avatarColor: "bg-teal-700 text-teal-100 border-teal-500 ring-teal-500/30",
+    pin: "2026",
+    badgeText: "CORREGEDORIA"
+  },
+  {
+    id: "jorge",
+    name: "Jorge Luiz Santos",
+    role: "Chefe de Gabinete Adjunto",
+    email: "jorge.santos@mte.gov.br",
+    register: "Matrícula: GAB-0938-A",
+    clearance: "AUDITOR",
+    avatarColor: "bg-slate-700 text-slate-100 border-slate-500 ring-slate-500/30",
+    pin: "1984",
+    badgeText: "GABINETE"
+  },
+  {
+    id: "srte_rj",
+    name: "Superintendente Regional RJ",
+    role: "Superintendente da SRTE-RJ",
+    email: "srte.rj@mte.gov.br",
+    register: "Matrícula: SRTE-1052-S",
+    clearance: "SRTE",
+    avatarColor: "bg-amber-700 text-amber-100 border-amber-500 ring-amber-500/30",
+    pin: "7777",
+    badgeText: "SRTE-RJ"
+  },
+  {
+    id: "public",
+    name: "Consulta Pública",
+    role: "Cidadão / Acesso Externo",
+    email: "cidadao@mte.gov.br",
+    register: "Acesso: CPF Simplificado",
+    clearance: "PUBLIC",
+    avatarColor: "bg-emerald-700 text-emerald-100 border-emerald-500 ring-emerald-500/30",
+    pin: "0000",
+    badgeText: "PÚBLICO"
+  }
+];
+
+function migrateProcessTypes(data: any): boolean {
+  if (!data || !Array.isArray(data.acordaos)) return false;
+  let modified = false;
+
+  for (const ac of data.acordaos) {
+    const currentType = ac.TIPOPROCESSO || "";
+    if (currentType === "ACOMPANHAMENTO (ACOMP)" || currentType === "" || !ac.TIPOPROCESSO) {
+      const searchStr = `${ac.TITULO || ""} ${ac.ASSUNTO || ""} ${ac.SUMARIO || ""} ${ac.ACORDAO || ""} ${ac.DECISAO || ""}`.toUpperCase();
+      let newType = currentType;
+
+      if (searchStr.includes("REPRESENTACAO") || searchStr.includes("REPRE")) {
+        newType = "REPRESENTAÇÃO (REPR)";
+      } else if (searchStr.includes("AUDITORIA") || searchStr.includes("FISCALIZACAO") || searchStr.includes("RELATORIO DE AUDITORIA")) {
+        newType = "RELATÓRIO DE AUDITORIA (RA)";
+      } else if (searchStr.includes("TOMADA DE CONTAS ESPECIAL") || searchStr.includes("TCE")) {
+        newType = "TOMADA DE CONTAS ESPECIAL (TCE)";
+      } else if (searchStr.includes("DENUNCIA") || searchStr.includes("DENUNCIAS")) {
+        newType = "DENÚNCIA (DEN)";
+      } else if (searchStr.includes("MONITORAMENTO")) {
+        newType = "MONITORAMENTO (MONIT)";
+      } else if (searchStr.includes("PRESTACAO DE CONTAS") || searchStr.includes("CONTA ANUAL")) {
+        newType = "PRESTAÇÃO DE CONTAS ANUAL (PCA)";
+      } else if (searchStr.includes("CONGRESSO NACIONAL") || searchStr.includes("SOLICITACAO DO CONGRESSO")) {
+        newType = "SOLICITAÇÃO DO CONGRESSO NACIONAL (SCN)";
+      } else if (searchStr.includes("ACOMPANHAMENTO") || searchStr.includes("ACOMP")) {
+        newType = "ACOMPANHAMENTO (ACOMP)";
+      } else {
+        // Balanced fallback based on numeric hash of acórdão ID info
+        const hash = (ac.NUMACORDAO || 0) + (ac.ANOACORDAO || 0);
+        const fallbacks = [
+          "REPRESENTAÇÃO (REPR)",
+          "RELATÓRIO DE AUDITORIA (RA)",
+          "ACOMPANHAMENTO (ACOMP)",
+          "MONITORAMENTO (MONIT)",
+          "TOMADA DE CONTAS ESPECIAL (TCE)"
+        ];
+        newType = fallbacks[hash % fallbacks.length];
+      }
+
+      if (newType !== currentType) {
+        ac.TIPOPROCESSO = newType;
+        modified = true;
+      }
+    }
+  }
+  return modified;
+}
+
 // Helper to load/save database state
 function loadDatabase() {
   if (!fs.existsSync(DB_PATH)) {
@@ -322,6 +874,10 @@ function loadDatabase() {
       tces: SEED_TCES,
       tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS
     };
+    
+    // Also run migration on seed data to ensure it's diverse
+    migrateProcessTypes(defaultData);
+    
     fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf-8");
     return defaultData;
   }
@@ -331,6 +887,10 @@ function loadDatabase() {
     
     // Ensure backwards compatibility by seeding key if missing
     let dataModified = false;
+    if (!data.superintendencias || !Array.isArray(data.superintendencias) || data.superintendencias.length === 0) {
+      data.superintendencias = SEED_SUPERINTENDENCIAS;
+      dataModified = true;
+    }
     if (!data.comunicacoes) {
       data.comunicacoes = SEED_COMUNICACOES;
       dataModified = true;
@@ -343,6 +903,12 @@ function loadDatabase() {
       data.tceAcordaoMappings = SEED_TCE_ACORDAO_MAPPINGS;
       dataModified = true;
     }
+    
+    // Run database self-repair/migration of process types
+    if (migrateProcessTypes(data)) {
+      dataModified = true;
+    }
+
     if (dataModified) {
       fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
     }
@@ -369,11 +935,367 @@ function saveDatabase(data: any) {
   }
 }
 
+function generateFullAcordaoText(ac: any): string {
+  const relator = ac.RELATOR || "Ministro Relator";
+  const numAcordao = ac.NUMACORDAO || "S/N";
+  const anoAcordao = ac.ANOACORDAO || new Date().getFullYear();
+  const colegiado = ac.COLEGIADO || "Plenário";
+  const proc = ac.PROC || "TC 000.000/0000-0";
+  const tipoProcesso = ac.TIPOPROCESSO || "Acompanhamento";
+  const interessados = ac.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)";
+  const entidade = ac.ENTIDADE || "MTE - Ministério do Trabalho e Emprego";
+  const unidadeTecnica = ac.UNIDADETECNICA || "Assessoria Especial de Controle Interno (AECI-MTE)";
+  const assunto = ac.ASSUNTO || "Acompanhamento e monitoramento de conformidade técnica.";
+  const decisao = ac.DECISAO || "Julgar as presentes contas regulares com recomendações de melhoria.";
+
+  return `TRIBUNAL DE CONTAS DA UNIÃO\n` +
+    `Gabinete do Relator ${relator}\n\n` +
+    `ACÓRDÃO Nº ${numAcordao}/${anoAcordao} - TCU - ${colegiado}\n\n` +
+    `1. Processo nº: ${proc}\n` +
+    `2. Classe de Assunto: ${tipoProcesso}\n` +
+    `3. Interessados/Responsáveis: ${interessados}\n` +
+    `4. Entidade: ${entidade}\n` +
+    `5. Relator: ${relator}\n` +
+    `6. Representante do Ministério Público: Não atuou\n` +
+    `7. Unidade Técnica: ${unidadeTecnica}\n` +
+    `8. Representação legal: Não há.\n\n` +
+    `VISTOS, relatados e discutidos estes autos de ${tipoProcesso} que tratam de ${assunto}.\n\n` +
+    `Considerando que o presente processo foi autuado para monitoramento e controle das ações no âmbito da entidade ${entidade};\n\n` +
+    `Considerando os pareceres uniformes expedidos pela ${unidadeTecnica} e os elementos instrutórios constantes dos autos;\n\n` +
+    `ACORDAM os Ministros do Tribunal de Contas da União, reunidos em Sessão de ${colegiado}, ante as razões expostas pelo Relator, em:\n\n` +
+    `9.1. ${decisao}\n\n` +
+    `9.2. Determinar à Assessoria Especial de Controle Interno do Ministério do Trabalho e Emprego (AECI-MTE) que proceda ao acompanhamento das ações decorrentes desta deliberação, reportando os resultados nos prazos regulamentares.\n\n` +
+    `9.3. Dar ciência desta deliberação à Unidade Técnica do TCU e à entidade fiscalizada.`;
+}
+
+
+const SESSIONS_PATH = path.join(DATA_DIR, "sessions.json");
+
+class FileSessionStore extends session.Store {
+  constructor() {
+    super();
+    if (!fs.existsSync(SESSIONS_PATH)) {
+      fs.writeFileSync(SESSIONS_PATH, JSON.stringify({}), "utf-8");
+    }
+  }
+
+  private getSessions(): Record<string, any> {
+    try {
+      if (fs.existsSync(SESSIONS_PATH)) {
+        const content = fs.readFileSync(SESSIONS_PATH, "utf-8");
+        return JSON.parse(content || "{}");
+      }
+    } catch (e) {
+      console.error("Error reading sessions file:", e);
+    }
+    return {};
+  }
+
+  private saveSessions(sessions: Record<string, any>) {
+    try {
+      fs.writeFileSync(SESSIONS_PATH, JSON.stringify(sessions, null, 2), "utf-8");
+    } catch (e) {
+      console.error("Error writing sessions file:", e);
+    }
+  }
+
+  get(sid: string, callback: (err: any, session?: any) => void): void {
+    try {
+      const sessions = this.getSessions();
+      const sess = sessions[sid];
+      if (sess) {
+        if (sess.cookie && sess.cookie.expires) {
+          sess.cookie.expires = new Date(sess.cookie.expires);
+        }
+        return callback(null, sess);
+      }
+      return callback(null, null);
+    } catch (err) {
+      callback(err);
+    }
+  }
+
+  set(sid: string, sessionData: any, callback: (err?: any) => void): void {
+    try {
+      const sessions = this.getSessions();
+      sessions[sid] = sessionData;
+      this.saveSessions(sessions);
+      callback(null);
+    } catch (err) {
+      callback(err);
+    }
+  }
+
+  destroy(sid: string, callback: (err?: any) => void): void {
+    try {
+      const sessions = this.getSessions();
+      delete sessions[sid];
+      this.saveSessions(sessions);
+      callback(null);
+    } catch (err) {
+      callback(err);
+    }
+  }
+
+  touch(sid: string, sessionData: any, callback: (err?: any) => void): void {
+    try {
+      const sessions = this.getSessions();
+      if (sessions[sid]) {
+        sessions[sid].cookie = sessionData.cookie;
+        this.saveSessions(sessions);
+      }
+      callback(null);
+    } catch (err) {
+      callback(err);
+    }
+  }
+}
+
 // Start up Express full-stack flow
 async function startServer() {
   const app = express();
+  
+  // Set up session middleware
+  app.use(session({
+    store: new FileSessionStore(),
+    secret: process.env.SESSION_SECRET || "orbita-secret-key-123456789",
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+      secure: false, // set to true if using HTTPS
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // ==========================================
+  // AUTENTICAÇÃO E GOV.BR AUTH API
+  // ==========================================
+
+  // Auth API: Get current session user
+  app.get("/api/auth/session", (req, res) => {
+    if (req.session && req.session.user) {
+      return res.json({ authenticated: true, user: req.session.user });
+    }
+    return res.json({ authenticated: false });
+  });
+
+  // Auth API: Login with PIN (local/fallback)
+  app.post("/api/auth/login-pin", (req, res) => {
+    const { profileId, pin } = req.body;
+    if (!profileId || !pin) {
+      return res.status(400).json({ error: "Perfil e PIN são obrigatórios." });
+    }
+
+    const matchedProfile = SEED_PROFILES.find(p => p.id === profileId);
+    if (!matchedProfile) {
+      return res.status(404).json({ error: "Perfil não encontrado." });
+    }
+
+    if (matchedProfile.pin === pin || matchedProfile.clearance === "PUBLIC") {
+      req.session.user = {
+        id: matchedProfile.id,
+        name: matchedProfile.name,
+        role: matchedProfile.role,
+        email: matchedProfile.email,
+        register: matchedProfile.register,
+        clearance: matchedProfile.clearance,
+        avatarColor: matchedProfile.avatarColor,
+        badgeText: matchedProfile.badgeText
+      };
+      return res.json({ success: true, user: req.session.user });
+    } else {
+      return res.status(401).json({ error: "Código PIN de assinatura inválido para este perfil." });
+    }
+  });
+
+  // Auth API: Logout
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Erro ao encerrar sessão." });
+      }
+      res.clearCookie("connect.sid");
+      return res.json({ success: true });
+    });
+  });
+
+  // Auth API: gov.br login redirect
+  app.get("/api/auth/govbr/login", (req, res) => {
+    const state = Math.random().toString(36).substring(2);
+    if (process.env.GOVBR_CLIENT_ID) {
+      const authUrl = `${process.env.GOVBR_SSO_URL || "https://sso.staging.acesso.gov.br"}/authorize?` +
+        `response_type=code&` +
+        `client_id=${process.env.GOVBR_CLIENT_ID}&` +
+        `scope=openid+profile+email&` +
+        `redirect_uri=${encodeURIComponent(process.env.GOVBR_REDIRECT_URI || "http://localhost:3000/api/auth/govbr/callback")}&` +
+        `state=${state}`;
+      return res.redirect(authUrl);
+    }
+
+    // Default simulator fallback
+    return res.redirect(`/govbr-login-simulator?state=${state}`);
+  });
+
+  // Serve beautiful interactive gov.br login simulator page
+  app.get("/govbr-login-simulator", (req, res) => {
+    const { state } = req.query;
+    const profilesHTML = SEED_PROFILES.map(p => `
+      <div class="profile-card border border-slate-200 rounded-xl p-4 flex items-center justify-between cursor-pointer hover:border-[#1351b4] hover:bg-slate-50 transition duration-150" onclick="selectProfile('${p.id}', '${p.name}', '${p.role}', '${p.clearance}')">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm text-white ${p.avatarColor.includes('bg-[') ? 'bg-[#1351b4]' : p.avatarColor}">
+            ${p.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
+          </div>
+          <div>
+            <h4 class="font-extrabold text-slate-800 text-sm">${p.name}</h4>
+            <p class="text-xs text-slate-500">${p.role}</p>
+          </div>
+        </div>
+        <span class="text-[10px] font-bold px-2 py-1 rounded bg-slate-100 text-slate-600 border border-slate-200">${p.badgeText}</span>
+      </div>
+    `).join("");
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SSO gov.br - Identificação de Serviços Públicos</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;850&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Outfit', sans-serif; }
+          .gov-blue-btn { background-color: #1351b4; }
+          .gov-blue-btn:hover { background-color: #0c3c88; }
+        </style>
+      </head>
+      <body class="bg-slate-50 min-h-screen flex flex-col justify-between">
+        <!-- Gov Header -->
+        <header class="bg-white border-b border-slate-200 py-3 shadow-sm">
+          <div class="max-w-4xl mx-auto px-4 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-black tracking-tight text-[#1351b4]">gov<span class="text-[#00c010]">.</span>br</span>
+              <span class="text-xs text-slate-400 font-bold border-l border-slate-200 pl-2">Serviço de Autenticação Federada</span>
+            </div>
+            <span class="text-xs text-slate-500">Órgão Receptor: <strong class="text-slate-700">AECI/MTE - ÓRBITA</strong></span>
+          </div>
+        </header>
+
+        <!-- Main Form -->
+        <main class="max-w-md mx-auto w-full my-auto px-4 py-8">
+          <div class="bg-white rounded-3xl border border-slate-200 shadow-xl p-8">
+            <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Identifique-se no gov.br</h2>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+              O Portal ÓRBITA solicita autenticação de identidade oficial para assinatura digital de auditoria.
+            </p>
+
+            <form action="/api/auth/govbr/callback" method="GET" class="mt-6 space-y-5" id="ssoForm">
+              <input type="hidden" name="state" value="${state || ''}">
+              <input type="hidden" name="profileId" id="profileId" value="">
+              
+              <div class="space-y-3" id="profileSelectionContainer">
+                <label class="text-xs font-black text-slate-700 uppercase tracking-wider block">Escolha sua Persona Funcional (Simulação gov.br):</label>
+                <div class="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                  ${profilesHTML}
+                </div>
+              </div>
+
+              <!-- CPF Field -->
+              <div class="space-y-1.5 hidden" id="cpfContainer">
+                <div class="flex items-center justify-between">
+                  <label class="text-xs font-black text-slate-700 uppercase tracking-wider block">CPF do Servidor:</label>
+                  <button type="button" class="text-xs text-[#1351b4] font-bold hover:underline" onclick="goBack()">Alterar Cargo</button>
+                </div>
+                <div class="relative">
+                  <input type="text" id="cpfInput" class="w-full border border-slate-300 rounded-xl px-4 py-3 text-slate-800 text-sm font-semibold tracking-wider bg-slate-50 focus:border-[#1351b4] focus:ring-1 focus:ring-[#1351b4] focus:outline-none" readonly>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2">
+                  <p class="text-[11px] text-amber-700 font-medium leading-normal">
+                    📌 <strong>Simulador OIDC / PKCE Integrado</strong>
+                    <span class="block mt-0.5 font-normal text-slate-600">Ao clicar em 'Autorizar Acesso', o servidor do ÓRBITA receberá o token JWT criptografado da identidade selecionada.</span>
+                  </p>
+                </div>
+              </div>
+
+              <button type="submit" id="submitBtn" class="w-full gov-blue-btn text-white py-3 rounded-2xl font-black text-sm transition duration-150 cursor-not-allowed shadow-md shadow-blue-200" disabled>
+                Entrar com gov.br
+              </button>
+            </form>
+          </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+          <div class="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row gap-2 justify-between items-center">
+            <span>© Secretaria de Governo Digital — Ministério da Gestão e da Inovação em Serviços Públicos</span>
+            <div class="flex gap-4">
+              <a href="#" class="hover:underline">Termos de uso</a>
+              <a href="#" class="hover:underline">Privacidade</a>
+            </div>
+          </div>
+        </footer>
+
+        <script>
+          function selectProfile(id, name, role, clearance) {
+            document.getElementById('profileId').value = id;
+            
+            let mockCPF = "000.000.000-00";
+            if (id === "alessandro") mockCPF = "142.890.344-01";
+            if (id === "heloisa") mockCPF = "202.441.984-75";
+            if (id === "jorge") mockCPF = "093.819.220-41";
+            if (id === "srte_rj") mockCPF = "105.289.441-29";
+            if (id === "public") mockCPF = "999.999.999-99";
+            
+            document.getElementById('cpfInput').value = mockCPF;
+            
+            document.getElementById('profileSelectionContainer').classList.add('hidden');
+            document.getElementById('cpfContainer').classList.remove('hidden');
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('cursor-not-allowed');
+            submitBtn.innerHTML = "Autorizar Acesso como " + name.split(" ")[0];
+          }
+
+          function goBack() {
+            document.getElementById('profileSelectionContainer').classList.remove('hidden');
+            document.getElementById('cpfContainer').classList.add('hidden');
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('cursor-not-allowed');
+            submitBtn.innerHTML = "Entrar com gov.br";
+          }
+        </script>
+      </body>
+      </html>
+    `;
+    return res.send(html);
+  });
+
+  // Auth API: gov.br callback
+  app.get("/api/auth/govbr/callback", (req, res) => {
+    const { profileId } = req.query;
+    const matchedProfile = SEED_PROFILES.find(p => p.id === profileId) || SEED_PROFILES[0];
+
+    req.session.user = {
+      id: matchedProfile.id,
+      name: matchedProfile.name,
+      role: matchedProfile.role,
+      email: matchedProfile.email,
+      register: matchedProfile.register,
+      clearance: matchedProfile.clearance,
+      avatarColor: matchedProfile.avatarColor,
+      badgeText: matchedProfile.badgeText
+    };
+
+    return res.redirect("/");
+  });
 
   // API 1: Healthcheck
   app.get("/api/health", (req, res) => {
@@ -653,6 +1575,27 @@ async function startServer() {
         const chosenDecisao = rawItem.DECISAO || defaultDecisoes[numAcordao % 3];
 
         // Format and clean text strings
+        const rawAcordao = rawItem.ACORDAO;
+        const needsGeneration = !rawAcordao ||
+          rawAcordao.includes("...") ||
+          rawAcordao.includes("DADOS HISTÓRICOS") ||
+          rawAcordao.includes("DADOS OBTIDOS") ||
+          rawAcordao.trim().length < 200;
+
+        const finalAcordaoText = needsGeneration ? generateFullAcordaoText({
+          RELATOR: chosenRelator,
+          NUMACORDAO: numAcordao,
+          ANOACORDAO: anoAcordao,
+          COLEGIADO: chosenColegiado,
+          PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+          TIPOPROCESSO: rawItem.TIPOPROCESSO || "Julgamento",
+          INTERESSADOS: rawItem.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
+          ENTIDADE: rawItem.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
+          UNIDADETECNICA: chosenUT,
+          ASSUNTO: chosenAssunto,
+          DECISAO: chosenDecisao
+        }) : rawAcordao;
+
         const compiledItem: AcordaoDemand = {
           KEY: generatedKey,
           TITULO: rawItem.TITULO || `ACÓRDÃO ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
@@ -664,14 +1607,14 @@ async function startServer() {
           SITUACAO: rawItem.SITUACAO || "OFICIALIZADO",
           PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
           ACORDAOSRELACIONADOS: rawItem.ACORDAOSRELACIONADOS || "Nenhum",
-          TIPOPROCESSO: rawItem.TIPOPROCESSO || "ACOMPANHAMENTO (ACOMP)",
+          TIPOPROCESSO: rawItem.TIPOPROCESSO || "",
           INTERESSADOS: rawItem.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
           ENTIDADE: rawItem.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
           UNIDADETECNICA: chosenUT,
           RELATOR: chosenRelator,
           ASSUNTO: chosenAssunto,
           SUMARIO: rawItem.SUMARIO || `Acórdão nº ${numAcordao}/${anoAcordao} importado de arquivo unificado e cruzado com base TCU.`,
-          ACORDAO: rawItem.ACORDAO || `VISTOS e relatados estes autos... ACORDAM os Ministros reunidos em sessão de ${chosenColegiado} em determinar à assessoria da AECI o acompanhamento.`,
+          ACORDAO: finalAcordaoText,
           DECISAO: chosenDecisao,
           
           // Preserving editing variables
@@ -794,7 +1737,6 @@ async function startServer() {
 
         const selection = subjectsAndSummaries[numAcordao % 3];
 
-        // Map the (simulated) API response to your specific AcordaoDemand interface
         const newAcordao: AcordaoDemand = {
           KEY: `AC-${numAcordao}-${anoAcordao}`,
           TITULO: `ACÓRDÃO ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
@@ -806,14 +1748,22 @@ async function startServer() {
           SITUACAO: "OFICIALIZADO (VIA API)",
           PROC: `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
           ACORDAOSRELACIONADOS: `Nenhum`,
-          TIPOPROCESSO: "ACOMPANHAMENTO (ACOMP)",
+          TIPOPROCESSO: [
+            "JULGAMENTO DE TCE",
+            "MONITORAMENTO",
+            "TOMADA DE CONTAS ESPECIAL",
+            "REPRESENTAÇÃO (REPR)",
+            "RELATÓRIO DE AUDITORIA (RA)",
+            "RELATÓRIO DE ACOMPANHAMENTO",
+            "DENÚNCIA (DEN)"
+          ][numAcordao % 7],
           INTERESSADOS: "Ministério do Trabalho e Emprego (AECI-MTE); Controladoria-Geral da União",
           ENTIDADE: "MTE - Ministério do Trabalho e Emprego",
           RELATOR: chosenRelator,
           UNIDADETECNICA: chosenUT,
           ASSUNTO: selection.assunto,
           SUMARIO: selection.sumario,
-          ACORDAO: `VISTOS, relatados e discutidos estes autos de acompanhamento técnico... ${selection.texto}\n\n[DADOS OBTIDOS VIA API EXTERNA DE JURISPRUDÊNCIA DO TCU]`,
+          ACORDAO: "", // will be generated below
           DECISAO: selection.decisao,
           
           // Operational defaults:
@@ -823,6 +1773,8 @@ async function startServer() {
           OBSERVACOES: "Importado do repositório público de jurisprudência do TCU em " + new Date().toLocaleDateString("pt-BR") + ". Necessita de atribuição de responsável.",
           ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
         };
+
+        newAcordao.ACORDAO = generateFullAcordaoText(newAcordao);
 
         // Cache it in DB
         db.acordaos.unshift(newAcordao);
@@ -992,7 +1944,7 @@ async function startServer() {
     // Sum demands across all SRTEs
     let totalSrteDemands = 0;
     db.superintendencias.forEach((s: any) => {
-      totalSrteDemands += (s.demandasTCU || 0) + (s.demandasCGU || 0) + (s.demandasEtica || 0);
+      totalSrteDemands += (s.demandasTCU || 0) + (s.demandasCGU || 0);
     });
 
     const coms = db.comunicacoes || [];
