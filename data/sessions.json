@@ -1,1 +1,21 @@
-{}
+{
+  "yLteRoyxLFxguiRAP8ny4-CN_Rvnz5IX": {
+    "cookie": {
+      "originalMaxAge": 86400000,
+      "expires": "2026-06-25T13:16:07.178Z",
+      "secure": false,
+      "httpOnly": true,
+      "path": "/"
+    },
+    "user": {
+      "id": "alessandro",
+      "name": "Alessandro Barbosa",
+      "role": "Analista de Controle Interno Especial",
+      "email": "alessandro.barbosa@mte.gov.br",
+      "register": "Matrícula: AECI-8409-G",
+      "clearance": "ADMIN",
+      "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
+      "badgeText": "AECI - ADMIN"
+    }
+  }
+}
