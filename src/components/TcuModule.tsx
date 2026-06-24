@@ -563,7 +563,13 @@ export default function TcuModule({
     const headerLine = firstLineEnd > 0 ? csvText.substring(0, firstLineEnd) : csvText;
     const semiCount = (headerLine.match(/;/g) || []).length;
     const commaCount = (headerLine.match(/,/g) || []).length;
-    const delimiter = semiCount > commaCount ? ";" : ",";
+    const tabCount = (headerLine.match(/\t/g) || []).length;
+    let delimiter = ",";
+    if (semiCount > commaCount && semiCount > tabCount) {
+      delimiter = ";";
+    } else if (tabCount > commaCount && tabCount > semiCount) {
+      delimiter = "\t";
+    };
 
     const allRows = parseCSVRobust(csvText, delimiter);
     const items: ComunicacaoDemand[] = [];
@@ -637,7 +643,13 @@ export default function TcuModule({
     }
     const semicolonCount = (headerText.match(/;/g) || []).length;
     const commaCount = (headerText.match(/,/g) || []).length;
-    const delimiter = semicolonCount >= commaCount ? ";" : ",";
+    const tabCount = (headerText.match(/\t/g) || []).length;
+    let delimiter = ",";
+    if (semicolonCount > commaCount && semicolonCount > tabCount) {
+      delimiter = ";";
+    } else if (tabCount > commaCount && tabCount > semicolonCount) {
+      delimiter = "\t";
+    };
 
     const allRows = parseCSVRobust(csvText, delimiter);
     const items: TceDemand[] = [];
@@ -751,7 +763,13 @@ export default function TcuModule({
     }
     const semicolonCount = (headerText.match(/;/g) || []).length;
     const commaCount = (headerText.match(/,/g) || []).length;
-    const delimiter = semicolonCount >= commaCount ? ";" : ",";
+    const tabCount = (headerText.match(/\t/g) || []).length;
+    let delimiter = ",";
+    if (semicolonCount > commaCount && semicolonCount > tabCount) {
+      delimiter = ";";
+    } else if (tabCount > commaCount && tabCount > semicolonCount) {
+      delimiter = "\t";
+    };
 
     const allRows = parseCSVRobust(csvText, delimiter);
     const items: TceAcordaoMapping[] = [];
@@ -1264,9 +1282,16 @@ export default function TcuModule({
   };
 
   const findHeaderIdx = (normalizedHeaders: string[], ...candidates: string[]): number => {
+    // 1. Try exact matches first
     for (const candidate of candidates) {
       const cleanCandidate = normalizeHeaderName(candidate);
-      const idx = normalizedHeaders.findIndex(h => h === cleanCandidate || h.includes(cleanCandidate));
+      const idx = normalizedHeaders.findIndex(h => h === cleanCandidate);
+      if (idx !== -1) return idx;
+    }
+    // 2. Try partial/includes matches only as fallback
+    for (const candidate of candidates) {
+      const cleanCandidate = normalizeHeaderName(candidate);
+      const idx = normalizedHeaders.findIndex(h => h.includes(cleanCandidate));
       if (idx !== -1) return idx;
     }
     return -1;
@@ -1281,7 +1306,13 @@ export default function TcuModule({
     const headerLine = firstLineEnd > 0 ? csvText.substring(0, firstLineEnd) : csvText;
     const semiCount = (headerLine.match(/;/g) || []).length;
     const commaCount = (headerLine.match(/,/g) || []).length;
-    const delimiter = semiCount > commaCount ? ";" : ",";
+    const tabCount = (headerLine.match(/\t/g) || []).length;
+    let delimiter = ",";
+    if (semiCount > commaCount && semiCount > tabCount) {
+      delimiter = ";";
+    } else if (tabCount > commaCount && tabCount > semiCount) {
+      delimiter = "\t";
+    };
 
     // Parse entire CSV with multiline support
     const allRows = parseCSVRobust(csvText, delimiter);
@@ -1305,15 +1336,19 @@ export default function TcuModule({
     const idxEntidade = findHeaderIdx(normalizedHeaders, "ENTIDADE");
     const idxUT = findHeaderIdx(normalizedHeaders, "UNIDADETECNICA", "UNIDADE TECNICA");
     const idxAssunto = findHeaderIdx(normalizedHeaders, "ASSUNTO");
-    const idxAcordaoDoc = findHeaderIdx(normalizedHeaders, "ACORDAO");
+    const idxAcordaoDoc = findHeaderIdx(normalizedHeaders, "INTEIROTEOR", "INTEIRO TEOR", "TEXTO", "ACORDAO");
     const idxDecisaoDoc = findHeaderIdx(normalizedHeaders, "DECISAO");
     const idxInteressados = findHeaderIdx(normalizedHeaders, "INTERESSADOS", "INTERESSADO");
     const idxSumario = findHeaderIdx(normalizedHeaders, "SUMARIO", "SUMÁRIO");
     const idxTitulo = findHeaderIdx(normalizedHeaders, "TITULO");
 
-    // If both NUMACORDAO and ANOACORDAO indices are missing, return empty to fallback to simple code list
+    // If both NUMACORDAO and ANOACORDAO indices are missing, look for a reference/code column (like 'Acórdão' containing '7321/2025')
+    let idxRef = -1;
     if (idxNum === -1 || idxAno === -1) {
-      return [];
+      idxRef = findHeaderIdx(normalizedHeaders, "ACORDAO", "ACORDAOREF", "REFERENCIA", "TITULO", "KEY", "CODIGO");
+      if (idxRef === -1) {
+        return [];
+      }
     }
 
     const items: any[] = [];
@@ -1325,12 +1360,26 @@ export default function TcuModule({
       return val || undefined;
     };
 
+    const maxIdxToCheck = Math.max(idxNum, idxAno, idxRef);
+
     for (let i = 1; i < allRows.length; i++) {
       const row = allRows[i];
-      if (row.length < Math.max(idxNum, idxAno) + 1) continue;
+      if (row.length < maxIdxToCheck + 1) continue;
 
-      const numAcordaoVal = parseInt(getField(row, idxNum)?.replace(/[^\d]/g, "") || "0");
-      const anoAcordaoVal = parseInt(getField(row, idxAno)?.replace(/[^\d]/g, "") || "0");
+      let numAcordaoVal = 0;
+      let anoAcordaoVal = 0;
+
+      if (idxNum !== -1 && idxAno !== -1) {
+        numAcordaoVal = parseInt(getField(row, idxNum)?.replace(/[^\d]/g, "") || "0");
+        anoAcordaoVal = parseInt(getField(row, idxAno)?.replace(/[^\d]/g, "") || "0");
+      } else if (idxRef !== -1) {
+        const refVal = getField(row, idxRef) || "";
+        const match = refVal.match(/(\d+)[\/\-](\d{4})/);
+        if (match) {
+          numAcordaoVal = parseInt(match[1]);
+          anoAcordaoVal = parseInt(match[2]);
+        }
+      }
 
       if (!numAcordaoVal || !anoAcordaoVal) continue;
 
