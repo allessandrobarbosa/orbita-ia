@@ -26,8 +26,9 @@ declare module 'express-session' {
 }
 
 // Standard types
-import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand } from "./src/types";
+import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand, CguDemand, CguPublishedReport } from "./src/types";
 import { SEED_COMUNICACOES } from "./src/data/seed_comunicacoes";
+import { SEED_CGU } from "./src/data/seed_cgu";
 
 // DB Path Definition
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -904,7 +905,9 @@ function loadDatabase() {
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
       tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
-      users: SEED_PROFILES
+      users: SEED_PROFILES,
+      cgu: SEED_CGU,
+      cguReports: []
     };
 
     // Also run migration on seed data to ensure it's diverse
@@ -937,6 +940,14 @@ function loadDatabase() {
     }
     if (!data.users) {
       data.users = SEED_PROFILES;
+      dataModified = true;
+    }
+    if (!data.cgu) {
+      data.cgu = SEED_CGU;
+      dataModified = true;
+    }
+    if (!data.cguReports) {
+      data.cguReports = [];
       dataModified = true;
     }
 
@@ -1879,6 +1890,145 @@ async function startServer() {
       updatedCount,
       totalCount: db.tceAcordaoMappings.length,
       items: db.tceAcordaoMappings
+    });
+  });
+
+  // API 2.9: CGU Demands - GET, CRUD & IMPORT
+  app.get("/api/cgu", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.cgu || []);
+  });
+
+  app.post("/api/cgu/update", (req, res) => {
+    const db = loadDatabase();
+    const updated = req.body as CguDemand;
+    if (!db.cgu) db.cgu = [];
+    const index = db.cgu.findIndex((x: any) => x.idTarefa === updated.idTarefa);
+
+    if (index >= 0) {
+      db.cgu[index] = {
+        ...db.cgu[index],
+        ...updated,
+        ultimaAtualizacao: new Date().toLocaleString("pt-BR")
+      };
+      saveDatabase(db);
+      res.json({ success: true, item: db.cgu[index] });
+    } else {
+      res.status(404).json({ error: "Demanda CGU não encontrada." });
+    }
+  });
+
+  app.delete("/api/cgu/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    if (!db.cgu) db.cgu = [];
+    db.cgu = db.cgu.filter((x: any) => x.idTarefa !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  app.post("/api/cgu/import", (req, res) => {
+    const db = loadDatabase();
+    const { items } = req.body; // array of CguDemand
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: "Formato de importação inválido para CGU." });
+    }
+
+    if (!db.cgu) db.cgu = [];
+
+    let importedCount = 0;
+    let updatedCount = 0;
+
+    for (const item of items) {
+      const idx = db.cgu.findIndex((x: any) => x.idTarefa === item.idTarefa);
+      if (idx >= 0) {
+        db.cgu[idx] = {
+          ...db.cgu[idx],
+          ...item,
+          ultimaAtualizacao: new Date().toLocaleString("pt-BR")
+        };
+        updatedCount++;
+      } else {
+        db.cgu.unshift({
+          ...item,
+          ultimaAtualizacao: new Date().toLocaleString("pt-BR")
+        });
+        importedCount++;
+      }
+    }
+
+    saveDatabase(db);
+    res.json({
+      success: true,
+      importedCount,
+      updatedCount,
+      totalCount: db.cgu.length,
+      items: db.cgu
+    });
+  });
+
+  // API 2.9.5: CGU Published Reports - GET, CRUD & IMPORT
+  app.get("/api/cgu/reports", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.cguReports || []);
+  });
+
+  app.delete("/api/cgu/reports/:idTarefa", (req, res) => {
+    const db = loadDatabase();
+    const idTarefa = req.params.idTarefa;
+    if (!db.cguReports) db.cguReports = [];
+    db.cguReports = db.cguReports.filter((x: any) => x.idTarefa !== idTarefa);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  app.post("/api/cgu/reports/import", (req, res) => {
+    const db = loadDatabase();
+    const { items } = req.body; // array of CguPublishedReport
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: "Formato de importação inválido para relatórios da CGU." });
+    }
+
+    if (!db.cguReports) db.cguReports = [];
+
+    // Rigorous security filter: only import reports belonging to MTE and discard non-MTE entities via a blacklist
+    const blacklist = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
+    const filteredItems = items.filter((item: any) => {
+      const unit = ((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase();
+      const sup = ((item.nomeOrgaoSuperior || "") + " " + (item.siglaOrgaoSuperior || "")).toLowerCase();
+      const hasBlacklistInUnit = blacklist.some(b => unit.includes(b));
+      const hasMteInUnitOrSup = unit.includes("mte") || unit.includes("mtp") || unit.includes("trabalho") || unit.includes("emprego") || sup.includes("mte") || sup.includes("mtp") || sup.includes("trabalho") || sup.includes("emprego");
+      return hasMteInUnitOrSup && !hasBlacklistInUnit;
+    });
+
+    let importedCount = 0;
+    let updatedCount = 0;
+
+    for (const item of filteredItems) {
+      const idx = db.cguReports.findIndex((x: any) => x.idTarefa === item.idTarefa);
+      if (idx >= 0) {
+        db.cguReports[idx] = {
+          ...db.cguReports[idx],
+          ...item,
+          ultimaAtualizacao: new Date().toLocaleString("pt-BR")
+        };
+        updatedCount++;
+      } else {
+        db.cguReports.unshift({
+          ...item,
+          ultimaAtualizacao: new Date().toLocaleString("pt-BR")
+        });
+        importedCount++;
+      }
+    }
+
+    saveDatabase(db);
+    res.json({
+      success: true,
+      importedCount,
+      updatedCount,
+      totalCount: db.cguReports.length,
+      items: db.cguReports
     });
   });
 

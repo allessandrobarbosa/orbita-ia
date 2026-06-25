@@ -280,6 +280,102 @@ var SEED_COMUNICACOES = [
   }
 ];
 
+// src/data/seed_cgu.ts
+var SEED_CGU = [
+  {
+    idTarefa: "CGU-2025-0001",
+    situacao: "Pendente",
+    estado: "Aberto",
+    tituloTarefa: "Auditoria de Folha de Pagamento - Cargo comissionado acumula\xE7\xE3o",
+    dataInicio: "15/03/2025",
+    dataFim: "",
+    dataLimite: "30/08/2025",
+    unidadeAuditada: "Coordena\xE7\xE3o-Geral de Gest\xE3o de Pessoas - CGGP",
+    unidadesAuditoria: "CGU-Regional/DF - Divis\xE3o de Pessoal",
+    textoMonitoramento: "Acompanhamento das recomenda\xE7\xF5es do Relat\xF3rio de Auditoria Anual n\xBA 1234/2024. Trata de ind\xEDcios de acumula\xE7\xE3o il\xEDcita de cargos p\xFAblicos.",
+    providencia: "Levantamento de casos suspeitos, oitiva dos servidores e instaura\xE7\xE3o de processos disciplinares se configurada m\xE1-f\xE9.",
+    tipoUltimaManifestacao: "Of\xEDcio CGU",
+    textoUltimaManifestacao: "Recomenda\xE7\xE3o formal de regulariza\xE7\xE3o ou restitui\xE7\xE3o de valores em 5 casos identificados de acumula\xE7\xE3o indevida.",
+    dataUltimaManifestacao: "10/05/2025",
+    tipoUltimoPosicionamento: "Nota T\xE9cnica AECI",
+    textoUltimoPosicionamento: "Documenta\xE7\xE3o e fichas financeiras enviadas para an\xE1lise detalhada da Corregedoria do MTE.",
+    dataUltimoPosicionamento: "20/05/2025",
+    categoria: "AUDITORIA DE PESSOAL",
+    dataLimiteInicial: "15/06/2025",
+    ano: 2025,
+    ultimaAtualizacao: "20/05/2025 14:00"
+  },
+  {
+    idTarefa: "CGU-2026-0002",
+    situacao: "Em An\xE1lise",
+    estado: "Aberto",
+    tituloTarefa: "Fiscaliza\xE7\xE3o de Contratos de TI - Armazenamento em Nuvem Governamental",
+    dataInicio: "10/01/2026",
+    dataFim: "",
+    dataLimite: "15/07/2026",
+    unidadeAuditada: "Coordena\xE7\xE3o-Geral de Tecnologia da Informa\xE7\xE3o - CGTI",
+    unidadesAuditoria: "Secretaria de Fiscaliza\xE7\xE3o de TI da CGU - Bras\xEDlia",
+    textoMonitoramento: "Revis\xE3o dos pre\xE7os unit\xE1rios de armazenamento e licen\xE7as de software no Contrato Administrativo n\xBA 45/2024.",
+    providencia: "Negocia\xE7\xE3o de termos aditivos junto \xE0 empresa contratada para alinhamento dos valores de mercado com a tabela referencial da CGU.",
+    tipoUltimaManifestacao: "Relat\xF3rio de Fiscaliza\xE7\xE3o",
+    textoUltimaManifestacao: "Indica\xE7\xE3o de sobrepre\xE7o estimado de 12% nos servi\xE7os de infraestrutura de nuvem h\xEDbrida.",
+    dataUltimaManifestacao: "12/03/2026",
+    tipoUltimoPosicionamento: "Nota T\xE9cnica AECI",
+    textoUltimoPosicionamento: "Apresentadas justificativas t\xE9cnicas de mercado para a contrata\xE7\xE3o e os pre\xE7os praticados frente \xE0s especifica\xE7\xF5es exigidas.",
+    dataUltimoPosicionamento: "05/04/2026",
+    categoria: "FISCALIZA\xC7\xC3O DE CONTRATOS",
+    dataLimiteInicial: "30/04/2026",
+    ano: 2026,
+    ultimaAtualizacao: "05/04/2026 11:30"
+  },
+  {
+    idTarefa: "CGU-2024-0003",
+    situacao: "Cumprido",
+    estado: "Fechado",
+    tituloTarefa: "Recomenda\xE7\xE3o Operacional - Transpar\xEAncia Ativa no Portal MTE",
+    dataInicio: "22/08/2024",
+    dataFim: "15/12/2024",
+    dataLimite: "31/12/2024",
+    unidadeAuditada: "Assessoria Especial de Comunica\xE7\xE3o Social",
+    unidadesAuditoria: "Ouvidoria-Geral da Uni\xE3o - OGU/CGU",
+    textoMonitoramento: "Monitoramento do \xEDndice de atendimento \xE0 Lei de Acesso \xE0 Informa\xE7\xE3o (LAI) e divulga\xE7\xE3o de dados abertos.",
+    providencia: "Cria\xE7\xE3o de novos pain\xE9is din\xE2micos e publica\xE7\xE3o sistem\xE1tica de dados de di\xE1rias e passagens no portal institucional.",
+    tipoUltimaManifestacao: "Nota de Avalia\xE7\xE3o CGU",
+    textoUltimaManifestacao: "Atestada a conformidade de 100% dos itens de transpar\xEAncia ativa avaliados no painel da LAI.",
+    dataUltimaManifestacao: "10/12/2024",
+    tipoUltimoPosicionamento: "Relat\xF3rio de Atendimento MTE",
+    textoUltimoPosicionamento: "Enviado o relat\xF3rio final de atendimento com os links de acesso aos pain\xE9is de transpar\xEAncia publicados.",
+    dataUltimoPosicionamento: "15/12/2024",
+    categoria: "TRANSPAR\xCANCIA E LAI",
+    dataLimiteInicial: "15/12/2024",
+    ano: 2024,
+    ultimaAtualizacao: "15/12/2024 16:45"
+  },
+  {
+    idTarefa: "CGU-2026-0004",
+    situacao: "Atrasado",
+    estado: "Aberto",
+    tituloTarefa: "Plano de Integridade MTE - Implementa\xE7\xE3o do Canal de Den\xFAncias",
+    dataInicio: "05/02/2026",
+    dataFim: "",
+    dataLimite: "01/06/2026",
+    unidadeAuditada: "Corregedoria-Geral do MTE",
+    unidadesAuditoria: "Diretoria de Integridade e Preven\xE7\xE3o da Corrup\xE7\xE3o - CGU",
+    textoMonitoramento: "Monitoramento do cronograma de estrutura\xE7\xE3o do canal interno de den\xFAncias integrado ao Fala.BR.",
+    providencia: "Ajuste na parametriza\xE7\xE3o dos fluxos de triagem e publica\xE7\xE3o das portarias de designa\xE7\xE3o de servidores exclusivos.",
+    tipoUltimaManifestacao: "Alerta de Prazo CGU",
+    textoUltimaManifestacao: "Notifica\xE7\xE3o sobre a proximidade do prazo final de implanta\xE7\xE3o da fase II do Fala.BR no \xF3rg\xE3o.",
+    dataUltimaManifestacao: "15/05/2026",
+    tipoUltimoPosicionamento: "Of\xEDcio de Justificativa AECI",
+    textoUltimoPosicionamento: "Solicita\xE7\xE3o formal de prorroga\xE7\xE3o do prazo devido a atrasos t\xE9cnicos na integra\xE7\xE3o dos sistemas com o SERPRO.",
+    dataUltimoPosicionamento: "28/05/2026",
+    categoria: "INTEGRIDADE E COMPLIANCE",
+    dataLimiteInicial: "01/06/2026",
+    ano: 2026,
+    ultimaAtualizacao: "28/05/2026 10:15"
+  }
+];
+
 // server.ts
 import_dotenv.default.config();
 var DATA_DIR = import_path.default.join(process.cwd(), "data");
@@ -1138,7 +1234,9 @@ function loadDatabase() {
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
       tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
-      users: SEED_PROFILES
+      users: SEED_PROFILES,
+      cgu: SEED_CGU,
+      cguReports: []
     };
     migrateProcessTypes(defaultData);
     import_fs.default.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf-8");
@@ -1166,6 +1264,14 @@ function loadDatabase() {
     }
     if (!data.users) {
       data.users = SEED_PROFILES;
+      dataModified = true;
+    }
+    if (!data.cgu) {
+      data.cgu = SEED_CGU;
+      dataModified = true;
+    }
+    if (!data.cguReports) {
+      data.cguReports = [];
       dataModified = true;
     }
     if (migrateProcessTypes(data)) {
@@ -1955,6 +2061,125 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       updatedCount,
       totalCount: db.tceAcordaoMappings.length,
       items: db.tceAcordaoMappings
+    });
+  });
+  app.get("/api/cgu", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.cgu || []);
+  });
+  app.post("/api/cgu/update", (req, res) => {
+    const db = loadDatabase();
+    const updated = req.body;
+    if (!db.cgu) db.cgu = [];
+    const index = db.cgu.findIndex((x) => x.idTarefa === updated.idTarefa);
+    if (index >= 0) {
+      db.cgu[index] = {
+        ...db.cgu[index],
+        ...updated,
+        ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+      };
+      saveDatabase(db);
+      res.json({ success: true, item: db.cgu[index] });
+    } else {
+      res.status(404).json({ error: "Demanda CGU n\xE3o encontrada." });
+    }
+  });
+  app.delete("/api/cgu/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    if (!db.cgu) db.cgu = [];
+    db.cgu = db.cgu.filter((x) => x.idTarefa !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.post("/api/cgu/import", (req, res) => {
+    const db = loadDatabase();
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: "Formato de importa\xE7\xE3o inv\xE1lido para CGU." });
+    }
+    if (!db.cgu) db.cgu = [];
+    let importedCount = 0;
+    let updatedCount = 0;
+    for (const item of items) {
+      const idx = db.cgu.findIndex((x) => x.idTarefa === item.idTarefa);
+      if (idx >= 0) {
+        db.cgu[idx] = {
+          ...db.cgu[idx],
+          ...item,
+          ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+        };
+        updatedCount++;
+      } else {
+        db.cgu.unshift({
+          ...item,
+          ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+        });
+        importedCount++;
+      }
+    }
+    saveDatabase(db);
+    res.json({
+      success: true,
+      importedCount,
+      updatedCount,
+      totalCount: db.cgu.length,
+      items: db.cgu
+    });
+  });
+  app.get("/api/cgu/reports", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.cguReports || []);
+  });
+  app.delete("/api/cgu/reports/:idTarefa", (req, res) => {
+    const db = loadDatabase();
+    const idTarefa = req.params.idTarefa;
+    if (!db.cguReports) db.cguReports = [];
+    db.cguReports = db.cguReports.filter((x) => x.idTarefa !== idTarefa);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.post("/api/cgu/reports/import", (req, res) => {
+    const db = loadDatabase();
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: "Formato de importa\xE7\xE3o inv\xE1lido para relat\xF3rios da CGU." });
+    }
+    if (!db.cguReports) db.cguReports = [];
+    const blacklist = ["dnit", "codevasf", "incra", "ufgd", "ufpe", "ifac", "mgi", "mec", "caixa", "mds", "mtur", "mpa", "ceagesp", "unifesp", "fnde", "prf", "memp", "mdic", "mf", "ms", "midr", "ufg", "mps", "turismo", "saude", "educacao", "cgu", "fazenda", "planejamento", "integracao", "senac", "sesi", "inss"];
+    const filteredItems = items.filter((item) => {
+      const unit = ((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase();
+      const sup = ((item.nomeOrgaoSuperior || "") + " " + (item.siglaOrgaoSuperior || "")).toLowerCase();
+      const hasBlacklistInUnit = blacklist.some((b) => unit.includes(b));
+      const hasMteInUnitOrSup = unit.includes("mte") || unit.includes("mtp") || unit.includes("trabalho") || unit.includes("emprego") || sup.includes("mte") || sup.includes("mtp") || sup.includes("trabalho") || sup.includes("emprego");
+      return hasMteInUnitOrSup && !hasBlacklistInUnit;
+    });
+    let importedCount = 0;
+    let updatedCount = 0;
+    for (const item of filteredItems) {
+      const idx = db.cguReports.findIndex((x) => x.idTarefa === item.idTarefa);
+      if (idx >= 0) {
+        db.cguReports[idx] = {
+          ...db.cguReports[idx],
+          ...item,
+          ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+        };
+        updatedCount++;
+      } else {
+        db.cguReports.unshift({
+          ...item,
+          ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+        });
+        importedCount++;
+      }
+    }
+    saveDatabase(db);
+    res.json({
+      success: true,
+      importedCount,
+      updatedCount,
+      totalCount: db.cguReports.length,
+      items: db.cguReports
     });
   });
   app.post("/api/acordaos/import", async (req, res) => {

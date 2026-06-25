@@ -120,3 +120,48 @@ export interface TceAcordaoMapping {
   ACORDAO_REF: string; // reference to the Acórdão (e.g. "1234/2023")
 }
 
+// CGU Demand Item
+export interface CguDemand {
+  idTarefa: string; // Id da Tarefa
+  situacao: string; // Situação (e.g. Pendente, Em Análise, Cumprido, Atrasado)
+  estado: string; // Estado
+  tituloTarefa: string; // Título da Tarefa
+  dataInicio: string; // Data de Início
+  dataFim: string; // Data de Fim
+  dataLimite: string; // Data Limite
+  unidadeAuditada: string; // Unidade Auditada
+  unidadesAuditoria: string; // Unidades de Auditoria
+  textoMonitoramento: string; // Texto do Monitoramento
+  providencia: string; // Providência
+  tipoUltimaManifestacao: string; // Tipo da Última Manifestação
+  textoUltimaManifestacao: string; // Texto da Última Manifestação
+  dataUltimaManifestacao: string; // Data da Última Manifestação
+  tipoUltimoPosicionamento: string; // Tipo do Último Posicionamento
+  textoUltimoPosicionamento: string; // Texto do Último Posicionamento
+  dataUltimoPosicionamento: string; // Data do Último Posicionamento
+  categoria: string; // Categoria
+  dataLimiteInicial: string; // Data Limite Inicial
+  ano: number; // Parsed from Data de Início
+  ultimaAtualizacao?: string; // YYYY-MM-DD HH:MM
+}
+
+// CGU Published Report Item
+export interface CguPublishedReport {
+  idTarefa: string; // Id da Tarefa
+  tituloRelatorio: string; // Título do Relatório
+  dataPublicacao: string; // Data de Publicação
+  idAuditoria: string; // Id da Auditoria
+  siglaUnidadeAuditada: string; // Sigla da Unidade Auditada
+  nomeUnidadeAuditada: string; // Nome da Unidade Auditada
+  siglaOrgaoSuperior: string; // Sigla do Órgão Superior
+  nomeOrgaoSuperior: string; // Nome do Órgão Superior
+  uf: string; // UF
+  municipio: string; // Município
+  tipoServico: string; // Tipo de Serviço
+  linhaAcao: string; // Linha de Ação
+  grupoAtividade: string; // Grupo de Atividade
+  edicaoPrograma?: string; // Edição Programa Sorteio / FEF
+  ultimaAtualizacao?: string; // YYYY-MM-DD HH:MM
+}
+
+

@@ -121,9 +121,10 @@ import TcuModule from "./components/TcuModule";
 import RolModule from "./components/RolModule";
 import EticaModule from "./components/EticaModule";
 import SrteModule from "./components/SrteModule";
+import CguModule from "./components/CguModule";
 
 // Domain Types
-import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "./types";
+import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand, TceDemand, TceAcordaoMapping, CguDemand, CguPublishedReport } from "./types";
 
 export default function App() {
 
@@ -135,6 +136,8 @@ export default function App() {
   const [superintendencias, setSuperintendencias] = useState<SuperintendenciaRegional[]>([]);
   const [tces, setTces] = useState<TceDemand[]>([]);
   const [tceMappings, setTceMappings] = useState<TceAcordaoMapping[]>([]);
+  const [cguDemands, setCguDemands] = useState<CguDemand[]>([]);
+  const [cguPublishedReports, setCguPublishedReports] = useState<CguPublishedReport[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
 
   // Layout navigation states
@@ -215,7 +218,7 @@ export default function App() {
   };
 
   // Checks privileges against active user context on actions
-  const checkPermission = (module: "TCU" | "ROL" | "ETHICS" | "SRTE"): boolean => {
+  const checkPermission = (module: "TCU" | "ROL" | "ETHICS" | "SRTE" | "CGU"): boolean => {
     if (currentUser.clearance === "ADMIN") return true;
     
     if (currentUser.allowedModules) {
@@ -240,7 +243,7 @@ export default function App() {
     setIsLoading(true);
     try {
       const cb = `?cb=${Date.now()}`;
-      const [acRes, comRes, rolRes, eticaRes, srteRes, statsRes, tcesRes, tceMappingsRes] = await Promise.all([
+      const [acRes, comRes, rolRes, eticaRes, srteRes, statsRes, tcesRes, tceMappingsRes, cguRes, cguReportsRes] = await Promise.all([
         fetch(`/api/acordaos${cb}`).then(r => r.json()),
         fetch(`/api/comunicacoes${cb}`).then(r => r.json()),
         fetch(`/api/rol-responsaveis${cb}`).then(r => r.json()),
@@ -248,7 +251,9 @@ export default function App() {
         fetch(`/api/superintendencias${cb}`).then(r => r.json()),
         fetch(`/api/dashboard-stats${cb}`).then(r => r.json()),
         fetch(`/api/tces${cb}`).then(r => r.json()),
-        fetch(`/api/tce-mappings${cb}`).then(r => r.json())
+        fetch(`/api/tce-mappings${cb}`).then(r => r.json()),
+        fetch(`/api/cgu${cb}`).then(r => r.json()),
+        fetch(`/api/cgu/reports${cb}`).then(r => r.json())
       ]);
 
       setAcordaos(acRes);
@@ -259,6 +264,8 @@ export default function App() {
       setDashboardStats(statsRes);
       setTces(tcesRes || []);
       setTceMappings(tceMappingsRes || []);
+      setCguDemands(cguRes || []);
+      setCguPublishedReports(cguReportsRes || []);
     } catch (err) {
       console.error("Erro ao carregar dados do ORBITA.AECI:", err);
     }
@@ -511,6 +518,91 @@ export default function App() {
       console.error("Falha na importação de mapeamentos TCE com Acórdão:", err);
     }
     return null;
+  };
+
+  // CGU actions
+  const handleUpdateCgu = async (updated: CguDemand): Promise<boolean> => {
+    if (!checkPermission("CGU")) return false;
+    try {
+      const res = await fetch("/api/cgu/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error("Falha ao salvar demanda CGU:", err);
+    }
+    return false;
+  };
+
+  const handleDeleteCgu = async (id: string): Promise<boolean> => {
+    if (!checkPermission("CGU")) return false;
+    try {
+      const res = await fetch(`/api/cgu/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error("Falha ao remover demanda CGU:", err);
+    }
+    return false;
+  };
+
+  const handleImportCgu = async (items: CguDemand[]): Promise<any> => {
+    if (!checkPermission("CGU")) return null;
+    try {
+      const res = await fetch("/api/cgu/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchAllData();
+        return data;
+      }
+    } catch (err) {
+      console.error("Falha no lote de importação CGU:", err);
+    }
+    return { success: false, error: "Falha de conexão ao importar demandas CGU." };
+  };
+
+  const handleImportCguReports = async (items: CguPublishedReport[]): Promise<any> => {
+    if (!checkPermission("CGU")) return null;
+    try {
+      const res = await fetch("/api/cgu/reports/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchAllData();
+        return data;
+      }
+    } catch (err) {
+      console.error("Falha no lote de importação de relatórios CGU:", err);
+    }
+    return { success: false, error: "Falha de conexão ao importar relatórios CGU." };
+  };
+
+  const handleDeleteCguReport = async (idTarefa: string): Promise<boolean> => {
+    if (!checkPermission("CGU")) return false;
+    try {
+      const res = await fetch(`/api/cgu/reports/${idTarefa}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error("Falha ao remover relatório CGU:", err);
+    }
+    return false;
   };
 
   const handleClearOlderAcordaos = async (): Promise<any> => {
@@ -846,11 +938,11 @@ export default function App() {
                   acordaos={acordaos}
                   comunicacoes={comunicacoes}
                   tces={tces}
-                  tceMappings={tceMappings}
                   rolResponsaveis={rolResponsaveis}
                   comissaoEtica={comissaoEtica}
                   superintendencias={superintendencias}
                   hasModulePermission={hasModulePermission}
+                  cguDemands={cguDemands}
                 />
               )}
 
@@ -917,50 +1009,16 @@ export default function App() {
               )}
 
               {activeTab === "cgu" && (
-                <div className="bg-white rounded-3xl border border-slate-200 shadow-md p-8 text-center max-w-4xl mx-auto space-y-6 my-12 animate-fade-in no-print font-sans">
-                  <div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-full flex items-center justify-center mx-auto shadow-xs border border-blue-100/50">
-                    <Building2 className="w-8 h-8 text-[#003366]" />
-                  </div>
-                  <div className="space-y-2">
-                    <span className="bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
-                      Controle de Auditoria Interna
-                    </span>
-                    <h3 className="text-xl font-extrabold text-slate-950 font-display">
-                      Controladoria-Geral da União — CGU
-                    </h3>
-                    <p className="text-xs text-slate-500 max-w-xl mx-auto leading-relaxed">
-                      Este submódulo proporcionará a gestão e acompanhamento das recomendações do Órgão de Controle Interno do Poder Executivo Federal (CGU), facilitando o controle de auditorias anuais e relatórios de avaliação de gestão.
-                    </p>
-                  </div>
-
-                  <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5 max-w-2xl mx-auto text-left space-y-3.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#003366] block">
-                      Painéis e Workflow em Homologação:
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-600">
-                      <div className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Recomendações CGU:</strong> Sincronizador com o Sistema e-Aud da CGU para controle de providências pendentes.</span>
-                      </div>
-                      <div className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Plano de Providências:</strong> Gestão de respostas da AECI instruídas pelos gestores finalísticos.</span>
-                      </div>
-                      <div className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Relatórios anuais:</strong> Avaliação de eficiência de controle em conformidade com as diretrizes de prestação de contas.</span>
-                      </div>
-                      <div className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                        <span><strong>Análise de Vulnerabilidade:</strong> Inteligência de auditoria preventiva nos processos de contratação e licitação.</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-[10px] text-slate-400">
-                    Status: <span className="text-blue-600 font-bold">EM HOMOLOGAÇÃO COLETIVA</span> • Lançamento planejado para a próxima reunião técnica da AECI
-                  </div>
-                </div>
+                <CguModule
+                  cguDemands={cguDemands}
+                  onUpdateCgu={handleUpdateCgu}
+                  onDeleteCgu={handleDeleteCgu}
+                  onImportCgu={handleImportCgu}
+                  cguPublishedReports={cguPublishedReports}
+                  onImportCguReports={handleImportCguReports}
+                  onDeleteCguReport={handleDeleteCguReport}
+                  isLoading={isLoading}
+                />
               )}
 
             </div>

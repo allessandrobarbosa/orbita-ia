@@ -30,6 +30,7 @@ interface DashboardOverviewProps {
   comissaoEtica?: any[];
   superintendencias?: any[];
   hasModulePermission: (tabId: string) => boolean;
+  cguDemands?: any[];
 }
 
 export default function DashboardOverview({ 
@@ -40,7 +41,8 @@ export default function DashboardOverview({
   rolResponsaveis = [],
   comissaoEtica = [],
   superintendencias = [],
-  hasModulePermission
+  hasModulePermission,
+  cguDemands = []
 }: DashboardOverviewProps) {
 
   // Modules information list to render as beautiful, interactive portal cards
@@ -72,7 +74,7 @@ export default function DashboardOverview({
       title: "Controle Interno (CGU)",
       acronym: "CGU",
       desc: "Espaço para controle de recomendações de auditoria, fiscalizações correntes e plano de providências da Controladoria-Geral da União.",
-      indicator: "Fase de Homologação",
+      indicator: `${cguDemands.length} Demandas Cadastradas`,
       icon: ShieldCheck,
       accent: "border-t-4 border-l-0 border-[#1351b4]",
       bg: "bg-white",
