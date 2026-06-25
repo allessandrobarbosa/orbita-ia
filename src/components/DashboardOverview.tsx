@@ -29,6 +29,7 @@ interface DashboardOverviewProps {
   rolResponsaveis?: any[];
   comissaoEtica?: any[];
   superintendencias?: any[];
+  hasModulePermission: (tabId: string) => boolean;
 }
 
 export default function DashboardOverview({ 
@@ -38,7 +39,8 @@ export default function DashboardOverview({
   tces = [],
   rolResponsaveis = [],
   comissaoEtica = [],
-  superintendencias = []
+  superintendencias = [],
+  hasModulePermission
 }: DashboardOverviewProps) {
 
   // Modules information list to render as beautiful, interactive portal cards
@@ -109,7 +111,7 @@ export default function DashboardOverview({
       bg: "bg-white",
       hoverRing: "hover:ring-2 hover:ring-indigo-500/20"
     }
-  ];
+  ].filter(module => hasModulePermission(module.id));
 
   return (
     <div className="font-sans space-y-8 animate-fade-in max-w-7xl mx-auto py-2 px-4 no-print">

@@ -32,19 +32,27 @@ import {
   Award,
   BookOpen,
   UserPlus,
-  X
+  X,
+  User
 } from "lucide-react";
 
 // User Access Profile Management Schema
 export interface UserProfile {
   id: string;
   name: string;
+  cpf?: string;
+  phone?: string;
+  unidade?: string;
   role: string;
   email: string;
   register: string;
-  clearance: "ADMIN" | "ETHICS" | "AUDITOR" | "SRTE" | "PUBLIC";
+  clearance: "ADMIN" | "ETHICS" | "AUDITOR" | "SRTE" | "PUBLIC" | "PENDING";
+  allowedModules?: string[];
   avatarColor: string;
   pin: string;
+  password?: string;
+  requiresPasswordChange?: boolean;
+  status?: "PENDING" | "ACTIVE" | "INACTIVE";
   badgeText: string;
 }
 
@@ -163,7 +171,6 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile>(() => profiles[0] || USER_PROFILES[0]);
   const [isLocked, setIsLocked] = useState<boolean>(true); // Gated by default
   const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
-  const [isRegisteringUser, setIsRegisteringUser] = useState<boolean>(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState<boolean>(false);
   const [authAlert, setAuthAlert] = useState<{ title: string; message: string; sub: string } | null>(null);
   const [authSuccessToast, setAuthSuccessToast] = useState<string | null>(null);
@@ -176,11 +183,48 @@ export default function App() {
     setAuthSuccessToast(`Usuário "${newProfile.name}" cadastrado e logado!`);
   };
 
+  const hasModulePermission = (tabId: string): boolean => {
+    if (currentUser.clearance === "ADMIN") return true;
+    if (tabId === "dashboard") return true; // Todos veem o Início
+    
+    const idToMod: Record<string, string> = {
+      tcu: "TCU",
+      cgu: "CGU",
+      etica: "ETHICS",
+      rol: "ROL",
+      srte: "SRTE",
+      bi: "BI"
+    };
+
+    const mod = idToMod[tabId];
+    if (!mod) return true;
+
+    if (currentUser.allowedModules) {
+      return currentUser.allowedModules.includes(mod);
+    }
+
+    // Fallback de segurança: Se a sessão antiga não enviou allowedModules, tenta extrair do badgeText
+    if (currentUser.badgeText && currentUser.badgeText.includes(mod)) {
+      return true;
+    }
+
+    // Fallback legado
+    if (currentUser.clearance === "ETHICS" && mod === "ETHICS") return true;
+    if (currentUser.clearance === "SRTE" && mod === "SRTE") return true;
+    return false;
+  };
+
   // Checks privileges against active user context on actions
   const checkPermission = (module: "TCU" | "ROL" | "ETHICS" | "SRTE"): boolean => {
     if (currentUser.clearance === "ADMIN") return true;
-    if (currentUser.clearance === "ETHICS" && module === "ETHICS") return true;
-    if (currentUser.clearance === "SRTE" && module === "SRTE") return true;
+    
+    if (currentUser.allowedModules) {
+      if (currentUser.allowedModules.includes(module)) return true;
+    } else {
+      // Legacy fallback
+      if (currentUser.clearance === "ETHICS" && module === "ETHICS") return true;
+      if (currentUser.clearance === "SRTE" && module === "SRTE") return true;
+    }
 
     // Trigger security modal feedback for unauthorized users
     setAuthAlert({
@@ -220,6 +264,12 @@ export default function App() {
     }
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    if (!hasModulePermission(activeTab)) {
+      setActiveTab("dashboard");
+    }
+  }, [currentUser, activeTab]);
 
   useEffect(() => {
     const checkActiveSession = async () => {
@@ -702,16 +752,6 @@ export default function App() {
                     </button>
                   )}
 
-                  {/* Register New User */}
-                  <button
-                    onClick={() => {
-                      setShowUserDropdown(false);
-                      setIsRegisteringUser(true);
-                    }}
-                    className="w-full py-2.5 px-3 border border-dashed border-[#003366]/35 hover:bg-[#003366]/5 text-[#003366] hover:text-[#001f3f] font-extrabold rounded-xl text-[10px] flex items-center gap-1.5 transition cursor-pointer"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" /> Credenciar Novo Gestor (MTE)
-                  </button>
 
                   {/* Trancar com senha */}
                   <button
@@ -759,7 +799,7 @@ export default function App() {
               { id: "rol", label: "Rol", icon: Users, title: "Gestão do Rol de Responsáveis" },
               { id: "srte", label: "STRES", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
               { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
-            ].map((moduleLink) => {
+            ].filter(link => hasModulePermission(link.id)).map((moduleLink) => {
               const ModuleIcon = moduleLink.icon;
               const isSelected = activeTab === moduleLink.id;
               return (
@@ -810,6 +850,7 @@ export default function App() {
                   rolResponsaveis={rolResponsaveis}
                   comissaoEtica={comissaoEtica}
                   superintendencias={superintendencias}
+                  hasModulePermission={hasModulePermission}
                 />
               )}
 
@@ -935,14 +976,6 @@ export default function App() {
         <p className="opacity-60 text-[10px] mt-0.5">Ambiente Integrado de Apoio às decisões de Controle e Auditoria Governamental da IN 84/TCU.</p>
       </footer>
 
-      {/* 1. Global User Profile Registration Modal */}
-      {isRegisteringUser && (
-        <UserProfileRegistrationModal
-          onClose={() => setIsRegisteringUser(false)}
-          onSave={handleRegisterProfile}
-        />
-      )}
-
       {/* Admin Panel Modal */}
       {isAdminPanelOpen && (
         <AdminPanelModal
@@ -1042,33 +1075,81 @@ function LockScreen({
   onRegisterProfile: (profile: UserProfile) => void;
 }) {
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
+  const [showSimulatedProfiles, setShowSimulatedProfiles] = useState<boolean>(false);
+  
+  // New auth flow state
+  const [loginStep, setLoginStep] = useState<"identifier" | "password">("identifier");
+  const [identifier, setIdentifier] = useState<string>("");
+  const [localPassword, setLocalPassword] = useState<string>("");
+  const [isRegisteringAccess, setIsRegisteringAccess] = useState<boolean>(false);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState<boolean>(false);
+  const [showForcePasswordChange, setShowForcePasswordChange] = useState<boolean>(false);
+  const [pendingUser, setPendingUser] = useState<UserProfile | null>(null);
+  
   const [pinCode, setPinCode] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string>("");
-  const [isRegisteringLock, setIsRegisteringLock] = useState<boolean>(false);
 
   const handleVerify = async () => {
     if (!selectedProfile) return;
     try {
-      const res = await fetch("/api/auth/login-pin", {
+      const res = await fetch("/api/auth/login-local", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId: selectedProfile.id, pin: pinCode })
+        body: JSON.stringify({ identifier: selectedProfile.id, password: pinCode })
       });
       if (res.ok) {
         const data = await res.json();
         onUnlock(data.user);
       } else {
         const data = await res.json();
-        setErrorMsg(data.error || "Código de Assinatura Eletrônica Inválido.");
+        setErrorMsg(data.error || "Código PIN Inválido.");
         setPinCode("");
       }
     } catch (err) {
-      // Offline fallback for local development without server
+      // Offline fallback
       if (selectedProfile.pin === pinCode || selectedProfile.clearance === "PUBLIC") {
         onUnlock(selectedProfile);
       } else {
-        setErrorMsg("Erro de conexão com o servidor de autenticação.");
+        setErrorMsg("Erro de conexão.");
         setPinCode("");
+      }
+    }
+  };
+
+  const handleLocalLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg("");
+    if (loginStep === "identifier") {
+      if (!identifier.trim()) {
+        setErrorMsg("Por favor, informe seu CPF, Login ou E-mail.");
+        return;
+      }
+      setLoginStep("password");
+    } else {
+      if (!localPassword) {
+        setErrorMsg("Por favor, informe a senha.");
+        return;
+      }
+      try {
+        const res = await fetch("/api/auth/login-local", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier, password: localPassword })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          if (data.requiresPasswordChange) {
+            setPendingUser(data.user);
+            setShowForcePasswordChange(true);
+          } else {
+            onUnlock(data.user);
+          }
+        } else {
+          setErrorMsg(data.error || "Credenciais inválidas.");
+          setLocalPassword("");
+        }
+      } catch (err) {
+        setErrorMsg("Erro de conexão com o servidor.");
       }
     }
   };
@@ -1088,54 +1169,128 @@ function LockScreen({
       </div>
 
       {/* Main Lock Form Box */}
-      <div className="max-w-md mx-auto w-full my-auto py-8 px-6 bg-white rounded-2xl border border-slate-200 shadow-lg flex flex-col items-center animate-fade-in">
-
-        <h2 className="text-xl font-extrabold text-slate-800 tracking-tight text-center" style={{ fontFamily: '"Outfit", sans-serif' }}>
-          Identifique-se no gov.br
-        </h2>
-        <p className="text-[11px] text-slate-500 text-center mt-1 max-w-xs leading-relaxed">
-          Portal ÓRBITA - Assessoria Especial de Controle Interno (MTE)
-        </p>
+      <div className="max-w-md mx-auto w-full my-auto py-8 px-8 bg-white rounded-2xl border border-slate-200 shadow-lg flex flex-col items-center animate-fade-in">
 
         {/* Profile Card grid */}
         {!selectedProfile ? (
-          <div className="mt-6 w-full space-y-4">
-            {/* Official gov.br Login button */}
-            <div className="w-full">
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = "/api/auth/govbr/login";
-                }}
-                className="w-full bg-[#1351b4] hover:bg-[#0c3c88] text-white font-extrabold text-xs py-3 px-5 rounded-xl flex items-center justify-center gap-2 transition duration-150 cursor-pointer shadow-xs"
-              >
-                Entrar com a conta gov.br
-              </button>
-            </div>
+          !showSimulatedProfiles ? (
+            <div className="w-full text-left">
+              <label className="text-[14px] font-medium text-slate-700 block mb-2">Entrar com</label>
+              
+              {errorMsg && (
+                <div className="mb-4 bg-rose-50 border border-rose-200 p-2.5 rounded-md text-rose-700 text-xs text-center font-semibold">
+                  {errorMsg}
+                </div>
+              )}
 
-            <div className="flex items-center w-full">
-              <div className="flex-1 border-t border-slate-200"></div>
-              <span className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-widest">ou simule acesso local</span>
-              <div className="flex-1 border-t border-slate-200"></div>
-            </div>
+              <form onSubmit={handleLocalLogin}>
+                {loginStep === "identifier" ? (
+                  <div className="relative mb-4">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none border-r border-slate-300 pr-3">
+                      <User className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Informe seu CPF, Login ou Email"
+                      value={identifier}
+                      onChange={e => { setIdentifier(e.target.value); setErrorMsg(""); }}
+                      className="pl-12 w-full bg-white border border-slate-300 focus:border-[#1351b4] focus:ring-1 focus:ring-[#1351b4] focus:outline-none rounded-md py-2.5 text-[14px] text-slate-700"
+                    />
+                  </div>
+                ) : (
+                  <div className="relative mb-4">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none border-r border-slate-300 pr-3">
+                      <Lock className="h-4 w-4 text-slate-400" />
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="Senha de Acesso"
+                      value={localPassword}
+                      onChange={e => { setLocalPassword(e.target.value); setErrorMsg(""); }}
+                      className="pl-12 w-full bg-white border border-slate-300 focus:border-[#1351b4] focus:ring-1 focus:ring-[#1351b4] focus:outline-none rounded-md py-2.5 text-[14px] text-slate-700"
+                      autoFocus
+                    />
+                  </div>
+                )}
+                <div className="flex gap-2 mb-6">
+                  {loginStep === "password" && (
+                    <button type="button" onClick={() => setLoginStep("identifier")} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[14px] py-2.5 px-4 rounded-md transition duration-150 cursor-pointer">
+                      Voltar
+                    </button>
+                  )}
+                  <button type="submit" className="flex-1 bg-[#1351b4] hover:bg-[#0c3c88] text-white font-medium text-[14px] py-2.5 rounded-md transition duration-150 cursor-pointer">
+                    {loginStep === "identifier" ? "AVANÇAR" : "ENTRAR"}
+                  </button>
+                </div>
+              </form>
 
-            {/* Explanatory box for simulation login */}
-            <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-center">
-              <p className="text-[10px] text-blue-900 leading-normal font-medium">
-                🔐 <strong>Ambiente de Homologação Integrado</strong>
-                <span className="block mt-0.5 text-[9.5px] text-slate-600 font-normal">
-                  Selecione o seu perfil de gestor ou cidadão abaixo e forneça o PIN de assinatura local correspondente.
-                </span>
-              </p>
-            </div>
+              <div className="flex items-center w-full mb-6">
+                <div className="flex-1 border-t border-slate-200"></div>
+                <span className="px-3 text-[12px] text-slate-500 uppercase">OU</span>
+                <div className="flex-1 border-t border-slate-200"></div>
+              </div>
 
-            <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block text-center mb-1">
-              Selecione seu perfil funcional:
-            </span>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto pr-1">
-              {profiles.map((profile) => (
+              <div className="flex justify-center mb-6">
                 <button
+                  type="button"
+                  onClick={() => window.location.href = "/api/auth/govbr/login"}
+                  className="border border-[#1351b4] hover:bg-slate-50 rounded-full py-2 px-6 flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  <span className="text-[#1351b4] text-[14px]">Entrar com</span>
+                  <span className="text-xl font-black tracking-tight text-[#1351b4]">gov<span className="text-[#00c010]">.</span>br</span>
+                </button>
+              </div>
+
+              <div className="text-left mb-6">
+                <h3 className="text-[#1351b4] font-bold text-[14px] mb-2">Acesse utilizando o Cadastro Único do Governo Federal</h3>
+                <p className="text-[13px] text-slate-700 mb-1">A conta gov.br é uma forma digital de acessar serviços públicos.</p>
+                <a href="#" className="text-[13px] text-[#1351b4] hover:underline">Saiba como obter as credenciais de acesso.</a>
+              </div>
+
+              <div className="border-t border-slate-200 mb-6"></div>
+
+              <button onClick={() => setIsRegisteringAccess(true)} className="w-full border border-[#1351b4] text-[#1351b4] hover:bg-slate-50 font-bold text-[14px] py-2.5 rounded-md transition duration-150 mb-6 cursor-pointer">
+                NOVO CADASTRO
+              </button>
+
+              <div className="text-center mb-4">
+                <button onClick={() => setIsRecoveringPassword(true)} className="text-[13px] text-[#1351b4] hover:underline cursor-pointer">Gerenciar usuário ou senha? Clique aqui</button>
+              </div>
+
+              <div className="flex items-center w-full mt-4">
+                <div className="flex-1 border-t border-slate-200"></div>
+                <button onClick={() => setShowSimulatedProfiles(true)} className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-[#1351b4] cursor-pointer transition">
+                  ou simule acesso local
+                </button>
+                <div className="flex-1 border-t border-slate-200"></div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full space-y-4">
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-xl font-extrabold text-slate-800 tracking-tight" style={{ fontFamily: '"Outfit", sans-serif' }}>
+                  Acesso Simulado
+                </h2>
+                <button onClick={() => setShowSimulatedProfiles(false)} className="text-[10px] text-slate-500 hover:text-slate-800 underline cursor-pointer">Voltar</button>
+              </div>
+
+              {/* Explanatory box for simulation login */}
+              <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl text-center">
+                <p className="text-[10px] text-blue-900 leading-normal font-medium">
+                  🔐 <strong>Ambiente de Homologação Integrado</strong>
+                  <span className="block mt-0.5 text-[9.5px] text-slate-600 font-normal">
+                    Selecione o seu perfil de gestor ou cidadão abaixo e forneça o PIN de assinatura local correspondente.
+                  </span>
+                </p>
+              </div>
+
+              <span className="text-[10px] font-bold text-slate-500 tracking-wider uppercase block text-center mb-1">
+                Selecione seu perfil funcional:
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto pr-1">
+                {profiles.map((profile) => (
+                  <button
                   key={profile.id}
                   onClick={() => {
                     setErrorMsg("");
@@ -1159,17 +1314,9 @@ function LockScreen({
               ))}
             </div>
 
-            {/* Registration trigger from Lock screen */}
-            <div className="pt-3 border-t border-slate-200 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setIsRegisteringLock(true)}
-                className="px-4 py-2 border border-dashed border-[#1351b4]/35 hover:border-[#1351b4]/70 hover:bg-[#1351b4]/5 text-[#1351b4] font-extrabold text-[11px] rounded-xl flex items-center gap-1.5 transition cursor-pointer"
-              >
-                <UserPlus className="w-3.5 h-3.5" /> Credenciar Novo Gestor
-              </button>
-            </div>
+            {/* Removed legacy registration trigger */}
           </div>
+          )
         ) : (
           /* Profile PIN Form */
           <div className="mt-6 w-full max-w-sm space-y-4 animate-in zoom-in-95 duration-200">
@@ -1246,13 +1393,19 @@ function LockScreen({
         )}
       </div>
 
-      {isRegisteringLock && (
-        <UserProfileRegistrationModal
-          onClose={() => setIsRegisteringLock(false)}
-          onSave={(newUser) => {
-            onRegisterProfile(newUser);
-            setIsRegisteringLock(false);
-          }}
+      {isRegisteringAccess && (
+        <AccessRequestModal onClose={() => setIsRegisteringAccess(false)} />
+      )}
+      {isRecoveringPassword && (
+        <ForgotPasswordModal onClose={() => setIsRecoveringPassword(false)} />
+      )}
+      {showForcePasswordChange && pendingUser && (
+        <ForcePasswordChangeModal 
+          user={pendingUser} 
+          onSuccess={(user) => {
+            setShowForcePasswordChange(false);
+            onUnlock(user);
+          }} 
         />
       )}
 
@@ -1266,222 +1419,107 @@ function LockScreen({
 }
 
 // --------------------------------------------------------------------------------
-// UserProfileRegistrationModal component function
+// AccessRequestModal component function
 // --------------------------------------------------------------------------------
-export function UserProfileRegistrationModal({
-  onClose,
-  onSave
-}: {
-  onClose: () => void;
-  onSave: (newUser: UserProfile) => void;
-}) {
+export function AccessRequestModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
+  const [cpf, setCpf] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("");
-  const [registerInput, setRegisterInput] = useState(() => {
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `MTE-DEC-${rand}`;
-  });
-  const [clearance, setClearance] = useState<"ADMIN" | "ETHICS" | "AUDITOR" | "SRTE" | "PUBLIC">("ADMIN");
-  const [pin, setPin] = useState("");
+  const [phone, setPhone] = useState("");
+  const [unidade, setUnidade] = useState("");
   const [errorText, setErrorText] = useState("");
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorText("");
 
-    if (!name.trim()) {
-      setErrorText("Nome completo é obrigatório.");
-      return;
-    }
-    if (!email.trim() || !email.includes("@")) {
-      setErrorText("Forneça um endereço de e-mail governamental válido.");
-      return;
-    }
-    if (!role.trim()) {
-      setErrorText("Cargo/Função é obrigatória.");
-      return;
-    }
-    if (pin.length !== 4 || !/^\d+$/.test(pin)) {
-      setErrorText("O PIN de assinatura eletrônica deve conter exatamente 4 dígitos numéricos.");
+    if (!name.trim() || !cpf.trim() || !email.trim()) {
+      setErrorText("Nome, CPF e E-mail são obrigatórios.");
       return;
     }
 
-    // Determine badge and color based on selected clearance
-    let badgeText = "ACESSO PÚBLICO";
-    let avatarColor = "bg-slate-600 text-white border-slate-450 ring-slate-500/30";
-
-    if (clearance === "ADMIN") {
-      badgeText = "AECI - ADMIN";
-      avatarColor = "bg-amber-500 text-slate-950 border-amber-300 ring-amber-400/30";
-    } else if (clearance === "ETHICS") {
-      badgeText = "ÉTICA - CORREGEDORIA";
-      avatarColor = "bg-indigo-600 text-white border-indigo-400 ring-indigo-500/30";
-    } else if (clearance === "AUDITOR") {
-      badgeText = "AUDITOR TCU";
-      avatarColor = "bg-rose-600 text-white border-rose-400 ring-rose-500/30";
-    } else if (clearance === "SRTE") {
-      badgeText = "GESTOR SRTE - REGIONAL";
-      avatarColor = "bg-indigo-650 text-white border-indigo-400 ring-indigo-500/30";
+    try {
+      const res = await fetch("/api/auth/request-access", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, cpf, email, phone, unidade })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccess(true);
+      } else {
+        setErrorText(data.error || "Erro ao solicitar acesso.");
+      }
+    } catch (err) {
+      setErrorText("Erro de conexão com o servidor.");
     }
-
-    const newUser: UserProfile = {
-      id: name.toLowerCase().replace(/[^a-z0-9]/g, "-"),
-      name,
-      role,
-      email,
-      register: registerInput,
-      clearance,
-      avatarColor,
-      pin,
-      badgeText
-    };
-
-    onSave(newUser);
   };
+
+  if (success) {
+    return (
+      <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-normal">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-sm p-8 text-center animate-in zoom-in-95 duration-150">
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 stroke-[3]" />
+          </div>
+          <h3 className="text-xl font-black text-slate-800 mb-2">Solicitação Enviada!</h3>
+          <p className="text-sm text-slate-600 mb-6">Seus dados foram enviados para análise. O administrador será notificado via e-mail e em breve você receberá as instruções de acesso no seu e-mail cadastrado.</p>
+          <button onClick={onClose} className="w-full bg-[#1351b4] text-white font-bold py-3 rounded-xl transition hover:bg-[#0c3c88]">Concluir</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-normal">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header decoration */}
         <div className="p-5 bg-gradient-to-r from-blue-900 to-[#003366] text-white flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-400">
             <UserPlus className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div>
-            <h3 className="text-sm font-black uppercase tracking-tight" style={{ fontFamily: '"Outfit", sans-serif' }}>
-              Credenciamento de Dirigente
-            </h3>
-            <span className="text-[10px] text-blue-200 uppercase tracking-widest font-mono font-extrabold block mt-0.5">
-              Identificação Funcional MTE / IN 84 TCU
-            </span>
+            <h3 className="text-sm font-black uppercase tracking-tight">Solicitação de Acesso</h3>
+            <span className="text-[10px] text-blue-200 uppercase tracking-widest font-mono font-extrabold block mt-0.5">Sistema Órbita</span>
           </div>
         </div>
 
-        {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorText && (
-            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl flex items-start gap-2 text-rose-800 text-xs font-bold leading-normal">
-              <span>⚠️</span>
-              <span>{errorText}</span>
+            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 text-xs font-bold leading-normal">
+              ⚠️ {errorText}
             </div>
           )}
-
           <div className="space-y-3.5">
-            {/* Field: Name */}
             <div>
-              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">
-                Nome Completo:
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Dra. Marianna Lima"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-hidden py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition"
-              />
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Nome Completo:</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
             </div>
-
-            {/* Field: Email & Matrícula */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">
-                  E-mail Funcional (.gov):
-                </label>
-                <input
-                  type="email"
-                  placeholder="marianna.lima@mte.gov.br"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-hidden py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition"
-                />
+                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">CPF:</label>
+                <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="Apenas números" className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
               </div>
               <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">
-                  Matrícula Geral:
-                </label>
-                <input
-                  type="text"
-                  placeholder="MTE-DEC-xxxx"
-                  value={registerInput}
-                  onChange={(e) => setRegisterInput(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-hidden py-2 px-3 rounded-xl text-xs font-medium font-mono text-slate-800 transition"
-                />
+                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Telefone:</label>
+                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
               </div>
             </div>
-
-            {/* Field: Cargo & PIN */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">
-                  Cargo / Setor Relacionado:
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ex: Auditor Adjunto"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-hidden py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition"
-                />
+                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">E-mail Funcional:</label>
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
               </div>
               <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">
-                  Código PIN de Assinatura (4 dígitos):
-                </label>
-                <input
-                  type="password"
-                  placeholder="Defina PIN numérico"
-                  maxLength={4}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-                  className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-hidden py-2 px-3 rounded-xl text-xs font-mono text-center tracking-widest text-slate-800 transition"
-                />
-              </div>
-            </div>
-
-            {/* Field: Nível de Acesso */}
-            <div>
-              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">
-                Perfil de Acesso (Nível de Credenciamento):
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: "ADMIN", label: "AECI - Admin", desc: "Acesso Total e Assinaturas" },
-                  { id: "ETHICS", label: "Membro Comitê Ética", desc: "Processar Demandas Éticas" },
-                  { id: "AUDITOR", label: "Auditor TCU Externo", desc: "Visualização Homologada" },
-                  { id: "SRTE", label: "Gestor SRTE", desc: "Editar Superintendências" },
-                  { id: "PUBLIC", label: "Cidadão / Consulta", desc: "Restrito (Apenas leitura)" }
-                ].map((level) => (
-                  <button
-                    key={level.id}
-                    type="button"
-                    onClick={() => setClearance(level.id as any)}
-                    className={`p-2.5 rounded-xl border text-left transition select-none flex flex-col justify-between ${clearance === level.id
-                        ? "bg-blue-50/70 border-[#003366] ring-2 ring-blue-900/10"
-                        : "bg-slate-50 border-slate-200 hover:border-slate-350"
-                      }`}
-                  >
-                    <span className="text-[11px] font-black text-slate-900 block">{level.label}</span>
-                    <span className="text-[9px] text-slate-500 mt-0.5 block leading-tight">{level.desc}</span>
-                  </button>
-                ))}
+                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Setor/Unidade:</label>
+                <input type="text" value={unidade} onChange={(e) => setUnidade(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
               </div>
             </div>
           </div>
-
           <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 bg-gradient-to-r from-blue-900 to-[#003366] hover:from-[#002244] hover:to-blue-900 text-white font-black rounded-xl text-xs transition shadow-md hover:shadow-lg cursor-pointer flex items-center gap-1.5"
-            >
-              <Check className="w-3.5 h-3.5 stroke-[2.5]" /> Gravar e Registrar
+            <button type="button" onClick={onClose} className="px-4 py-2 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">Cancelar</button>
+            <button type="submit" className="px-5 py-2 bg-[#1351b4] hover:bg-[#0c3c88] text-white font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center gap-1.5">
+              Solicitar
             </button>
           </div>
         </form>
@@ -1491,8 +1529,161 @@ export function UserProfileRegistrationModal({
 }
 
 // --------------------------------------------------------------------------------
-// Admin Panel Modal for Database Maintenance
+// ForgotPasswordModal component function
 // --------------------------------------------------------------------------------
+export function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
+  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("loading");
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, cpf })
+      });
+      const data = await res.json();
+      setStatus(data.success ? "success" : "error");
+      setMessage(data.message || data.error);
+    } catch (err) {
+      setStatus("error");
+      setMessage("Erro ao conectar com o servidor.");
+    }
+  };
+
+  if (status === "success") {
+    return (
+      <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-normal">
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-sm p-8 text-center animate-in zoom-in-95 duration-150">
+          <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 stroke-[3]" />
+          </div>
+          <h3 className="text-xl font-black text-slate-800 mb-2">E-mail Enviado</h3>
+          <p className="text-sm text-slate-600 mb-6">{message}</p>
+          <button onClick={onClose} className="w-full bg-[#1351b4] text-white font-bold py-3 rounded-xl transition hover:bg-[#0c3c88]">OK</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-normal">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="p-5 bg-slate-100 border-b border-slate-200 text-center">
+          <h3 className="text-lg font-black tracking-tight text-slate-800">Recuperação de Senha</h3>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {status === "error" && (
+            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 text-xs font-bold leading-normal">
+              ⚠️ {message}
+            </div>
+          )}
+          <div className="space-y-3.5">
+            <div>
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">CPF Cadastrado:</label>
+              <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} required className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">E-mail Cadastrado:</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+            </div>
+          </div>
+          <div className="pt-3 flex gap-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">Cancelar</button>
+            <button type="submit" disabled={status === "loading"} className="flex-1 py-2.5 bg-[#1351b4] hover:bg-[#0c3c88] disabled:opacity-50 text-white font-black rounded-xl text-xs transition shadow-md cursor-pointer">
+              {status === "loading" ? "Processando..." : "Recuperar Senha"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------------
+// ForcePasswordChangeModal component function
+// --------------------------------------------------------------------------------
+export function ForcePasswordChangeModal({ user, onSuccess }: { user: UserProfile; onSuccess: (user: UserProfile) => void }) {
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus("loading");
+    
+    if (newPassword !== confirmPassword) {
+      setStatus("error");
+      setMessage("As novas senhas não coincidem.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, oldPassword, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        onSuccess(user);
+      } else {
+        setStatus("error");
+        setMessage(data.error || "Erro ao trocar a senha.");
+      }
+    } catch (err) {
+      setStatus("error");
+      setMessage("Erro ao conectar com o servidor.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-normal">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-150">
+        <div className="p-5 bg-gradient-to-r from-rose-700 to-rose-900 text-white text-center flex flex-col items-center gap-2">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+            <Lock className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-sm font-black tracking-tight">Troca Obrigatória de Senha</h3>
+          <p className="text-[10px] text-rose-200">Por motivos de segurança, você precisa definir uma nova senha para continuar.</p>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {status === "error" && (
+            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 text-xs font-bold leading-normal">
+              ⚠️ {message}
+            </div>
+          )}
+          <div className="space-y-3.5">
+            <div>
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Senha Atual / Provisória:</label>
+              <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Nova Senha:</label>
+              <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Confirme a Nova Senha:</label>
+              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+            </div>
+          </div>
+          <div className="pt-3">
+            <button type="submit" disabled={status === "loading"} className="w-full py-3 bg-[#1351b4] hover:bg-[#0c3c88] disabled:opacity-50 text-white font-black rounded-xl text-xs transition shadow-md cursor-pointer">
+              {status === "loading" ? "Atualizando..." : "Atualizar e Entrar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function AdminPanelModal({
   onClose,
   onClearOlderAcordaos,
@@ -1504,10 +1695,101 @@ export function AdminPanelModal({
   onResetDatabase: () => Promise<any>;
   currentUser: UserProfile;
 }) {
+  const [activeTab, setActiveTab] = useState<"database" | "users">("users");
+  
+  // Database states
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [adminStatusMsg, setAdminStatusMsg] = useState<string | null>(null);
   const [isAdminExecuting, setIsAdminExecuting] = useState(false);
+
+  // Users states
+  const [usersList, setUsersList] = useState<UserProfile[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [managingPermissionsFor, setManagingPermissionsFor] = useState<UserProfile | null>(null);
+  const [tempModules, setTempModules] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (activeTab === "users") {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  const fetchUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const res = await fetch("/api/admin/users");
+      const data = await res.json();
+      setUsersList(data);
+    } catch (err) {
+      console.error("Failed to fetch users", err);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleOpenPermissions = (u: UserProfile) => {
+    setManagingPermissionsFor(u);
+    setTempModules(u.allowedModules || []);
+  };
+
+  const handleToggleModule = (mod: string) => {
+    if (tempModules.includes(mod)) {
+      setTempModules(tempModules.filter(m => m !== mod));
+    } else {
+      setTempModules([...tempModules, mod]);
+    }
+  };
+
+  const handleSavePermissions = async () => {
+    if (!managingPermissionsFor) return;
+    setIsAdminExecuting(true);
+    try {
+      const isPending = managingPermissionsFor.status === "PENDING";
+      const payload = {
+        role: managingPermissionsFor.role || "Usuário",
+        clearance: "PUBLIC",
+        badgeText: tempModules.length > 0 ? tempModules.join(" | ") : "BÁSICO",
+        allowedModules: tempModules
+      };
+      
+      const endpoint = isPending
+        ? `/api/admin/users/${managingPermissionsFor.id}/approve`
+        : `/api/admin/users/${managingPermissionsFor.id}`;
+
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setAdminStatusMsg(isPending ? "Acesso aprovado e senha provisória gerada." : "Permissões atualizadas com sucesso.");
+        setManagingPermissionsFor(null);
+        fetchUsers();
+      }
+    } catch (err) {
+      setAdminStatusMsg("Erro ao salvar permissões.");
+    } finally {
+      setIsAdminExecuting(false);
+    }
+  };
+
+  const handleInactivateUser = async (id: string) => {
+    setIsAdminExecuting(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/inactivate`, {
+        method: "POST"
+      });
+      if (res.ok) {
+        setAdminStatusMsg("Usuário inativado.");
+        fetchUsers();
+      }
+    } catch (err) {
+      setAdminStatusMsg("Erro ao inativar usuário.");
+    } finally {
+      setIsAdminExecuting(false);
+    }
+  };
 
   const handleClearPre2022 = async () => {
     setIsAdminExecuting(true);
@@ -1547,9 +1829,9 @@ export function AdminPanelModal({
 
   return (
     <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-all-normal">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-slate-900 to-slate-850 text-white flex items-center justify-between">
+        <div className="p-5 bg-gradient-to-r from-slate-900 to-slate-850 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-400 font-bold">
               <Database className="w-5 h-5 stroke-[2.5]" />
@@ -1559,7 +1841,7 @@ export function AdminPanelModal({
                 Painel do Administrador (AECI)
               </h3>
               <span className="text-[10px] text-slate-300 uppercase tracking-widest font-mono font-extrabold block mt-0.5">
-                Manutenção Protetiva e Controle Exclusivo do Banco
+                Gestão de Acessos e Manutenção do Banco
               </span>
             </div>
           </div>
@@ -1571,133 +1853,256 @@ export function AdminPanelModal({
           </button>
         </div>
 
-        {/* Admin context metadata box */}
-        <div className="bg-amber-50 border-b border-amber-100 p-4 flex items-center justify-between text-xs text-amber-950 font-medium">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span>Sessão de Administrador Ativa: <strong>{currentUser.name}</strong> ({currentUser.register})</span>
+        {/* Admin context metadata box & Tabs */}
+        <div className="bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 shrink-0">
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => { setActiveTab("users"); setAdminStatusMsg(""); }}
+              className={`py-4 text-xs font-bold border-b-2 transition ${activeTab === "users" ? "border-[#1351b4] text-[#1351b4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+            >
+              Gestão de Usuários
+            </button>
+            <button 
+              onClick={() => { setActiveTab("database"); setAdminStatusMsg(""); }}
+              className={`py-4 text-xs font-bold border-b-2 transition ${activeTab === "database" ? "border-[#1351b4] text-[#1351b4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+            >
+              Manutenção de Base
+            </button>
           </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 bg-amber-100 text-amber-850 rounded-md font-bold uppercase">Nível AECI-GOLD</span>
+          <div className="flex items-center gap-2 py-3 sm:py-0 text-xs text-amber-950 font-medium">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Sessão: <strong>{currentUser.name}</strong></span>
+          </div>
         </div>
 
         {/* Body content */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 overflow-y-auto flex-1 bg-white">
           {adminStatusMsg && (
-            <div className="p-3.5 bg-emerald-50 border border-emerald-150 text-emerald-800 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 animate-fade-in">
+            <div className="mb-6 p-3.5 bg-blue-50 border border-blue-150 text-blue-800 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 animate-fade-in">
               <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
                 <span>{adminStatusMsg}</span>
               </div>
-              <button
-                onClick={() => setAdminStatusMsg(null)}
-                className="text-emerald-600 hover:text-[#003366] font-extrabold text-[10px] uppercase tracking-wide px-1.5 cursor-pointer"
-              >
+              <button onClick={() => setAdminStatusMsg(null)} className="text-blue-600 hover:text-[#003366] font-extrabold text-[10px] uppercase tracking-wide px-1.5 cursor-pointer">
                 Fechar
               </button>
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            {/* Action 1: Expurgar */}
-            <div className="bg-slate-50 hover:bg-slate-100/30 border border-slate-200 rounded-2xl p-5 transition flex flex-col justify-between gap-4">
-              <div>
-                <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md uppercase tracking-wider mb-2 inline-block">Filtro de Anos</span>
-                <h5 className="text-xs font-bold text-slate-950 leading-tight">
-                  Expurgar Acórdãos Anteriores a 2022
-                </h5>
-                <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                  Remove do banco acórdãos de anos antigos, deixando unicamente dados de 2022 em diante. Ideal para focar nos anos vigentes e limpar dropdowns de filtros.
-                </p>
+          {activeTab === "users" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h4 className="text-sm font-black text-slate-800">Controle de Acessos</h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Aprove, bloqueie e gerencie perfis e permissões dos usuários do sistema.</p>
+                </div>
+                <button onClick={fetchUsers} className="text-xs text-[#1351b4] bg-blue-50 hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg transition cursor-pointer">
+                  Atualizar
+                </button>
               </div>
 
-              {!showClearConfirm ? (
-                <div>
-                  <button
-                    onClick={() => { setShowClearConfirm(true); setShowResetConfirm(false); }}
-                    disabled={isAdminExecuting}
-                    className="w-full py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-3xs transition cursor-pointer"
-                  >
-                    Remover Dados &lt; 2022
-                  </button>
-                </div>
+              {loadingUsers ? (
+                <div className="text-center text-xs text-slate-500 py-8">Carregando usuários...</div>
               ) : (
-                <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl space-y-2.5 animate-fade-in text-xs">
-                  <p className="font-extrabold text-amber-950 text-[10px]">
-                    ⚠️ Confirmar destruição de registros anteriores a 2022? Ação irrecuperável.
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={handleClearPre2022}
-                      disabled={isAdminExecuting}
-                      className="flex-1 py-1 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-lg text-[10px] cursor-pointer"
-                    >
-                      {isAdminExecuting ? "Processando..." : "Sim, Deletar"}
-                    </button>
-                    <button
-                      onClick={() => setShowClearConfirm(false)}
-                      disabled={isAdminExecuting}
-                      className="flex-1 py-1 bg-white border border-slate-200 text-slate-605 font-bold rounded-lg text-[10px] cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-500">
+                        <th className="py-3 px-4">Nome / E-mail</th>
+                        <th className="py-3 px-4">CPF</th>
+                        <th className="py-3 px-4">Setor/Unidade</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usersList.map((u) => (
+                        <tr key={u.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                          <td className="py-3 px-4">
+                            <div className="text-xs font-bold text-slate-800">{u.name}</div>
+                            <div className="text-[10px] text-slate-500">{u.email}</div>
+                          </td>
+                          <td className="py-3 px-4 text-xs font-mono text-slate-600">{u.cpf || "-"}</td>
+                          <td className="py-3 px-4 text-xs text-slate-600">{u.unidade || "-"}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${
+                              u.status === "PENDING" ? "bg-amber-100 text-amber-800" :
+                              u.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" :
+                              "bg-rose-100 text-rose-800"
+                            }`}>
+                              {u.status === "PENDING" ? "Pendente" : u.status === "ACTIVE" ? "Ativo" : "Inativo"}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex gap-2 justify-end">
+                              {u.status === "PENDING" && (
+                                <button 
+                                  onClick={() => handleOpenPermissions(u)}
+                                  disabled={isAdminExecuting}
+                                  className="text-[10px] font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                                >
+                                  Aprovar
+                                </button>
+                              )}
+                              {u.status === "ACTIVE" && u.id !== currentUser.id && (
+                                <>
+                                  <button 
+                                    onClick={() => handleOpenPermissions(u)}
+                                    disabled={isAdminExecuting}
+                                    className="text-[10px] font-bold bg-blue-100 text-[#1351b4] hover:bg-blue-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                                  >
+                                    Acessos
+                                  </button>
+                                  <button 
+                                    onClick={() => handleInactivateUser(u.id)}
+                                    disabled={isAdminExecuting}
+                                    className="text-[10px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                                  >
+                                    Bloquear
+                                  </button>
+                                </>
+                              )}
+                              {u.status === "INACTIVE" && (
+                                <button 
+                                  onClick={() => handleOpenPermissions(u)}
+                                  disabled={isAdminExecuting}
+                                  className="text-[10px] font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                                >
+                                  Reativar
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Gerenciamento de Permissões Modal */}
+              {managingPermissionsFor && (
+                <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95">
+                    <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                      <div>
+                        <h4 className="font-black text-slate-800 text-sm">Gerenciar Acessos</h4>
+                        <span className="text-[10px] text-slate-500">{managingPermissionsFor.name}</span>
+                      </div>
+                      <button onClick={() => setManagingPermissionsFor(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <p className="text-[10px] text-slate-500 font-medium mb-2 uppercase tracking-widest">Módulos Permitidos</p>
+                      {[
+                        { id: "BI", label: "BI & IA Preditiva" },
+                        { id: "TCU", label: "TCU (Controle Externo)" },
+                        { id: "CGU", label: "CGU (Controle Interno)" },
+                        { id: "ETHICS", label: "Comissão de Ética" },
+                        { id: "ROL", label: "Rol de Responsáveis" },
+                        { id: "SRTE", label: "Superintendências Regionais" }
+                      ].map(mod => (
+                        <label key={mod.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
+                          <span className="text-xs font-bold text-slate-700">{mod.label}</span>
+                          <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${tempModules.includes(mod.id) ? 'bg-[#1351b4]' : 'bg-slate-200'}`}>
+                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${tempModules.includes(mod.id) ? 'translate-x-5' : 'translate-x-0'}`} />
+                          </div>
+                          <input type="checkbox" className="sr-only" checked={tempModules.includes(mod.id)} onChange={() => handleToggleModule(mod.id)} />
+                        </label>
+                      ))}
+                    </div>
+                    <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                      <button onClick={() => setManagingPermissionsFor(null)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 cursor-pointer">
+                        Cancelar
+                      </button>
+                      <button onClick={handleSavePermissions} disabled={isAdminExecuting} className="px-4 py-2 text-xs font-bold bg-[#1351b4] text-white rounded-lg hover:bg-blue-800 transition shadow-sm cursor-pointer">
+                        {managingPermissionsFor.status === "PENDING" ? "Aprovar Acesso" : "Salvar Permissões"}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
+          )}
 
-            {/* Action 2: Reset */}
-            <div className="bg-rose-50/10 hover:bg-rose-50/20 border border-rose-100 rounded-2xl p-5 transition flex flex-col justify-between gap-4">
-              <div>
-                <span className="text-[10px] bg-rose-100 text-rose-850 font-bold px-2 py-0.5 rounded-md uppercase tracking-wider mb-2 inline-block">Factory Reset</span>
-                <h5 className="text-xs font-bold text-slate-950 leading-tight">
-                  Redefinição Completa de Fábrica
-                </h5>
-                <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-                  Zera integralmente todas as tabelas (acórdãos, comunicações, comissão de ética, rol de responsáveis) de volta aos dados de semente oficiais fornecidos no Ministério.
-                </p>
-              </div>
-
-              {!showResetConfirm ? (
+          {activeTab === "database" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Action 1: Expurgar */}
+              <div className="bg-slate-50 hover:bg-slate-100/30 border border-slate-200 rounded-2xl p-5 transition flex flex-col justify-between gap-4">
                 <div>
-                  <button
-                    onClick={() => { setShowResetConfirm(true); setShowClearConfirm(false); }}
-                    disabled={isAdminExecuting}
-                    className="w-full py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-3xs transition cursor-pointer"
-                  >
-                    Zerar Banco de Dados
-                  </button>
-                </div>
-              ) : (
-                <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl space-y-2.5 animate-fade-in text-xs">
-                  <p className="font-extrabold text-rose-950 text-[10px]">
-                    💥 ATENÇÃO: Deseja REALMENTE apagar todo o histórico customizado do portal?
+                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-md uppercase tracking-wider mb-2 inline-block">Filtro de Anos</span>
+                  <h5 className="text-xs font-bold text-slate-950 leading-tight">
+                    Expurgar Acórdãos Anteriores a 2022
+                  </h5>
+                  <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                    Remove do banco acórdãos de anos antigos, deixando unicamente dados de 2022 em diante. Ideal para focar nos anos vigentes e limpar dropdowns de filtros.
                   </p>
-                  <div className="flex gap-2">
+                </div>
+
+                {!showClearConfirm ? (
+                  <div>
                     <button
-                      onClick={handleResetToFactory}
+                      onClick={() => { setShowClearConfirm(true); setShowResetConfirm(false); }}
                       disabled={isAdminExecuting}
-                      className="flex-1 py-1 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg text-[10px] cursor-pointer"
+                      className="w-full py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-3xs transition cursor-pointer"
                     >
-                      {isAdminExecuting ? "Processando..." : "Sim, Resetar Tudo"}
-                    </button>
-                    <button
-                      onClick={() => setShowResetConfirm(false)}
-                      disabled={isAdminExecuting}
-                      className="flex-1 py-1 bg-white border border-slate-200 text-slate-605 font-bold rounded-lg text-[10px] cursor-pointer"
-                    >
-                      Cancelar
+                      Remover Dados &lt; 2022
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl space-y-2.5 animate-fade-in text-xs">
+                    <p className="font-extrabold text-amber-950 text-[10px]">
+                      ⚠️ Confirmar destruição de registros anteriores a 2022? Ação irrecuperável.
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={handleClearPre2022} disabled={isAdminExecuting} className="flex-1 py-1 bg-amber-600 hover:bg-amber-700 text-white font-black rounded-lg text-[10px] cursor-pointer">Sim, Deletar</button>
+                      <button onClick={() => setShowClearConfirm(false)} disabled={isAdminExecuting} className="flex-1 py-1 bg-white border border-slate-200 text-slate-605 font-bold rounded-lg text-[10px] cursor-pointer">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-          </div>
+              {/* Action 2: Reset */}
+              <div className="bg-rose-50/10 hover:bg-rose-50/20 border border-rose-100 rounded-2xl p-5 transition flex flex-col justify-between gap-4">
+                <div>
+                  <span className="text-[10px] bg-rose-100 text-rose-850 font-bold px-2 py-0.5 rounded-md uppercase tracking-wider mb-2 inline-block">Factory Reset</span>
+                  <h5 className="text-xs font-bold text-slate-950 leading-tight">
+                    Redefinição Completa de Fábrica
+                  </h5>
+                  <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
+                    Zera integralmente todas as tabelas (acórdãos, comunicações, comissão de ética, rol de responsáveis) de volta aos dados de semente oficiais.
+                  </p>
+                </div>
+
+                {!showResetConfirm ? (
+                  <div>
+                    <button
+                      onClick={() => { setShowResetConfirm(true); setShowClearConfirm(false); }}
+                      disabled={isAdminExecuting}
+                      className="w-full py-2 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-3xs transition cursor-pointer"
+                    >
+                      Zerar Banco de Dados
+                    </button>
+                  </div>
+                ) : (
+                  <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl space-y-2.5 animate-fade-in text-xs">
+                    <p className="font-extrabold text-rose-950 text-[10px]">
+                      💥 ATENÇÃO: Deseja REALMENTE apagar todo o histórico customizado do portal?
+                    </p>
+                    <div className="flex gap-2">
+                      <button onClick={handleResetToFactory} disabled={isAdminExecuting} className="flex-1 py-1 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg text-[10px] cursor-pointer">Sim, Resetar Tudo</button>
+                      <button onClick={() => setShowResetConfirm(false)} disabled={isAdminExecuting} className="flex-1 py-1 bg-white border border-slate-200 text-slate-605 font-bold rounded-lg text-[10px] cursor-pointer">Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer controls */}
-        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
           <button
             onClick={onClose}
             className="px-5 py-2 bg-slate-900 hover:bg-slate-950 text-white font-black rounded-xl text-xs transition cursor-pointer"

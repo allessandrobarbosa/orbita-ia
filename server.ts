@@ -760,56 +760,86 @@ const SEED_PROFILES = [
   {
     id: "alessandro",
     name: "Alessandro Barbosa",
+    cpf: "111.222.333-44",
+    phone: "(61) 99999-1111",
+    unidade: "AECI",
     role: "Analista de Controle Interno Especial",
     email: "alessandro.barbosa@mte.gov.br",
     register: "Matrícula: AECI-8409-G",
     clearance: "ADMIN",
     avatarColor: "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
     pin: "1234",
+    password: "1234",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "AECI - ADMIN"
   },
   {
     id: "heloisa",
     name: "Dra. Heloísa Mendes",
+    cpf: "222.333.444-55",
+    phone: "(61) 99999-2222",
+    unidade: "Corregedoria",
     role: "Membro Presidência / Corregedora Geral",
     email: "heloisa.mendes@mte.gov.br",
     register: "Matrícula: COR-4421-E",
     clearance: "ETHICS",
     avatarColor: "bg-teal-700 text-teal-100 border-teal-500 ring-teal-500/30",
     pin: "2026",
+    password: "2026",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "CORREGEDORIA"
   },
   {
     id: "jorge",
     name: "Jorge Luiz Santos",
+    cpf: "333.444.555-66",
+    phone: "(61) 99999-3333",
+    unidade: "Gabinete",
     role: "Chefe de Gabinete Adjunto",
     email: "jorge.santos@mte.gov.br",
     register: "Matrícula: GAB-0938-A",
     clearance: "AUDITOR",
     avatarColor: "bg-slate-700 text-slate-100 border-slate-500 ring-slate-500/30",
     pin: "1984",
+    password: "1984",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "GABINETE"
   },
   {
     id: "srte_rj",
     name: "Superintendente Regional RJ",
+    cpf: "444.555.666-77",
+    phone: "(21) 99999-4444",
+    unidade: "SRTE-RJ",
     role: "Superintendente da SRTE-RJ",
     email: "srte.rj@mte.gov.br",
     register: "Matrícula: SRTE-1052-S",
     clearance: "SRTE",
     avatarColor: "bg-amber-700 text-amber-100 border-amber-500 ring-amber-500/30",
     pin: "7777",
+    password: "7777",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "SRTE-RJ"
   },
   {
     id: "public",
     name: "Consulta Pública",
+    cpf: "000.000.000-00",
+    phone: "",
+    unidade: "Público Externo",
     role: "Cidadão / Acesso Externo",
     email: "cidadao@mte.gov.br",
     register: "Acesso: CPF Simplificado",
     clearance: "PUBLIC",
     avatarColor: "bg-emerald-700 text-emerald-100 border-emerald-500 ring-emerald-500/30",
     pin: "0000",
+    password: "0000",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "PÚBLICO"
   }
 ];
@@ -872,7 +902,8 @@ function loadDatabase() {
       comissaoEtica: SEED_COMISSAO_ETICA,
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
-      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS
+      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
+      users: SEED_PROFILES
     };
 
     // Also run migration on seed data to ensure it's diverse
@@ -901,6 +932,10 @@ function loadDatabase() {
     }
     if (!data.tceAcordaoMappings) {
       data.tceAcordaoMappings = SEED_TCE_ACORDAO_MAPPINGS;
+      dataModified = true;
+    }
+    if (!data.users) {
+      data.users = SEED_PROFILES;
       dataModified = true;
     }
 
@@ -1177,6 +1212,24 @@ async function startServer() {
   // Auth API: Get current session user
   app.get("/api/auth/session", (req, res) => {
     if (req.session && req.session.user) {
+      // Fetch fresh data from db to ensure permissions are up to date
+      const data = loadDatabase();
+      const freshUser = (data.users || []).find((u: any) => u.id === req.session.user.id);
+      
+      if (freshUser) {
+        // Update session with fresh data
+        req.session.user = {
+          id: freshUser.id,
+          name: freshUser.name,
+          role: freshUser.role,
+          email: freshUser.email,
+          register: freshUser.register,
+          clearance: freshUser.clearance,
+          avatarColor: freshUser.avatarColor,
+          badgeText: freshUser.badgeText,
+          allowedModules: freshUser.allowedModules
+        };
+      }
       return res.json({ authenticated: true, user: req.session.user });
     }
     return res.json({ authenticated: false });
@@ -1209,6 +1262,217 @@ async function startServer() {
     } else {
       return res.status(401).json({ error: "Código PIN de assinatura inválido para este perfil." });
     }
+  });
+
+  // Auth API: Login with local credentials (new flow)
+  app.post("/api/auth/login-local", (req, res) => {
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res.status(400).json({ error: "Identificador e senha são obrigatórios." });
+    }
+
+    const data = loadDatabase();
+    const users = data.users || [];
+    
+    // Find by exact email or exact CPF (numbers only) or exact id
+    const cleanId = identifier.replace(/\D/g, "");
+    const matchedProfile = users.find((p: any) => 
+      p.email === identifier || p.id === identifier || (p.cpf && p.cpf.replace(/\D/g, "") === cleanId)
+    );
+
+    if (!matchedProfile) {
+      return res.status(404).json({ error: "Credenciais inválidas." });
+    }
+
+    if (matchedProfile.status && matchedProfile.status !== "ACTIVE") {
+      return res.status(403).json({ error: "Usuário não está ativo (status: " + matchedProfile.status + ")." });
+    }
+
+    // fallback to pin if password not set (for old mock profiles)
+    const validPassword = matchedProfile.password || matchedProfile.pin;
+    
+    if (validPassword === password || matchedProfile.clearance === "PUBLIC") {
+      req.session.user = {
+        id: matchedProfile.id,
+        name: matchedProfile.name,
+        role: matchedProfile.role,
+        email: matchedProfile.email,
+        register: matchedProfile.register,
+        clearance: matchedProfile.clearance,
+        avatarColor: matchedProfile.avatarColor,
+        badgeText: matchedProfile.badgeText,
+        allowedModules: matchedProfile.allowedModules
+      };
+      return res.json({ 
+        success: true, 
+        user: req.session.user, 
+        requiresPasswordChange: matchedProfile.requiresPasswordChange || false 
+      });
+    } else {
+      return res.status(401).json({ error: "Credenciais inválidas." });
+    }
+  });
+
+  // Auth API: Request Access
+  app.post("/api/auth/request-access", (req, res) => {
+    const { name, cpf, phone, email, unidade } = req.body;
+    if (!name || !cpf || !email) {
+      return res.status(400).json({ error: "Nome, CPF e E-mail são obrigatórios." });
+    }
+    
+    const data = loadDatabase();
+    data.users = data.users || [];
+    
+    // Check if exists
+    const cleanCpf = cpf.replace(/\D/g, "");
+    const exists = data.users.find((p:any) => p.email === email || (p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf));
+    if (exists) {
+      return res.status(400).json({ error: "Usuário com este E-mail ou CPF já está cadastrado." });
+    }
+
+    const newUser = {
+      id: "usr_" + Math.random().toString(36).substr(2, 9),
+      name,
+      cpf,
+      phone,
+      unidade,
+      email,
+      role: "Acesso Solicitado",
+      register: "Pendente",
+      clearance: "PENDING",
+      avatarColor: "bg-slate-300 text-slate-700 border-slate-300",
+      pin: "0000",
+      password: "",
+      requiresPasswordChange: true,
+      status: "PENDING",
+      badgeText: "PENDENTE"
+    };
+
+    data.users.push(newUser);
+    saveDatabase(data);
+
+    console.log(`[EMAIL SIMULATION] To: admins | Subject: Nova Solicitação de Acesso | Body: O usuário ${name} (${email}) solicitou acesso.`);
+
+    return res.json({ success: true, message: "Solicitação enviada com sucesso." });
+  });
+
+  // Auth API: Forgot Password
+  app.post("/api/auth/forgot-password", (req, res) => {
+    const { email, cpf } = req.body;
+    
+    const data = loadDatabase();
+    const users = data.users || [];
+    
+    const cleanCpf = cpf ? cpf.replace(/\D/g, "") : "";
+    const userIndex = users.findIndex((p:any) => p.email === email && p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf);
+    
+    if (userIndex === -1) {
+      // Return success anyway for security reasons (don't leak emails)
+      return res.json({ success: true, message: "Se os dados estiverem corretos, um e-mail foi enviado." });
+    }
+
+    // Generate provisional password
+    const provPass = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
+    data.users[userIndex].password = provPass;
+    data.users[userIndex].requiresPasswordChange = true;
+    saveDatabase(data);
+
+    console.log(`[EMAIL SIMULATION] To: ${email} | Subject: Recuperação de Senha | Body: Sua nova senha provisória é ${provPass}. Você deverá trocá-la no próximo acesso.`);
+
+    return res.json({ success: true, message: "E-mail de recuperação enviado." });
+  });
+
+  // Auth API: Reset Password (after login)
+  app.post("/api/auth/reset-password", (req, res) => {
+    const { userId, oldPassword, newPassword } = req.body;
+    // In a real app, we check if req.session.user.id == userId
+    
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p:any) => p.id === userId);
+    
+    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
+    
+    const user = data.users[userIndex];
+    if (user.password !== oldPassword && user.pin !== oldPassword) {
+      return res.status(403).json({ error: "Senha atual incorreta." });
+    }
+
+    data.users[userIndex].password = newPassword;
+    data.users[userIndex].requiresPasswordChange = false;
+    data.users[userIndex].pin = newPassword; // keeping pin in sync for mock fallback
+    saveDatabase(data);
+
+    return res.json({ success: true, message: "Senha atualizada com sucesso." });
+  });
+
+  // Admin API: List Users
+  app.get("/api/admin/users", (req, res) => {
+    // Should check clearance === ADMIN here
+    const data = loadDatabase();
+    return res.json(data.users || []);
+  });
+
+  // Admin API: Approve or Update User
+  app.post("/api/admin/users/:id/approve", (req, res) => {
+    const { role, clearance, badgeText, allowedModules } = req.body;
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p:any) => p.id === req.params.id);
+    
+    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
+    
+    const isNewApproval = data.users[userIndex].status === "PENDING";
+    let provPass = data.users[userIndex].password;
+
+    if (isNewApproval) {
+      provPass = Math.floor(100000 + Math.random() * 900000).toString();
+      data.users[userIndex].password = provPass;
+      data.users[userIndex].pin = provPass;
+      data.users[userIndex].requiresPasswordChange = true;
+    }
+    
+    data.users[userIndex].status = "ACTIVE";
+    data.users[userIndex].role = role || data.users[userIndex].role;
+    data.users[userIndex].clearance = clearance || "PUBLIC";
+    data.users[userIndex].badgeText = badgeText || "AUTORIZADO";
+    if (allowedModules) {
+      data.users[userIndex].allowedModules = allowedModules;
+    }
+    
+    saveDatabase(data);
+
+    if (isNewApproval) {
+      console.log(`\n\n=== SIMULAÇÃO DE ENVIO DE E-MAIL ===\nPara: ${data.users[userIndex].email}\nAssunto: Acesso Aprovado\nMensagem: Seu acesso ao ÓRBITA.AECI foi aprovado.\nSua senha provisória é: ${provPass}\n====================================\n\n`);
+    }
+
+    return res.json({ success: true, user: data.users[userIndex] });
+  });
+
+  // Admin API: Update active user permissions
+  app.post("/api/admin/users/:id", (req, res) => {
+    const { badgeText, allowedModules } = req.body;
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p:any) => p.id === req.params.id);
+    
+    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
+    
+    if (badgeText) data.users[userIndex].badgeText = badgeText;
+    if (allowedModules) data.users[userIndex].allowedModules = allowedModules;
+    
+    saveDatabase(data);
+    return res.json({ success: true, user: data.users[userIndex] });
+  });
+
+  // Admin API: Inactivate User
+  app.post("/api/admin/users/:id/inactivate", (req, res) => {
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p:any) => p.id === req.params.id);
+    
+    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
+    
+    data.users[userIndex].status = "INACTIVE";
+    saveDatabase(data);
+
+    return res.json({ success: true, user: data.users[userIndex] });
   });
 
   // Auth API: Logout

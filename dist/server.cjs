@@ -1002,56 +1002,86 @@ var SEED_PROFILES = [
   {
     id: "alessandro",
     name: "Alessandro Barbosa",
+    cpf: "111.222.333-44",
+    phone: "(61) 99999-1111",
+    unidade: "AECI",
     role: "Analista de Controle Interno Especial",
     email: "alessandro.barbosa@mte.gov.br",
     register: "Matr\xEDcula: AECI-8409-G",
     clearance: "ADMIN",
     avatarColor: "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
     pin: "1234",
+    password: "1234",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "AECI - ADMIN"
   },
   {
     id: "heloisa",
     name: "Dra. Helo\xEDsa Mendes",
+    cpf: "222.333.444-55",
+    phone: "(61) 99999-2222",
+    unidade: "Corregedoria",
     role: "Membro Presid\xEAncia / Corregedora Geral",
     email: "heloisa.mendes@mte.gov.br",
     register: "Matr\xEDcula: COR-4421-E",
     clearance: "ETHICS",
     avatarColor: "bg-teal-700 text-teal-100 border-teal-500 ring-teal-500/30",
     pin: "2026",
+    password: "2026",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "CORREGEDORIA"
   },
   {
     id: "jorge",
     name: "Jorge Luiz Santos",
+    cpf: "333.444.555-66",
+    phone: "(61) 99999-3333",
+    unidade: "Gabinete",
     role: "Chefe de Gabinete Adjunto",
     email: "jorge.santos@mte.gov.br",
     register: "Matr\xEDcula: GAB-0938-A",
     clearance: "AUDITOR",
     avatarColor: "bg-slate-700 text-slate-100 border-slate-500 ring-slate-500/30",
     pin: "1984",
+    password: "1984",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "GABINETE"
   },
   {
     id: "srte_rj",
     name: "Superintendente Regional RJ",
+    cpf: "444.555.666-77",
+    phone: "(21) 99999-4444",
+    unidade: "SRTE-RJ",
     role: "Superintendente da SRTE-RJ",
     email: "srte.rj@mte.gov.br",
     register: "Matr\xEDcula: SRTE-1052-S",
     clearance: "SRTE",
     avatarColor: "bg-amber-700 text-amber-100 border-amber-500 ring-amber-500/30",
     pin: "7777",
+    password: "7777",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "SRTE-RJ"
   },
   {
     id: "public",
     name: "Consulta P\xFAblica",
+    cpf: "000.000.000-00",
+    phone: "",
+    unidade: "P\xFAblico Externo",
     role: "Cidad\xE3o / Acesso Externo",
     email: "cidadao@mte.gov.br",
     register: "Acesso: CPF Simplificado",
     clearance: "PUBLIC",
     avatarColor: "bg-emerald-700 text-emerald-100 border-emerald-500 ring-emerald-500/30",
     pin: "0000",
+    password: "0000",
+    requiresPasswordChange: false,
+    status: "ACTIVE",
     badgeText: "P\xDABLICO"
   }
 ];
@@ -1107,7 +1137,8 @@ function loadDatabase() {
       comissaoEtica: SEED_COMISSAO_ETICA,
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
-      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS
+      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
+      users: SEED_PROFILES
     };
     migrateProcessTypes(defaultData);
     import_fs.default.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf-8");
@@ -1131,6 +1162,10 @@ function loadDatabase() {
     }
     if (!data.tceAcordaoMappings) {
       data.tceAcordaoMappings = SEED_TCE_ACORDAO_MAPPINGS;
+      dataModified = true;
+    }
+    if (!data.users) {
+      data.users = SEED_PROFILES;
       dataModified = true;
     }
     if (migrateProcessTypes(data)) {
@@ -1159,6 +1194,35 @@ function saveDatabase(data) {
   } catch (err) {
     console.error("Failed to save database file:", err);
   }
+}
+function stripHtmlToText(html) {
+  if (!html) return "";
+  let text = html;
+  text = text.replace(/<br\s*\/?>/gi, "\n");
+  text = text.replace(/<\/p>/gi, "\n\n");
+  text = text.replace(/<p\b[^>]*>/gi, "");
+  text = text.replace(/<\/div>/gi, "\n");
+  text = text.replace(/<div\b[^>]*>/gi, "");
+  text = text.replace(/<\/li>/gi, "\n");
+  text = text.replace(/<li\b[^>]*>/gi, "  \u2022 ");
+  text = text.replace(/<\/tr>/gi, "\n");
+  text = text.replace(/<td>|<\/td>|<th>|<\/th>/gi, " | ");
+  text = text.replace(/<\/h[1-6]>/gi, "\n\n");
+  text = text.replace(/<h[1-6]\b[^>]*>/gi, "");
+  text = text.replace(/<[^>]*>/g, "");
+  text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&gt;/g, ">");
+  text = text.replace(/&quot;/g, '"');
+  text = text.replace(/&#39;/g, "'");
+  text = text.replace(/&apos;/g, "'");
+  text = text.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+  text = text.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
+  text = text.replace(/[ \t]+/g, " ");
+  text = text.replace(/\n{3,}/g, "\n\n");
+  text = text.split("\n").map((line) => line.trim()).join("\n");
+  return text.trim();
 }
 function generateFullAcordaoText(ac) {
   const relator = ac.RELATOR || "Ministro Relator";
@@ -1200,13 +1264,56 @@ ACORDAM os Ministros do Tribunal de Contas da Uni\xE3o, reunidos em Sess\xE3o de
 
 9.3. Dar ci\xEAncia desta delibera\xE7\xE3o \xE0 Unidade T\xE9cnica do TCU e \xE0 entidade fiscalizada.`;
 }
+async function fetchAcordaoFromTCU(numAcordao, anoAcordao) {
+  try {
+    const searchUrl = `https://pesquisa.apps.tcu.gov.br/rest/publico/base/acordao-completo/documentosResumidos?termo=${numAcordao}/${anoAcordao}&quantidade=10`;
+    console.log(`[TCU API] Searching for ${numAcordao}/${anoAcordao}...`);
+    const searchRes = await fetch(searchUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://pesquisa.apps.tcu.gov.br/"
+      }
+    });
+    if (!searchRes.ok) {
+      throw new Error(`Search request failed with status ${searchRes.status}`);
+    }
+    const searchData = await searchRes.json();
+    const docs = searchData.documentos || [];
+    const exactDoc = docs.find(
+      (d) => String(d.NUMACORDAO) === String(numAcordao) && String(d.ANOACORDAO) === String(anoAcordao)
+    );
+    if (!exactDoc) {
+      console.log(`[TCU API] No exact match found for ${numAcordao}/${anoAcordao} in search results.`);
+      return null;
+    }
+    console.log(`[TCU API] Found document with KEY: ${exactDoc.KEY}. Fetching details...`);
+    const docUrl = `https://pesquisa.apps.tcu.gov.br/rest/publico/base/acordao-completo/documento?termo=KEY:${exactDoc.KEY}`;
+    const docRes = await fetch(docUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://pesquisa.apps.tcu.gov.br/"
+      }
+    });
+    if (!docRes.ok) {
+      throw new Error(`Detail request failed with status ${docRes.status}`);
+    }
+    const docData = await docRes.json();
+    if (docData.documentos && docData.documentos.length > 0) {
+      return docData.documentos[0];
+    }
+    return null;
+  } catch (err) {
+    console.error(`[TCU API] Error fetching ${numAcordao}/${anoAcordao}:`, err.message);
+    return null;
+  }
+}
 var SESSIONS_PATH = import_path.default.join(DATA_DIR, "sessions.json");
 var FileSessionStore = class extends import_express_session.default.Store {
   constructor() {
     super();
-    if (!import_fs.default.existsSync(SESSIONS_PATH)) {
-      import_fs.default.writeFileSync(SESSIONS_PATH, JSON.stringify({}), "utf-8");
-    }
+    import_fs.default.writeFileSync(SESSIONS_PATH, JSON.stringify({}), "utf-8");
   }
   getSessions() {
     try {
@@ -1285,15 +1392,28 @@ async function startServer() {
     cookie: {
       secure: false,
       // set to true if using HTTPS
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1e3
-      // 24 hours
+      httpOnly: true
     }
   }));
   app.use(import_express.default.json({ limit: "50mb" }));
   app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
   app.get("/api/auth/session", (req, res) => {
     if (req.session && req.session.user) {
+      const data = loadDatabase();
+      const freshUser = (data.users || []).find((u) => u.id === req.session.user.id);
+      if (freshUser) {
+        req.session.user = {
+          id: freshUser.id,
+          name: freshUser.name,
+          role: freshUser.role,
+          email: freshUser.email,
+          register: freshUser.register,
+          clearance: freshUser.clearance,
+          avatarColor: freshUser.avatarColor,
+          badgeText: freshUser.badgeText,
+          allowedModules: freshUser.allowedModules
+        };
+      }
       return res.json({ authenticated: true, user: req.session.user });
     }
     return res.json({ authenticated: false });
@@ -1322,6 +1442,167 @@ async function startServer() {
     } else {
       return res.status(401).json({ error: "C\xF3digo PIN de assinatura inv\xE1lido para este perfil." });
     }
+  });
+  app.post("/api/auth/login-local", (req, res) => {
+    const { identifier, password } = req.body;
+    if (!identifier || !password) {
+      return res.status(400).json({ error: "Identificador e senha s\xE3o obrigat\xF3rios." });
+    }
+    const data = loadDatabase();
+    const users = data.users || [];
+    const cleanId = identifier.replace(/\D/g, "");
+    const matchedProfile = users.find(
+      (p) => p.email === identifier || p.id === identifier || p.cpf && p.cpf.replace(/\D/g, "") === cleanId
+    );
+    if (!matchedProfile) {
+      return res.status(404).json({ error: "Credenciais inv\xE1lidas." });
+    }
+    if (matchedProfile.status && matchedProfile.status !== "ACTIVE") {
+      return res.status(403).json({ error: "Usu\xE1rio n\xE3o est\xE1 ativo (status: " + matchedProfile.status + ")." });
+    }
+    const validPassword = matchedProfile.password || matchedProfile.pin;
+    if (validPassword === password || matchedProfile.clearance === "PUBLIC") {
+      req.session.user = {
+        id: matchedProfile.id,
+        name: matchedProfile.name,
+        role: matchedProfile.role,
+        email: matchedProfile.email,
+        register: matchedProfile.register,
+        clearance: matchedProfile.clearance,
+        avatarColor: matchedProfile.avatarColor,
+        badgeText: matchedProfile.badgeText,
+        allowedModules: matchedProfile.allowedModules
+      };
+      return res.json({
+        success: true,
+        user: req.session.user,
+        requiresPasswordChange: matchedProfile.requiresPasswordChange || false
+      });
+    } else {
+      return res.status(401).json({ error: "Credenciais inv\xE1lidas." });
+    }
+  });
+  app.post("/api/auth/request-access", (req, res) => {
+    const { name, cpf, phone, email, unidade } = req.body;
+    if (!name || !cpf || !email) {
+      return res.status(400).json({ error: "Nome, CPF e E-mail s\xE3o obrigat\xF3rios." });
+    }
+    const data = loadDatabase();
+    data.users = data.users || [];
+    const cleanCpf = cpf.replace(/\D/g, "");
+    const exists = data.users.find((p) => p.email === email || p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf);
+    if (exists) {
+      return res.status(400).json({ error: "Usu\xE1rio com este E-mail ou CPF j\xE1 est\xE1 cadastrado." });
+    }
+    const newUser = {
+      id: "usr_" + Math.random().toString(36).substr(2, 9),
+      name,
+      cpf,
+      phone,
+      unidade,
+      email,
+      role: "Acesso Solicitado",
+      register: "Pendente",
+      clearance: "PENDING",
+      avatarColor: "bg-slate-300 text-slate-700 border-slate-300",
+      pin: "0000",
+      password: "",
+      requiresPasswordChange: true,
+      status: "PENDING",
+      badgeText: "PENDENTE"
+    };
+    data.users.push(newUser);
+    saveDatabase(data);
+    console.log(`[EMAIL SIMULATION] To: admins | Subject: Nova Solicita\xE7\xE3o de Acesso | Body: O usu\xE1rio ${name} (${email}) solicitou acesso.`);
+    return res.json({ success: true, message: "Solicita\xE7\xE3o enviada com sucesso." });
+  });
+  app.post("/api/auth/forgot-password", (req, res) => {
+    const { email, cpf } = req.body;
+    const data = loadDatabase();
+    const users = data.users || [];
+    const cleanCpf = cpf ? cpf.replace(/\D/g, "") : "";
+    const userIndex = users.findIndex((p) => p.email === email && p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf);
+    if (userIndex === -1) {
+      return res.json({ success: true, message: "Se os dados estiverem corretos, um e-mail foi enviado." });
+    }
+    const provPass = Math.floor(1e5 + Math.random() * 9e5).toString();
+    data.users[userIndex].password = provPass;
+    data.users[userIndex].requiresPasswordChange = true;
+    saveDatabase(data);
+    console.log(`[EMAIL SIMULATION] To: ${email} | Subject: Recupera\xE7\xE3o de Senha | Body: Sua nova senha provis\xF3ria \xE9 ${provPass}. Voc\xEA dever\xE1 troc\xE1-la no pr\xF3ximo acesso.`);
+    return res.json({ success: true, message: "E-mail de recupera\xE7\xE3o enviado." });
+  });
+  app.post("/api/auth/reset-password", (req, res) => {
+    const { userId, oldPassword, newPassword } = req.body;
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p) => p.id === userId);
+    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
+    const user = data.users[userIndex];
+    if (user.password !== oldPassword && user.pin !== oldPassword) {
+      return res.status(403).json({ error: "Senha atual incorreta." });
+    }
+    data.users[userIndex].password = newPassword;
+    data.users[userIndex].requiresPasswordChange = false;
+    data.users[userIndex].pin = newPassword;
+    saveDatabase(data);
+    return res.json({ success: true, message: "Senha atualizada com sucesso." });
+  });
+  app.get("/api/admin/users", (req, res) => {
+    const data = loadDatabase();
+    return res.json(data.users || []);
+  });
+  app.post("/api/admin/users/:id/approve", (req, res) => {
+    const { role, clearance, badgeText, allowedModules } = req.body;
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p) => p.id === req.params.id);
+    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
+    const isNewApproval = data.users[userIndex].status === "PENDING";
+    let provPass = data.users[userIndex].password;
+    if (isNewApproval) {
+      provPass = Math.floor(1e5 + Math.random() * 9e5).toString();
+      data.users[userIndex].password = provPass;
+      data.users[userIndex].pin = provPass;
+      data.users[userIndex].requiresPasswordChange = true;
+    }
+    data.users[userIndex].status = "ACTIVE";
+    data.users[userIndex].role = role || data.users[userIndex].role;
+    data.users[userIndex].clearance = clearance || "PUBLIC";
+    data.users[userIndex].badgeText = badgeText || "AUTORIZADO";
+    if (allowedModules) {
+      data.users[userIndex].allowedModules = allowedModules;
+    }
+    saveDatabase(data);
+    if (isNewApproval) {
+      console.log(`
+
+=== SIMULA\xC7\xC3O DE ENVIO DE E-MAIL ===
+Para: ${data.users[userIndex].email}
+Assunto: Acesso Aprovado
+Mensagem: Seu acesso ao \xD3RBITA.AECI foi aprovado.
+Sua senha provis\xF3ria \xE9: ${provPass}
+====================================
+
+`);
+    }
+    return res.json({ success: true, user: data.users[userIndex] });
+  });
+  app.post("/api/admin/users/:id", (req, res) => {
+    const { badgeText, allowedModules } = req.body;
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p) => p.id === req.params.id);
+    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
+    if (badgeText) data.users[userIndex].badgeText = badgeText;
+    if (allowedModules) data.users[userIndex].allowedModules = allowedModules;
+    saveDatabase(data);
+    return res.json({ success: true, user: data.users[userIndex] });
+  });
+  app.post("/api/admin/users/:id/inactivate", (req, res) => {
+    const data = loadDatabase();
+    const userIndex = (data.users || []).findIndex((p) => p.id === req.params.id);
+    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
+    data.users[userIndex].status = "INACTIVE";
+    saveDatabase(data);
+    return res.json({ success: true, user: data.users[userIndex] });
   });
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err) => {
@@ -1710,40 +1991,62 @@ async function startServer() {
         ];
         const chosenDecisao = rawItem.DECISAO || defaultDecisoes[numAcordao % 3];
         const rawAcordao = rawItem.ACORDAO;
-        const needsGeneration = !rawAcordao || rawAcordao.includes("...") || rawAcordao.includes("DADOS HIST\xD3RICOS") || rawAcordao.includes("DADOS OBTIDOS") || rawAcordao.trim().length < 200;
-        const finalAcordaoText = needsGeneration ? generateFullAcordaoText({
-          RELATOR: chosenRelator,
-          NUMACORDAO: numAcordao,
-          ANOACORDAO: anoAcordao,
-          COLEGIADO: chosenColegiado,
-          PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-          TIPOPROCESSO: rawItem.TIPOPROCESSO || "Julgamento",
-          INTERESSADOS: rawItem.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
-          ENTIDADE: rawItem.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
-          UNIDADETECNICA: chosenUT,
-          ASSUNTO: chosenAssunto,
-          DECISAO: chosenDecisao
-        }) : rawAcordao;
+        const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
+        const needsGeneration = !cleanedAcordao || cleanedAcordao.includes("DADOS HIST\xD3RICOS") || cleanedAcordao.includes("DADOS OBTIDOS") || cleanedAcordao.trim().length < 50;
+        let finalAcordaoText = cleanedAcordao;
+        let isSimulated = false;
+        if (needsGeneration) {
+          console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
+          const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
+          if (apiDoc && apiDoc.ACORDAO) {
+            finalAcordaoText = stripHtmlToText(apiDoc.ACORDAO);
+            rawItem.RELATOR = rawItem.RELATOR || apiDoc.RELATOR;
+            rawItem.COLEGIADO = rawItem.COLEGIADO || apiDoc.COLEGIADO;
+            rawItem.NUMATA = rawItem.NUMATA || apiDoc.NUMATA;
+            rawItem.DATASESSAO = rawItem.DATASESSAO || apiDoc.DATASESSAO;
+            rawItem.PROC = rawItem.PROC || (apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : void 0);
+            rawItem.INTERESSADOS = rawItem.INTERESSADOS || apiDoc.INTERESSADOS;
+            rawItem.ENTIDADE = rawItem.ENTIDADE || apiDoc.ENTIDADE;
+            rawItem.UNIDADETECNICA = rawItem.UNIDADETECNICA || apiDoc.UNIDADETECNICA;
+            rawItem.ASSUNTO = rawItem.ASSUNTO || apiDoc.ASSUNTO;
+            rawItem.TIPOPROCESSO = rawItem.TIPOPROCESSO || apiDoc.TIPOPROCESSO;
+          } else {
+            isSimulated = true;
+            finalAcordaoText = generateFullAcordaoText({
+              RELATOR: chosenRelator,
+              NUMACORDAO: numAcordao,
+              ANOACORDAO: anoAcordao,
+              COLEGIADO: chosenColegiado,
+              PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+              TIPOPROCESSO: rawItem.TIPOPROCESSO || "Julgamento",
+              INTERESSADOS: rawItem.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
+              ENTIDADE: rawItem.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
+              UNIDADETECNICA: chosenUT,
+              ASSUNTO: chosenAssunto,
+              DECISAO: chosenDecisao
+            });
+          }
+        }
         const compiledItem = {
           KEY: generatedKey,
-          TITULO: rawItem.TITULO || `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
+          TITULO: rawItem.TITULO || `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${rawItem.NUMATA || numAta} - ${(rawItem.COLEGIADO || chosenColegiado).toUpperCase()}`,
           NUMACORDAO: numAcordao,
           ANOACORDAO: anoAcordao,
-          NUMATA: numAta,
-          COLEGIADO: chosenColegiado,
-          DATASESSAO: dataSessao,
-          SITUACAO: rawItem.SITUACAO || "OFICIALIZADO",
+          NUMATA: rawItem.NUMATA || numAta,
+          COLEGIADO: rawItem.COLEGIADO || chosenColegiado,
+          DATASESSAO: rawItem.DATASESSAO || dataSessao,
+          SITUACAO: rawItem.SITUACAO || (isSimulated ? "OFICIALIZADO" : "OFICIALIZADO (VIA API)"),
           PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
           ACORDAOSRELACIONADOS: rawItem.ACORDAOSRELACIONADOS || "Nenhum",
           TIPOPROCESSO: rawItem.TIPOPROCESSO || "",
           INTERESSADOS: rawItem.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
           ENTIDADE: rawItem.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
-          UNIDADETECNICA: chosenUT,
-          RELATOR: chosenRelator,
-          ASSUNTO: chosenAssunto,
+          UNIDADETECNICA: rawItem.UNIDADETECNICA || chosenUT,
+          RELATOR: rawItem.RELATOR || chosenRelator,
+          ASSUNTO: rawItem.ASSUNTO || chosenAssunto,
           SUMARIO: rawItem.SUMARIO || `Ac\xF3rd\xE3o n\xBA ${numAcordao}/${anoAcordao} importado de arquivo unificado e cruzado com base TCU.`,
           ACORDAO: finalAcordaoText,
-          DECISAO: chosenDecisao,
+          DECISAO: rawItem.DECISAO || chosenDecisao,
           // Preserving editing variables
           STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : rawItem.STATUS_MONITORAMENTO || "Pendente",
           RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : rawItem.RESPONSAVEL_INTERNO || "AECI - Divis\xE3o de Monitoramento",
@@ -1795,99 +2098,124 @@ async function startServer() {
       const numAcordao = parseInt(match[1]);
       const anoAcordao = parseInt(match[2]);
       const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
-      const existing = db.acordaos.find(
+      const existingIndex = db.acordaos.findIndex(
         (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
       );
-      if (existing) {
-        results.push({
-          input: itemString,
-          parsedNumero: numAcordao,
-          parsedAno: anoAcordao,
-          status: "cached",
-          item: existing,
-          message: "Carregado do reposit\xF3rio local (j\xE1 monitorado)"
-        });
-        continue;
-      }
       try {
-        const colegiadoOptions = ["Plen\xE1rio", "Primeira C\xE2mara", "Segunda C\xE2mara"];
-        const chosenColegiado = colegiadoOptions[numAcordao % 3];
-        const numAta = `${Math.floor(Math.random() * 45) + 1}/${anoAcordao}`;
-        const dataSessao = `${String(Math.floor(numAcordao % 28 + 1)).padStart(2, "0")}/${String(Math.floor(numAcordao % 12 + 1)).padStart(2, "0")}/${anoAcordao}`;
-        const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do R\xEAgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
-        const chosenRelator = relatorOptions[numAcordao % 5];
-        const utOptions = ["AudContrata\xE7\xF5es (Unidade de Auditoria de Contrata\xE7\xF5es)", "AudBenef\xEDcios (Unidade de Auditoria de Benef\xEDcios Sociais)", "AudGovernan\xE7a (Unidade de Auditoria de Governan\xE7a de Pessoas)", "AudPatrim\xF4nio (Unidade de Auditoria de Infraestrutura e Log\xEDstica)"];
-        const chosenUT = utOptions[numAcordao % 4];
-        const subjectsAndSummaries = [
-          {
-            assunto: "Acompanhamento de recomenda\xE7\xF5es de transpar\xEAncia passiva e divulga\xE7\xE3o de pain\xE9is do MTE.",
-            sumario: "Acompanhamento t\xE9cnico gerado a partir do cruzamento de dados institucionais dos canais oficiais do Minist\xE9rio do Trabalho e Emprego. Recomenda-se a reestrutura\xE7\xE3o da se\xE7\xE3o de perguntas frequentes e canais de Ouvidoria.",
-            texto: `ACORDAM os Ministros do Tribunal de Contas da Uni\xE3o, reunidos em sess\xE3o de ${chosenColegiado}, em:
+        const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
+        let newAcordao;
+        if (apiDoc) {
+          const cleanProc = apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+          const cleanTitulo = apiDoc.TITULO ? stripHtmlToText(apiDoc.TITULO) : `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao}`;
+          const cleanAcordaoText = apiDoc.ACORDAO ? stripHtmlToText(apiDoc.ACORDAO) : "";
+          newAcordao = {
+            KEY: generatedKey,
+            TITULO: cleanTitulo,
+            NUMACORDAO: numAcordao,
+            ANOACORDAO: anoAcordao,
+            NUMATA: apiDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
+            COLEGIADO: apiDoc.COLEGIADO || "Plen\xE1rio",
+            DATASESSAO: apiDoc.DATASESSAO || "",
+            SITUACAO: apiDoc.SITUACAO || "OFICIALIZADO",
+            PROC: cleanProc,
+            ACORDAOSRELACIONADOS: "Nenhum",
+            TIPOPROCESSO: apiDoc.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+            INTERESSADOS: apiDoc.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
+            ENTIDADE: apiDoc.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
+            RELATOR: apiDoc.RELATOR || "",
+            UNIDADETECNICA: apiDoc.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+            ASSUNTO: apiDoc.ASSUNTO || "Jurisprud\xEAncia TCU",
+            SUMARIO: apiDoc.ASSUNTO || "Importado via API de Pesquisa do TCU.",
+            ACORDAO: cleanAcordaoText,
+            DECISAO: cleanAcordaoText,
+            // Operational defaults:
+            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
+            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado do reposit\xF3rio p\xFAblico de jurisprud\xEAncia do TCU em " + (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR") + ".",
+            ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+          };
+        } else {
+          const colegiadoOptions = ["Plen\xE1rio", "Primeira C\xE2mara", "Segunda C\xE2mara"];
+          const chosenColegiado = colegiadoOptions[numAcordao % 3];
+          const numAta = `${Math.floor(Math.random() * 45) + 1}/${anoAcordao}`;
+          const dataSessao = `${String(Math.floor(numAcordao % 28 + 1)).padStart(2, "0")}/${String(Math.floor(numAcordao % 12 + 1)).padStart(2, "0")}/${anoAcordao}`;
+          const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do R\xEAgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
+          const chosenRelator = relatorOptions[numAcordao % 5];
+          const utOptions = ["AudContrata\xE7\xF5es (Unidade de Auditoria de Contrata\xE7\xF5es)", "AudBenef\xEDcios (Unidade de Auditoria de Benef\xEDcios Sociais)", "AudGovernan\xE7a (Unidade de Auditoria de Governan\xE7a de Pessoas)", "AudPatrim\xF4nio (Unidade de Auditoria de Infraestrutura e Log\xEDstica)"];
+          const chosenUT = utOptions[numAcordao % 4];
+          const subjectsAndSummaries = [
+            {
+              assunto: "Acompanhamento de recomenda\xE7\xF5es de transpar\xEAncia passiva e divulga\xE7\xE3o de pain\xE9is do MTE.",
+              sumario: "Acompanhamento t\xE9cnico gerado a partir do cruzamento de dados institucionais dos canais oficiais do Minist\xE9rio do Trabalho e Emprego. Recomenda-se a reestrutura\xE7\xE3o da se\xE7\xE3o de perguntas frequentes e canais de Ouvidoria.",
+              texto: `ACORDAM os Ministros do Tribunal de Contas da Uni\xE3o, reunidos em sess\xE3o de ${chosenColegiado}, em:
 1. Recomendar \xE0 AECI-MTE o aprimoramento dos portais para facilidade do cidad\xE3o;
-2. Remeter os relat\xF3rios de andamento ao Tribunal no prazo regimental de 120 dias.`,
-            decisao: "Acolhimento da representa\xE7\xE3o governamental com expedi\xE7\xE3o de ci\xEAncia e plano de monitoramento em 120 dias ordin\xE1rios."
-          },
-          {
-            assunto: "Presta\xE7\xE3o de Contas Simplificada e gest\xE3o integrada de pol\xEDticas de fomento ao emprego.",
-            sumario: "Exame de regularidade das despesas efetuadas na capacita\xE7\xE3o de jovens e adultos pelo Sistema Sine. Averigua\xE7\xE3o de termos de fomento operacionalizados pelas Superintend\xEAncias Regionais.",
-            texto: `Determina-se \xE0 Assessoria Especial de Controle Interno do MTE que realize auditoria interna amostral nos repasses efetuados \xE0s conveniadas estaduais, com encaminhamento dos relat\xF3rios de conformidade t\xE9cnica em 150 dias.`,
-            decisao: "Julgamento de regularidade com ressalva, com determina\xE7\xF5es urgentes para saneamento de contas sob dilig\xEAncia amostral."
-          },
-          {
-            assunto: "Inconsist\xEAncias cadastrais na emiss\xE3o de Carteiras de Trabalho Digitais e abonos salariais.",
-            sumario: "Medida preventiva de auditoria para mapear riscos de homofonias ou CPFs inativos recebendo seguro-desemprego irregularmente. Recomendado plano de governan\xE7a conjunto de dados abertos.",
-            texto: `O TCU determina \xE0 Secretaria de Emprego e Rela\xE7\xF5es do Trabalho do MTE que estabele\xE7a, no prazo de 60 dias, um comit\xEA interno de concilia\xE7\xE3o estat\xEDstica sob supervis\xE3o e auditoria da AECI-MTE.`,
-            decisao: "Ado\xE7\xE3o de medida proativa mediante constitui\xE7\xE3o de comiss\xE3o parit\xE1ria de saneamento cadastral e fiscal sob auditoria da AECI-MTE."
-          }
-        ];
-        const selection = subjectsAndSummaries[numAcordao % 3];
-        const newAcordao = {
-          KEY: `AC-${numAcordao}-${anoAcordao}`,
-          TITULO: `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
-          NUMACORDAO: numAcordao,
-          ANOACORDAO: anoAcordao,
-          NUMATA: numAta,
-          COLEGIADO: chosenColegiado,
-          DATASESSAO: dataSessao,
-          SITUACAO: "OFICIALIZADO (VIA API)",
-          PROC: `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-          ACORDAOSRELACIONADOS: `Nenhum`,
-          TIPOPROCESSO: [
-            "JULGAMENTO DE TCE",
-            "MONITORAMENTO",
-            "TOMADA DE CONTAS ESPECIAL",
-            "REPRESENTA\xC7\xC3O (REPR)",
-            "RELAT\xD3RIO DE AUDITORIA (RA)",
-            "RELAT\xD3RIO DE ACOMPANHAMENTO",
-            "DEN\xDANCIA (DEN)"
-          ][numAcordao % 7],
-          INTERESSADOS: "Minist\xE9rio do Trabalho e Emprego (AECI-MTE); Controladoria-Geral da Uni\xE3o",
-          ENTIDADE: "MTE - Minist\xE9rio do Trabalho e Emprego",
-          RELATOR: chosenRelator,
-          UNIDADETECNICA: chosenUT,
-          ASSUNTO: selection.assunto,
-          SUMARIO: selection.sumario,
-          ACORDAO: "",
-          // will be generated below
-          DECISAO: selection.decisao,
-          // Operational defaults:
-          STATUS_MONITORAMENTO: "Pendente",
-          RESPONSAVEL_INTERNO: "AECI - Divis\xE3o de Monitoramento",
-          PRAZO_LIMITE: `${anoAcordao + 1}-12-31`,
-          // reasonable default
-          OBSERVACOES: "Importado do reposit\xF3rio p\xFAblico de jurisprud\xEAncia do TCU em " + (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR") + ". Necessita de atribui\xE7\xE3o de respons\xE1vel.",
-          ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
-        };
-        newAcordao.ACORDAO = generateFullAcordaoText(newAcordao);
-        db.acordaos.unshift(newAcordao);
+2. Remeter os relat\xF3rios de andamento al Tribunal no prazo regimental de 120 dias.`,
+              decisao: "Acolhimento da representa\xE7\xE3o governamental com expedi\xE7\xE3o de ci\xEAncia e plano de monitoramento em 120 dias ordin\xE1rios."
+            },
+            {
+              assunto: "Presta\xE7\xE3o de Contas Simplificada e gest\xE3o integrada de pol\xEDticas de fomento ao emprego.",
+              sumario: "Exame de regularidade das despesas efetuadas na capacita\xE7\xE3o de jovens e adultos pelo Sistema Sine. Averigua\xE7\xE3o de termos de fomento operacionalizados pelas Superintend\xEAncias Regionais.",
+              texto: `Determina-se \xE0 Assessoria Especial de Controle Interno do MTE que realize auditoria interna amostral nos repasses efetuados \xE0s conveniadas estaduais, com encaminhamento dos relat\xF3rios de conformidade t\xE9cnica em 150 dias.`,
+              decisao: "Julgamento de regularidade com ressalva, com determina\xE7\xF5es urgentes para saneamento de contas sob dilig\xEAncia amostral."
+            },
+            {
+              assunto: "Inconsist\xEAncias cadastrais na emiss\xE3o de Carteiras de Trabalho Digitais e abonos salariais.",
+              sumario: "Medida preventiva de auditoria para mapear riscos de homofonias ou CPFs inativos recebendo seguro-desemprego irregularmente. Recomendado plano de governan\xE7a conjunto de dados abertos.",
+              texto: `O TCU determina \xE0 Secretaria de Emprego e Rela\xE7\xF5es do Trabalho do MTE que estabele\xE7a, no prazo de 60 dias, um comit\xEA interno de concilia\xE7\xE3o estat\xEDstica sob supervis\xE3o e auditoria da AECI-MTE.`,
+              decisao: "Ado\xE7\xE3o de medida proativa mediante constitui\xE7\xE3o de comiss\xE3o parit\xE1ria de saneamento cadastral e fiscal sob auditoria da AECI-MTE."
+            }
+          ];
+          const selection = subjectsAndSummaries[numAcordao % 3];
+          newAcordao = {
+            KEY: generatedKey,
+            TITULO: `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
+            NUMACORDAO: numAcordao,
+            ANOACORDAO: anoAcordao,
+            NUMATA: numAta,
+            COLEGIADO: chosenColegiado,
+            DATASESSAO: dataSessao,
+            SITUACAO: "OFICIALIZADO (SIMULADO)",
+            PROC: `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+            ACORDAOSRELACIONADOS: `Nenhum`,
+            TIPOPROCESSO: [
+              "JULGAMENTO DE TCE",
+              "MONITORAMENTO",
+              "TOMADA DE CONTAS ESPECIAL",
+              "REPRESENTA\xC7\xC3O (REPR)",
+              "RELAT\xD3RIO DE AUDITORIA (RA)",
+              "RELAT\xD3RIO DE ACOMPANHAMENTO",
+              "DEN\xDANCIA (DEN)"
+            ][numAcordao % 7],
+            INTERESSADOS: "Minist\xE9rio do Trabalho e Emprego (AECI-MTE); Controladoria-Geral da Uni\xE3o",
+            ENTIDADE: "MTE - Minist\xE9rio do Trabalho e Emprego",
+            RELATOR: chosenRelator,
+            UNIDADETECNICA: chosenUT,
+            ASSUNTO: selection.assunto,
+            SUMARIO: selection.sumario,
+            ACORDAO: "",
+            DECISAO: selection.decisao,
+            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
+            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Gerado automaticamente (TCU offline).",
+            ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+          };
+          newAcordao.ACORDAO = generateFullAcordaoText(newAcordao);
+        }
+        if (existingIndex >= 0) {
+          db.acordaos[existingIndex] = newAcordao;
+        } else {
+          db.acordaos.unshift(newAcordao);
+        }
         saveDatabase(db);
         results.push({
           input: itemString,
           parsedNumero: numAcordao,
           parsedAno: anoAcordao,
-          status: "imported",
+          status: existingIndex >= 0 ? "updated" : "imported",
           item: newAcordao,
-          message: "Ac\xF3rd\xE3o localizado na API de Dados Abertos e incorporado ao monitoramento interno!"
+          message: existingIndex >= 0 ? "Ac\xF3rd\xE3o atualizado e metadados de monitoramento local preservados!" : "Ac\xF3rd\xE3o localizado na API de Jurisprud\xEAncia do TCU e incorporado ao monitoramento interno!"
         });
       } catch (error) {
         console.error(`[API Import] Failed to process ${itemString}:`, error);
