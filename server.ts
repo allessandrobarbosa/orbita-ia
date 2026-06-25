@@ -20,6 +20,7 @@ declare module 'express-session' {
       clearance: string;
       avatarColor: string;
       badgeText: string;
+      allowedModules?: string[];
     };
   }
 }
