@@ -2148,11 +2148,38 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     if (!db.cguReports) db.cguReports = [];
     const blacklist = ["dnit", "codevasf", "incra", "ufgd", "ufpe", "ifac", "mgi", "mec", "caixa", "mds", "mtur", "mpa", "ceagesp", "unifesp", "fnde", "prf", "memp", "mdic", "mf", "ms", "midr", "ufg", "mps", "turismo", "saude", "educacao", "cgu", "fazenda", "planejamento", "integracao", "senac", "sesi", "inss"];
     const filteredItems = items.filter((item) => {
-      const unit = ((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase();
-      const sup = ((item.nomeOrgaoSuperior || "") + " " + (item.siglaOrgaoSuperior || "")).toLowerCase();
-      const hasBlacklistInUnit = blacklist.some((b) => unit.includes(b));
-      const hasMteInUnitOrSup = unit.includes("mte") || unit.includes("mtp") || unit.includes("trabalho") || unit.includes("emprego") || sup.includes("mte") || sup.includes("mtp") || sup.includes("trabalho") || sup.includes("emprego");
-      return hasMteInUnitOrSup && !hasBlacklistInUnit;
+      const sup = (item.nomeOrgaoSuperior || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const unit = ((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      let isMte = false;
+      if (sup) {
+        isMte = sup.includes("trabalho") || sup.includes("emprego") || sup.includes("mte") || sup.includes("mtp");
+      } else {
+        const unitMatches = unit.includes("trabalho") || unit.includes("emprego") || unit.includes("mte") || unit.includes("mtp") || unit.includes("srt") || unit.includes("srte");
+        const hasBlacklistInUnit = blacklist.some((b) => unit.includes(b));
+        isMte = unitMatches && !hasBlacklistInUnit;
+      }
+      let dateOk = false;
+      const dataPublicacao = item.dataPublicacao;
+      if (dataPublicacao) {
+        const parts = dataPublicacao.split("/");
+        if (parts.length === 3) {
+          const d = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const y = parseInt(parts[2], 10);
+          const dateVal = new Date(y, m, d);
+          if (!isNaN(dateVal.getTime())) {
+            const start = new Date(2023, 0, 1);
+            dateOk = dateVal >= start;
+          }
+        } else {
+          const dateVal = new Date(dataPublicacao);
+          if (!isNaN(dateVal.getTime())) {
+            const start = new Date(2023, 0, 1);
+            dateOk = dateVal >= start;
+          }
+        }
+      }
+      return isMte && dateOk;
     });
     let importedCount = 0;
     let updatedCount = 0;

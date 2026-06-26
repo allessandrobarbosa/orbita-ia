@@ -43,6 +43,7 @@ interface CguModuleProps {
   isLoading: boolean;
   cguPublishedReports?: CguPublishedReport[];
   onImportCguReports?: (items: CguPublishedReport[]) => Promise<any>;
+  onSyncCguReports?: () => Promise<any>;
   onDeleteCguReport?: (idTarefa: string) => Promise<boolean>;
 }
 
@@ -61,6 +62,7 @@ export default function CguModule({
   isLoading,
   cguPublishedReports = [],
   onImportCguReports,
+  onSyncCguReports,
   onDeleteCguReport
 }: CguModuleProps) {
   // Submodule navigation state
@@ -86,6 +88,9 @@ export default function CguModule({
   const [reportsImportSuccessMessage, setReportsImportSuccessMessage] = useState<string | null>(null);
   const [parsedReportItems, setParsedReportItems] = useState<CguPublishedReport[] | null>(null);
   const [isReportsDragOver, setIsReportsDragOver] = useState(false);
+  const [isSyncingReports, setIsSyncingReports] = useState(false);
+  const [syncReportsSuccessMessage, setSyncReportsSuccessMessage] = useState<string | null>(null);
+  const [syncReportsErrorMessage, setSyncReportsErrorMessage] = useState<string | null>(null);
 
   // Importer state
   const [showImporter, setShowImporter] = useState(false);
@@ -524,6 +529,25 @@ export default function CguModule({
         const normalizedHeaders = headers.map(normalizeHeader);
 
         const findHeaderIndex = (keywords: string[]): number => {
+          // 1. Exact match pass
+          for (const kw of keywords) {
+            const normKw = normalizeHeader(kw);
+            for (let idx = 0; idx < normalizedHeaders.length; idx++) {
+              if (normalizedHeaders[idx] === normKw) {
+                return idx;
+              }
+            }
+          }
+          // 2. Starts with match pass
+          for (const kw of keywords) {
+            const normKw = normalizeHeader(kw);
+            for (let idx = 0; idx < normalizedHeaders.length; idx++) {
+              if (normalizedHeaders[idx].startsWith(normKw)) {
+                return idx;
+              }
+            }
+          }
+          // 3. Substring match pass (fallback)
           for (const kw of keywords) {
             const normKw = normalizeHeader(kw);
             for (let idx = 0; idx < normalizedHeaders.length; idx++) {
@@ -542,8 +566,8 @@ export default function CguModule({
         const idxIdAuditoria = findHeaderIndex(["id da auditoria", "idauditoria", "auditoria"]);
         const idxSiglaUnidadeAuditada = findHeaderIndex(["sigla da unidade auditada", "siglaunidadeauditada", "sigla auditada"]);
         const idxNomeUnidadeAuditada = findHeaderIndex(["nome da unidade auditada", "nomeunidadeauditada", "unidade auditada", "unidade"]);
-        const idxSiglaOrgaoSuperior = findHeaderIndex(["sigla do orgao superior", "siglaorgaosuperior", "sigla superior", "orgao superior"]);
-        const idxNomeOrgaoSuperior = findHeaderIndex(["nome do orgao superior", "nomeorgaosuperior", "orgao superior"]);
+        const idxSiglaOrgaoSuperior = findHeaderIndex(["sigla do orgao superior", "siglaorgaosuperior", "sigla superior", "orgao superior", "sigla orgao"]);
+        const idxNomeOrgaoSuperior = findHeaderIndex(["orgaos", "orgao", "órgãos", "órgão", "nome do orgao superior", "nomeorgaosuperior", "orgao superior"]);
         const idxUf = findHeaderIndex(["uf", "estado"]);
         const idxMunicipio = findHeaderIndex(["municipio", "cidade"]);
         const idxTipoServico = findHeaderIndex(["tipo de servico", "tiposervico", "tipo servico", "servico"]);
@@ -590,18 +614,55 @@ export default function CguModule({
           const nomeAuditada = getVal(idxNomeUnidadeAuditada);
           const siglaSuperior = getVal(idxSiglaOrgaoSuperior);
           const nomeSuperior = getVal(idxNomeOrgaoSuperior);
+          const dataPublicacao = getValDate(idxDataPublicacao);
 
-          // Filtering rule: must belong to MTE or MTP and must NOT belong to any blacklisted other public organ
-          const checkString = normalizeCheckText(`${nomeAuditada} ${siglaAuditada} ${nomeSuperior} ${siglaSuperior}`);
-          const unitString = normalizeCheckText(`${nomeAuditada} ${siglaAuditada}`);
-          const matchesFilter = checkString.includes("trabalho") || 
-                                checkString.includes("emprego") || 
-                                checkString.includes("mte") || 
-                                checkString.includes("mtp");
-          const blacklist = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
-          const containsBlacklist = blacklist.some(b => unitString.includes(b));
+          // Filtering rule: must belong to MTE (Ministério do Trabalho e Emprego)
+          // If the organ superior matches MTE/MTP, we immediately accept it.
+          // Otherwise, fall back to checking the unit name.
+          let isMte = false;
+          
+          if (idxNomeOrgaoSuperior !== -1 && nomeSuperior) {
+            const normOrgao = normalizeCheckText(nomeSuperior);
+            isMte = normOrgao.includes("trabalho") || 
+                    normOrgao.includes("emprego") || 
+                    normOrgao.includes("mte") || 
+                    normOrgao.includes("mtp");
+          } else {
+            const otherOrgans = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
+            const unitString = normalizeCheckText(`${nomeAuditada} ${siglaAuditada}`);
+            const unitMatches = unitString.includes("trabalho") || 
+                                unitString.includes("emprego") || 
+                                unitString.includes("mte") || 
+                                unitString.includes("mtp") ||
+                                unitString.includes("srt") ||
+                                unitString.includes("srte");
+            const containsBlacklist = otherOrgans.some(b => unitString.includes(b));
+            isMte = unitMatches && !containsBlacklist;
+          }
 
-          if (!matchesFilter || containsBlacklist) {
+          // Date filter: must be on or after 01/01/2023
+          let dateOk = false;
+          if (dataPublicacao) {
+            const parts = dataPublicacao.split("/");
+            if (parts.length === 3) {
+              const d = parseInt(parts[0], 10);
+              const m = parseInt(parts[1], 10) - 1;
+              const y = parseInt(parts[2], 10);
+              const dateVal = new Date(y, m, d);
+              if (!isNaN(dateVal.getTime())) {
+                const start = new Date(2023, 0, 1);
+                dateOk = dateVal >= start;
+              }
+            } else {
+              const dateVal = new Date(dataPublicacao);
+              if (!isNaN(dateVal.getTime())) {
+                const start = new Date(2023, 0, 1);
+                dateOk = dateVal >= start;
+              }
+            }
+          }
+
+          if (!isMte || !dateOk) {
             skippedNonMteCount++;
             continue;
           }
@@ -609,7 +670,7 @@ export default function CguModule({
           parsedReports.push({
             idTarefa,
             tituloRelatorio: getVal(idxTituloRelatorio),
-            dataPublicacao: getValDate(idxDataPublicacao),
+            dataPublicacao,
             idAuditoria: getVal(idxIdAuditoria) || idTarefa,
             siglaUnidadeAuditada: siglaAuditada || "MTE",
             nomeUnidadeAuditada: nomeAuditada || "Ministério do Trabalho e Emprego",
@@ -625,10 +686,10 @@ export default function CguModule({
         }
 
         if (parsedReports.length === 0) {
-          setReportsImportError(`Nenhum registro correspondente ao MTE foi encontrado. (${skippedNonMteCount} registros de outros órgãos foram ignorados).`);
+          setReportsImportError(`Nenhum registro correspondente ao MTE dentro do período foi encontrado. (${skippedNonMteCount} registros de outros órgãos ou fora do período de 01/01/2023 até hoje foram ignorados).`);
         } else {
           setParsedReportItems(parsedReports);
-          setReportsImportSuccessMessage(`${parsedReports.length} relatórios publicados do MTE carregados. (${skippedNonMteCount} registros de outros órgãos foram filtrados e omitidos). Revise os dados e clique em Salvar.`);
+          setReportsImportSuccessMessage(`${parsedReports.length} relatórios publicados do MTE carregados. (${skippedNonMteCount} registros de outros órgãos ou fora do período de 01/01/2023 até hoje foram filtrados e omitidos). Revise os dados e clique em Salvar.`);
         }
       } catch (err) {
         console.error("Erro na leitura do arquivo de relatórios:", err);
@@ -661,6 +722,26 @@ export default function CguModule({
       setReportsImportError("Falha de conexão com o servidor de banco de dados.");
     } finally {
       setIsSavingReportsImport(false);
+    }
+  };
+
+  const handleSyncReports = async () => {
+    if (!onSyncCguReports) return;
+    setIsSyncingReports(true);
+    setSyncReportsSuccessMessage(null);
+    setSyncReportsErrorMessage(null);
+    try {
+      const res = await onSyncCguReports();
+      if (res && res.success) {
+        setSyncReportsSuccessMessage(`Sincronização concluída com sucesso! ${res.importedCount} novos relatórios importados, ${res.updatedCount} atualizados.`);
+      } else {
+        setSyncReportsErrorMessage(res?.error || "Erro ao sincronizar relatórios com o portal da CGU.");
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncReportsErrorMessage("Falha de conexão com o servidor de banco de dados.");
+    } finally {
+      setIsSyncingReports(false);
     }
   };
 
@@ -698,20 +779,21 @@ export default function CguModule({
     new Set(
       cguPublishedReports
         .filter(r => {
-          const checkString = (
-            (r.nomeUnidadeAuditada || "") + " " + 
-            (r.siglaUnidadeAuditada || "") + " " + 
-            (r.nomeOrgaoSuperior || "") + " " + 
-            (r.siglaOrgaoSuperior || "")
-          ).toLowerCase();
-          const unitString = ((r.nomeUnidadeAuditada || "") + " " + (r.siglaUnidadeAuditada || "")).toLowerCase();
-          const matchesMte = checkString.includes("trabalho") || 
-                             checkString.includes("emprego") || 
-                             checkString.includes("mte") || 
-                             checkString.includes("mtp");
-          const blacklist = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
-          const containsBlacklist = blacklist.some(b => unitString.includes(b));
-          return matchesMte && !containsBlacklist;
+          const sup = (r.nomeOrgaoSuperior || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          const unit = ((r.nomeUnidadeAuditada || "") + " " + (r.siglaUnidadeAuditada || "")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          let isMte = false;
+          if (sup) {
+            isMte = sup.includes("trabalho") || 
+                    sup.includes("emprego") || 
+                    sup.includes("mte") || 
+                    sup.includes("mtp");
+          } else {
+            const otherOrgans = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
+            const unitMatches = unit.includes("trabalho") || unit.includes("emprego") || unit.includes("mte") || unit.includes("mtp") || unit.includes("srt") || unit.includes("srte");
+            const containsBlacklist = otherOrgans.some(b => unit.includes(b));
+            isMte = unitMatches && !containsBlacklist;
+          }
+          return isMte;
         })
         .map(r => extractYear(r.dataPublicacao))
         .filter((y): y is number => typeof y === "number" && !isNaN(y))
@@ -720,20 +802,22 @@ export default function CguModule({
 
   const filteredReports = cguPublishedReports.filter(r => {
     // Safety check: must belong to MTE and not to any other public organ blacklist
-    const checkString = (
-      (r.nomeUnidadeAuditada || "") + " " + 
-      (r.siglaUnidadeAuditada || "") + " " + 
-      (r.nomeOrgaoSuperior || "") + " " + 
-      (r.siglaOrgaoSuperior || "")
-    ).toLowerCase();
-    const unitString = ((r.nomeUnidadeAuditada || "") + " " + (r.siglaUnidadeAuditada || "")).toLowerCase();
-    const matchesMte = checkString.includes("trabalho") || 
-                       checkString.includes("emprego") || 
-                       checkString.includes("mte") || 
-                       checkString.includes("mtp");
-    const blacklist = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
-    const containsBlacklist = blacklist.some(b => unitString.includes(b));
-    if (!matchesMte || containsBlacklist) {
+    const sup = (r.nomeOrgaoSuperior || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const unit = ((r.nomeUnidadeAuditada || "") + " " + (r.siglaUnidadeAuditada || "")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    let isMte = false;
+    if (sup) {
+      isMte = sup.includes("trabalho") || 
+              sup.includes("emprego") || 
+              sup.includes("mte") || 
+              sup.includes("mtp");
+    } else {
+      const otherOrgans = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
+      const unitMatches = unit.includes("trabalho") || unit.includes("emprego") || unit.includes("mte") || unit.includes("mtp") || unit.includes("srt") || unit.includes("srte");
+      const containsBlacklist = otherOrgans.some(b => unit.includes(b));
+      isMte = unitMatches && !containsBlacklist;
+    }
+
+    if (!isMte) {
       return false;
     }
 
@@ -756,6 +840,16 @@ export default function CguModule({
       (r.nomeOrgaoSuperior && r.nomeOrgaoSuperior.toLowerCase().includes(sLower)) ||
       (r.uf && r.uf.toLowerCase().includes(sLower)) ||
       (r.municipio && r.municipio.toLowerCase().includes(sLower));
+  }).sort((a, b) => {
+    const parseDateForSort = (str: string): number => {
+      if (!str) return 0;
+      const parts = str.split("/");
+      if (parts.length === 3) {
+        return new Date(parseInt(parts[2], 10), parseInt(parts[1], 10) - 1, parseInt(parts[0], 10)).getTime() || 0;
+      }
+      return new Date(str).getTime() || 0;
+    };
+    return parseDateForSort(a.dataPublicacao) - parseDateForSort(b.dataPublicacao);
   });
 
   // Published reports statistics calculations
@@ -892,11 +986,30 @@ export default function CguModule({
     XLSX.writeFile(wb, `ORBITA_AECI_CGU_RELATORIOS_PUBLICADOS_${new Date().toISOString().split("T")[0]}.xlsx`);
   };
 
-  const handleOpenEcgAndCopy = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedReportId(id);
+  const handleOpenEcgAndCopy = (idTarefa: string, idAuditoria: string, titulo: string) => {
+    // Copy idTarefa to clipboard
+    navigator.clipboard.writeText(idTarefa).catch(() => {});
+    setCopiedReportId(idTarefa);
     setTimeout(() => setCopiedReportId(null), 2000);
-    window.open("https://eaud.cgu.gov.br/relatorios", "_blank");
+
+    // Build a safe filename from the report title
+    const safeName = titulo
+      ? titulo.replace(/[^a-zA-Z0-9\u00C0-\u024F\s\-_]/g, "").trim().substring(0, 80)
+      : `Relatorio_CGU_${idAuditoria || idTarefa}`;
+
+    // Open via proxy in a new tab — browser will display PDF inline
+    const proxyUrl = `/api/cgu/reports/pdf/${encodeURIComponent(idTarefa)}?filename=${encodeURIComponent(safeName)}`;
+    window.open(proxyUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleSearchInPortal = (titulo: string) => {
+    // Open the e-CGU advanced search page (portal uses dynamic JS so we can't pre-fill)
+    window.open("https://eaud.cgu.gov.br/relatorios/pesquisa", "_blank");
+  };
+
+  // Detect if a report has a public PDF (idAuditoria is purely numeric)
+  const isPublicReport = (idAuditoria: string): boolean => {
+    return /^\d+$/.test(idAuditoria || "");
   };
 
   const handlePrintPDF = () => {
@@ -1051,22 +1164,35 @@ export default function CguModule({
               {showImporter ? "Ocultar Importador" : "Importar Planilha CGU (.xlsx)"}
             </button>
           ) : (
-            <button
-              onClick={() => {
-                setShowReportsImporter(!showReportsImporter);
-                setReportsImportError(null);
-                setReportsImportSuccessMessage(null);
-                setParsedReportItems(null);
-              }}
-              className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                showReportsImporter
-                  ? "bg-slate-800 text-white shadow-xs"
-                  : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              {showReportsImporter ? "Ocultar Importador" : "Importar Relatórios CGU (.xlsx)"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setShowReportsImporter(!showReportsImporter);
+                  setReportsImportError(null);
+                  setReportsImportSuccessMessage(null);
+                  setParsedReportItems(null);
+                }}
+                className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  showReportsImporter
+                    ? "bg-slate-800 text-white shadow-xs"
+                    : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {showReportsImporter ? "Ocultar Importador" : "Importar Relatórios CGU (.xlsx)"}
+              </button>
+
+              {onSyncCguReports && (
+                <button
+                  onClick={handleSyncReports}
+                  disabled={isSyncingReports}
+                  className={`px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 shadow-sm cursor-pointer`}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncingReports ? "animate-spin" : ""}`} />
+                  {isSyncingReports ? "Sincronizando..." : "Sincronizar com Dados Abertos"}
+                </button>
+              )}
+            </div>
           )}
 
           <button
@@ -2166,6 +2292,30 @@ export default function CguModule({
             </div>
           </div>
 
+          {/* Sync status alerts */}
+          {(syncReportsSuccessMessage || syncReportsErrorMessage) && (
+            <div className="mb-4 no-print animate-fade-in">
+              {syncReportsSuccessMessage && (
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs flex items-center justify-between gap-3 font-semibold shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                    <span>{syncReportsSuccessMessage}</span>
+                  </div>
+                  <button onClick={() => setSyncReportsSuccessMessage(null)} className="text-emerald-500 hover:text-emerald-750 font-bold shrink-0">X</button>
+                </div>
+              )}
+              {syncReportsErrorMessage && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-xs flex items-center justify-between gap-3 font-semibold shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{syncReportsErrorMessage}</span>
+                  </div>
+                  <button onClick={() => setSyncReportsErrorMessage(null)} className="text-red-500 hover:text-red-750 font-bold shrink-0">X</button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Main Datagrid for Published Reports */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
             <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 font-mono text-[10px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 no-print">
@@ -2184,7 +2334,7 @@ export default function CguModule({
               <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
                 <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
                   <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
-                    <th className="px-5 py-3 bg-slate-100 font-mono w-32">ID Tarefa</th>
+                    <th className="px-5 py-3 bg-slate-100 font-mono w-32">ID Auditoria</th>
                     <th className="px-4 py-3 bg-slate-100">Título do Relatório</th>
                     <th className="px-4 py-3 bg-slate-100 w-36 text-center">Publicação</th>
                     <th className="px-4 py-3 bg-slate-100 w-44">Tipo de Serviço</th>
@@ -2210,7 +2360,7 @@ export default function CguModule({
                     filteredReports.map(r => (
                       <tr key={r.idTarefa} className="hover:bg-blue-50/10">
                         <td className="px-5 py-3.5 font-mono font-bold text-[#003366] text-[11.5px]">
-                          {r.idTarefa}
+                          {r.idAuditoria || "—"}
                         </td>
                         <td className="px-4 py-3.5 font-bold text-slate-800 text-xs leading-relaxed max-w-md break-words" title={r.tituloRelatorio}>
                           {r.tituloRelatorio}
@@ -2227,28 +2377,51 @@ export default function CguModule({
                           {r.nomeUnidadeAuditada || "MTE"}
                         </td>
                         <td className="px-4 py-3.5 text-center no-print">
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {isPublicReport(r.idAuditoria) ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleOpenEcgAndCopy(r.idTarefa, r.idAuditoria, r.tituloRelatorio);
+                                }}
+                                className="px-2.5 py-1.5 bg-[#003366] hover:bg-[#002244] text-white rounded-lg text-[10px] font-black uppercase flex items-center gap-1 transition duration-200 shadow-xs cursor-pointer"
+                                title="Baixar o PDF do relatório no portal e-CGU"
+                              >
+                                {copiedReportId === r.idTarefa ? (
+                                  <>
+                                    <FileCheck className="w-3 h-3 text-emerald-300 animate-pulse" />
+                                    <span>Copiado!</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download className="w-3 h-3" />
+                                    <span>PDF</span>
+                                  </>
+                                )}
+                              </button>
+                            ) : (
+                              <span
+                                className="px-2.5 py-1.5 bg-slate-200 text-slate-400 rounded-lg text-[10px] font-black uppercase flex items-center gap-1 cursor-not-allowed"
+                                title={`PDF restrito (${r.idAuditoria}) — use o Portal e-CGU`}
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Restrito</span>
+                              </span>
+                            )}
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleOpenEcgAndCopy(r.idAuditoria || r.idTarefa);
+                                handleSearchInPortal(r.tituloRelatorio);
                               }}
-                              className="px-3 py-1.5 bg-[#003366] hover:bg-[#002244] text-white rounded-xl text-[10px] font-black uppercase flex items-center gap-1.5 transition duration-200 shadow-xs cursor-pointer"
-                              title="Copiar ID da Auditoria e Abrir no e-CGU/e-Aud"
+                              className="px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-[10px] font-black uppercase flex items-center gap-1 transition duration-200 shadow-xs cursor-pointer"
+                              title="Abrir pesquisa no Portal e-CGU"
                             >
-                              {copiedReportId === (r.idAuditoria || r.idTarefa) ? (
-                                <>
-                                  <FileCheck className="w-3 h-3 text-emerald-300 animate-pulse" />
-                                  <span>Copiado!</span>
-                                </>
-                              ) : (
-                                <>
-                                  <ExternalLink className="w-3 h-3" />
-                                  <span>Acessar Relatório</span>
-                                </>
-                              )}
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Portal</span>
                             </button>
                           </div>
                         </td>

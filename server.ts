@@ -1,6 +1,8 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
+import https from "https";
+import readline from "readline";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -1991,14 +1993,48 @@ async function startServer() {
 
     if (!db.cguReports) db.cguReports = [];
 
-    // Rigorous security filter: only import reports belonging to MTE and discard non-MTE entities via a blacklist
+    // Rigorous security filter: only import reports belonging to MTE
     const blacklist = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
     const filteredItems = items.filter((item: any) => {
-      const unit = ((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase();
-      const sup = ((item.nomeOrgaoSuperior || "") + " " + (item.siglaOrgaoSuperior || "")).toLowerCase();
-      const hasBlacklistInUnit = blacklist.some(b => unit.includes(b));
-      const hasMteInUnitOrSup = unit.includes("mte") || unit.includes("mtp") || unit.includes("trabalho") || unit.includes("emprego") || sup.includes("mte") || sup.includes("mtp") || sup.includes("trabalho") || sup.includes("emprego");
-      return hasMteInUnitOrSup && !hasBlacklistInUnit;
+      const sup = (item.nomeOrgaoSuperior || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const unit = (((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+      
+      let isMte = false;
+      if (sup) {
+        isMte = sup.includes("trabalho") || 
+                sup.includes("emprego") || 
+                sup.includes("mte") || 
+                sup.includes("mtp");
+      } else {
+        const unitMatches = unit.includes("trabalho") || unit.includes("emprego") || unit.includes("mte") || unit.includes("mtp") || unit.includes("srt") || unit.includes("srte");
+        const hasBlacklistInUnit = blacklist.some(b => unit.includes(b));
+        isMte = unitMatches && !hasBlacklistInUnit;
+      }
+
+      // Date filter: must be on or after 01/01/2023
+      let dateOk = false;
+      const dataPublicacao = item.dataPublicacao;
+      if (dataPublicacao) {
+        const parts = dataPublicacao.split("/");
+        if (parts.length === 3) {
+          const d = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10) - 1;
+          const y = parseInt(parts[2], 10);
+          const dateVal = new Date(y, m, d);
+          if (!isNaN(dateVal.getTime())) {
+            const start = new Date(2023, 0, 1);
+            dateOk = dateVal >= start;
+          }
+        } else {
+          const dateVal = new Date(dataPublicacao);
+          if (!isNaN(dateVal.getTime())) {
+            const start = new Date(2023, 0, 1);
+            dateOk = dateVal >= start;
+          }
+        }
+      }
+
+      return isMte && dateOk;
     });
 
     let importedCount = 0;
@@ -2029,6 +2065,222 @@ async function startServer() {
       updatedCount,
       totalCount: db.cguReports.length,
       items: db.cguReports
+    });
+  });
+
+  // API 2.9.5b: CGU Reports - PDF Proxy Download
+  // Proxies the PDF from eaud.cgu.gov.br following redirects and serving with correct filename
+  app.get("/api/cgu/reports/pdf/:idTarefa", (req, res) => {
+    const { idTarefa } = req.params;
+    const filename = req.query.filename ? String(req.query.filename) : `Relatorio_CGU_${idTarefa}`;
+    const safeFilename = filename.replace(/[^\w\s\-\.]/gi, "").trim().substring(0, 120) + ".pdf";
+
+    const startUrl = `https://eaud.cgu.gov.br/relatorios/download/${encodeURIComponent(idTarefa)}`;
+    console.log(`[CGU PDF PROXY] Fetching: ${startUrl}`);
+
+    const fetchWithRedirects = (url: string, maxRedirects: number) => {
+      const isHttps = url.startsWith("https");
+      const lib = isHttps ? https : require("http");
+
+      const reqOptions = new URL(url);
+
+      lib.get({
+        hostname: reqOptions.hostname,
+        path: reqOptions.pathname + reqOptions.search,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+          "Accept": "application/pdf, application/octet-stream, */*",
+          "Accept-Language": "pt-BR,pt;q=0.9",
+          "Referer": "https://eaud.cgu.gov.br/relatorios"
+        }
+      }, (response: any) => {
+        const status = response.statusCode;
+        const location = response.headers["location"];
+        const contentType = response.headers["content-type"] || "";
+
+        console.log(`[CGU PDF PROXY] Status: ${status}, Content-Type: ${contentType}, Location: ${location || "none"}`);
+
+        // Follow redirects
+        if ((status === 301 || status === 302 || status === 303 || status === 307) && location && maxRedirects > 0) {
+          const redirectUrl = location.startsWith("http") ? location : `https://eaud.cgu.gov.br${location}`;
+          console.log(`[CGU PDF PROXY] Redirecting to: ${redirectUrl}`);
+          response.resume(); // discard body
+          return fetchWithRedirects(redirectUrl, maxRedirects - 1);
+        }
+
+        if (status === 404) {
+          response.resume();
+          return res.status(404).json({ error: "Relatório não encontrado no portal e-CGU." });
+        }
+
+        if (status !== 200) {
+          response.resume();
+          return res.status(502).json({ error: `Portal e-CGU retornou status ${status}.` });
+        }
+
+        // Check if the response is actually a PDF
+        if (contentType && contentType.includes("text/html")) {
+          // e-CGU returned a login page or error page — read and log it
+          let body = "";
+          response.setEncoding("utf8");
+          response.on("data", (chunk: string) => { body += chunk.substring(0, 200); });
+          response.on("end", () => {
+            console.warn(`[CGU PDF PROXY] Expected PDF but got HTML. Body preview: ${body.substring(0, 150)}`);
+            res.status(403).json({ error: "O portal e-CGU requer autenticação para acessar este relatório. Use o botão Portal para acessá-lo manualmente." });
+          });
+          return;
+        }
+
+        // Serve the PDF inline so it opens in the browser's PDF viewer
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `inline; filename="${safeFilename}"`);
+        const contentLength = response.headers["content-length"];
+        if (contentLength) res.setHeader("Content-Length", contentLength);
+
+        console.log(`[CGU PDF PROXY] Streaming PDF inline (${contentLength || "unknown"} bytes) as: ${safeFilename}`);
+        response.pipe(res);
+
+      }).on("error", (err: Error) => {
+        console.error("[CGU PDF PROXY] Connection error:", err.message);
+        if (!res.headersSent) {
+          res.status(502).json({ error: "Falha de conexão com o portal e-CGU." });
+        }
+      });
+    };
+
+    fetchWithRedirects(startUrl, 5);
+  });
+
+  // API 2.9.6: CGU Published Reports - AUTOMATED SYNC
+  app.post("/api/cgu/reports/sync", (req, res) => {
+    console.log("[CGU SYNC] Starting automated sync from dadosabertos-download.cgu.gov.br...");
+    
+    const csvUrl = "https://dadosabertos-download.cgu.gov.br/Auditorias/Auditorias.csv";
+    
+    const request = https.get(csvUrl, (response) => {
+      if (response.statusCode !== 200) {
+        console.error(`[CGU SYNC] Failed to download CSV. Status: ${response.statusCode}`);
+        return res.status(500).json({ error: `Falha ao conectar com o portal de dados abertos da CGU (Status: ${response.statusCode}).` });
+      }
+
+      response.setEncoding('latin1'); // Decode Latin1/ISO-8859-1 correctly
+
+      const rl = readline.createInterface({
+        input: response,
+        crlfDelay: Infinity
+      });
+
+      const db = loadDatabase();
+      if (!db.cguReports) db.cguReports = [];
+
+      let isFirstLine = true;
+      let importedCount = 0;
+      let updatedCount = 0;
+      const blacklist = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
+
+      rl.on('line', (line) => {
+        if (isFirstLine) {
+          isFirstLine = false;
+          return;
+        }
+
+        if (!line || line.trim() === "") return;
+
+        // Split by semicolon outside quotes
+        const row = line.split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        if (row.length < 13) return;
+
+        const idTarefa = (row[0] || "").replace(/"/g, "").trim();
+        if (!idTarefa) return;
+
+        // Date check: publication must be >= 01/01/2023 (format is YYYY-MM-DD)
+        const dateStr = (row[2] || "").trim();
+        if (!dateStr) return;
+
+        const dateParts = dateStr.split("-");
+        if (dateParts.length === 3) {
+          const y = parseInt(dateParts[0], 10);
+          if (y < 2023) return;
+        } else {
+          const dateVal = new Date(dateStr);
+          if (isNaN(dateVal.getTime()) || dateVal.getFullYear() < 2023) return;
+        }
+
+        // Format date from YYYY-MM-DD to DD/MM/YYYY
+        let formattedDate = dateStr;
+        if (dateParts.length === 3) {
+          formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+        }
+
+        const nomeSuperior = (row[7] || "").replace(/"/g, "").trim();
+        const siglaSuperior = (row[6] || "").replace(/"/g, "").trim();
+        const nomeAuditada = (row[5] || "").replace(/"/g, "").trim();
+        const siglaAuditada = (row[4] || "").replace(/"/g, "").trim();
+
+        const sup = nomeSuperior.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const siglaSup = siglaSuperior.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const unit = (nomeAuditada + " " + siglaAuditada).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        let isMte = false;
+        if (sup && (sup.includes("trabalho") || sup.includes("emprego") || sup.includes("mte") || sup.includes("mtp") || siglaSup.includes("mte") || siglaSup.includes("mtp"))) {
+          isMte = true;
+        } else {
+          const unitMatches = unit.includes("trabalho") || unit.includes("emprego") || unit.includes("mte") || unit.includes("mtp") || unit.includes("srt") || unit.includes("srte");
+          const containsBlacklist = blacklist.some(b => unit.includes(b));
+          isMte = unitMatches && !containsBlacklist;
+        }
+
+        if (!isMte) return;
+
+        const reportItem = {
+          idTarefa,
+          tituloRelatorio: (row[1] || "").replace(/"/g, "").trim(),
+          dataPublicacao: formattedDate,
+          idAuditoria: (row[3] || "").replace(/"/g, "").trim() || idTarefa,
+          siglaUnidadeAuditada: siglaAuditada || "MTE",
+          nomeUnidadeAuditada: nomeAuditada || "Ministério do Trabalho e Emprego",
+          siglaOrgaoSuperior: siglaSuperior || "MTE",
+          nomeOrgaoSuperior: nomeSuperior || "Ministério do Trabalho e Emprego",
+          uf: (row[8] || "").replace(/"/g, "").trim() || "DF",
+          municipio: (row[9] || "").replace(/"/g, "").trim() || "Brasília",
+          tipoServico: (row[10] || "").replace(/"/g, "").trim() || "Auditoria",
+          linhaAcao: (row[11] || "").replace(/"/g, "").trim(),
+          grupoAtividade: (row[12] || "").replace(/"/g, "").trim(),
+          edicaoPrograma: (row[13] || "").replace(/"/g, "").trim()
+        };
+
+        const idx = db.cguReports.findIndex((x: any) => x.idTarefa === reportItem.idTarefa);
+        if (idx >= 0) {
+          db.cguReports[idx] = {
+            ...db.cguReports[idx],
+            ...reportItem,
+            ultimaAtualizacao: new Date().toLocaleString("pt-BR")
+          };
+          updatedCount++;
+        } else {
+          db.cguReports.unshift({
+            ...reportItem,
+            ultimaAtualizacao: new Date().toLocaleString("pt-BR")
+          });
+          importedCount++;
+        }
+      });
+
+      rl.on('close', () => {
+        saveDatabase(db);
+        console.log(`[CGU SYNC] Sync completed. Imported: ${importedCount}, Updated: ${updatedCount}. Total: ${db.cguReports.length}`);
+        res.json({
+          success: true,
+          importedCount,
+          updatedCount,
+          totalCount: db.cguReports.length
+        });
+      });
+    });
+
+    request.on('error', (err) => {
+      console.error("[CGU SYNC] Network error downloading CGU CSV:", err);
+      res.status(500).json({ error: "Erro de conexão ao baixar a base de dados abertos da CGU." });
     });
   });
 

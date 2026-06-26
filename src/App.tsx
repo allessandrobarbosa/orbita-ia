@@ -591,6 +591,23 @@ export default function App() {
     return { success: false, error: "Falha de conexão ao importar relatórios CGU." };
   };
 
+  const handleSyncCguReports = async (): Promise<any> => {
+    if (!checkPermission("CGU")) return null;
+    try {
+      const res = await fetch("/api/cgu/reports/sync", {
+        method: "POST"
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await fetchAllData();
+        return data;
+      }
+    } catch (err) {
+      console.error("Falha ao sincronizar relatórios CGU:", err);
+    }
+    return { success: false, error: "Falha de conexão ao sincronizar relatórios CGU com o portal." };
+  };
+
   const handleDeleteCguReport = async (idTarefa: string): Promise<boolean> => {
     if (!checkPermission("CGU")) return false;
     try {
@@ -1016,6 +1033,7 @@ export default function App() {
                   onImportCgu={handleImportCgu}
                   cguPublishedReports={cguPublishedReports}
                   onImportCguReports={handleImportCguReports}
+                  onSyncCguReports={handleSyncCguReports}
                   onDeleteCguReport={handleDeleteCguReport}
                   isLoading={isLoading}
                 />
