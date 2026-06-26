@@ -28,9 +28,16 @@ declare module 'express-session' {
 }
 
 // Standard types
-import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand, CguDemand, CguPublishedReport } from "./src/types";
+import { 
+  AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, 
+  ComunicacaoDemand, CguDemand, CguPublishedReport,
+  EticaMembro, EticaReuniao, EticaAta, EticaProcesso 
+} from "./src/types";
 import { SEED_COMUNICACOES } from "./src/data/seed_comunicacoes";
 import { SEED_CGU } from "./src/data/seed_cgu";
+import { 
+  SEED_ETICA_MEMBROS, SEED_ETICA_REUNIOES, SEED_ETICA_ATAS, SEED_ETICA_PROCESSOS 
+} from "./src/data/seed_etica";
 
 // DB Path Definition
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -909,7 +916,11 @@ function loadDatabase() {
       tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
       users: SEED_PROFILES,
       cgu: SEED_CGU,
-      cguReports: []
+      cguReports: [],
+      eticaMembros: SEED_ETICA_MEMBROS,
+      eticaReunioes: SEED_ETICA_REUNIOES,
+      eticaAtas: SEED_ETICA_ATAS,
+      eticaProcessos: SEED_ETICA_PROCESSOS
     };
 
     // Also run migration on seed data to ensure it's diverse
@@ -950,6 +961,32 @@ function loadDatabase() {
     }
     if (!data.cguReports) {
       data.cguReports = [];
+      dataModified = true;
+    } else if (Array.isArray(data.cguReports)) {
+      const filtered = data.cguReports.filter((r: any) => {
+        const idT = String(r.idTarefa || "");
+        const idA = String(r.idAuditoria || "");
+        return !idT.toUpperCase().startsWith("AUD") && !idA.toUpperCase().startsWith("AUD");
+      });
+      if (filtered.length !== data.cguReports.length) {
+        data.cguReports = filtered;
+        dataModified = true;
+      }
+    }
+    if (!data.eticaMembros) {
+      data.eticaMembros = SEED_ETICA_MEMBROS;
+      dataModified = true;
+    }
+    if (!data.eticaReunioes) {
+      data.eticaReunioes = SEED_ETICA_REUNIOES;
+      dataModified = true;
+    }
+    if (!data.eticaAtas) {
+      data.eticaAtas = SEED_ETICA_ATAS;
+      dataModified = true;
+    }
+    if (!data.eticaProcessos) {
+      data.eticaProcessos = SEED_ETICA_PROCESSOS;
       dataModified = true;
     }
 
@@ -1996,6 +2033,11 @@ async function startServer() {
     // Rigorous security filter: only import reports belonging to MTE
     const blacklist = ['dnit','codevasf','incra','ufgd','ufpe','ifac','mgi','mec','caixa','mds','mtur','mpa','ceagesp','unifesp','fnde','prf','memp','mdic','mf','ms','midr','ufg','mps','turismo','saude','educacao','cgu','fazenda','planejamento','integracao','senac','sesi','inss'];
     const filteredItems = items.filter((item: any) => {
+      const idT = String(item.idTarefa || "");
+      const idA = String(item.idAuditoria || "");
+      if (idT.toUpperCase().startsWith("AUD") || idA.toUpperCase().startsWith("AUD")) {
+        return false;
+      }
       const sup = (item.nomeOrgaoSuperior || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const unit = (((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
       
@@ -2232,11 +2274,16 @@ async function startServer() {
 
         if (!isMte) return;
 
+        const idAuditoria = (row[3] || "").replace(/"/g, "").trim() || idTarefa;
+        if (idTarefa.toUpperCase().startsWith("AUD") || idAuditoria.toUpperCase().startsWith("AUD")) {
+          return;
+        }
+
         const reportItem = {
           idTarefa,
           tituloRelatorio: (row[1] || "").replace(/"/g, "").trim(),
           dataPublicacao: formattedDate,
-          idAuditoria: (row[3] || "").replace(/"/g, "").trim() || idTarefa,
+          idAuditoria,
           siglaUnidadeAuditada: siglaAuditada || "MTE",
           nomeUnidadeAuditada: nomeAuditada || "Ministério do Trabalho e Emprego",
           siglaOrgaoSuperior: siglaSuperior || "MTE",
@@ -2688,6 +2735,209 @@ async function startServer() {
     const db = loadDatabase();
     const id = req.params.id;
     db.comissaoEtica = db.comissaoEtica.filter((x: any) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  // API 5.1: Comissão de Ética - Membros CRUD
+  app.get("/api/etica/membros", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaMembros || []);
+  });
+
+  app.post("/api/etica/membros", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as EticaMembro;
+    newItem.id = "MEM-" + Date.now();
+    newItem.ativo = true;
+    newItem.ultimaAtualizacao = new Date().toLocaleString("pt-BR");
+    if (!db.eticaMembros) db.eticaMembros = [];
+    db.eticaMembros.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/etica/membros/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.eticaMembros.findIndex((x: any) => x.id === id);
+    if (index >= 0) {
+      db.eticaMembros[index] = { 
+        ...db.eticaMembros[index], 
+        ...updateData, 
+        ultimaAtualizacao: new Date().toLocaleString("pt-BR") 
+      };
+      saveDatabase(db);
+      res.json(db.eticaMembros[index]);
+    } else {
+      res.status(404).json({ error: "Membro não encontrado." });
+    }
+  });
+
+  app.delete("/api/etica/membros/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const index = db.eticaMembros.findIndex((x: any) => x.id === id);
+    if (index >= 0) {
+      db.eticaMembros[index].ativo = !db.eticaMembros[index].ativo; // toggle status as soft delete
+      db.eticaMembros[index].ultimaAtualizacao = new Date().toLocaleString("pt-BR");
+      saveDatabase(db);
+      res.json({ success: true, item: db.eticaMembros[index] });
+    } else {
+      res.status(404).json({ error: "Membro não encontrado." });
+    }
+  });
+
+  // API 5.2: Comissão de Ética - Reuniões CRUD
+  app.get("/api/etica/reunioes", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaReunioes || []);
+  });
+
+  app.post("/api/etica/reunioes", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as EticaReuniao;
+    newItem.id = "REU-" + Date.now();
+    newItem.notificadoAgendamento = false;
+    newItem.notificadoLembrete = false;
+    newItem.confirmacoes = {};
+    if (newItem.convidados && Array.isArray(newItem.convidados)) {
+      newItem.convidados.forEach((c: any) => {
+        newItem.confirmacoes[c.email] = "Pendente";
+      });
+    }
+    newItem.ultimaAtualizacao = new Date().toLocaleString("pt-BR");
+    if (!db.eticaReunioes) db.eticaReunioes = [];
+    db.eticaReunioes.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/etica/reunioes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.eticaReunioes.findIndex((x: any) => x.id === id);
+    if (index >= 0) {
+      db.eticaReunioes[index] = { 
+        ...db.eticaReunioes[index], 
+        ...updateData, 
+        ultimaAtualizacao: new Date().toLocaleString("pt-BR") 
+      };
+      saveDatabase(db);
+      res.json(db.eticaReunioes[index]);
+    } else {
+      res.status(404).json({ error: "Reunião não encontrada." });
+    }
+  });
+
+  app.delete("/api/etica/reunioes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.eticaReunioes = db.eticaReunioes.filter((x: any) => x.id !== id);
+    if (db.eticaAtas) {
+      db.eticaAtas = db.eticaAtas.filter((x: any) => x.reuniaoId !== id);
+    }
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  // API 5.2b: Reuniões Notificações Simulação
+  app.post("/api/etica/reunioes/:id/notificar", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const { type } = req.body; // 'agendamento' | 'lembrete'
+    const index = db.eticaReunioes.findIndex((x: any) => x.id === id);
+    if (index >= 0) {
+      const r = db.eticaReunioes[index];
+      if (type === 'agendamento') {
+        r.notificadoAgendamento = true;
+      } else {
+        r.notificadoLembrete = true;
+      }
+      if (r.convidados && Array.isArray(r.convidados)) {
+        r.convidados.forEach((c: any) => {
+          if (!r.confirmacoes[c.email] || r.confirmacoes[c.email] === 'Pendente') {
+            r.confirmacoes[c.email] = Math.random() > 0.2 ? 'Confirmado' : 'Recusado';
+          }
+        });
+      }
+      r.ultimaAtualizacao = new Date().toLocaleString("pt-BR");
+      saveDatabase(db);
+      res.json({ success: true, reuniao: r });
+    } else {
+      res.status(404).json({ error: "Reunião não encontrada." });
+    }
+  });
+
+  // API 5.3: Comissão de Ética - Atas CRUD
+  app.get("/api/etica/atas", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaAtas || []);
+  });
+
+  app.post("/api/etica/atas", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as EticaAta;
+    newItem.id = newItem.reuniaoId;
+    if (!db.eticaAtas) db.eticaAtas = [];
+    const idx = db.eticaAtas.findIndex((x: any) => x.reuniaoId === newItem.reuniaoId);
+    if (idx >= 0) {
+      db.eticaAtas[idx] = { 
+        ...db.eticaAtas[idx], 
+        ...newItem, 
+        ultimaAtualizacao: new Date().toLocaleString("pt-BR") 
+      };
+    } else {
+      db.eticaAtas.unshift({ 
+        ...newItem, 
+        ultimaAtualizacao: new Date().toLocaleString("pt-BR") 
+      });
+    }
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  // API 5.4: Comissão de Ética - Processos CRUD
+  app.get("/api/etica/processos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaProcessos || []);
+  });
+
+  app.post("/api/etica/processos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as EticaProcesso;
+    newItem.id = "PRC-" + Date.now();
+    newItem.ultimaAtualizacao = new Date().toLocaleString("pt-BR");
+    if (!db.eticaProcessos) db.eticaProcessos = [];
+    db.eticaProcessos.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/etica/processos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.eticaProcessos.findIndex((x: any) => x.id === id);
+    if (index >= 0) {
+      db.eticaProcessos[index] = { 
+        ...db.eticaProcessos[index], 
+        ...updateData, 
+        ultimaAtualizacao: new Date().toLocaleString("pt-BR") 
+      };
+      saveDatabase(db);
+      res.json(db.eticaProcessos[index]);
+    } else {
+      res.status(404).json({ error: "Processo não encontrado." });
+    }
+  });
+
+  app.delete("/api/etica/processos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.eticaProcessos = db.eticaProcessos.filter((x: any) => x.id !== id);
     saveDatabase(db);
     res.json({ success: true });
   });

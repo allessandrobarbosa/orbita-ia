@@ -33281,7 +33281,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1731215",
@@ -33298,7 +33298,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1529141",
@@ -33315,7 +33315,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1517796",
@@ -33332,7 +33332,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1881960",
@@ -33349,7 +33349,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1562659",
@@ -33366,7 +33366,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1717711",
@@ -33383,7 +33383,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1644394",
@@ -33400,87 +33400,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
-    },
-    {
-      "municipio": "Belém",
-      "siglaOrgaoSuperior": "MTE",
-      "siglaUnidadeAuditada": "SRTE/PA",
-      "linhaAcao": "Linha PA",
-      "idTarefa": "1351581",
-      "tituloRelatorio": "Auditoria de Contratos na SRTE/PA",
-      "tipoServico": "Auditoria",
-      "nomeUnidadeAuditada": "Superintendência Regional do Trabalho e Emprego em Pará",
-      "grupoAtividade": "Grupo PA",
-      "nomeOrgaoSuperior": "Ministério do Trabalho e Emprego",
-      "idAuditoria": "AUD-2024-PA",
-      "uf": "PA",
-      "dataPublicacao": "15/06/2024",
-      "ultimaAtualizacao": "26/06/2026, 12:03:44"
-    },
-    {
-      "municipio": "Campo Grande",
-      "siglaOrgaoSuperior": "MTE",
-      "siglaUnidadeAuditada": "SRTE/MS",
-      "linhaAcao": "Linha MS",
-      "idTarefa": "1351580",
-      "tituloRelatorio": "Auditoria Regional na SRTE/MS",
-      "tipoServico": "Auditoria",
-      "nomeUnidadeAuditada": "Superintendência Regional do Trabalho e Emprego em Mato Grosso do Sul",
-      "grupoAtividade": "Grupo MS",
-      "nomeOrgaoSuperior": "Ministério do Trabalho e Emprego",
-      "idAuditoria": "AUD-2024-MS",
-      "uf": "MS",
-      "dataPublicacao": "12/04/2024",
-      "ultimaAtualizacao": "26/06/2026, 12:03:44"
-    },
-    {
-      "municipio": "Brasília",
-      "siglaOrgaoSuperior": "MTP",
-      "siglaUnidadeAuditada": "MTE",
-      "linhaAcao": "Linha de Ação Emprego",
-      "idTarefa": "1351573",
-      "tituloRelatorio": "Avaliação de Políticas de Emprego 2025",
-      "tipoServico": "Avaliação",
-      "nomeUnidadeAuditada": "Secretaria de Políticas de Emprego",
-      "grupoAtividade": "Atividade de Avaliação",
-      "nomeOrgaoSuperior": "MTP",
-      "idAuditoria": "AUD-2025-055",
-      "uf": "DF",
-      "dataPublicacao": "20/06/2025",
-      "ultimaAtualizacao": "26/06/2026, 11:32:08"
-    },
-    {
-      "municipio": "Rio de Janeiro",
-      "siglaOrgaoSuperior": "MTE",
-      "siglaUnidadeAuditada": "SRT/RJ",
-      "linhaAcao": "Linha de Ação Seguro Desemprego",
-      "idTarefa": "1351572",
-      "tituloRelatorio": "Fiscalização de Seguro Desemprego no Rio de Janeiro",
-      "tipoServico": "Fiscalização",
-      "nomeUnidadeAuditada": "Superintendência Regional do Trabalho RJ",
-      "grupoAtividade": "Atividade de Fiscalização",
-      "nomeOrgaoSuperior": "MTE",
-      "idAuditoria": "AUD-2023-010",
-      "uf": "RJ",
-      "dataPublicacao": "10/01/2023",
-      "ultimaAtualizacao": "26/06/2026, 11:32:08"
-    },
-    {
-      "municipio": "Brasília",
-      "siglaOrgaoSuperior": "MTE",
-      "siglaUnidadeAuditada": "MTE",
-      "linhaAcao": "Linha de Ação Contratos",
-      "idTarefa": "1351571",
-      "tituloRelatorio": "Relatório de Auditoria de Contratos MTE 2024",
-      "tipoServico": "Auditoria",
-      "nomeUnidadeAuditada": "Ministério do Trabalho e Emprego",
-      "grupoAtividade": "Atividade Administrativa",
-      "nomeOrgaoSuperior": "Ministério do Trabalho e Emprego",
-      "idAuditoria": "AUD-2024-001",
-      "uf": "DF",
-      "dataPublicacao": "15/05/2024",
-      "ultimaAtualizacao": "26/06/2026, 11:32:08"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1828136",
@@ -33497,7 +33417,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1404107",
@@ -33514,7 +33434,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Análise de Alertas de Licitações",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1400421",
@@ -33531,7 +33451,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1267245",
@@ -33548,7 +33468,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1269926",
@@ -33565,7 +33485,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1732365",
@@ -33582,7 +33502,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Avaliação da Prestação Anual de Contas",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1527109",
@@ -33599,7 +33519,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1421234",
@@ -33616,7 +33536,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1258293",
@@ -33633,7 +33553,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1808704",
@@ -33650,7 +33570,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1532360",
@@ -33667,7 +33587,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     },
     {
       "idTarefa": "1402707",
@@ -33684,7 +33604,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "26/06/2026, 13:07:35"
+      "ultimaAtualizacao": "26/06/2026, 16:21:21"
     }
   ]
 }

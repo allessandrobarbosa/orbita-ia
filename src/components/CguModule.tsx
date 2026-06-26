@@ -610,6 +610,11 @@ export default function CguModule({
           const idTarefa = getVal(idxIdTarefa);
           if (!idTarefa) continue;
 
+          const idAuditoria = idxIdAuditoria !== -1 ? getVal(idxIdAuditoria) : "";
+          if (idTarefa.toUpperCase().startsWith("AUD") || idAuditoria.toUpperCase().startsWith("AUD")) {
+            continue;
+          }
+
           const siglaAuditada = getVal(idxSiglaUnidadeAuditada);
           const nomeAuditada = getVal(idxNomeUnidadeAuditada);
           const siglaSuperior = getVal(idxSiglaOrgaoSuperior);
@@ -801,6 +806,13 @@ export default function CguModule({
   ).sort((a, b) => b - a);
 
   const filteredReports = cguPublishedReports.filter(r => {
+    // Exclude reports starting with AUD in idTarefa or idAuditoria
+    const idT = String(r.idTarefa || "");
+    const idA = String(r.idAuditoria || "");
+    if (idT.toUpperCase().startsWith("AUD") || idA.toUpperCase().startsWith("AUD")) {
+      return false;
+    }
+
     // Safety check: must belong to MTE and not to any other public organ blacklist
     const sup = (r.nomeOrgaoSuperior || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     const unit = ((r.nomeUnidadeAuditada || "") + " " + (r.siglaUnidadeAuditada || "")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -1002,14 +1014,22 @@ export default function CguModule({
     window.open(proxyUrl, "_blank", "noopener,noreferrer");
   };
 
-  const handleSearchInPortal = (titulo: string) => {
-    // Open the e-CGU advanced search page (portal uses dynamic JS so we can't pre-fill)
-    window.open("https://eaud.cgu.gov.br/relatorios/pesquisa", "_blank");
+  const handleSearchInPortal = (idTarefa?: string, idAuditoria?: string, titulo?: string) => {
+    // We can pre-fill using the palavraChave parameter in the query string.
+    // Try to search by idAuditoria first (most precise), then idTarefa, and fallback to title.
+    const queryTerm = idAuditoria || idTarefa || titulo || "";
+    const cleanTerm = queryTerm.trim();
+    if (!cleanTerm) {
+      window.open("https://eaud.cgu.gov.br/relatorios/pesquisa", "_blank", "noopener,noreferrer");
+      return;
+    }
+    const url = `https://eaud.cgu.gov.br/relatorios/pesquisa?colunaOrdenacao=dataPublicacao&direcaoOrdenacao=DESC&tamanhoPagina=15&offset=0&palavraChave=${encodeURIComponent(cleanTerm)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  // Detect if a report has a public PDF (idAuditoria is purely numeric)
+  // All reports in the Open Data database are public by definition and can be downloaded using their idTarefa.
   const isPublicReport = (idAuditoria: string): boolean => {
-    return /^\d+$/.test(idAuditoria || "");
+    return true;
   };
 
   const handlePrintPDF = () => {
@@ -2281,13 +2301,27 @@ export default function CguModule({
             </div>
             <div className="flex items-center gap-2">
               {reportSearchTerm && (
-                <button
-                  type="button"
-                  onClick={(e) => { e.preventDefault(); setReportSearchTerm(""); }}
-                  className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-855 bg-slate-100 hover:bg-slate-200/60 rounded-xl transition"
-                >
-                  Limpar Filtro
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleSearchInPortal(undefined, undefined, reportSearchTerm);
+                    }}
+                    className="px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white bg-slate-600 hover:bg-slate-700 rounded-xl transition flex items-center gap-1 shadow-xs cursor-pointer"
+                    title="Pesquisar este termo diretamente no Portal e-CGU"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Pesquisar no Portal</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setReportSearchTerm(""); }}
+                    className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200/60 rounded-xl transition cursor-pointer"
+                  >
+                    Limpar Filtro
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -2415,7 +2449,7 @@ export default function CguModule({
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                handleSearchInPortal(r.tituloRelatorio);
+                                handleSearchInPortal(r.idTarefa, r.idAuditoria, r.tituloRelatorio);
                               }}
                               className="px-2.5 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-[10px] font-black uppercase flex items-center gap-1 transition duration-200 shadow-xs cursor-pointer"
                               title="Abrir pesquisa no Portal e-CGU"

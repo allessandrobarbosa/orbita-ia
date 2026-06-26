@@ -123,8 +123,11 @@ import EticaModule from "./components/EticaModule";
 import SrteModule from "./components/SrteModule";
 import CguModule from "./components/CguModule";
 
-// Domain Types
-import { AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, ComunicacaoDemand, TceDemand, TceAcordaoMapping, CguDemand, CguPublishedReport } from "./types";
+import { 
+  AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, 
+  ComunicacaoDemand, TceDemand, TceAcordaoMapping, CguDemand, CguPublishedReport,
+  EticaMembro, EticaReuniao, EticaAta, EticaProcesso 
+} from "./types";
 
 export default function App() {
 
@@ -138,6 +141,10 @@ export default function App() {
   const [tceMappings, setTceMappings] = useState<TceAcordaoMapping[]>([]);
   const [cguDemands, setCguDemands] = useState<CguDemand[]>([]);
   const [cguPublishedReports, setCguPublishedReports] = useState<CguPublishedReport[]>([]);
+  const [membrosEtica, setMembrosEtica] = useState<EticaMembro[]>([]);
+  const [reunioesEtica, setReunioesEtica] = useState<EticaReuniao[]>([]);
+  const [atasEtica, setAtasEtica] = useState<EticaAta[]>([]);
+  const [processosEtica, setProcessosEtica] = useState<EticaProcesso[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
 
   // Layout navigation states
@@ -243,7 +250,10 @@ export default function App() {
     setIsLoading(true);
     try {
       const cb = `?cb=${Date.now()}`;
-      const [acRes, comRes, rolRes, eticaRes, srteRes, statsRes, tcesRes, tceMappingsRes, cguRes, cguReportsRes] = await Promise.all([
+      const [
+        acRes, comRes, rolRes, eticaRes, srteRes, statsRes, tcesRes, tceMappingsRes, cguRes, cguReportsRes,
+        membrosRes, reunioesRes, atasRes, processosRes
+      ] = await Promise.all([
         fetch(`/api/acordaos${cb}`).then(r => r.json()),
         fetch(`/api/comunicacoes${cb}`).then(r => r.json()),
         fetch(`/api/rol-responsaveis${cb}`).then(r => r.json()),
@@ -253,7 +263,11 @@ export default function App() {
         fetch(`/api/tces${cb}`).then(r => r.json()),
         fetch(`/api/tce-mappings${cb}`).then(r => r.json()),
         fetch(`/api/cgu${cb}`).then(r => r.json()),
-        fetch(`/api/cgu/reports${cb}`).then(r => r.json())
+        fetch(`/api/cgu/reports${cb}`).then(r => r.json()),
+        fetch(`/api/etica/membros${cb}`).then(r => r.json()),
+        fetch(`/api/etica/reunioes${cb}`).then(r => r.json()),
+        fetch(`/api/etica/atas${cb}`).then(r => r.json()),
+        fetch(`/api/etica/processos${cb}`).then(r => r.json())
       ]);
 
       setAcordaos(acRes);
@@ -266,6 +280,10 @@ export default function App() {
       setTceMappings(tceMappingsRes || []);
       setCguDemands(cguRes || []);
       setCguPublishedReports(cguReportsRes || []);
+      setMembrosEtica(membrosRes || []);
+      setReunioesEtica(reunioesRes || []);
+      setAtasEtica(atasRes || []);
+      setProcessosEtica(processosRes || []);
     } catch (err) {
       console.error("Erro ao carregar dados do ORBITA.AECI:", err);
     }
@@ -760,6 +778,196 @@ export default function App() {
     return false;
   };
 
+  // Membros Comissão de Ética handlers
+  const handleAddEticaMembro = async (newMembro: any): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch("/api/etica/membros", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMembro)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  const handleUpdateEticaMembro = async (id: string, updated: any): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch(`/api/etica/membros/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  const handleDeleteEticaMembro = async (id: string): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch(`/api/etica/membros/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  // Reuniões handlers
+  const handleAddEticaReuniao = async (newReuniao: any): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch("/api/etica/reunioes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newReuniao)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  const handleUpdateEticaReuniao = async (id: string, updated: any): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch(`/api/etica/reunioes/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  const handleDeleteEticaReuniao = async (id: string): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch(`/api/etica/reunioes/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  const handleNotifyEticaReuniao = async (id: string, type: 'agendamento' | 'lembrete'): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch(`/api/etica/reunioes/${id}/notificar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type })
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  // Atas handlers
+  const handleSaveEticaAta = async (newAta: any): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch("/api/etica/atas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newAta)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  // Processos handlers
+  const handleAddEticaProcesso = async (newProcesso: any): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch("/api/etica/processos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newProcesso)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  const handleUpdateEticaProcesso = async (id: string, updated: any): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch(`/api/etica/processos/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated)
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
+  const handleDeleteEticaProcesso = async (id: string): Promise<boolean> => {
+    if (!checkPermission("ETHICS")) return false;
+    try {
+      const res = await fetch(`/api/etica/processos/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    return false;
+  };
+
   // Superintendências actions
   const handleUpdateSrte = async (uf: string, data: any): Promise<boolean> => {
     if (!checkPermission("SRTE")) return false;
@@ -1012,6 +1220,21 @@ export default function App() {
                   onAddEtica={handleAddEtica}
                   onUpdateEtica={handleUpdateEtica}
                   onDeleteEtica={handleDeleteEtica}
+                  membrosEtica={membrosEtica}
+                  reunioesEtica={reunioesEtica}
+                  atasEtica={atasEtica}
+                  processosEtica={processosEtica}
+                  onAddEticaMembro={handleAddEticaMembro}
+                  onUpdateEticaMembro={handleUpdateEticaMembro}
+                  onDeleteEticaMembro={handleDeleteEticaMembro}
+                  onAddEticaReuniao={handleAddEticaReuniao}
+                  onUpdateEticaReuniao={handleUpdateEticaReuniao}
+                  onDeleteEticaReuniao={handleDeleteEticaReuniao}
+                  onNotifyEticaReuniao={handleNotifyEticaReuniao}
+                  onSaveEticaAta={handleSaveEticaAta}
+                  onAddEticaProcesso={handleAddEticaProcesso}
+                  onUpdateEticaProcesso={handleUpdateEticaProcesso}
+                  onDeleteEticaProcesso={handleDeleteEticaProcesso}
                 />
               )}
 

@@ -61,6 +61,67 @@ export interface ComissaoEticaDemand {
   recomendacoes?: string;
 }
 
+export interface EticaMembro {
+  id: string;
+  nome: string;
+  cpf: string;
+  atribuicao: 'Presidente' | 'Membro' | 'Secretária-Executiva';
+  encargo: 'Titular' | 'Suplente';
+  dispositivoLegal: string; // Portaria / Ato
+  dataPublicacao: string; // YYYY-MM-DD
+  dataInicioMandato: string; // YYYY-MM-DD (as requested by user to help calculate elapsed time)
+  dataFimMandato: string; // YYYY-MM-DD (calculated or explicit absolute date)
+  mandato: string; // ex: "3 anos", "1 ano e 40 dias"
+  matricula: string;
+  telefone: string;
+  email: string;
+  ativo: boolean; // soft delete / desativação
+  ultimaAtualizacao?: string;
+}
+
+export interface EticaConvidado {
+  nome: string;
+  encargo: string;
+  email: string;
+  telefone: string;
+}
+
+export interface EticaReuniao {
+  id: string;
+  tipo: 'Ordinária' | 'Extraordinária';
+  dataHora: string; // YYYY-MM-DDTHH:MM
+  pauta: string;
+  convidados: EticaConvidado[];
+  confirmacoes: Record<string, 'Pendente' | 'Confirmado' | 'Recusado'>; // keyed by email
+  notificadoAgendamento: boolean;
+  notificadoLembrete: boolean;
+  ultimaAtualizacao?: string;
+}
+
+export interface EticaAta {
+  id: string; // Identical to reuniaoId (1:1)
+  reuniaoId: string;
+  relatos: string;
+  decisoes: string;
+  dataGeracao: string; // YYYY-MM-DD
+  ultimaAtualizacao?: string;
+}
+
+export interface EticaProcesso {
+  id: string;
+  tipo: 'SECI' | 'Consulta' | 'Ético';
+  processoSei: string; // e.g. "19973.100203/2026-11"
+  dataInicio: string; // YYYY-MM-DD (for grouping by year)
+  dataFim?: string; // YYYY-MM-DD
+  resumo?: string; // SECI
+  responsavel?: string; // SECI
+  situacao: string; // SECI: "Deferido" | "Indeferido" | ... ; Ético: "Arquivado" | "Em Andamento"
+  solicitante?: string; // Consulta
+  assunto?: string; // Consulta
+  ultimaAtualizacao?: string;
+}
+
+
 // Communications (Ofícios) Demand Item
 export interface ComunicacaoDemand {
   KEY: string; // Unique identifier ofício

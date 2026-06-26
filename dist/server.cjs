@@ -25,6 +25,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var import_express = __toESM(require("express"), 1);
 var import_path = __toESM(require("path"), 1);
 var import_fs = __toESM(require("fs"), 1);
+var import_https = __toESM(require("https"), 1);
+var import_readline = __toESM(require("readline"), 1);
 var import_vite = require("vite");
 var import_dotenv = __toESM(require("dotenv"), 1);
 var import_express_session = __toESM(require("express-session"), 1);
@@ -373,6 +375,196 @@ var SEED_CGU = [
     dataLimiteInicial: "01/06/2026",
     ano: 2026,
     ultimaAtualizacao: "28/05/2026 10:15"
+  }
+];
+
+// src/data/seed_etica.ts
+var SEED_ETICA_MEMBROS = [
+  {
+    id: "MEM-001",
+    nome: "Alessandro Barbosa Louren\xE7o",
+    cpf: "111.222.333-44",
+    atribuicao: "Presidente",
+    encargo: "Titular",
+    dispositivoLegal: "Portaria MTE n\xBA 104/2024",
+    dataPublicacao: "2024-05-15",
+    dataInicioMandato: "2024-05-15",
+    dataFimMandato: "2027-05-15",
+    mandato: "3 anos",
+    matricula: "AECI-8409-G",
+    telefone: "(61) 98765-4321",
+    email: "alessandro.lourenco@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "MEM-002",
+    nome: "Maria Eunice Ramos",
+    cpf: "222.333.444-55",
+    atribuicao: "Membro",
+    encargo: "Titular",
+    dispositivoLegal: "Portaria MTE n\xBA 104/2024",
+    dataPublicacao: "2024-05-15",
+    dataInicioMandato: "2024-05-15",
+    dataFimMandato: "2026-05-15",
+    // Mandato expirado há 1 mês
+    mandato: "2 anos",
+    matricula: "AECI-3301-A",
+    telefone: "(61) 98888-1111",
+    email: "maria.ramos@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "MEM-003",
+    nome: "Carlos Henrique Santos",
+    cpf: "333.444.555-66",
+    atribuicao: "Membro",
+    encargo: "Suplente",
+    dispositivoLegal: "Portaria MTE n\xBA 205/2025",
+    dataPublicacao: "2025-02-10",
+    dataInicioMandato: "2025-02-10",
+    dataFimMandato: "2027-02-10",
+    mandato: "2 anos",
+    matricula: "AECI-1029-F",
+    telefone: "(61) 99111-2222",
+    email: "carlos.henrique@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "MEM-004",
+    nome: "Ana L\xFAcia Rezende",
+    cpf: "444.555.666-77",
+    atribuicao: "Secret\xE1ria-Executiva",
+    encargo: "Titular",
+    dispositivoLegal: "Portaria MTE n\xBA 412/2025",
+    dataPublicacao: "2025-08-01",
+    dataInicioMandato: "2025-08-01",
+    dataFimMandato: "2027-01-28",
+    // 1 ano e 180 dias a partir de 01/08/2025
+    mandato: "1 ano e 180 dias",
+    matricula: "AECI-7744-X",
+    telefone: "(61) 99333-4444",
+    email: "ana.rezende@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  }
+];
+var SEED_ETICA_REUNIOES = [
+  {
+    id: "REU-001",
+    tipo: "Ordin\xE1ria",
+    dataHora: "2026-07-10T14:30",
+    pauta: "Julgamento de processos SECI pendentes, homologa\xE7\xE3o de consultas e planejamento das campanhas de integridade no \xE2mbito das Superintend\xEAncias Regionais do Trabalho.",
+    convidados: [
+      {
+        nome: "Alessandro Barbosa Louren\xE7o",
+        encargo: "Presidente",
+        email: "alessandro.lourenco@trabalho.gov.br",
+        telefone: "(61) 98765-4321"
+      },
+      {
+        nome: "Maria Eunice Ramos",
+        encargo: "Membro",
+        email: "maria.ramos@trabalho.gov.br",
+        telefone: "(61) 98888-1111"
+      },
+      {
+        nome: "Ana L\xFAcia Rezende",
+        encargo: "Secret\xE1ria-Executiva",
+        email: "ana.rezende@trabalho.gov.br",
+        telefone: "(61) 99333-4444"
+      },
+      {
+        nome: "Dr. Roberto de Almeida (Convidado Externo)",
+        encargo: "Palestrante / Assessor",
+        email: "roberto.almeida@cgu.gov.br",
+        telefone: "(61) 99999-5555"
+      }
+    ],
+    confirmacoes: {
+      "alessandro.lourenco@trabalho.gov.br": "Confirmado",
+      "maria.ramos@trabalho.gov.br": "Confirmado",
+      "ana.rezende@trabalho.gov.br": "Confirmado",
+      "roberto.almeida@cgu.gov.br": "Pendente"
+    },
+    notificadoAgendamento: true,
+    notificadoLembrete: false,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  }
+];
+var SEED_ETICA_ATAS = [
+  {
+    id: "REU-001",
+    reuniaoId: "REU-001",
+    relatos: "Aos dez dias do m\xEAs de julho de 2026, reuniu-se ordinariamente a Comiss\xE3o de \xC9tica do Minist\xE9rio do Trabalho e Emprego. O Presidente iniciou os trabalhos dando as boas-vindas a todos e submetendo a pauta sobre preven\xE7\xE3o a conflitos de interesse ao escrut\xEDnio da mesa. Discutiu-se a necessidade de intensificar campanhas de conscientiza\xE7\xE3o nas SRTEs.",
+    decisoes: "Deliberou-se, por unanimidade, pela aprova\xE7\xE3o do voto da relatora Maria Eunice Ramos no \xE2mbito do processo SECI 19973.102345/2026-88. Determinou-se o agendamento de palestra com a CGU para o m\xEAs subsequente.",
+    dataGeracao: "2026-07-10",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  }
+];
+var SEED_ETICA_PROCESSOS = [
+  {
+    id: "PRC-001",
+    tipo: "SECI",
+    processoSei: "19973.102345/2026-88",
+    dataInicio: "2026-06-20",
+    // 6 dias atrás (SLA ok)
+    resumo: "Consulta sobre exerc\xEDcio de doc\xEAncia concomitante em institui\xE7\xE3o de ensino privada de \xE2mbito regional.",
+    responsavel: "Maria Eunice Ramos",
+    situacao: "Deferido",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-002",
+    tipo: "SECI",
+    processoSei: "19973.102456/2026-99",
+    dataInicio: "2026-06-25",
+    // 1 dia atrás (SLA ok)
+    resumo: "Pedido de autoriza\xE7\xE3o para exercer atividade privada de consultoria estrat\xE9gica em an\xE1lise de mercado de trabalho.",
+    responsavel: "Alessandro Barbosa Louren\xE7o",
+    situacao: "Em An\xE1lise",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-003",
+    tipo: "SECI",
+    processoSei: "19973.100999/2026-22",
+    dataInicio: "2026-06-01",
+    // 25 dias atrás (SLA Estourado!)
+    resumo: "Consulta sobre libera\xE7\xE3o para ministrar palestra remunerada contratada por concession\xE1ria de servi\xE7o p\xFAblico federal.",
+    responsavel: "Carlos Henrique Santos",
+    situacao: "Em An\xE1lise",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-004",
+    tipo: "Consulta",
+    processoSei: "19973.200111/2026-15",
+    dataInicio: "2026-04-10",
+    dataFim: "2026-04-20",
+    solicitante: "Superintend\xEAncia Regional do Trabalho de S\xE3o Paulo (SRTb-SP)",
+    assunto: "Consulta sobre recebimento de brindes corporativos e materiais promocionais em feiras institucionais por auditores fiscais.",
+    situacao: "Respondida",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-005",
+    tipo: "\xC9tico",
+    processoSei: "19973.300555/2026-01",
+    dataInicio: "2026-05-02",
+    situacao: "Em Andamento",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-006",
+    tipo: "\xC9tico",
+    processoSei: "19973.300122/2025-99",
+    dataInicio: "2025-11-12",
+    dataFim: "2025-12-18",
+    situacao: "Arquivado",
+    ultimaAtualizacao: "26/06/2026 10:00"
   }
 ];
 
@@ -1236,7 +1428,11 @@ function loadDatabase() {
       tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
       users: SEED_PROFILES,
       cgu: SEED_CGU,
-      cguReports: []
+      cguReports: [],
+      eticaMembros: SEED_ETICA_MEMBROS,
+      eticaReunioes: SEED_ETICA_REUNIOES,
+      eticaAtas: SEED_ETICA_ATAS,
+      eticaProcessos: SEED_ETICA_PROCESSOS
     };
     migrateProcessTypes(defaultData);
     import_fs.default.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf-8");
@@ -1272,6 +1468,32 @@ function loadDatabase() {
     }
     if (!data.cguReports) {
       data.cguReports = [];
+      dataModified = true;
+    } else if (Array.isArray(data.cguReports)) {
+      const filtered = data.cguReports.filter((r) => {
+        const idT = String(r.idTarefa || "");
+        const idA = String(r.idAuditoria || "");
+        return !idT.toUpperCase().startsWith("AUD") && !idA.toUpperCase().startsWith("AUD");
+      });
+      if (filtered.length !== data.cguReports.length) {
+        data.cguReports = filtered;
+        dataModified = true;
+      }
+    }
+    if (!data.eticaMembros) {
+      data.eticaMembros = SEED_ETICA_MEMBROS;
+      dataModified = true;
+    }
+    if (!data.eticaReunioes) {
+      data.eticaReunioes = SEED_ETICA_REUNIOES;
+      dataModified = true;
+    }
+    if (!data.eticaAtas) {
+      data.eticaAtas = SEED_ETICA_ATAS;
+      dataModified = true;
+    }
+    if (!data.eticaProcessos) {
+      data.eticaProcessos = SEED_ETICA_PROCESSOS;
       dataModified = true;
     }
     if (migrateProcessTypes(data)) {
@@ -2148,6 +2370,11 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     if (!db.cguReports) db.cguReports = [];
     const blacklist = ["dnit", "codevasf", "incra", "ufgd", "ufpe", "ifac", "mgi", "mec", "caixa", "mds", "mtur", "mpa", "ceagesp", "unifesp", "fnde", "prf", "memp", "mdic", "mf", "ms", "midr", "ufg", "mps", "turismo", "saude", "educacao", "cgu", "fazenda", "planejamento", "integracao", "senac", "sesi", "inss"];
     const filteredItems = items.filter((item) => {
+      const idT = String(item.idTarefa || "");
+      const idA = String(item.idAuditoria || "");
+      if (idT.toUpperCase().startsWith("AUD") || idA.toUpperCase().startsWith("AUD")) {
+        return false;
+      }
       const sup = (item.nomeOrgaoSuperior || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const unit = ((item.nomeUnidadeAuditada || "") + " " + (item.siglaUnidadeAuditada || "")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       let isMte = false;
@@ -2207,6 +2434,182 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       updatedCount,
       totalCount: db.cguReports.length,
       items: db.cguReports
+    });
+  });
+  app.get("/api/cgu/reports/pdf/:idTarefa", (req, res) => {
+    const { idTarefa } = req.params;
+    const filename = req.query.filename ? String(req.query.filename) : `Relatorio_CGU_${idTarefa}`;
+    const safeFilename = filename.replace(/[^\w\s\-\.]/gi, "").trim().substring(0, 120) + ".pdf";
+    const startUrl = `https://eaud.cgu.gov.br/relatorios/download/${encodeURIComponent(idTarefa)}`;
+    console.log(`[CGU PDF PROXY] Fetching: ${startUrl}`);
+    const fetchWithRedirects = (url, maxRedirects) => {
+      const isHttps = url.startsWith("https");
+      const lib = isHttps ? import_https.default : require("http");
+      const reqOptions = new URL(url);
+      lib.get({
+        hostname: reqOptions.hostname,
+        path: reqOptions.pathname + reqOptions.search,
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+          "Accept": "application/pdf, application/octet-stream, */*",
+          "Accept-Language": "pt-BR,pt;q=0.9",
+          "Referer": "https://eaud.cgu.gov.br/relatorios"
+        }
+      }, (response) => {
+        const status = response.statusCode;
+        const location = response.headers["location"];
+        const contentType = response.headers["content-type"] || "";
+        console.log(`[CGU PDF PROXY] Status: ${status}, Content-Type: ${contentType}, Location: ${location || "none"}`);
+        if ((status === 301 || status === 302 || status === 303 || status === 307) && location && maxRedirects > 0) {
+          const redirectUrl = location.startsWith("http") ? location : `https://eaud.cgu.gov.br${location}`;
+          console.log(`[CGU PDF PROXY] Redirecting to: ${redirectUrl}`);
+          response.resume();
+          return fetchWithRedirects(redirectUrl, maxRedirects - 1);
+        }
+        if (status === 404) {
+          response.resume();
+          return res.status(404).json({ error: "Relat\xF3rio n\xE3o encontrado no portal e-CGU." });
+        }
+        if (status !== 200) {
+          response.resume();
+          return res.status(502).json({ error: `Portal e-CGU retornou status ${status}.` });
+        }
+        if (contentType && contentType.includes("text/html")) {
+          let body = "";
+          response.setEncoding("utf8");
+          response.on("data", (chunk) => {
+            body += chunk.substring(0, 200);
+          });
+          response.on("end", () => {
+            console.warn(`[CGU PDF PROXY] Expected PDF but got HTML. Body preview: ${body.substring(0, 150)}`);
+            res.status(403).json({ error: "O portal e-CGU requer autentica\xE7\xE3o para acessar este relat\xF3rio. Use o bot\xE3o Portal para acess\xE1-lo manualmente." });
+          });
+          return;
+        }
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `inline; filename="${safeFilename}"`);
+        const contentLength = response.headers["content-length"];
+        if (contentLength) res.setHeader("Content-Length", contentLength);
+        console.log(`[CGU PDF PROXY] Streaming PDF inline (${contentLength || "unknown"} bytes) as: ${safeFilename}`);
+        response.pipe(res);
+      }).on("error", (err) => {
+        console.error("[CGU PDF PROXY] Connection error:", err.message);
+        if (!res.headersSent) {
+          res.status(502).json({ error: "Falha de conex\xE3o com o portal e-CGU." });
+        }
+      });
+    };
+    fetchWithRedirects(startUrl, 5);
+  });
+  app.post("/api/cgu/reports/sync", (req, res) => {
+    console.log("[CGU SYNC] Starting automated sync from dadosabertos-download.cgu.gov.br...");
+    const csvUrl = "https://dadosabertos-download.cgu.gov.br/Auditorias/Auditorias.csv";
+    const request = import_https.default.get(csvUrl, (response) => {
+      if (response.statusCode !== 200) {
+        console.error(`[CGU SYNC] Failed to download CSV. Status: ${response.statusCode}`);
+        return res.status(500).json({ error: `Falha ao conectar com o portal de dados abertos da CGU (Status: ${response.statusCode}).` });
+      }
+      response.setEncoding("latin1");
+      const rl = import_readline.default.createInterface({
+        input: response,
+        crlfDelay: Infinity
+      });
+      const db = loadDatabase();
+      if (!db.cguReports) db.cguReports = [];
+      let isFirstLine = true;
+      let importedCount = 0;
+      let updatedCount = 0;
+      const blacklist = ["dnit", "codevasf", "incra", "ufgd", "ufpe", "ifac", "mgi", "mec", "caixa", "mds", "mtur", "mpa", "ceagesp", "unifesp", "fnde", "prf", "memp", "mdic", "mf", "ms", "midr", "ufg", "mps", "turismo", "saude", "educacao", "cgu", "fazenda", "planejamento", "integracao", "senac", "sesi", "inss"];
+      rl.on("line", (line) => {
+        if (isFirstLine) {
+          isFirstLine = false;
+          return;
+        }
+        if (!line || line.trim() === "") return;
+        const row = line.split(/;(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+        if (row.length < 13) return;
+        const idTarefa = (row[0] || "").replace(/"/g, "").trim();
+        if (!idTarefa) return;
+        const dateStr = (row[2] || "").trim();
+        if (!dateStr) return;
+        const dateParts = dateStr.split("-");
+        if (dateParts.length === 3) {
+          const y = parseInt(dateParts[0], 10);
+          if (y < 2023) return;
+        } else {
+          const dateVal = new Date(dateStr);
+          if (isNaN(dateVal.getTime()) || dateVal.getFullYear() < 2023) return;
+        }
+        let formattedDate = dateStr;
+        if (dateParts.length === 3) {
+          formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+        }
+        const nomeSuperior = (row[7] || "").replace(/"/g, "").trim();
+        const siglaSuperior = (row[6] || "").replace(/"/g, "").trim();
+        const nomeAuditada = (row[5] || "").replace(/"/g, "").trim();
+        const siglaAuditada = (row[4] || "").replace(/"/g, "").trim();
+        const sup = nomeSuperior.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const siglaSup = siglaSuperior.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const unit = (nomeAuditada + " " + siglaAuditada).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        let isMte = false;
+        if (sup && (sup.includes("trabalho") || sup.includes("emprego") || sup.includes("mte") || sup.includes("mtp") || siglaSup.includes("mte") || siglaSup.includes("mtp"))) {
+          isMte = true;
+        } else {
+          const unitMatches = unit.includes("trabalho") || unit.includes("emprego") || unit.includes("mte") || unit.includes("mtp") || unit.includes("srt") || unit.includes("srte");
+          const containsBlacklist = blacklist.some((b) => unit.includes(b));
+          isMte = unitMatches && !containsBlacklist;
+        }
+        if (!isMte) return;
+        const idAuditoria = (row[3] || "").replace(/"/g, "").trim() || idTarefa;
+        if (idTarefa.toUpperCase().startsWith("AUD") || idAuditoria.toUpperCase().startsWith("AUD")) {
+          return;
+        }
+        const reportItem = {
+          idTarefa,
+          tituloRelatorio: (row[1] || "").replace(/"/g, "").trim(),
+          dataPublicacao: formattedDate,
+          idAuditoria,
+          siglaUnidadeAuditada: siglaAuditada || "MTE",
+          nomeUnidadeAuditada: nomeAuditada || "Minist\xE9rio do Trabalho e Emprego",
+          siglaOrgaoSuperior: siglaSuperior || "MTE",
+          nomeOrgaoSuperior: nomeSuperior || "Minist\xE9rio do Trabalho e Emprego",
+          uf: (row[8] || "").replace(/"/g, "").trim() || "DF",
+          municipio: (row[9] || "").replace(/"/g, "").trim() || "Bras\xEDlia",
+          tipoServico: (row[10] || "").replace(/"/g, "").trim() || "Auditoria",
+          linhaAcao: (row[11] || "").replace(/"/g, "").trim(),
+          grupoAtividade: (row[12] || "").replace(/"/g, "").trim(),
+          edicaoPrograma: (row[13] || "").replace(/"/g, "").trim()
+        };
+        const idx = db.cguReports.findIndex((x) => x.idTarefa === reportItem.idTarefa);
+        if (idx >= 0) {
+          db.cguReports[idx] = {
+            ...db.cguReports[idx],
+            ...reportItem,
+            ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+          };
+          updatedCount++;
+        } else {
+          db.cguReports.unshift({
+            ...reportItem,
+            ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+          });
+          importedCount++;
+        }
+      });
+      rl.on("close", () => {
+        saveDatabase(db);
+        console.log(`[CGU SYNC] Sync completed. Imported: ${importedCount}, Updated: ${updatedCount}. Total: ${db.cguReports.length}`);
+        res.json({
+          success: true,
+          importedCount,
+          updatedCount,
+          totalCount: db.cguReports.length
+        });
+      });
+    });
+    request.on("error", (err) => {
+      console.error("[CGU SYNC] Network error downloading CGU CSV:", err);
+      res.status(500).json({ error: "Erro de conex\xE3o ao baixar a base de dados abertos da CGU." });
     });
   });
   app.post("/api/acordaos/import", async (req, res) => {
@@ -2543,6 +2946,189 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     const db = loadDatabase();
     const id = req.params.id;
     db.comissaoEtica = db.comissaoEtica.filter((x) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.get("/api/etica/membros", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaMembros || []);
+  });
+  app.post("/api/etica/membros", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "MEM-" + Date.now();
+    newItem.ativo = true;
+    newItem.ultimaAtualizacao = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+    if (!db.eticaMembros) db.eticaMembros = [];
+    db.eticaMembros.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/etica/membros/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.eticaMembros.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.eticaMembros[index] = {
+        ...db.eticaMembros[index],
+        ...updateData,
+        ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+      };
+      saveDatabase(db);
+      res.json(db.eticaMembros[index]);
+    } else {
+      res.status(404).json({ error: "Membro n\xE3o encontrado." });
+    }
+  });
+  app.delete("/api/etica/membros/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const index = db.eticaMembros.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.eticaMembros[index].ativo = !db.eticaMembros[index].ativo;
+      db.eticaMembros[index].ultimaAtualizacao = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+      saveDatabase(db);
+      res.json({ success: true, item: db.eticaMembros[index] });
+    } else {
+      res.status(404).json({ error: "Membro n\xE3o encontrado." });
+    }
+  });
+  app.get("/api/etica/reunioes", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaReunioes || []);
+  });
+  app.post("/api/etica/reunioes", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "REU-" + Date.now();
+    newItem.notificadoAgendamento = false;
+    newItem.notificadoLembrete = false;
+    newItem.confirmacoes = {};
+    if (newItem.convidados && Array.isArray(newItem.convidados)) {
+      newItem.convidados.forEach((c) => {
+        newItem.confirmacoes[c.email] = "Pendente";
+      });
+    }
+    newItem.ultimaAtualizacao = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+    if (!db.eticaReunioes) db.eticaReunioes = [];
+    db.eticaReunioes.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/etica/reunioes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.eticaReunioes.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.eticaReunioes[index] = {
+        ...db.eticaReunioes[index],
+        ...updateData,
+        ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+      };
+      saveDatabase(db);
+      res.json(db.eticaReunioes[index]);
+    } else {
+      res.status(404).json({ error: "Reuni\xE3o n\xE3o encontrada." });
+    }
+  });
+  app.delete("/api/etica/reunioes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.eticaReunioes = db.eticaReunioes.filter((x) => x.id !== id);
+    if (db.eticaAtas) {
+      db.eticaAtas = db.eticaAtas.filter((x) => x.reuniaoId !== id);
+    }
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.post("/api/etica/reunioes/:id/notificar", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const { type } = req.body;
+    const index = db.eticaReunioes.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      const r = db.eticaReunioes[index];
+      if (type === "agendamento") {
+        r.notificadoAgendamento = true;
+      } else {
+        r.notificadoLembrete = true;
+      }
+      if (r.convidados && Array.isArray(r.convidados)) {
+        r.convidados.forEach((c) => {
+          if (!r.confirmacoes[c.email] || r.confirmacoes[c.email] === "Pendente") {
+            r.confirmacoes[c.email] = Math.random() > 0.2 ? "Confirmado" : "Recusado";
+          }
+        });
+      }
+      r.ultimaAtualizacao = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+      saveDatabase(db);
+      res.json({ success: true, reuniao: r });
+    } else {
+      res.status(404).json({ error: "Reuni\xE3o n\xE3o encontrada." });
+    }
+  });
+  app.get("/api/etica/atas", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaAtas || []);
+  });
+  app.post("/api/etica/atas", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = newItem.reuniaoId;
+    if (!db.eticaAtas) db.eticaAtas = [];
+    const idx = db.eticaAtas.findIndex((x) => x.reuniaoId === newItem.reuniaoId);
+    if (idx >= 0) {
+      db.eticaAtas[idx] = {
+        ...db.eticaAtas[idx],
+        ...newItem,
+        ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+      };
+    } else {
+      db.eticaAtas.unshift({
+        ...newItem,
+        ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+      });
+    }
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.get("/api/etica/processos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.eticaProcessos || []);
+  });
+  app.post("/api/etica/processos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "PRC-" + Date.now();
+    newItem.ultimaAtualizacao = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+    if (!db.eticaProcessos) db.eticaProcessos = [];
+    db.eticaProcessos.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/etica/processos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.eticaProcessos.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.eticaProcessos[index] = {
+        ...db.eticaProcessos[index],
+        ...updateData,
+        ultimaAtualizacao: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+      };
+      saveDatabase(db);
+      res.json(db.eticaProcessos[index]);
+    } else {
+      res.status(404).json({ error: "Processo n\xE3o encontrado." });
+    }
+  });
+  app.delete("/api/etica/processos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.eticaProcessos = db.eticaProcessos.filter((x) => x.id !== id);
     saveDatabase(db);
     res.json({ success: true });
   });
