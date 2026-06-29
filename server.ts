@@ -774,87 +774,19 @@ const SEED_PROFILES = [
   {
     id: "alessandro",
     name: "Alessandro Barbosa",
-    cpf: "111.222.333-44",
-    phone: "(61) 99999-1111",
+    cpf: "416.526.491-15",
+    phone: "(61) 2031-6261",
     unidade: "AECI",
     role: "Analista de Controle Interno Especial",
-    email: "alessandro.barbosa@mte.gov.br",
-    register: "Matrícula: AECI-8409-G",
+    email: "alessandro@trabalho.gov.br",
+    register: "Matrícula: 1792381",
     clearance: "ADMIN",
     avatarColor: "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
-    pin: "1234",
-    password: "1234",
+    pin: "Cmnsg@102030",
+    password: "Cmnsg@102030",
     requiresPasswordChange: false,
     status: "ACTIVE",
     badgeText: "AECI - ADMIN"
-  },
-  {
-    id: "heloisa",
-    name: "Dra. Heloísa Mendes",
-    cpf: "222.333.444-55",
-    phone: "(61) 99999-2222",
-    unidade: "Corregedoria",
-    role: "Membro Presidência / Corregedora Geral",
-    email: "heloisa.mendes@mte.gov.br",
-    register: "Matrícula: COR-4421-E",
-    clearance: "ETHICS",
-    avatarColor: "bg-teal-700 text-teal-100 border-teal-500 ring-teal-500/30",
-    pin: "2026",
-    password: "2026",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "CORREGEDORIA"
-  },
-  {
-    id: "jorge",
-    name: "Jorge Luiz Santos",
-    cpf: "333.444.555-66",
-    phone: "(61) 99999-3333",
-    unidade: "Gabinete",
-    role: "Chefe de Gabinete Adjunto",
-    email: "jorge.santos@mte.gov.br",
-    register: "Matrícula: GAB-0938-A",
-    clearance: "AUDITOR",
-    avatarColor: "bg-slate-700 text-slate-100 border-slate-500 ring-slate-500/30",
-    pin: "1984",
-    password: "1984",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "GABINETE"
-  },
-  {
-    id: "srte_rj",
-    name: "Superintendente Regional RJ",
-    cpf: "444.555.666-77",
-    phone: "(21) 99999-4444",
-    unidade: "SRTE-RJ",
-    role: "Superintendente da SRTE-RJ",
-    email: "srte.rj@mte.gov.br",
-    register: "Matrícula: SRTE-1052-S",
-    clearance: "SRTE",
-    avatarColor: "bg-amber-700 text-amber-100 border-amber-500 ring-amber-500/30",
-    pin: "7777",
-    password: "7777",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "SRTE-RJ"
-  },
-  {
-    id: "public",
-    name: "Consulta Pública",
-    cpf: "000.000.000-00",
-    phone: "",
-    unidade: "Público Externo",
-    role: "Cidadão / Acesso Externo",
-    email: "cidadao@mte.gov.br",
-    register: "Acesso: CPF Simplificado",
-    clearance: "PUBLIC",
-    avatarColor: "bg-emerald-700 text-emerald-100 border-emerald-500 ring-emerald-500/30",
-    pin: "0000",
-    password: "0000",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "PÚBLICO"
   }
 ];
 
@@ -1196,7 +1128,7 @@ function loadDatabase() {
     return defaultData;
   }
   try {
-    const raw = fs.readFileSync(DB_PATH, "utf-8");
+    const raw = fs.readFileSync(DB_PATH, "utf-8").replace(/^\uFEFF/, "");
     const data = JSON.parse(raw);
 
     // Ensure backwards compatibility by seeding key if missing
@@ -1332,6 +1264,76 @@ function saveDatabase(data: any) {
   }
 }
 
+// Utility: Fix UTF-8/Latin-1/Windows-1252 mojibake from TCU API responses.
+// The TCU API (Solr-based) returns ISO-8859-1/Windows-1252 text that Node's fetch
+// decodes as Unicode codepoints. This maps those codepoints back to the original bytes
+// so UTF-8 can be decoded correctly.
+const WIN1252_MAP: Record<number, number> = {
+  0x80: 0x20AC, 0x82: 0x201A, 0x83: 0x0192, 0x84: 0x201E,
+  0x85: 0x2026, 0x86: 0x2020, 0x87: 0x2021, 0x88: 0x02C6,
+  0x89: 0x2030, 0x8A: 0x0160, 0x8B: 0x2039, 0x8C: 0x0152,
+  0x8E: 0x017D, 0x91: 0x2018, 0x92: 0x2019, 0x93: 0x201C,
+  0x94: 0x201D, 0x95: 0x2022, 0x96: 0x2013, 0x97: 0x2014,
+  0x98: 0x02DC, 0x99: 0x2122, 0x9A: 0x0161, 0x9B: 0x203A,
+  0x9C: 0x0153, 0x9E: 0x017E, 0x9F: 0x0178
+};
+// Reverse map: Unicode codepoint → Windows-1252 byte
+const REVERSE_WIN1252: Record<number, number> = {};
+for (const [byteVal, uniCode] of Object.entries(WIN1252_MAP)) {
+  REVERSE_WIN1252[uniCode] = parseInt(byteVal);
+}
+
+function fixMojibake(text: string | undefined | null): string {
+  if (!text) return "";
+  try {
+    const chars = [...text];
+    const bytes: number[] = [];
+    let hasMojibake = false;
+
+    for (const ch of chars) {
+      const code = ch.codePointAt(0)!;
+      if (code >= 0x80 && code <= 0xFF) {
+        // Latin-1 byte stored as-is
+        bytes.push(code);
+        hasMojibake = true;
+      } else if (REVERSE_WIN1252[code] !== undefined) {
+        // Windows-1252 extended char mapped back to its byte
+        bytes.push(REVERSE_WIN1252[code]);
+        hasMojibake = true;
+      } else if (code > 0xFF) {
+        // Pure high Unicode – re-encode as UTF-8 bytes
+        const enc = new TextEncoder().encode(ch);
+        for (const b of enc) bytes.push(b);
+      } else {
+        bytes.push(code);
+      }
+    }
+
+    if (!hasMojibake) return text;
+
+    const decoded = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(bytes));
+    if (decoded && !decoded.includes("\uFFFD")) return decoded;
+    return text;
+  } catch {
+    return text;
+  }
+}
+
+// Utility: Apply fixMojibake to all string fields of an object from TCU API
+function fixDocEncoding(doc: any): any {
+  if (!doc || typeof doc !== "object") return doc;
+  const fixed: any = {};
+  for (const [key, val] of Object.entries(doc)) {
+    if (typeof val === "string") {
+      fixed[key] = fixMojibake(val);
+    } else {
+      fixed[key] = val;
+    }
+  }
+  return fixed;
+}
+
+
 // Utility: Convert HTML content (from TCU API ACORDAO field) to clean plain text
 // Preserves line breaks, structure, and decodes HTML entities.
 function stripHtmlToText(html: string): string {
@@ -1426,7 +1428,7 @@ async function fetchAcordaoFromTCU(numAcordao: number, anoAcordao: number): Prom
     }
 
     const searchData = (await searchRes.json()) as any;
-    const docs = searchData.documentos || [];
+    const docs = (searchData.documentos || []).map(fixDocEncoding);
     
     // Find exact match
     const exactDoc = docs.find(
@@ -1454,7 +1456,8 @@ async function fetchAcordaoFromTCU(numAcordao: number, anoAcordao: number): Prom
 
     const docData = (await docRes.json()) as any;
     if (docData.documentos && docData.documentos.length > 0) {
-      return docData.documentos[0];
+      // Fix Latin-1/UTF-8 mojibake from TCU API encoding mismatch
+      return fixDocEncoding(docData.documentos[0]);
     }
 
     return null;
@@ -2006,11 +2009,7 @@ async function startServer() {
             document.getElementById('profileId').value = id;
             
             let mockCPF = "000.000.000-00";
-            if (id === "alessandro") mockCPF = "142.890.344-01";
-            if (id === "heloisa") mockCPF = "202.441.984-75";
-            if (id === "jorge") mockCPF = "093.819.220-41";
-            if (id === "srte_rj") mockCPF = "105.289.441-29";
-            if (id === "public") mockCPF = "999.999.999-99";
+            if (id === "alessandro") mockCPF = "416.526.491-15";
             
             document.getElementById('cpfInput').value = mockCPF;
             

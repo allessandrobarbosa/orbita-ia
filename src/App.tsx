@@ -344,25 +344,25 @@ export default function App() {
     return () => clearInterval(interval);
   }, [isLocked]);
 
-  // Inactivity timeout (5 minutes) to automatically check-out and lock session
+  // Inactivity timeout (10 minutes) to automatically check-out and lock session
   useEffect(() => {
     if (isLocked) return;
 
     let timeoutId: NodeJS.Timeout;
 
     const handleInactivityLogout = async () => {
-      console.log("[Orbita Security] Logging out due to 5 minutes of inactivity.");
+      console.log("[Orbita Security] Logging out due to 10 minutes of inactivity.");
       try {
         await fetch("/api/auth/logout", { method: "POST" });
       } catch (e) {}
       sessionStorage.removeItem("sessionActive");
       setIsLocked(true);
-      setAuthSuccessToast("Sessão finalizada por inatividade (5 minutos).");
+      setAuthSuccessToast("Sessão finalizada por inatividade (10 minutos).");
     };
 
     const resetInactivityTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleInactivityLogout, 5 * 60 * 1000); // 5 minutes
+      timeoutId = setTimeout(handleInactivityLogout, 10 * 60 * 1000); // 10 minutes
     };
 
     // Set up listeners for active user interactions
