@@ -300,6 +300,15 @@ export default function App() {
   useEffect(() => {
     const checkActiveSession = async () => {
       try {
+        // If this is a cold start (new tab or browser restarted without sessionStorage),
+        // force a logout first to destroy any persistent server session.
+        if (sessionStorage.getItem("sessionActive") !== "true") {
+          try {
+            await fetch("/api/auth/logout", { method: "POST" });
+          } catch (e) {}
+          sessionStorage.setItem("sessionActive", "true");
+        }
+
         const res = await fetch("/api/auth/session");
         if (res.ok) {
           const data = await res.json();
@@ -317,6 +326,62 @@ export default function App() {
     checkActiveSession();
     fetchAllData();
   }, []);
+
+  // Session heartbeat to keep session active and detect browser close
+  useEffect(() => {
+    if (isLocked) return;
+
+    const sendHeartbeat = () => {
+      fetch("/api/auth/heartbeat", { method: "POST" }).catch(() => {});
+    };
+
+    // Send initially
+    sendHeartbeat();
+
+    // Send heartbeat every 10 seconds
+    const interval = setInterval(sendHeartbeat, 10000);
+
+    return () => clearInterval(interval);
+  }, [isLocked]);
+
+  // Inactivity timeout (5 minutes) to automatically check-out and lock session
+  useEffect(() => {
+    if (isLocked) return;
+
+    let timeoutId: NodeJS.Timeout;
+
+    const handleInactivityLogout = async () => {
+      console.log("[Orbita Security] Logging out due to 5 minutes of inactivity.");
+      try {
+        await fetch("/api/auth/logout", { method: "POST" });
+      } catch (e) {}
+      sessionStorage.removeItem("sessionActive");
+      setIsLocked(true);
+      setAuthSuccessToast("Sessão finalizada por inatividade (5 minutos).");
+    };
+
+    const resetInactivityTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleInactivityLogout, 5 * 60 * 1000); // 5 minutes
+    };
+
+    // Set up listeners for active user interactions
+    const activityEvents = ["mousemove", "mousedown", "keypress", "scroll", "touchstart"];
+    
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, resetInactivityTimer);
+    });
+
+    // Initialize timer
+    resetInactivityTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, resetInactivityTimer);
+      });
+    };
+  }, [isLocked]);
 
   // Automated Toast clear hook
   useEffect(() => {
@@ -336,6 +401,7 @@ export default function App() {
         onUnlock={(profile) => {
           setCurrentUser(profile);
           setIsLocked(false);
+          sessionStorage.setItem("sessionActive", "true");
           setAuthSuccessToast(`Chave de acesso assinada para ${profile.name}!`);
         }}
         onRegisterProfile={handleRegisterProfile}
@@ -992,7 +1058,7 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased">
 
       {/* 1. Header Federal Government Layout */}
-      <header className="gov-header border-b-2 shadow-xs no-print shrink-0 font-sans">
+      <header className="gov-header border-b-2 shadow-xs no-print shrink-0 font-sans sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-5 py-3.5 flex flex-col md:flex-row items-center gap-6">
           
           {/* 1. Left Side: Flat Geometric Logo (GOV.BR Style) */}
@@ -1131,6 +1197,7 @@ export default function App() {
                       try {
                         await fetch("/api/auth/logout", { method: "POST" });
                       } catch (e) {}
+                      sessionStorage.removeItem("sessionActive");
                       setIsLocked(true);
                       setShowUserDropdown(false);
                     }}
@@ -1145,6 +1212,7 @@ export default function App() {
                       try {
                         await fetch("/api/auth/logout", { method: "POST" });
                       } catch (e) {}
+                      sessionStorage.removeItem("sessionActive");
                       setIsLocked(true);
                       setShowUserDropdown(false);
                       setAuthSuccessToast("Sessão finalizada. Faça o login autenticado para retornar.");

@@ -34,7 +34,10 @@ import {
   Scale,
   Landmark,
   Activity,
-  Users
+  Users,
+  Building2,
+  ArrowLeftRight,
+  Archive
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
 
@@ -427,6 +430,9 @@ export default function TcuModule({
   const [editComExpedicao, setEditComExpedicao] = useState("");
   const [editComResposta, setEditComResposta] = useState("");
   const [editComCarece, setEditComCarece] = useState(true);
+  const [editComUnidadeExecutora, setEditComUnidadeExecutora] = useState("");
+  const [editComProcessoSei, setEditComProcessoSei] = useState("");
+  const [editComDestinacao, setEditComDestinacao] = useState("RESPOSTA");
 
   // TCE module states
   const [tceActiveSubTab, setTceActiveSubTab] = useState<"geral" | "com-acordaos">("geral");
@@ -1160,6 +1166,9 @@ export default function TcuModule({
     setEditComExpedicao(item.DATA_EXPEDICAO);
     setEditComResposta(item.DATA_RESPOSTA || "");
     setEditComCarece(item.CARECE_RESPOSTA !== false);
+    setEditComUnidadeExecutora(item.UNIDADE_EXECUTORA || "");
+    setEditComProcessoSei(item.PROCESSO_SEI || "");
+    setEditComDestinacao(item.DESTINACAO || "RESPOSTA");
   };
 
   const saveComEdit = async () => {
@@ -1174,7 +1183,10 @@ export default function TcuModule({
       PROCESSO: editComProcesso,
       DATA_EXPEDICAO: editComExpedicao,
       DATA_RESPOSTA: editComResposta,
-      CARECE_RESPOSTA: editComCarece
+      CARECE_RESPOSTA: editComCarece,
+      UNIDADE_EXECUTORA: editComUnidadeExecutora,
+      PROCESSO_SEI: editComProcessoSei,
+      DESTINACAO: editComDestinacao
     };
 
     const success = await onUpdateComunicacao(updated);
@@ -2846,6 +2858,11 @@ export default function TcuModule({
    <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#B45309" ss:Size="10"/>
    <Interior ss:Color="#FEF3C7" ss:Pattern="Solid"/>
   </Style>
+  <Style ss:ID="NaoExigidoRow">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#475569" ss:Size="10"/>
+   <Interior ss:Color="#F1F5F9" ss:Pattern="Solid"/>
+  </Style>
   <Style ss:ID="PctCell">
    <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
    <NumberFormat ss:Format="0.0%"/>
@@ -2858,17 +2875,20 @@ export default function TcuModule({
    <Column ss:Width="200" />
    <Column ss:Width="160" />
    <Column ss:Width="120" />
+   <Column ss:Width="120" />
+   <Column ss:Width="120" />
+   <Column ss:Width="100" />
    <Column ss:Width="90" />
    <Column ss:Width="90" />
    <Column ss:Width="130" />
    
    <Row ss:Height="28">
-    <Cell ss:MergeAcross="7" ss:StyleID="Title">
+    <Cell ss:MergeAcross="10" ss:StyleID="Title">
      <Data ss:Type="String">MINISTÉRIO DO TRABALHO E EMPREGO — AECI</Data>
     </Cell>
    </Row>
    <Row ss:Height="20">
-    <Cell ss:MergeAcross="7" ss:StyleID="SubTitle">
+    <Cell ss:MergeAcross="10" ss:StyleID="SubTitle">
      <Data ss:Type="String">Relatório Oficial de Ofícios e Respostas TCU • Filtro: ${comAnoFilter === "TODOS" ? "Histórico Completo" : `Ano ${comAnoFilter}`} • Exportado em: ${new Date().toLocaleString('pt-BR')}</Data>
     </Cell>
    </Row>
@@ -2877,16 +2897,26 @@ export default function TcuModule({
     <Cell><Data ss:Type="String">Emitente TCU</Data></Cell>
     <Cell><Data ss:Type="String">Destinatário MTE</Data></Cell>
     <Cell><Data ss:Type="String">Contato MTE</Data></Cell>
-    <Cell><Data ss:Type="String">Processo Vinculado</Data></Cell>
+    <Cell><Data ss:Type="String">Processo TCU</Data></Cell>
+    <Cell><Data ss:Type="String">Unidade Executora</Data></Cell>
+    <Cell><Data ss:Type="String">Processo SEI</Data></Cell>
+    <Cell><Data ss:Type="String">Destinação</Data></Cell>
     <Cell><Data ss:Type="String">Expedição</Data></Cell>
     <Cell><Data ss:Type="String">Resposta</Data></Cell>
     <Cell><Data ss:Type="String">Acompanhamento</Data></Cell>
    </Row>`;
 
               finalFiltered.forEach(item => {
+                const carece = item.CARECE_RESPOSTA !== false;
                 const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
-                const stateText = hasResponse ? "Saneado" : "Aguardando Resposta";
-                const rowStyle = hasResponse ? "SaneadoRow" : "PendenteRow";
+                
+                let stateText = "Não Precisa de Resposta";
+                let rowStyle = "NaoExigidoRow";
+
+                if (carece) {
+                  stateText = hasResponse ? "Respondido" : "Aguardando Resposta";
+                  rowStyle = hasResponse ? "SaneadoRow" : "PendenteRow";
+                }
 
                 xml += `
    <Row ss:Height="21">
@@ -2895,6 +2925,9 @@ export default function TcuModule({
     <Cell><Data ss:Type="String">${escapeXML(item.DESTINATARIO)}</Data></Cell>
     <Cell><Data ss:Type="String">${escapeXML(item.CONTATO)}</Data></Cell>
     <Cell><Data ss:Type="String">${escapeXML(item.PROCESSO)}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXML(item.UNIDADE_EXECUTORA || "-")}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXML(item.PROCESSO_SEI || "-")}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXML(item.DESTINACAO || "-")}</Data></Cell>
     <Cell><Data ss:Type="String">${escapeXML(item.DATA_EXPEDICAO)}</Data></Cell>
     <Cell><Data ss:Type="String">${escapeXML(item.DATA_RESPOSTA || "-")}</Data></Cell>
     <Cell ss:StyleID="${rowStyle}"><Data ss:Type="String">${stateText}</Data></Cell>
@@ -3150,14 +3183,13 @@ export default function TcuModule({
                             <th className="p-2.5 font-extrabold bg-slate-100">Destinatário MTE</th>
                             <th className="p-2.5 font-extrabold bg-slate-100 text-center">Processo</th>
                             <th className="p-2.5 font-extrabold bg-slate-100 text-center">Expedição</th>
-                            <th className="p-2.5 font-extrabold bg-slate-100 text-center" title="Carece/exige resposta oficial da assessoria (S/N)">Resposta (S/N)</th>
                             <th className="p-2.5 font-extrabold bg-slate-100 text-center">Situação</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
                           {finalFiltered.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="p-16 text-center text-slate-400 space-y-2">
+                              <td colSpan={6} className="p-16 text-center text-slate-400 space-y-2">
                                 <MessageSquare className="w-10 h-10 text-slate-300 mx-auto animate-bounce" />
                                 <p className="font-bold text-slate-700">Nenhuma comunicação localizada</p>
                                 <p className="text-[11px] text-slate-400 max-w-md mx-auto">
@@ -3176,15 +3208,15 @@ export default function TcuModule({
                               let dotStyle = "bg-slate-450";
                               
                               if (carece) {
-                                if (hasResponse) {
-                                  situacaoText = "RESPONDIDA";
-                                  situacaoStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
-                                  dotStyle = "bg-emerald-500";
-                                } else {
-                                  situacaoText = "PENDENTE";
-                                  situacaoStyle = "bg-amber-50 text-amber-800 border-amber-200 animate-pulse";
-                                  dotStyle = "bg-amber-500";
-                                }
+                                  if (hasResponse) {
+                                    situacaoText = "RESPONDIDA";
+                                    situacaoStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                                    dotStyle = "bg-emerald-500";
+                                  } else {
+                                    situacaoText = "PENDENTE";
+                                    situacaoStyle = "bg-amber-50 text-amber-800 border-amber-200 animate-pulse";
+                                    dotStyle = "bg-amber-500";
+                                  }
                               }
 
                               return (
@@ -3227,17 +3259,6 @@ export default function TcuModule({
                                       {item.DATA_EXPEDICAO}
                                     </td>
 
-                                    {/* Resposta (S/N) checkbox */}
-                                    <td className="p-2.5 text-center">
-                                      <input
-                                        type="checkbox"
-                                        checked={carece}
-                                        onChange={() => toggleCareceResposta(item)}
-                                        className="w-3.5 h-3.5 text-[#003366] border-slate-355 rounded-sm focus:ring-[#003366] cursor-pointer"
-                                        title="Marcar se esta comunicação exige resposta oficial da assessoria (Carece de Resposta)"
-                                      />
-                                    </td>
-
                                     {/* Situação */}
                                     <td className="p-2.5 text-center whitespace-nowrap">
                                       <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 border ${situacaoStyle}`}>
@@ -3251,7 +3272,7 @@ export default function TcuModule({
                                   {/* Detail panel expansion */}
                                   {isExpanded && (
                                     <tr>
-                                      <td colSpan={7} className="bg-slate-50/30 px-6 py-4.5 border-b border-slate-200 no-print">
+                                      <td colSpan={6} className="bg-slate-50/30 px-6 py-4.5 border-b border-slate-200 no-print">
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                           
                                           {/* Emitente block */}
@@ -3293,17 +3314,61 @@ export default function TcuModule({
                                             </div>
 
                                             <button
-                                              disabled={!carece}
                                               onClick={() => triggerComEdit(item)}
-                                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-2xs ${
-                                                carece
-                                                  ? "bg-[#003366] hover:bg-slate-900 text-white cursor-pointer"
-                                                  : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
-                                              }`}
-                                              title={carece ? "Registrar data de resposta oficial ou editar campos" : "Esta comunicação não carece de resposta"}
+                                              className="px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#003366] hover:bg-slate-900 text-white cursor-pointer transition shadow-2xs shrink-0"
+                                              title="Editar resposta ou dados complementares desta comunicação"
                                             >
-                                              Responder
+                                              Editar / Responder
                                             </button>
+                                          </div>
+
+                                          {/* Unidade Executora block */}
+                                          <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+                                            <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+                                              <Building2 className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                              <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider leading-none mb-1">Unidade Executora</span>
+                                              <span className="text-xs text-[#003366] font-bold block">
+                                                {item.UNIDADE_EXECUTORA || <span className="text-slate-300 italic">Não informada</span>}
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {/* Processo SEI block */}
+                                          <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+                                            <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+                                              <FileText className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                              <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider leading-none mb-1">Processo SEI</span>
+                                              <span className="text-xs text-slate-700 font-mono font-bold block">
+                                                {item.PROCESSO_SEI || <span className="text-slate-300 italic">Não informado</span>}
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {/* Destinação block */}
+                                          <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+                                            <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+                                              {item.DESTINACAO === "ARQUIVAMENTO" ? <Archive className="w-4 h-4 text-slate-500" /> : <ArrowLeftRight className="w-4 h-4 text-[#003366]" />}
+                                            </div>
+                                            <div>
+                                              <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider leading-none mb-1">Destinação</span>
+                                              <span className="text-xs text-slate-700 font-bold block">
+                                                {item.DESTINACAO === "ARQUIVAMENTO" ? (
+                                                  <span className="bg-slate-100 text-slate-700 border border-slate-200/60 px-2 py-0.5 rounded-full text-[9px] font-black uppercase">
+                                                    Arquivamento
+                                                  </span>
+                                                ) : item.DESTINACAO === "RESPOSTA" ? (
+                                                  <span className="bg-blue-50 text-blue-800 border border-blue-200/60 px-2 py-0.5 rounded-full text-[9px] font-black uppercase">
+                                                    Resposta
+                                                  </span>
+                                                ) : (
+                                                  <span className="text-slate-300 italic">Não informada</span>
+                                                )}
+                                              </span>
+                                            </div>
                                           </div>
 
                                         </div>
@@ -3353,7 +3418,7 @@ export default function TcuModule({
                                 </div>
 
                                 <div className="grid grid-cols-2 text-[10px] text-slate-500 border-t border-slate-100 pt-2 font-mono">
-                                  <div className="text-emerald-700 font-bold">✓ {stat.responded} Saneados</div>
+                                  <div className="text-emerald-700 font-bold">✓ {stat.responded} Respondidos</div>
                                   <div className="border-l border-slate-100 pl-2 text-amber-700 font-bold">⚡ {stat.pending} Pendentes</div>
                                 </div>
 
@@ -3400,7 +3465,7 @@ export default function TcuModule({
                             <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-mono text-[9px] uppercase tracking-wider">
                               <th className="p-3 font-bold">Unidade do Ministério do Trabalho (Destinatário)</th>
                               <th className="p-3 font-bold text-center w-[130px]">Ofícios Recebidos</th>
-                              <th className="p-3 font-bold text-center w-[130px]">Saneados (Respondidos)</th>
+                              <th className="p-3 font-bold text-center w-[130px]">Respondidos</th>
                               <th className="p-3 font-bold text-center w-[130px]">Pendentes (Em Aberto)</th>
                               <th className="p-3 font-bold text-center w-[200px]">% de Representação no Órgão</th>
                               <th className="p-3 font-bold text-center w-[130px]">Índice de Conclusão</th>
@@ -3523,6 +3588,58 @@ export default function TcuModule({
                     />
                   </div>
 
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Unidade Executora</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: SECI"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                      value={editComUnidadeExecutora}
+                      onChange={(e) => setEditComUnidadeExecutora(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Nº Processo SEI</label>
+                    <input
+                      type="text"
+                      placeholder="Ex: 19973.100234/2026-99"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
+                      value={editComProcessoSei}
+                      onChange={(e) => setEditComProcessoSei(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Destinação da Comunicação</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditComDestinacao("RESPOSTA")}
+                        className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          editComDestinacao === "RESPOSTA"
+                            ? "bg-[#003366] text-white border-[#003366] shadow-2xs"
+                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
+                        }`}
+                      >
+                        <ArrowLeftRight className="w-3.5 h-3.5" />
+                        Resposta
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditComDestinacao("ARQUIVAMENTO")}
+                        className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          editComDestinacao === "ARQUIVAMENTO"
+                            ? "bg-slate-700 text-white border-slate-700 shadow-2xs"
+                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
+                        }`}
+                      >
+                        <Archive className="w-3.5 h-3.5" />
+                        Arquivamento
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Data de Expedição</label>
@@ -3557,6 +3674,27 @@ export default function TcuModule({
                     <label htmlFor="edit-com-carece" className="text-[11px] font-bold text-slate-700 cursor-pointer select-none">
                       Esta comunicação carece/exige resposta oficial da assessoria
                     </label>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2.5 pt-2 border-t border-slate-150/70">
+                    <a
+                      href="https://processoeletronico.trabalho.gov.br"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Acessar SEI
+                    </a>
+                    <a
+                      href="https://conecta-tcu.apps.tcu.gov.br/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Conecta TCU
+                    </a>
                   </div>
                 </div>
 

@@ -13,6 +13,7 @@ dotenv.config();
 
 declare module 'express-session' {
   interface SessionData {
+    lastHeartbeat?: number;
     user?: {
       id: string;
       name: string;
@@ -1253,6 +1254,34 @@ async function startServer() {
     }
   }));
 
+  // Session heartbeat expiration middleware to log out users on browser close
+  app.use((req, res, next) => {
+    if (req.session && req.session.user) {
+      const now = Date.now();
+      const isAuthRoute = req.path.startsWith("/api/auth");
+      const shouldCheck = !isAuthRoute || req.path === "/api/auth/session";
+
+      if (shouldCheck && req.session.lastHeartbeat) {
+        const diff = now - req.session.lastHeartbeat;
+        // If no heartbeat has been received for more than 25 seconds, expire the session.
+        if (diff > 25000) {
+          console.log(`[Orbita Session] Session expired due to lack of client heartbeat. Last seen: ${diff}ms ago.`);
+          req.session.destroy(() => {});
+          if (req.path.startsWith("/api/")) {
+            return res.status(401).json({ authenticated: false, error: "Sessão encerrada por inatividade/fechamento do navegador." });
+          } else {
+            return res.redirect("/");
+          }
+        }
+      }
+
+      if (req.path !== "/api/auth/heartbeat") {
+        req.session.lastHeartbeat = now;
+      }
+    }
+    next();
+  });
+
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
@@ -1284,6 +1313,15 @@ async function startServer() {
       return res.json({ authenticated: true, user: req.session.user });
     }
     return res.json({ authenticated: false });
+  });
+
+  // Auth API: Heartbeat to keep session alive
+  app.post("/api/auth/heartbeat", (req, res) => {
+    if (req.session && req.session.user) {
+      req.session.lastHeartbeat = Date.now();
+      return res.json({ success: true });
+    }
+    return res.json({ success: false });
   });
 
   // Auth API: Login with PIN (local/fallback)

@@ -134,6 +134,9 @@ export interface ComunicacaoDemand {
   DATA_RESPOSTA: string; // DD/MM/YYYY or filled
   ANO: number; // Year extracted ofício (e.g. 2022, 2023, etc)
   CARECE_RESPOSTA?: boolean; // If this communication requires a response
+  UNIDADE_EXECUTORA?: string; // Executor Unit (SECI, AECI, etc.)
+  PROCESSO_SEI?: string; // SEI process number
+  DESTINACAO?: "ARQUIVAMENTO" | "RESPOSTA" | string; // Goal / target action of communication
   ULTIMA_ATUALIZACAO?: string; // Metadata time
 }
 

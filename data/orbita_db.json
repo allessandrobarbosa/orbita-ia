@@ -21367,7 +21367,8 @@
       "DATA_EXPEDICAO": "22/01/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "26/06/2026, 09:51:33"
+      "ULTIMA_ATUALIZACAO": "29/06/2026, 09:17:46",
+      "CARECE_RESPOSTA": false
     },
     {
       "KEY": "COM-000917-2026",
@@ -21379,7 +21380,8 @@
       "DATA_EXPEDICAO": "23/01/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "26/06/2026, 09:51:33"
+      "ULTIMA_ATUALIZACAO": "29/06/2026, 09:17:48",
+      "CARECE_RESPOSTA": false
     },
     {
       "KEY": "COM-001129-2026",
@@ -21391,7 +21393,8 @@
       "DATA_EXPEDICAO": "27/01/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "26/06/2026, 09:51:33"
+      "ULTIMA_ATUALIZACAO": "29/06/2026, 09:17:50",
+      "CARECE_RESPOSTA": false
     },
     {
       "KEY": "COM-001353-2026",
@@ -21403,7 +21406,8 @@
       "DATA_EXPEDICAO": "28/01/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "26/06/2026, 09:51:33"
+      "ULTIMA_ATUALIZACAO": "29/06/2026, 09:17:51",
+      "CARECE_RESPOSTA": false
     },
     {
       "KEY": "COM-001356-2026",
@@ -21415,7 +21419,8 @@
       "DATA_EXPEDICAO": "28/01/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "26/06/2026, 09:51:33"
+      "ULTIMA_ATUALIZACAO": "29/06/2026, 09:17:53",
+      "CARECE_RESPOSTA": false
     },
     {
       "KEY": "COM-001354-2026",
@@ -21427,7 +21432,8 @@
       "DATA_EXPEDICAO": "28/01/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "26/06/2026, 09:51:33"
+      "ULTIMA_ATUALIZACAO": "29/06/2026, 09:17:54",
+      "CARECE_RESPOSTA": false
     },
     {
       "KEY": "COM-001585-2026",
