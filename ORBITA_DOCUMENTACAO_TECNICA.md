@@ -173,7 +173,7 @@ O ORBITA-AECI utiliza banco de dados no formato JSON (data/orbita_db.json) com l
 ### 5.2 Diagrama Entidade-Relacionamento (MER)
 
 MODULO TCU / COMUNICACOES / CGU:
-
+```
   +------------------+   +--------------------+   +-----------------+
   |   acordaos       |   |   comunicacoes     |   |  cgu_demandas   |
   +------------------+   +--------------------+   +-----------------+
@@ -188,9 +188,9 @@ MODULO TCU / COMUNICACOES / CGU:
   | PRAZO_LIMITE     |   +--------------------+   +-----------------+
   | RESPONSAVEL_INT  |
   +------------------+
-
+```
 ROL DE RESPONSAVEIS (IN TCU 84/2020):
-
+```
   +--------------+  1:N  +------------------+  N:1  +----------------+
   |  dirigentes  |-------|dirigentes_cargos  |-------|  unidades_rol  |
   +--------------+       +------------------+       +----------------+
@@ -212,9 +212,9 @@ ROL DE RESPONSAVEIS (IN TCU 84/2020):
   | ato_autorizacao  |
   | substituto_id(FK)| -> dirigentes (substituto)
   +------------------+
-
+```
 SRTE - CONTRATOS E FROTA:
-
+```
   +------------------+  1:N  +---------------------+
   |     contratos    |-------|contratos_consumo_    |
   +------------------+       |    mensal            |
@@ -234,9 +234,9 @@ SRTE - CONTRATOS E FROTA:
   | chassi/renavam   |       +---------------------------+
   | km_atual/status  |
   +------------------+
-
+```
 ETICA - COMISSAO DE ETICA:
-
+```
   +----------------+  1:1  +------------------+
   | etica_reunioes |-------|   etica_atas     |
   +----------------+       +------------------+
@@ -252,7 +252,7 @@ ETICA - COMISSAO DE ETICA:
   | atribuicao     |       | processoSei      |
   | encargo/mandato|       | situacao/resumo  |
   +----------------+       +------------------+
-
+```
 ### 5.3 Colecoes do Banco de Dados JSON
 
 | Colecao | Descricao |
