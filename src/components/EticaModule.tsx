@@ -36,13 +36,13 @@ import {
   AlertOctagon,
   FileSpreadsheet
 } from "lucide-react";
-import { 
-  ComissaoEticaDemand, 
-  EticaMembro, 
-  EticaReuniao, 
-  EticaAta, 
-  EticaProcesso, 
-  EticaConvidado 
+import {
+  ComissaoEticaDemand,
+  EticaMembro,
+  EticaReuniao,
+  EticaAta,
+  EticaProcesso,
+  EticaConvidado
 } from "../types";
 import * as XLSX from "xlsx";
 
@@ -214,7 +214,7 @@ export default function EticaModule({
 
     const totalDays = Math.max(1, Math.ceil(totalMs / (1000 * 60 * 60 * 24)));
     let elapsedDays = Math.ceil(elapsedMs / (1000 * 60 * 60 * 24));
-    
+
     if (elapsedDays < 0) elapsedDays = 0;
     if (elapsedDays > totalDays) elapsedDays = totalDays;
 
@@ -238,7 +238,7 @@ export default function EticaModule({
     }
     // Completed processes do not tick down SLA
     const isCompleted = ["Deferido", "Indeferido", "Concluído", "Arquivado"].includes(processo.situacao) || !!processo.dataFim;
-    
+
     const start = new Date(processo.dataInicio + "T00:00:00");
     const today = processo.dataFim ? new Date(processo.dataFim + "T23:59:59") : new Date();
 
@@ -641,17 +641,17 @@ export default function EticaModule({
 
   // Filter members list
   const filteredMembros = membrosEtica.filter(m => {
-    const matchesSearch = 
+    const matchesSearch =
       m.nome.toLowerCase().includes(membroSearch.toLowerCase()) ||
       m.email.toLowerCase().includes(membroSearch.toLowerCase()) ||
       m.dispositivoLegal.toLowerCase().includes(membroSearch.toLowerCase());
-    
-    const matchesStatus = 
+
+    const matchesStatus =
       membroStatusFilter === "TODOS" ||
       (membroStatusFilter === "ATIVOS" && m.ativo) ||
       (membroStatusFilter === "INATIVOS" && !m.ativo);
 
-    const matchesAtrib = 
+    const matchesAtrib =
       membroAtribFilter === "TODOS" || m.atribuicao === membroAtribFilter;
 
     return matchesSearch && matchesStatus && matchesAtrib;
@@ -659,21 +659,21 @@ export default function EticaModule({
 
   // Filter meetings list
   const filteredReunioes = reunioesEtica.filter(r => {
-    return r.pauta.toLowerCase().includes(reuniaoSearch.toLowerCase()) || 
-           r.tipo.toLowerCase().includes(reuniaoSearch.toLowerCase()) ||
-           r.dataHora.includes(reuniaoSearch);
+    return r.pauta.toLowerCase().includes(reuniaoSearch.toLowerCase()) ||
+      r.tipo.toLowerCase().includes(reuniaoSearch.toLowerCase()) ||
+      r.dataHora.includes(reuniaoSearch);
   });
 
   // Filter processes list
   const filteredProcessos = processosEtica.filter(p => {
     const matchesTipo = p.tipo === processoTipoSubTab;
-    const matchesSearch = 
+    const matchesSearch =
       p.processoSei.toLowerCase().includes(processoSearch.toLowerCase()) ||
       (p.responsavel && p.responsavel.toLowerCase().includes(processoSearch.toLowerCase())) ||
       (p.solicitante && p.solicitante.toLowerCase().includes(processoSearch.toLowerCase())) ||
       (p.resumo && p.resumo.toLowerCase().includes(processoSearch.toLowerCase()));
 
-    const matchesSituacao = 
+    const matchesSituacao =
       processoSituacaoFilter === "TODOS" || p.situacao === processoSituacaoFilter;
 
     return matchesTipo && matchesSearch && matchesSituacao;
@@ -705,55 +705,50 @@ export default function EticaModule({
 
   // Sub-tabs list helper
   const tabs = [
-    { id: "dashboard", label: "Dashboard & Visão Geral", icon: BarChart3 },
-    { id: "membros", label: "Gestão de Membros", icon: Users },
-    { id: "reunioes", label: "Agenda & Presença", icon: Calendar },
-    { id: "atas", label: "Atas Oficiais", icon: FileSignature },
-    { id: "processos", label: "Controle de Processos", icon: Scale },
-    { id: "bi", label: "BI e Relatórios", icon: TrendingUp }
+    { id: "dashboard", label: "Dashboard & Visão Geral", desc: "Indicadores e Alertas de SLA", icon: BarChart3 },
+    { id: "membros", label: "Gestão de Membros", desc: "Membros Ativos e Mandatos", icon: Users },
+    { id: "reunioes", label: "Agenda & Presença", desc: "Reuniões, Pautas e Presenças", icon: Calendar },
+    { id: "atas", label: "Atas Oficiais", desc: "Atas da Comissão e Deliberações", icon: FileSignature },
+    { id: "processos", label: "Controle de Processos", desc: "Demandas e Processos SECI", icon: Scale },
+    { id: "bi", label: "BI e Relatórios", desc: "Relatórios e Analytics da Ética", icon: TrendingUp }
   ];
 
   return (
     <div className="space-y-6 font-sans">
-      {/* 1. Header Banner */}
-      <div className="no-print bg-slate-900 border-b-2 border-amber-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-        {/* Glow effect */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div className="flex items-start gap-4">
-            <div className="p-3 bg-amber-500/15 rounded-xl border border-amber-500/30 text-amber-500">
-              <ShieldAlert className="w-8 h-8" />
-            </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold text-amber-500 font-mono tracking-wider">AECI - Assessoria Especial de Controle Interno</span>
-              <h1 className="text-2xl font-bold text-slate-100 font-display mt-0.5">Módulo – Comissão de Ética</h1>
-              <p className="text-slate-400 text-xs mt-1">Gerenciamento ágil de membros, mandatos, reuniões de pauta, atas oficiais e SLAs de conduta pública.</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2.5">
-            <button
-              onClick={handleExportExcel}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition shadow-sm"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              Exportar Painel (Excel)
-            </button>
-            <button
-              onClick={() => {
-                resetReuniaoForm();
-                setShowAddReuniaoModal(true);
-              }}
-              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs inline-flex items-center gap-1.5 transition shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Agendar Reunião
-            </button>
-          </div>
+      {/* Module Title Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
+            <ShieldAlert className="w-6 h-6 text-[#003366]" />
+            Comissão de Ética — ÉTICA
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">Gerenciamento ágil de membros, mandatos, reuniões de pauta, atas oficiais e SLAs de conduta pública</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+          <button
+            onClick={handleExportExcel}
+            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs cursor-pointer"
+          >
+            <Download className="w-4 h-4" />
+            Exportar Excel
+          </button>
+
+          <button
+            onClick={() => {
+              resetReuniaoForm();
+              setShowAddReuniaoModal(true);
+            }}
+            className="px-4 py-2 bg-[#003366] text-white hover:bg-[#002244] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            Agendar Reunião
+          </button>
         </div>
       </div>
 
       {/* 2. Sub Navigation Tabs */}
-      <div className="no-print flex border-b border-slate-200 overflow-x-auto scrollbar-thin gap-1">
+      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -764,14 +759,18 @@ export default function EticaModule({
                 setActiveSubTab(tab.id as any);
                 setActiveAtaForm(null); // Clear active redactor when switching tabs
               }}
-              className={`px-4 py-3 text-xs font-bold font-display border-b-2 flex items-center gap-2 whitespace-nowrap transition-all ${
-                isActive
-                  ? "border-amber-500 text-amber-600 bg-amber-50/50"
-                  : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
+              className={`flex-1 min-w-[150px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${isActive
+                ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
+                : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+                }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? "text-amber-500" : "text-slate-400"}`} />
-              {tab.label}
+              <div className="flex items-center gap-2.5">
+                <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <span className="block text-xs font-black uppercase tracking-wide leading-none">{tab.label}</span>
+                  <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{tab.desc}</span>
+                </div>
+              </div>
             </button>
           );
         })}
@@ -815,8 +814,8 @@ export default function EticaModule({
               <div className="border-t border-slate-100 pt-2.5 mt-3 flex justify-between text-[10px] text-slate-500">
                 <span>Próxima em:</span>
                 <span className="font-bold text-slate-700">
-                  {reunioesEtica.length > 0 
-                    ? formatDate(reunioesEtica[0].dataHora.split('T')[0]) 
+                  {reunioesEtica.length > 0
+                    ? formatDate(reunioesEtica[0].dataHora.split('T')[0])
                     : "Sem agendamentos"
                   }
                 </span>
@@ -899,7 +898,7 @@ export default function EticaModule({
                             </span>
                           )}
                           <a
-                            href="https://sei.economia.gov.br/sei/"
+                            href="https://processoeletronico.trabalho.gov.br"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-1.5 bg-slate-200/80 hover:bg-slate-300 rounded-lg text-slate-600 transition"
@@ -948,7 +947,7 @@ export default function EticaModule({
         <div className="no-print space-y-6 animate-fade-in">
           {/* Filters Bar */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs flex flex-col md:flex-row gap-4 justify-between items-center">
-            
+
             <div className="relative w-full md:w-1/3">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
               <input
@@ -1013,27 +1012,25 @@ export default function EticaModule({
               filteredMembros.map(membro => {
                 const calc = calculateMandateInfo(membro);
                 return (
-                  <div 
-                    key={membro.id} 
-                    className={`bg-white rounded-2xl border transition-all p-5 flex flex-col justify-between shadow-xs ${
-                      !membro.ativo 
-                        ? "border-slate-100 bg-slate-50 opacity-60" 
-                        : calc.expired 
-                        ? "border-rose-300 hover:border-rose-400" 
+                  <div
+                    key={membro.id}
+                    className={`bg-white rounded-2xl border transition-all p-5 flex flex-col justify-between shadow-xs ${!membro.ativo
+                      ? "border-slate-100 bg-slate-50 opacity-60"
+                      : calc.expired
+                        ? "border-rose-300 hover:border-rose-400"
                         : "border-slate-200 hover:border-amber-300"
-                    }`}
+                      }`}
                   >
                     <div>
                       {/* Card Header metadata */}
                       <div className="flex justify-between items-start border-b border-slate-100 pb-3 mb-3">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold font-mono tracking-wide ${
-                            membro.atribuicao === "Presidente" 
-                              ? "bg-amber-100 text-amber-800 border border-amber-200" 
-                              : membro.atribuicao === "Secretária-Executiva" 
-                              ? "bg-indigo-100 text-indigo-800 border border-indigo-200" 
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold font-mono tracking-wide ${membro.atribuicao === "Presidente"
+                            ? "bg-amber-100 text-amber-800 border border-amber-200"
+                            : membro.atribuicao === "Secretária-Executiva"
+                              ? "bg-indigo-100 text-indigo-800 border border-indigo-200"
                               : "bg-slate-100 text-slate-800 border border-slate-200"
-                          }`}>
+                            }`}>
                             {membro.atribuicao}
                           </span>
                           <span className="text-[10px] text-slate-400 font-semibold font-mono">
@@ -1047,9 +1044,8 @@ export default function EticaModule({
                               <AlertCircle className="w-2.5 h-2.5" /> Mandato Vencido
                             </span>
                           )}
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                            membro.ativo ? "bg-emerald-100 text-emerald-800 border border-emerald-200" : "bg-slate-200 text-slate-500"
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${membro.ativo ? "bg-emerald-100 text-emerald-800 border border-emerald-200" : "bg-slate-200 text-slate-500"
+                            }`}>
                             {membro.ativo ? "Ativo" : "Inabilitado"}
                           </span>
                         </div>
@@ -1091,12 +1087,11 @@ export default function EticaModule({
                               {calc.percent}% decorrido
                             </span>
                           </div>
-                          
+
                           <div className="w-full bg-slate-100 border border-slate-200 h-2.5 rounded-full overflow-hidden flex">
-                            <div 
-                              className={`h-full transition-all ${
-                                calc.expired ? "bg-rose-500" : calc.percent > 85 ? "bg-amber-500" : "bg-blue-600"
-                              }`}
+                            <div
+                              className={`h-full transition-all ${calc.expired ? "bg-rose-500" : calc.percent > 85 ? "bg-amber-500" : "bg-blue-600"
+                                }`}
                               style={{ width: `${calc.percent}%` }}
                             />
                           </div>
@@ -1131,11 +1126,10 @@ export default function EticaModule({
                               addLog(`Solicitada alteração de status do membro ${membro.nome} para ${membro.ativo ? 'Inativo' : 'Ativo'}.`);
                             }
                           }}
-                          className={`p-1 px-2.5 rounded-lg border font-bold text-[10px] inline-flex items-center gap-1 transition ${
-                            membro.ativo 
-                              ? "border-rose-100 text-rose-600 hover:bg-rose-50" 
-                              : "border-emerald-100 text-emerald-600 hover:bg-emerald-50"
-                          }`}
+                          className={`p-1 px-2.5 rounded-lg border font-bold text-[10px] inline-flex items-center gap-1 transition ${membro.ativo
+                            ? "border-rose-100 text-rose-600 hover:bg-rose-50"
+                            : "border-emerald-100 text-emerald-600 hover:bg-emerald-50"
+                            }`}
                         >
                           {membro.ativo ? (
                             <>
@@ -1162,7 +1156,7 @@ export default function EticaModule({
         <div className="no-print space-y-6 animate-fade-in">
           {/* Controls Bar */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs flex flex-col md:flex-row gap-4 justify-between items-center">
-            
+
             <div className="relative w-full md:w-1/3">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
               <input
@@ -1199,7 +1193,7 @@ export default function EticaModule({
                 const meetingDate = r.dataHora.split('T')[0];
                 const meetingTime = r.dataHora.split('T')[1];
                 const hasAta = atasEtica.some(a => a.reuniaoId === r.id);
-                
+
                 const confs = Object.values(r.confirmacoes || {});
                 const totalConv = r.convidados?.length || 0;
                 const confirmados = confs.filter(s => s === "Confirmado").length;
@@ -1211,14 +1205,13 @@ export default function EticaModule({
                     <div className="space-y-3 flex-1">
                       {/* Title / Header */}
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wide border ${
-                          r.tipo === "Ordinária" 
-                            ? "bg-slate-100 text-slate-800 border-slate-200" 
-                            : "bg-amber-100 text-amber-800 border-amber-250 animate-pulse"
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold uppercase tracking-wide border ${r.tipo === "Ordinária"
+                          ? "bg-slate-100 text-slate-800 border-slate-200"
+                          : "bg-amber-100 text-amber-800 border-amber-250 animate-pulse"
+                          }`}>
                           Reunião {r.tipo}
                         </span>
-                        
+
                         <span className="text-xs font-bold text-slate-800 flex items-center gap-1">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           {formatDate(meetingDate)} às {meetingTime}
@@ -1252,26 +1245,24 @@ export default function EticaModule({
                             r.convidados.map((conv, idx) => {
                               const status = r.confirmacoes[conv.email] || "Pendente";
                               return (
-                                <div 
-                                  key={idx} 
-                                  className={`px-2.5 py-1 rounded-xl text-[10px] font-medium border flex items-center gap-1.5 ${
-                                    status === "Confirmado" 
-                                      ? "bg-emerald-50/70 border-emerald-200 text-emerald-800" 
-                                      : status === "Recusado" 
-                                      ? "bg-rose-50/70 border-rose-200 text-rose-800" 
+                                <div
+                                  key={idx}
+                                  className={`px-2.5 py-1 rounded-xl text-[10px] font-medium border flex items-center gap-1.5 ${status === "Confirmado"
+                                    ? "bg-emerald-50/70 border-emerald-200 text-emerald-800"
+                                    : status === "Recusado"
+                                      ? "bg-rose-50/70 border-rose-200 text-rose-800"
                                       : "bg-slate-50 border-slate-200 text-slate-600"
-                                  }`}
+                                    }`}
                                   title={`${conv.email} | ${conv.telefone}`}
                                 >
                                   <span className="font-bold">{conv.nome}</span>
                                   <span className="text-[9px] opacity-70">({conv.encargo})</span>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${
-                                    status === "Confirmado" 
-                                      ? "bg-emerald-500" 
-                                      : status === "Recusado" 
-                                      ? "bg-rose-500" 
+                                  <span className={`w-1.5 h-1.5 rounded-full ${status === "Confirmado"
+                                    ? "bg-emerald-500"
+                                    : status === "Recusado"
+                                      ? "bg-rose-500"
                                       : "bg-slate-400"
-                                  }`} />
+                                    }`} />
                                 </div>
                               );
                             })
@@ -1284,15 +1275,14 @@ export default function EticaModule({
                     <div className="flex flex-col justify-between md:items-end gap-4 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-5 shrink-0 md:w-52">
                       <div className="space-y-1.5 w-full">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block md:text-right">Notificações e Disparos</span>
-                        
+
                         <div className="grid grid-cols-2 md:grid-cols-1 gap-1.5">
                           <button
                             onClick={() => triggerNotification(r.id, 'agendamento')}
-                            className={`w-full px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition flex items-center justify-center gap-1 ${
-                              r.notificadoAgendamento 
-                                ? "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200" 
-                                : "bg-amber-500/10 border-amber-500/30 text-amber-700 hover:bg-amber-500/20"
-                            }`}
+                            className={`w-full px-2.5 py-1.5 rounded-lg text-[10px] font-bold border transition flex items-center justify-center gap-1 ${r.notificadoAgendamento
+                              ? "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200"
+                              : "bg-amber-500/10 border-amber-500/30 text-amber-700 hover:bg-amber-500/20"
+                              }`}
                           >
                             <Mail className="w-3.5 h-3.5" />
                             {r.notificadoAgendamento ? "Reenviar Convite" : "Disparar Convite"}
@@ -1324,7 +1314,7 @@ export default function EticaModule({
                           >
                             Editar
                           </button>
-                          
+
                           <button
                             onClick={async () => {
                               if (window.confirm("Excluir agendamento permanentemente do sistema?")) {
@@ -1374,11 +1364,11 @@ export default function EticaModule({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">Data da Geração Oficial:</label>
-                    <input 
-                      type="date" 
-                      className="w-full bg-slate-50 border p-2 text-xs rounded-lg font-mono focus:ring-1 focus:ring-indigo-500 outline-hidden" 
-                      value={activeAtaForm.dataGeracao} 
-                      onChange={e => setActiveAtaForm(prev => prev ? ({ ...prev, dataGeracao: e.target.value }) : null)} 
+                    <input
+                      type="date"
+                      className="w-full bg-slate-50 border p-2 text-xs rounded-lg font-mono focus:ring-1 focus:ring-indigo-500 outline-hidden"
+                      value={activeAtaForm.dataGeracao}
+                      onChange={e => setActiveAtaForm(prev => prev ? ({ ...prev, dataGeracao: e.target.value }) : null)}
                     />
                   </div>
                   <div className="flex items-end text-xs text-slate-400">
@@ -1388,34 +1378,34 @@ export default function EticaModule({
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">1. Relato dos Fatos e Discussões Realizadas:</label>
-                  <textarea 
-                    className="w-full h-40 bg-slate-50 border p-3 text-xs rounded-lg focus:ring-1 focus:ring-indigo-500 outline-hidden" 
-                    placeholder="Insira a transcrição sintética dos fatos expostos, discussões da mesa, manifestações de relatores..." 
-                    value={activeAtaForm.relatos} 
-                    onChange={e => setActiveAtaForm(prev => prev ? ({ ...prev, relatos: e.target.value }) : null)} 
+                  <textarea
+                    className="w-full h-40 bg-slate-50 border p-3 text-xs rounded-lg focus:ring-1 focus:ring-indigo-500 outline-hidden"
+                    placeholder="Insira a transcrição sintética dos fatos expostos, discussões da mesa, manifestações de relatores..."
+                    value={activeAtaForm.relatos}
+                    onChange={e => setActiveAtaForm(prev => prev ? ({ ...prev, relatos: e.target.value }) : null)}
                   />
                 </div>
 
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">2. Decisões, Votos Proferidos e Encaminhamentos:</label>
-                  <textarea 
-                    className="w-full h-32 bg-slate-50 border p-3 text-xs rounded-lg focus:ring-1 focus:ring-indigo-500 outline-hidden" 
-                    placeholder="Detalhamento das deliberações oficiais, homologação de consultas, instauração de representações e encaminhamentos..." 
-                    value={activeAtaForm.decisoes} 
-                    onChange={e => setActiveAtaForm(prev => prev ? ({ ...prev, decisoes: e.target.value }) : null)} 
+                  <textarea
+                    className="w-full h-32 bg-slate-50 border p-3 text-xs rounded-lg focus:ring-1 focus:ring-indigo-500 outline-hidden"
+                    placeholder="Detalhamento das deliberações oficiais, homologação de consultas, instauração de representações e encaminhamentos..."
+                    value={activeAtaForm.decisoes}
+                    onChange={e => setActiveAtaForm(prev => prev ? ({ ...prev, decisoes: e.target.value }) : null)}
                   />
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 border-t pt-4">
-                <button 
-                  onClick={() => setActiveAtaForm(null)} 
+                <button
+                  onClick={() => setActiveAtaForm(null)}
                   className="px-4 py-2 border rounded-lg text-xs font-bold hover:bg-slate-50 transition text-slate-600"
                 >
                   Cancelar
                 </button>
-                <button 
-                  onClick={handleSaveAta} 
+                <button
+                  onClick={handleSaveAta}
                   className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow-xs"
                 >
                   Homologar e Salvar Ata
@@ -1426,7 +1416,7 @@ export default function EticaModule({
             /* Meeting list for Atas */
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-slate-800 font-display">Registrar/Gerar Documento de Ata de Reuniões</h3>
-              
+
               <div className="grid grid-cols-1 gap-3">
                 {reunioesEtica.length === 0 ? (
                   <div className="text-center py-16 bg-white border border-dashed rounded-2xl text-slate-400 text-xs">
@@ -1463,7 +1453,7 @@ export default function EticaModule({
                             <FileSignature className="w-3.5 h-3.5 text-indigo-500" />
                             {ata ? "Editar Redação" : "Redigir Ata"}
                           </button>
-                          
+
                           {ata && (
                             <button
                               onClick={() => setPrintingAtaId(ata.reuniaoId)}
@@ -1497,11 +1487,10 @@ export default function EticaModule({
                     setProcessoTipoSubTab(tipo);
                     setProcessoSituacaoFilter("TODOS");
                   }}
-                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                    processoTipoSubTab === tipo
-                      ? "bg-white text-slate-800 shadow-2xs"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${processoTipoSubTab === tipo
+                    ? "bg-white text-slate-800 shadow-2xs"
+                    : "text-slate-500 hover:text-slate-800"
+                    }`}
                 >
                   {tipo === "SECI" ? "SECI (Conflito de Interesses)" : tipo === "Consulta" ? "Consultas Técnicas" : "Processos Éticos"}
                 </button>
@@ -1604,7 +1593,7 @@ export default function EticaModule({
                         <td className="px-4 py-3.5 text-slate-500 font-mono">
                           {formatDate(p.dataInicio)}
                         </td>
-                        
+
                         {/* SECI SLA Column */}
                         {processoTipoSubTab === "SECI" && (
                           <td className="px-4 py-3.5">
@@ -1617,13 +1606,12 @@ export default function EticaModule({
                                 Atrasado ({-sla.remainingDays}d)
                               </span>
                             ) : (
-                              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border ${
-                                sla.alertLevel === "danger" 
-                                  ? "bg-red-50 text-red-700 border-red-150 animate-pulse" 
-                                  : sla.alertLevel === "warning" 
-                                  ? "bg-amber-50 text-amber-700 border-amber-150" 
+                              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold border ${sla.alertLevel === "danger"
+                                ? "bg-red-50 text-red-700 border-red-150 animate-pulse"
+                                : sla.alertLevel === "warning"
+                                  ? "bg-amber-50 text-amber-700 border-amber-150"
                                   : "bg-emerald-50 text-emerald-700 border-emerald-150"
-                              }`}>
+                                }`}>
                                 {sla.remainingDays} dias restantes
                               </span>
                             )}
@@ -1648,13 +1636,12 @@ export default function EticaModule({
 
                         {/* Situação status */}
                         <td className="px-4 py-3.5">
-                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase ${
-                            p.situacao === "Deferido" || p.situacao === "Respondida" || p.situacao === "Arquivado"
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-250"
-                              : p.situacao === "Indeferido"
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase ${p.situacao === "Deferido" || p.situacao === "Respondida" || p.situacao === "Arquivado"
+                            ? "bg-emerald-100 text-emerald-800 border border-emerald-250"
+                            : p.situacao === "Indeferido"
                               ? "bg-red-100 text-red-800 border border-red-250"
                               : "bg-amber-100 text-amber-800 border border-amber-250"
-                          }`}>
+                            }`}>
                             {p.situacao}
                           </span>
                         </td>
@@ -1663,7 +1650,7 @@ export default function EticaModule({
                         <td className="px-4 py-3.5 text-center">
                           <div className="flex justify-center gap-1.5">
                             <a
-                              href="https://sei.economia.gov.br/sei/"
+                              href="https://processoeletronico.trabalho.gov.br"
                               target="_blank"
                               rel="noopener noreferrer"
                               className="px-2 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 rounded-lg font-bold text-[10px] inline-flex items-center gap-1 transition"
@@ -1712,7 +1699,7 @@ export default function EticaModule({
               <h3 className="text-sm font-bold text-slate-800 font-display">BI Consolidado – Comissão de Ética</h3>
               <p className="text-[11px] text-slate-500">Métricas analíticas do colegiado de integridade pública do MTE.</p>
             </div>
-            
+
             <div className="flex gap-2">
               <div className="flex items-center gap-1.5 text-xs">
                 <span>Filtrar Ano:</span>
@@ -1741,7 +1728,7 @@ export default function EticaModule({
             {/* Chart 1: SECI Conflito de Interesses */}
             <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-4">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Demandas SECI (Conflito de Interesse)</span>
-              
+
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-black text-slate-800 font-display">{seciCount}</span>
                 <span className="text-xs text-slate-400 font-medium">Casos cadastrados</span>
@@ -1750,18 +1737,18 @@ export default function EticaModule({
               {/* Pure CSS Stacked Percentage Bar */}
               <div className="space-y-2">
                 <div className="w-full h-3 bg-slate-150 rounded-full overflow-hidden flex">
-                  <div 
-                    className="h-full bg-emerald-500" 
+                  <div
+                    className="h-full bg-emerald-500"
                     style={{ width: `${seciCount > 0 ? (seciDeferidos / seciCount) * 100 : 0}%` }}
                     title={`Deferidos: ${seciDeferidos}`}
                   />
-                  <div 
-                    className="h-full bg-red-500" 
+                  <div
+                    className="h-full bg-red-500"
                     style={{ width: `${seciCount > 0 ? (seciIndeferidos / seciCount) * 100 : 0}%` }}
                     title={`Indeferidos: ${seciIndeferidos}`}
                   />
-                  <div 
-                    className="h-full bg-amber-500 animate-pulse" 
+                  <div
+                    className="h-full bg-amber-500 animate-pulse"
                     style={{ width: `${seciCount > 0 ? (seciAnalise / seciCount) * 100 : 0}%` }}
                     title={`Em Análise: ${seciAnalise}`}
                   />
@@ -1803,8 +1790,8 @@ export default function EticaModule({
                 </div>
 
                 <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-600 rounded-full" 
+                  <div
+                    className="h-full bg-blue-600 rounded-full"
                     style={{ width: `${consultasCount > 0 ? (consultasRespondidas / consultasCount) * 100 : 0}%` }}
                   />
                 </div>
@@ -1846,16 +1833,16 @@ export default function EticaModule({
       {showAddMembroModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-lg border border-slate-250 overflow-hidden flex flex-col shadow-2xl">
-            
-            <div className="bg-slate-900 px-5 py-4 text-white flex justify-between items-center">
-              <h3 className="text-xs font-bold font-display uppercase tracking-wider text-amber-500">
+
+            <div className="bg-[#003366] px-5 py-4 text-white flex justify-between items-center">
+              <h3 className="text-xs font-bold font-display uppercase tracking-wider text-white">
                 {editingMembro ? "Editar Cadastro de Membro" : "Cadastrar Membro na Comissão"}
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowAddMembroModal(false);
                   setEditingMembro(null);
-                }} 
+                }}
                 className="text-white hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
@@ -1863,16 +1850,16 @@ export default function EticaModule({
             </div>
 
             <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] text-slate-800 text-xs">
-              
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="text-[11px] font-bold block mb-1">Nome Completo (Obrigatorio):</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg" 
-                    placeholder="Ex: Alessandro Barbosa Lourenço" 
-                    value={mFormNome} 
-                    onChange={e => setMFormNome(e.target.value)} 
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border p-2 rounded-lg"
+                    placeholder="Ex: Alessandro Barbosa Lourenço"
+                    value={mFormNome}
+                    onChange={e => setMFormNome(e.target.value)}
                   />
                 </div>
               </div>
@@ -1880,22 +1867,22 @@ export default function EticaModule({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold block mb-1">CPF (Obrigatorio):</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    placeholder="Ex: 000.000.000-00" 
-                    value={mFormCPF} 
-                    onChange={e => setMFormCPF(e.target.value)} 
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    placeholder="Ex: 000.000.000-00"
+                    value={mFormCPF}
+                    onChange={e => setMFormCPF(e.target.value)}
                   />
                 </div>
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Matrícula SIAPE/MTE:</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    placeholder="Ex: AECI-8409-G" 
-                    value={mFormMatricula} 
-                    onChange={e => setMFormMatricula(e.target.value)} 
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    placeholder="Ex: AECI-8409-G"
+                    value={mFormMatricula}
+                    onChange={e => setMFormMatricula(e.target.value)}
                   />
                 </div>
               </div>
@@ -1903,9 +1890,9 @@ export default function EticaModule({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Atribuição na Comissão:</label>
-                  <select 
-                    className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden" 
-                    value={mFormAtrib} 
+                  <select
+                    className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
+                    value={mFormAtrib}
                     onChange={e => setMFormAtrib(e.target.value as any)}
                   >
                     <option value="Membro">Membro</option>
@@ -1915,9 +1902,9 @@ export default function EticaModule({
                 </div>
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Encargo:</label>
-                  <select 
-                    className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden" 
-                    value={mFormEncargo} 
+                  <select
+                    className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
+                    value={mFormEncargo}
                     onChange={e => setMFormEncargo(e.target.value as any)}
                   >
                     <option value="Titular">Titular</option>
@@ -1929,12 +1916,12 @@ export default function EticaModule({
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
                   <label className="text-[11px] font-bold block mb-1">Portaria / Instrumento Designador:</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg" 
-                    placeholder="Ex: Portaria MTE nº 104/2024" 
-                    value={mFormDispositivo} 
-                    onChange={e => setMFormDispositivo(e.target.value)} 
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border p-2 rounded-lg"
+                    placeholder="Ex: Portaria MTE nº 104/2024"
+                    value={mFormDispositivo}
+                    onChange={e => setMFormDispositivo(e.target.value)}
                   />
                 </div>
               </div>
@@ -1942,29 +1929,29 @@ export default function EticaModule({
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="text-[10px] font-bold block mb-1">Pub. Portaria:</label>
-                  <input 
-                    type="date" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    value={mFormPub} 
-                    onChange={e => setMFormPub(e.target.value)} 
+                  <input
+                    type="date"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    value={mFormPub}
+                    onChange={e => setMFormPub(e.target.value)}
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold block mb-1">Início Mandato:</label>
-                  <input 
-                    type="date" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    value={mFormInicio} 
-                    onChange={e => setMFormInicio(e.target.value)} 
+                  <input
+                    type="date"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    value={mFormInicio}
+                    onChange={e => setMFormInicio(e.target.value)}
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold block mb-1">Fim Mandato:</label>
-                  <input 
-                    type="date" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    value={mFormFim} 
-                    onChange={e => setMFormFim(e.target.value)} 
+                  <input
+                    type="date"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    value={mFormFim}
+                    onChange={e => setMFormFim(e.target.value)}
                   />
                 </div>
               </div>
@@ -1972,51 +1959,51 @@ export default function EticaModule({
               <div className="grid grid-cols-3 gap-2">
                 <div className="col-span-1">
                   <label className="text-[11px] font-bold block mb-1">Mandato (Texto):</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg" 
-                    placeholder="Ex: 3 anos" 
-                    value={mFormMandato} 
-                    onChange={e => setMFormMandato(e.target.value)} 
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border p-2 rounded-lg"
+                    placeholder="Ex: 3 anos"
+                    value={mFormMandato}
+                    onChange={e => setMFormMandato(e.target.value)}
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="text-[11px] font-bold block mb-1">E-mail Institucional:</label>
-                  <input 
-                    type="email" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    placeholder="nome.sobrenome@trabalho.gov.br" 
-                    value={mFormEmail} 
-                    onChange={e => setMFormEmail(e.target.value)} 
+                  <input
+                    type="email"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    placeholder="nome.sobrenome@trabalho.gov.br"
+                    value={mFormEmail}
+                    onChange={e => setMFormEmail(e.target.value)}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="text-[11px] font-bold block mb-1">Telefone / Ramal Contato:</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-slate-50 border p-2 rounded-lg" 
-                  placeholder="(61) 99999-9999" 
-                  value={mFormTel} 
-                  onChange={e => setMFormTel(e.target.value)} 
+                <input
+                  type="text"
+                  className="w-full bg-slate-50 border p-2 rounded-lg"
+                  placeholder="(61) 99999-9999"
+                  value={mFormTel}
+                  onChange={e => setMFormTel(e.target.value)}
                 />
               </div>
 
             </div>
 
             <div className="bg-slate-50 px-5 py-3.5 flex justify-end gap-2 border-t text-xs">
-              <button 
+              <button
                 onClick={() => {
                   setShowAddMembroModal(false);
                   setEditingMembro(null);
-                }} 
+                }}
                 className="px-4 py-1.5 text-slate-600 font-semibold"
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleSaveMembro} 
+              <button
+                onClick={handleSaveMembro}
                 className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg shadow-xs"
               >
                 {editingMembro ? "Salvar Alterações" : "Homologar Membro"}
@@ -2031,16 +2018,16 @@ export default function EticaModule({
       {showAddReuniaoModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-2xl border border-slate-250 overflow-hidden flex flex-col shadow-2xl">
-            
-            <div className="bg-slate-900 px-5 py-4 text-white flex justify-between items-center">
-              <h3 className="text-xs font-bold font-display uppercase tracking-wider text-amber-500">
+
+            <div className="bg-[#003366] px-5 py-4 text-white flex justify-between items-center">
+              <h3 className="text-xs font-bold font-display uppercase tracking-wider text-white">
                 {editingReuniao ? "Editar Agendamento de Colegiado" : "Agendar Reunião de Colegiado"}
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowAddReuniaoModal(false);
                   setEditingReuniao(null);
-                }} 
+                }}
                 className="text-white hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
@@ -2048,13 +2035,13 @@ export default function EticaModule({
             </div>
 
             <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] text-slate-800 text-xs">
-              
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Tipo de Reunião:</label>
-                  <select 
-                    className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden" 
-                    value={rFormTipo} 
+                  <select
+                    className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
+                    value={rFormTipo}
                     onChange={e => setRFormTipo(e.target.value as any)}
                   >
                     <option value="Ordinária">Ordinária</option>
@@ -2063,22 +2050,22 @@ export default function EticaModule({
                 </div>
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Data e Hora de Início:</label>
-                  <input 
-                    type="datetime-local" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono focus:outline-hidden" 
-                    value={rFormDataHora} 
-                    onChange={e => setRFormDataHora(e.target.value)} 
+                  <input
+                    type="datetime-local"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono focus:outline-hidden"
+                    value={rFormDataHora}
+                    onChange={e => setRFormDataHora(e.target.value)}
                   />
                 </div>
               </div>
 
               <div>
                 <label className="text-[11px] font-bold block mb-1">Assuntos e Deliberações da Pauta:</label>
-                <textarea 
-                  className="w-full h-20 bg-slate-50 border p-2 rounded-lg focus:outline-hidden" 
-                  placeholder="Insira os principais processos e assuntos a serem debatidos..." 
-                  value={rFormPauta} 
-                  onChange={e => setRFormPauta(e.target.value)} 
+                <textarea
+                  className="w-full h-20 bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
+                  placeholder="Insira os principais processos e assuntos a serem debatidos..."
+                  value={rFormPauta}
+                  onChange={e => setRFormPauta(e.target.value)}
                 />
               </div>
 
@@ -2098,43 +2085,43 @@ export default function EticaModule({
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 bg-slate-50 p-3 border rounded-xl items-end">
                   <div>
                     <label className="text-[10px] font-bold block mb-1">Nome:</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Ex: Dr. Roberto"
-                      className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg" 
-                      value={gFormNome} 
-                      onChange={e => setGFormNome(e.target.value)} 
+                      className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg"
+                      value={gFormNome}
+                      onChange={e => setGFormNome(e.target.value)}
                     />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold block mb-1">Encargo:</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="Ex: Assessor CGU"
-                      className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg" 
-                      value={gFormEncargo} 
-                      onChange={e => setGFormEncargo(e.target.value)} 
+                      className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg"
+                      value={gFormEncargo}
+                      onChange={e => setGFormEncargo(e.target.value)}
                     />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold block mb-1">E-mail:</label>
-                    <input 
-                      type="email" 
+                    <input
+                      type="email"
                       placeholder="email@dominio.com"
-                      className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg font-mono" 
-                      value={gFormEmail} 
-                      onChange={e => setGFormEmail(e.target.value)} 
+                      className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg font-mono"
+                      value={gFormEmail}
+                      onChange={e => setGFormEmail(e.target.value)}
                     />
                   </div>
                   <div className="flex gap-1.5">
                     <div className="flex-1">
                       <label className="text-[10px] font-bold block mb-1">Telefone:</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         placeholder="(61) 999..."
-                        className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg" 
-                        value={gFormTel} 
-                        onChange={e => setGFormTel(e.target.value)} 
+                        className="w-full bg-white border p-1.5 text-[10.5px] rounded-lg"
+                        value={gFormTel}
+                        onChange={e => setGFormTel(e.target.value)}
                       />
                     </div>
                     <button
@@ -2176,17 +2163,17 @@ export default function EticaModule({
             </div>
 
             <div className="bg-slate-50 px-5 py-3.5 flex justify-end gap-2 border-t text-xs">
-              <button 
+              <button
                 onClick={() => {
                   setShowAddReuniaoModal(false);
                   setEditingReuniao(null);
-                }} 
+                }}
                 className="px-4 py-1.5 text-slate-600 font-semibold"
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleSaveReuniao} 
+              <button
+                onClick={handleSaveReuniao}
                 className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg shadow-xs"
               >
                 {editingReuniao ? "Salvar Agendamento" : "Concluir Agendamento"}
@@ -2201,16 +2188,16 @@ export default function EticaModule({
       {showAddProcessoModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 no-print animate-fade-in">
           <div className="bg-white rounded-2xl w-full max-w-lg border border-slate-250 overflow-hidden flex flex-col shadow-2xl">
-            
-            <div className="bg-slate-900 px-5 py-4 text-white flex justify-between items-center">
-              <h3 className="text-xs font-bold font-display uppercase tracking-wider text-amber-500">
+
+            <div className="bg-[#003366] px-5 py-4 text-white flex justify-between items-center">
+              <h3 className="text-xs font-bold font-display uppercase tracking-wider text-white">
                 {editingProcesso ? `Editar Processo ${pFormTipo}` : `Novo Registro de Processo (${pFormTipo})`}
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setShowAddProcessoModal(false);
                   setEditingProcesso(null);
-                }} 
+                }}
                 className="text-white hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
@@ -2218,11 +2205,11 @@ export default function EticaModule({
             </div>
 
             <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] text-slate-800 text-xs">
-              
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Tipo do Processo:</label>
-                  <select 
+                  <select
                     className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
                     value={pFormTipo}
                     onChange={e => {
@@ -2240,12 +2227,12 @@ export default function EticaModule({
                 </div>
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Número do Processo SEI:</label>
-                  <input 
-                    type="text" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    placeholder="Ex: 19973.102345/2026-88" 
-                    value={pFormSei} 
-                    onChange={e => setPFormSei(e.target.value)} 
+                  <input
+                    type="text"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    placeholder="Ex: 19973.102345/2026-88"
+                    value={pFormSei}
+                    onChange={e => setPFormSei(e.target.value)}
                   />
                 </div>
               </div>
@@ -2253,20 +2240,20 @@ export default function EticaModule({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Data de Instauração/Início:</label>
-                  <input 
-                    type="date" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    value={pFormDataInicio} 
-                    onChange={e => setPFormDataInicio(e.target.value)} 
+                  <input
+                    type="date"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    value={pFormDataInicio}
+                    onChange={e => setPFormDataInicio(e.target.value)}
                   />
                 </div>
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Data Fim/Conclusão (Opcional):</label>
-                  <input 
-                    type="date" 
-                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono" 
-                    value={pFormDataFim} 
-                    onChange={e => setPFormDataFim(e.target.value)} 
+                  <input
+                    type="date"
+                    className="w-full bg-slate-50 border p-2 rounded-lg font-mono"
+                    value={pFormDataFim}
+                    onChange={e => setPFormDataFim(e.target.value)}
                   />
                 </div>
               </div>
@@ -2276,7 +2263,7 @@ export default function EticaModule({
                 <>
                   <div>
                     <label className="text-[11px] font-bold block mb-1">Relator Responsável Designado:</label>
-                    <select 
+                    <select
                       className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
                       value={pFormResponsavel}
                       onChange={e => setPFormResponsavel(e.target.value)}
@@ -2289,7 +2276,7 @@ export default function EticaModule({
                   </div>
                   <div>
                     <label className="text-[11px] font-bold block mb-1">Resumo das Atividades Denunciadas / Conflito:</label>
-                    <textarea 
+                    <textarea
                       className="w-full h-20 bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
                       placeholder="Descreva suscintamente o objeto da solicitação de conflito de interesses..."
                       value={pFormResumo}
@@ -2298,7 +2285,7 @@ export default function EticaModule({
                   </div>
                   <div>
                     <label className="text-[11px] font-bold block mb-1">Situação / Decisão SECI:</label>
-                    <select 
+                    <select
                       className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
                       value={pFormSituacao}
                       onChange={e => setPFormSituacao(e.target.value)}
@@ -2315,9 +2302,9 @@ export default function EticaModule({
                 <>
                   <div>
                     <label className="text-[11px] font-bold block mb-1">Unidade Solicitante:</label>
-                    <input 
-                      type="text" 
-                      className="w-full bg-slate-50 border p-2 rounded-lg" 
+                    <input
+                      type="text"
+                      className="w-full bg-slate-50 border p-2 rounded-lg"
                       placeholder="Ex: Superintendência Regional da Bahia"
                       value={pFormSolicitante}
                       onChange={e => setPFormSolicitante(e.target.value)}
@@ -2325,7 +2312,7 @@ export default function EticaModule({
                   </div>
                   <div>
                     <label className="text-[11px] font-bold block mb-1">Assunto / Descrição da Dúvida:</label>
-                    <textarea 
+                    <textarea
                       className="w-full h-20 bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
                       placeholder="Assunto da consulta formulada pela unidade..."
                       value={pFormAssunto}
@@ -2334,7 +2321,7 @@ export default function EticaModule({
                   </div>
                   <div>
                     <label className="text-[11px] font-bold block mb-1">Status da Consulta:</label>
-                    <select 
+                    <select
                       className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
                       value={pFormSituacao}
                       onChange={e => setPFormSituacao(e.target.value)}
@@ -2350,7 +2337,7 @@ export default function EticaModule({
               {pFormTipo === "Ético" && (
                 <div>
                   <label className="text-[11px] font-bold block mb-1">Status do Processo Ético:</label>
-                  <select 
+                  <select
                     className="w-full bg-slate-50 border p-2 rounded-lg focus:outline-hidden"
                     value={pFormSituacao}
                     onChange={e => setPFormSituacao(e.target.value)}
@@ -2365,17 +2352,17 @@ export default function EticaModule({
             </div>
 
             <div className="bg-slate-50 px-5 py-3.5 flex justify-end gap-2 border-t text-xs">
-              <button 
+              <button
                 onClick={() => {
                   setShowAddProcessoModal(false);
                   setEditingProcesso(null);
-                }} 
+                }}
                 className="px-4 py-1.5 text-slate-600 font-semibold"
               >
                 Cancelar
               </button>
-              <button 
-                onClick={handleSaveProcesso} 
+              <button
+                onClick={handleSaveProcesso}
                 className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg shadow-xs"
               >
                 {editingProcesso ? "Salvar Alterações" : "Cadastrar Processo"}
@@ -2389,25 +2376,25 @@ export default function EticaModule({
       {/* --- 4. PRINT PREVIEW AND PRINT VIEW OVERLAY --- */}
       {printingAtaId && (
         <div className="fixed inset-0 z-50 bg-slate-900/70 overflow-y-auto flex items-center justify-center p-4 backdrop-blur-xs">
-          
+
           {/* Main print preview panel (hidden on paper due to @media print in index.css) */}
           <div className="bg-white border rounded-2xl w-full max-w-3xl overflow-hidden flex flex-col shadow-2xl my-8 no-print">
             {/* Header controls bar */}
-            <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
+            <div className="bg-[#003366] text-white px-5 py-4 flex items-center justify-between">
               <div>
-                <span className="text-[10px] uppercase font-bold text-amber-500 font-mono tracking-wider">Ata da Reunião - Pré-visualização</span>
+                <span className="text-[10px] uppercase font-bold text-blue-200 font-mono tracking-wider">Ata da Reunião - Pré-visualização</span>
                 <h4 className="text-sm font-bold font-display">Ata nº {reunioesEtica.find(x => x.id === printingAtaId)?.id}</h4>
               </div>
-              
+
               <div className="flex gap-2">
                 <button
                   onClick={() => window.print()}
-                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
+                  className="px-4 py-1.5 bg-[#1351b4] hover:bg-[#003366] text-white font-bold rounded-lg text-xs flex items-center gap-1.5 transition"
                 >
                   <Printer className="w-3.5 h-3.5" />
                   Imprimir / Salvar PDF
                 </button>
-                
+
                 <button
                   onClick={() => setPrintingAtaId(null)}
                   className="p-1 bg-slate-800 hover:bg-slate-700 border rounded-lg text-white"
@@ -2431,7 +2418,7 @@ export default function EticaModule({
                     <circle cx="50" cy="50" r="16" fill="white" stroke="currentColor" strokeWidth="2" />
                     <path d="M45,50 A5,5 0 0,1 55,50" strokeWidth="2.5" />
                   </svg>
-                  
+
                   <span className="text-[10px] font-bold uppercase tracking-wider block">Presidência da República</span>
                   <span className="text-xs font-bold uppercase tracking-wider block">Ministério do Trabalho e Emprego</span>
                   <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase block">AECI - Assessoria Especial de Controle Interno</span>
@@ -2478,7 +2465,7 @@ export default function EticaModule({
                   {/* Signatures block of confirmed attendees */}
                   <div className="border-t border-slate-300 pt-6 mt-8 space-y-4">
                     <h5 className="font-bold uppercase font-sans text-[10px] tracking-wider text-slate-600 block">Membros e Convidados Confirmados (Presentes na Sessão):</h5>
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-y-12 gap-x-6 pt-4 font-sans text-[10px] text-slate-600">
                       {reunioesEtica.find(x => x.id === printingAtaId)?.convidados
                         .filter(c => (reunioesEtica.find(x => x.id === printingAtaId)?.confirmacoes[c.email] === "Confirmado"))
@@ -2561,7 +2548,7 @@ export default function EticaModule({
 
               <div className="border-t border-slate-300 pt-6 mt-8 space-y-4">
                 <h5 className="font-bold uppercase font-sans text-[10px] block">Membros e Convidados Presentes (Assinaturas):</h5>
-                
+
                 <div className="grid grid-cols-2 gap-y-12 gap-x-6 pt-4 font-sans text-[10px] text-slate-700">
                   {reunioesEtica.find(x => x.id === printingAtaId)?.convidados
                     .filter(c => (reunioesEtica.find(x => x.id === printingAtaId)?.confirmacoes[c.email] === "Confirmado"))

@@ -119,30 +119,22 @@ export default function DashboardOverview({
     <div className="font-sans space-y-8 animate-fade-in max-w-7xl mx-auto py-2 px-4 no-print">
       
       {/* AECI Welcome Header & Banner Block */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xl border border-slate-800">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#1351b4]/20 rounded-full -mr-32 -mt-32 pointer-events-none filter blur-xl"></div>
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-amber-400/5 rounded-full -ml-32 -mb-32 pointer-events-none filter blur-xl"></div>
-
-        <div className="relative z-10 space-y-4 md:max-w-4xl">
+      <div className="bg-[#e6f1fe] text-slate-800 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xs border border-blue-100/50">
+        <div className="relative z-10 space-y-4 md:max-w-5xl text-left">
           <div className="flex gap-2 items-center">
-            <span className="bg-[#1351b4]/90 text-white font-extrabold text-[8px] uppercase tracking-widest px-2.5 py-0.5 rounded-md">
+            <span className="bg-[#003366]/10 text-[#003366] border border-[#003366]/20 font-extrabold text-[8.5px] uppercase tracking-widest px-2.5 py-0.5 rounded-md">
               MINISTÉRIO DO TRABALHO E EMPREGO
             </span>
           </div>
 
-          <div className="space-y-2">
-            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-amber-400 uppercase">
-              Sistema Integrado de Controle Interno e Auditoria Governamental
+          <div className="space-y-1.5">
+            <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-tight text-[#003366] uppercase">
+              PLATAFORMA ÓRBITA | GESTÃO DE DEMANDAS DE CONTROLE INTERNO
             </h1>
-            <p className="text-[11px] text-slate-300 font-bold uppercase tracking-wide font-sans">
-              Assessoria Especial de Controle Interno — AECI • Versão 2.6.0
-            </p>
           </div>
 
-          <p className="text-xs text-slate-300 leading-relaxed">
-            Bem-vindo ao centro de operações ÓRBITA. Esta ferramenta reúne de forma integrada os módulos regulamentares 
-            exigidos pelo Tribunal de Contas da União e pela Controladoria-Geral da União, garantindo eficiência, transparência 
-            e rigorosa rastreabilidade processual na esfera do Ministério do Trabalho e Emprego.
+          <p className="text-[11.5px] md:text-xs text-[#003366]/80 leading-relaxed font-semibold">
+            Bem-vindo à Plataforma ÓRBITA, seu centro integrado para a gestão e rastreabilidade de TODAS as demandas de controle interno. Esta ferramenta reúne módulos para a gestão de processos, auditorias, conformidade e transparência, garantindo eficiência rigorosa em toda a esfera do Ministério do Trabalho e Emprego.
           </p>
         </div>
       </div>
@@ -205,9 +197,11 @@ export default function DashboardOverview({
       </div>
 
       {/* Helpful Ministerial Disclaimer & Guidelines info */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 text-center text-xs text-slate-400 max-w-3xl mx-auto space-y-1">
-        <p className="font-bold text-slate-500">Assessoria Especial de Controle Interno — AECI/MTE</p>
-        <p className="leading-relaxed">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 text-center text-xs text-slate-400 max-w-3xl mx-auto space-y-1 shadow-2xs">
+        <p className="font-bold text-[#003366] uppercase tracking-wide">
+          PLATAFORMA ÓRBITA | Gestão de Controle Interno do MTE
+        </p>
+        <p className="leading-relaxed text-slate-500 font-medium">
           Esta plataforma é de uso institucional regulamentado. Alterações de status, exclusões e inserções de dados 
           devem estar respaldadas por documentos administrativos do SEI (Sistema Eletrônico de Informações) e seguir as normas federais.
         </p>

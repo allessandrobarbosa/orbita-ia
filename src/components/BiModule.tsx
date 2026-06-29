@@ -728,30 +728,28 @@ export default function BiModule({
         <div className="space-y-6">
           
           {/* AI Diagnostic Dashboard Header Card */}
-          <div className="bg-[#1e1b4b] border border-indigo-900 text-white rounded-3xl p-5 md:p-6 shadow-md relative overflow-hidden flex flex-col md:flex-row gap-5 items-center justify-between">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-transparent pointer-events-none" />
-            
+          <div className="bg-[#e6f1fe] border border-blue-100/50 text-slate-800 rounded-3xl p-5 md:p-6 shadow-xs relative overflow-hidden flex flex-col md:flex-row gap-5 items-center justify-between">
             <div className="space-y-2 text-center md:text-left">
-              <div className="flex items-center justify-center md:justify-start gap-1 text-amber-300">
-                <Sparkles className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Motor Diagnóstico de Integridade Regulamentar</span>
+              <div className="flex items-center justify-center md:justify-start gap-1 text-[#003366]">
+                <Sparkles className="w-4 h-4 text-[#1351b4]" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#1351b4]">Motor Diagnóstico de Integridade Regulamentar</span>
               </div>
-              <h3 className="text-lg font-extrabold tracking-tight">Sinalização de Vulnerabilidade em Tempo Real (Predictive Engine)</h3>
-              <p className="text-[11px] text-indigo-250 leading-relaxed max-w-2xl">
+              <h3 className="text-lg font-extrabold tracking-tight text-[#003366]">Sinalização de Vulnerabilidade em Tempo Real (Predictive Engine)</h3>
+              <p className="text-[11px] text-slate-600 leading-relaxed max-w-2xl font-medium">
                 Nossa IA avalia preventivamente acórdãos, prazos regulamentares vencidos, comunicações sem resposta e conformidade de mandatos 
                 para prever gargalos jurídicos antes do encerramento das sessões ministeriais.
               </p>
             </div>
 
             {/* Live IA Scoring gauge */}
-            <div className="relative shrink-0 flex items-center justify-center border-2 border-indigo-500/25 bg-slate-900/40 p-4 rounded-3xl">
+            <div className="relative shrink-0 flex items-center justify-center border border-[#003366] bg-[#003366] text-white p-5 rounded-3xl w-32 shadow-sm">
               <div className="text-center">
-                <span className="text-4xl font-black text-amber-300 font-mono block leading-none">{aiInsightsSummary.integrityScore}%</span>
-                <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest block mt-1.5">Índice Conformidade IA</span>
-                <span className={`text-[8.5px] px-1.5 py-0.5 rounded mt-1 inline-block font-extrabold ${
-                  aiInsightsSummary.warningLevel === "Crítico" ? "bg-rose-500/20 text-rose-300" :
-                  aiInsightsSummary.warningLevel === "Moderado" ? "bg-amber-500/20 text-amber-300" :
-                  "bg-emerald-500/20 text-emerald-300"
+                <span className="text-4xl font-black text-white font-mono block leading-none">{aiInsightsSummary.integrityScore}%</span>
+                <span className="text-[8px] font-black text-blue-200 uppercase tracking-widest block mt-2">Índice Conformidade IA</span>
+                <span className={`text-[8.5px] px-1.5 py-0.5 rounded mt-1.5 inline-block font-extrabold ${
+                  aiInsightsSummary.warningLevel === "Crítico" ? "bg-rose-500 text-white" :
+                  aiInsightsSummary.warningLevel === "Moderado" ? "bg-amber-500 text-white" :
+                  "bg-emerald-600 text-white"
                 }`}>
                   Status: {aiInsightsSummary.warningLevel}
                 </span>

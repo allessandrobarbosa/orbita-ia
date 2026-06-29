@@ -33,7 +33,8 @@ import {
   DollarSign,
   Scale,
   Landmark,
-  Activity
+  Activity,
+  Users
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
 
@@ -415,6 +416,7 @@ export default function TcuModule({
   const [comImportMessage, setComImportMessage] = useState<string | null>(null);
   const [comSubTab, setComSubTab] = useState<"lista" | "analytics">("lista");
   const [comCurrentPage, setComCurrentPage] = useState(1);
+  const [comExpandedRow, setComExpandedRow] = useState<string | null>(null);
   const comItemsPerPage = 15;
 
   // Temporary Edit Form state for Communications
@@ -424,6 +426,7 @@ export default function TcuModule({
   const [editComProcesso, setEditComProcesso] = useState("");
   const [editComExpedicao, setEditComExpedicao] = useState("");
   const [editComResposta, setEditComResposta] = useState("");
+  const [editComCarece, setEditComCarece] = useState(true);
 
   // TCE module states
   const [tceActiveSubTab, setTceActiveSubTab] = useState<"geral" | "com-acordaos">("geral");
@@ -1156,6 +1159,7 @@ export default function TcuModule({
     setEditComProcesso(item.PROCESSO);
     setEditComExpedicao(item.DATA_EXPEDICAO);
     setEditComResposta(item.DATA_RESPOSTA || "");
+    setEditComCarece(item.CARECE_RESPOSTA !== false);
   };
 
   const saveComEdit = async () => {
@@ -1169,7 +1173,8 @@ export default function TcuModule({
       UNIDADE_EMITENTE: editComUnidade,
       PROCESSO: editComProcesso,
       DATA_EXPEDICAO: editComExpedicao,
-      DATA_RESPOSTA: editComResposta
+      DATA_RESPOSTA: editComResposta,
+      CARECE_RESPOSTA: editComCarece
     };
 
     const success = await onUpdateComunicacao(updated);
@@ -1179,6 +1184,15 @@ export default function TcuModule({
       alert("Erro ao salvar alterações da comunicação.");
     }
     setIsSavingCom(false);
+  };
+
+  const toggleCareceResposta = async (item: ComunicacaoDemand) => {
+    if (!onUpdateComunicacao) return;
+    const updated: ComunicacaoDemand = {
+      ...item,
+      CARECE_RESPOSTA: item.CARECE_RESPOSTA === false ? true : false
+    };
+    await onUpdateComunicacao(updated);
   };
 
   // Open Edit Dialog
@@ -1685,8 +1699,65 @@ export default function TcuModule({
   return (
     <div className="space-y-6 font-sans">
       
+      {/* Module Title Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
+            <Landmark className="w-6 h-6 text-[#003366]" />
+            Tribunal de Contas da União — TCU
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2 items-center">
+          {tcuActiveSection === "monitoramento" && (
+            <>
+              <button 
+                id="btn-importer-toggle"
+                onClick={() => { setShowImporter(!showImporter); setImportResults(null); }}
+                className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  showImporter 
+                    ? "bg-slate-800 text-white shadow-xs" 
+                    : "bg-[#003366] text-white hover:bg-slate-900 shadow-sm"
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {showImporter ? "Ocultar Importador" : "Importar Acórdãos do TCU"}
+              </button>
+
+              <button 
+                id="btn-export-excel"
+                onClick={handleExportExcel}
+                className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Excel
+              </button>
+            </>
+          )}
+
+          {tcuActiveSection === "comunicacoes" && (
+            <button
+              onClick={() => {
+                setShowComImporter(!showComImporter);
+                setParsedComItems(null);
+                setComImportMessage(null);
+              }}
+              className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                showComImporter
+                  ? "bg-slate-800 text-white shadow-xs"
+                  : "bg-[#003366] text-white hover:bg-slate-900 shadow-sm"
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              {showComImporter ? "Ocultar Sincronizador" : "Sincronizar Arquivo (CSV)"}
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* TCU Submodules Navigation */}
-      <div className="no-print border-b border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs">
+      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
         {[
           { id: "monitoramento", label: "Monitoramento", desc: "Acompanhamento de Acórdãos", icon: Database, isDev: false },
           { id: "comunicacoes", label: "Comunicações", desc: "Recepção de Ofícios & Notificações", icon: MessageSquare, isDev: false },
@@ -1709,7 +1780,7 @@ export default function TcuModule({
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <SubIcon className={`w-5 h-5 ${isActive ? "text-amber-400" : "text-slate-400"}`} />
+                <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
                 <div className="text-left">
                   <span className="block text-xs font-black uppercase tracking-wide leading-none">{subSection.label}</span>
                   <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{subSection.desc}</span>
@@ -1729,49 +1800,6 @@ export default function TcuModule({
 
       {tcuActiveSection === "monitoramento" && (
         <>
-          {/* Title Header with actions */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-            <Database className="w-6 h-6 text-[#003366]" />
-            Monitoramento
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">Tribunal de Contas da União - TCU</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 items-center">
-          <button 
-            id="btn-importer-toggle"
-            onClick={() => { setShowImporter(!showImporter); setImportResults(null); }}
-            className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-              showImporter 
-                ? "bg-slate-800 text-white shadow-xs" 
-                : "bg-[#003366] text-white hover:bg-slate-900 shadow-sm"
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            {showImporter ? "Ocultar Importador" : "Importar Acórdãos do TCU"}
-          </button>
-
-          <button 
-            id="btn-export-excel"
-            onClick={handleExportExcel}
-            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
-          >
-            <Download className="w-4 h-4" />
-            Exportar Excel
-          </button>
-
-          <button 
-            id="btn-export-pdf"
-            onClick={handleExportPDF}
-            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-[#003366] hover:text-[#003366] transition duration-200 shadow-xs"
-          >
-            <Printer className="w-4 h-4" />
-            Imprimir Relatório (PDF)
-          </button>
-        </div>
-      </div>
 
       {/* TCU Acórdão Importer Section - Premium Bento Box */}
       {showImporter && (
@@ -1923,9 +1951,9 @@ export default function TcuModule({
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-all-normal">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-150">
             {/* Header */}
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+            <div className="p-4 bg-[#003366] text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-amber-400">
+                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-blue-200">
                   <FileText className="w-4 h-4 stroke-[2.5]" />
                 </div>
                 <div>
@@ -2573,34 +2601,6 @@ export default function TcuModule({
       {/* Comunicações Section - Fully Loaded Module with CSV Sync, Stats & CRUD */}
       {tcuActiveSection === "comunicacoes" && (
         <div className="space-y-6 animate-fade-in">
-          {/* Header Banner */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
-            <div>
-              <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-                <Mail className="w-6 h-6 text-[#003366]" />
-                Comunicações Eletrônicas
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5 pt-0.5">Tribunal de Contas da União - TCU</p>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setShowComImporter(!showComImporter);
-                  setParsedComItems(null);
-                  setComImportMessage(null);
-                }}
-                className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  showComImporter
-                    ? "bg-slate-800 text-white shadow-xs"
-                    : "bg-[#003366] text-white hover:bg-slate-900 shadow-sm"
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                {showComImporter ? "Ocultar Sincronizador" : "Sincronizar Arquivo (CSV)"}
-              </button>
-            </div>
-          </div>
 
           {/* Importer Panel */}
           {showComImporter && (
@@ -2719,9 +2719,10 @@ export default function TcuModule({
             const currentYearInt = parseInt(comAnoFilter);
             const totalForSelectedYear = allComs.filter(x => comAnoFilter === "TODOS" || x.ANO === currentYearInt);
             const totalComsCount = totalForSelectedYear.length;
-            const respondedCount = totalForSelectedYear.filter(x => !!x.DATA_RESPOSTA && x.DATA_RESPOSTA.trim() !== "").length;
-            const pendingCount = totalComsCount - respondedCount;
-            const responseRate = totalComsCount > 0 ? ((respondedCount / totalComsCount) * 100).toFixed(1) : "0.0";
+            const respondedCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && !!x.DATA_RESPOSTA && x.DATA_RESPOSTA.trim() !== "").length;
+            const pendingCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && (!x.DATA_RESPOSTA || x.DATA_RESPOSTA.trim() === "")).length;
+            const totalRequiredCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false).length;
+            const responseRate = totalRequiredCount > 0 ? ((respondedCount / totalRequiredCount) * 100).toFixed(1) : "100.0";
 
             // Unidade Emitente counts for breakdown
             const emitentes: { [key: string]: number } = {};
@@ -2741,11 +2742,14 @@ export default function TcuModule({
                 (item.UNIDADE_EMITENTE && item.UNIDADE_EMITENTE.toLowerCase().includes(term));
 
               const matchesUnidade = comUnidadeFilter === "TODOS" || item.UNIDADE_EMITENTE === comUnidadeFilter;
+              
+              const carece = item.CARECE_RESPOSTA !== false;
               const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
               const matchesRespondido = 
                 comRespondidoFilter === "TODOS" || 
-                (comRespondidoFilter === "RESPONDIDO" && hasResponse) ||
-                (comRespondidoFilter === "PENDENTE" && !hasResponse);
+                (comRespondidoFilter === "RESPONDIDO" && carece && hasResponse) ||
+                (comRespondidoFilter === "PENDENTE" && carece && !hasResponse) ||
+                (comRespondidoFilter === "NAO_EXIGIDO" && !carece);
 
               return matchesSearch && matchesUnidade && matchesRespondido;
             });
@@ -2759,11 +2763,14 @@ export default function TcuModule({
                 if (!statsMap[dest]) {
                   statsMap[dest] = { total: 0, responded: 0, pending: 0 };
                 }
+                const carece = com.CARECE_RESPOSTA !== false;
                 statsMap[dest].total++;
-                if (com.DATA_RESPOSTA && com.DATA_RESPOSTA.trim() !== "") {
-                  statsMap[dest].responded++;
-                } else {
-                  statsMap[dest].pending++;
+                if (carece) {
+                  if (com.DATA_RESPOSTA && com.DATA_RESPOSTA.trim() !== "") {
+                    statsMap[dest].responded++;
+                  } else {
+                    statsMap[dest].pending++;
+                  }
                 }
               });
 
@@ -3115,7 +3122,6 @@ export default function TcuModule({
                           ))}
                         </select>
                       </div>
-
                       <div>
                         <select
                           value={comRespondidoFilter}
@@ -3125,34 +3131,33 @@ export default function TcuModule({
                           <option value="TODOS">Todos os Status de Resposta</option>
                           <option value="RESPONDIDO">Respondidos (Concluídos)</option>
                           <option value="PENDENTE">Pendentes (Não Respondidos)</option>
+                          <option value="NAO_EXIGIDO">Não Precisa de Resposta</option>
                         </select>
                       </div>
 
                       <div className="flex items-center justify-end text-slate-400 font-mono text-[10px] pr-2">
-                        Retornou {finalFiltered.length} registros • Rolagem lateral e vertical ativas
+                        Retornou {finalFiltered.length} registros • Rolagem vertical ativa
                       </div>
                     </div>
 
                     {/* Highly Formatted Scrollable list table - SCROLLABLE WITHOUT PAGES */}
-                    <div className="overflow-x-auto overflow-y-auto max-h-[500px] rounded-xl border border-slate-200 mt-4 custom-com-scroll-container bg-slate-50/20">
-                      <table className="w-full text-left border-collapse text-xs table-layout-fixed min-w-[1250px]">
-                        <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs font-mono text-[9px] uppercase tracking-wider text-slate-500">
+                    <div className="overflow-y-auto max-h-[500px] rounded-xl border border-slate-200 mt-4 bg-slate-50/20">
+                      <table className="w-full text-left border-collapse text-[10.5px] table-auto">
+                        <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs font-mono text-[8px] uppercase tracking-wider text-slate-500">
                           <tr>
-                            <th className="p-3 font-extrabold w-[160px] bg-slate-100">Ofício / Comunicação</th>
-                            <th className="p-3 font-extrabold w-[110px] bg-slate-100">Emitente TCU</th>
-                            <th className="p-3 font-extrabold w-[260px] bg-slate-100">Destinatário MTE (Unidade)</th>
-                            <th className="p-3 font-extrabold w-[210px] bg-slate-100">Contato Vinculado</th>
-                            <th className="p-3 font-extrabold w-[155px] bg-slate-100">Processo MTE</th>
-                            <th className="p-3 font-extrabold w-[100px] bg-slate-100 text-center">Expedição</th>
-                            <th className="p-3 font-extrabold w-[120px] bg-slate-100 text-center">Resposta Salva</th>
-                            <th className="p-3 font-extrabold w-[150px] bg-slate-100 text-center">Situação</th>
-                            <th className="p-3 font-extrabold w-[130px] bg-slate-100 text-center no-print">Ações</th>
+                            <th className="p-2.5 font-extrabold bg-slate-100 w-10 text-center no-print"></th>
+                            <th className="p-2.5 font-extrabold bg-slate-100">Ofício / Comunicação</th>
+                            <th className="p-2.5 font-extrabold bg-slate-100">Destinatário MTE</th>
+                            <th className="p-2.5 font-extrabold bg-slate-100 text-center">Processo</th>
+                            <th className="p-2.5 font-extrabold bg-slate-100 text-center">Expedição</th>
+                            <th className="p-2.5 font-extrabold bg-slate-100 text-center" title="Carece/exige resposta oficial da assessoria (S/N)">Resposta (S/N)</th>
+                            <th className="p-2.5 font-extrabold bg-slate-100 text-center">Situação</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200 bg-white">
                           {finalFiltered.length === 0 ? (
                             <tr>
-                              <td colSpan={9} className="p-16 text-center text-slate-400 space-y-2">
+                              <td colSpan={7} className="p-16 text-center text-slate-400 space-y-2">
                                 <MessageSquare className="w-10 h-10 text-slate-300 mx-auto animate-bounce" />
                                 <p className="font-bold text-slate-700">Nenhuma comunicação localizada</p>
                                 <p className="text-[11px] text-slate-400 max-w-md mx-auto">
@@ -3162,61 +3167,150 @@ export default function TcuModule({
                             </tr>
                           ) : (
                             finalFiltered.map((item) => {
+                              const isExpanded = comExpandedRow === item.KEY;
+                              const carece = item.CARECE_RESPOSTA !== false;
                               const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
+                              
+                              let situacaoText = "NÃO PRECISA DE RESPOSTA";
+                              let situacaoStyle = "bg-slate-50 text-slate-600 border-slate-200";
+                              let dotStyle = "bg-slate-450";
+                              
+                              if (carece) {
+                                if (hasResponse) {
+                                  situacaoText = "RESPONDIDA";
+                                  situacaoStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                                  dotStyle = "bg-emerald-500";
+                                } else {
+                                  situacaoText = "PENDENTE";
+                                  situacaoStyle = "bg-amber-50 text-amber-800 border-amber-200 animate-pulse";
+                                  dotStyle = "bg-amber-500";
+                                }
+                              }
+
                               return (
-                                <tr key={item.KEY || `${item.COMUNICACAO}-${item.ANO}`} className="hover:bg-blue-50/15 border-b border-slate-100 transition duration-100">
-                                  <td className="p-3 font-bold text-[#003366] whitespace-nowrap">
-                                    {item.COMUNICACAO}
-                                  </td>
-                                  <td className="p-3">
-                                    <span className="bg-blue-50 border border-blue-100 text-[#003366] text-[9px] font-black uppercase px-2 py-0.5 rounded font-mono">
-                                      {item.UNIDADE_EMITENTE}
-                                    </span>
-                                  </td>
-                                  <td className="p-3 font-bold text-slate-800 text-[11px]" title={item.DESTINATARIO}>
-                                    {item.DESTINATARIO}
-                                  </td>
-                                  <td className="p-3 text-slate-600 font-medium" title={item.CONTATO}>
-                                    {item.CONTATO || <span className="text-slate-350 italic">Alessandro Barbosa</span>}
-                                  </td>
-                                  <td className="p-3 font-mono text-[11px] text-slate-600 whitespace-nowrap">
-                                    {item.PROCESSO || <span className="text-slate-350 italic">Não associado</span>}
-                                  </td>
-                                  <td className="p-3 text-slate-500 text-center whitespace-nowrap font-mono font-medium">
-                                    {item.DATA_EXPEDICAO}
-                                  </td>
-                                  <td className="p-3 text-center whitespace-nowrap">
-                                    {hasResponse ? (
-                                      <span className="font-mono font-bold text-slate-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">{item.DATA_RESPOSTA}</span>
-                                    ) : (
-                                      <span className="text-slate-300 italic font-mono">-</span>
-                                    )}
-                                  </td>
-                                  <td className="p-3 text-center whitespace-nowrap">
-                                    {hasResponse ? (
-                                      <span className="bg-emerald-50 text-emerald-800 text-[9px] font-bold px-2.5 py-1 rounded-full inline-flex items-center gap-1 border border-emerald-200">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                        Saneado / Finalizado
-                                      </span>
-                                    ) : (
-                                      <span className="bg-amber-50 text-amber-800 text-[9px] font-black px-2.5 py-1 rounded-full inline-flex items-center gap-1 animate-pulse border border-amber-200">
-                                        <Clock className="w-3.5 h-3.5 text-amber-600" />
-                                        Resposta Pendente
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="p-3 text-center whitespace-nowrap no-print">
-                                    <div className="inline-flex gap-1.5">
-                                      <button
-                                        onClick={() => triggerComEdit(item)}
-                                        className="p-1 px-3 bg-[#003366] hover:bg-slate-900 text-white rounded-lg font-bold tracking-wide text-[10px] transition duration-150 shadow-2xs"
-                                        title="Registrar resposta oficial ou editar campos"
+                                <React.Fragment key={item.KEY || `${item.COMUNICACAO}-${item.ANO}`}>
+                                  {/* Row Item */}
+                                  <tr className={`hover:bg-blue-50/15 border-b border-slate-100 transition duration-100 ${isExpanded ? "bg-slate-50/50" : ""}`}>
+                                    
+                                    {/* Expand toggle icon */}
+                                    <td className="p-2.5 text-center no-print">
+                                      <button 
+                                        onClick={() => setComExpandedRow(isExpanded ? null : item.KEY)}
+                                        className="text-slate-400 hover:text-[#003366] hover:bg-slate-100 p-1.5 rounded-lg transition"
                                       >
-                                        Responder
+                                        {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[#003366] stroke-[2.5]" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
                                       </button>
-                                    </div>
-                                  </td>
-                                </tr>
+                                    </td>
+
+                                    {/* Ofício/Comunicação */}
+                                    <td className="p-2.5 font-bold text-[#003366]">
+                                      <span 
+                                        className="cursor-pointer hover:underline text-xs"
+                                        onClick={() => setComExpandedRow(isExpanded ? null : item.KEY)}
+                                      >
+                                        {item.COMUNICACAO}
+                                      </span>
+                                    </td>
+
+                                    {/* Destinatário */}
+                                    <td className="p-2.5 font-semibold text-slate-800 truncate max-w-[280px]" title={item.DESTINATARIO}>
+                                      {item.DESTINATARIO}
+                                    </td>
+
+                                    {/* Processo */}
+                                    <td className="p-2.5 font-mono text-[10px] text-slate-600 text-center whitespace-nowrap">
+                                      {item.PROCESSO || <span className="text-slate-350 italic">Não associado</span>}
+                                    </td>
+
+                                    {/* Expedição */}
+                                    <td className="p-2.5 text-slate-500 text-center whitespace-nowrap font-mono font-medium">
+                                      {item.DATA_EXPEDICAO}
+                                    </td>
+
+                                    {/* Resposta (S/N) checkbox */}
+                                    <td className="p-2.5 text-center">
+                                      <input
+                                        type="checkbox"
+                                        checked={carece}
+                                        onChange={() => toggleCareceResposta(item)}
+                                        className="w-3.5 h-3.5 text-[#003366] border-slate-355 rounded-sm focus:ring-[#003366] cursor-pointer"
+                                        title="Marcar se esta comunicação exige resposta oficial da assessoria (Carece de Resposta)"
+                                      />
+                                    </td>
+
+                                    {/* Situação */}
+                                    <td className="p-2.5 text-center whitespace-nowrap">
+                                      <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 border ${situacaoStyle}`}>
+                                        <span className={`w-1 h-1 rounded-full ${dotStyle}`} />
+                                        {situacaoText}
+                                      </span>
+                                    </td>
+
+                                  </tr>
+
+                                  {/* Detail panel expansion */}
+                                  {isExpanded && (
+                                    <tr>
+                                      <td colSpan={7} className="bg-slate-50/30 px-6 py-4.5 border-b border-slate-200 no-print">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                          
+                                          {/* Emitente block */}
+                                          <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+                                            <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+                                              <Database className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                              <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider leading-none mb-1">Emitente TCU</span>
+                                              <span className="text-xs text-[#003366] font-bold block">{item.UNIDADE_EMITENTE}</span>
+                                            </div>
+                                          </div>
+
+                                          {/* Contato block */}
+                                          <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+                                            <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+                                              <Users className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                              <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider leading-none mb-1">Contato Vinculado</span>
+                                              <span className="text-xs text-slate-700 font-bold block truncate max-w-[200px]" title={item.CONTATO || "Alessandro Barbosa"}>
+                                                {item.CONTATO || "Alessandro Barbosa"}
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {/* Data da Resposta / Ação Responder block */}
+                                          <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                              <div className={`p-2 rounded-lg ${hasResponse ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-400"}`}>
+                                                <Check className="w-4 h-4" />
+                                              </div>
+                                              <div>
+                                                <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider leading-none mb-1">Data da Resposta</span>
+                                                <span className="text-xs text-slate-800 font-mono font-bold block">
+                                                  {hasResponse ? item.DATA_RESPOSTA : "Sem data registrada"}
+                                                </span>
+                                              </div>
+                                            </div>
+
+                                            <button
+                                              disabled={!carece}
+                                              onClick={() => triggerComEdit(item)}
+                                              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition shadow-2xs ${
+                                                carece
+                                                  ? "bg-[#003366] hover:bg-slate-900 text-white cursor-pointer"
+                                                  : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                                              }`}
+                                              title={carece ? "Registrar data de resposta oficial ou editar campos" : "Esta comunicação não carece de resposta"}
+                                            >
+                                              Responder
+                                            </button>
+                                          </div>
+
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
                               );
                             })
                           )}
@@ -3441,7 +3535,7 @@ export default function TcuModule({
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Data de Resposta (Saneamento)</label>
+                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Data da Resposta</label>
                       <input
                         type="text"
                         placeholder="DD/MM/AAAA ou em branco se pendente"
@@ -3450,6 +3544,19 @@ export default function TcuModule({
                         onChange={(e) => setEditComResposta(e.target.value)}
                       />
                     </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1.5">
+                    <input
+                      type="checkbox"
+                      id="edit-com-carece"
+                      checked={editComCarece}
+                      onChange={(e) => setEditComCarece(e.target.checked)}
+                      className="w-4 h-4 text-[#003366] border-slate-350 rounded-sm focus:ring-[#003366] cursor-pointer"
+                    />
+                    <label htmlFor="edit-com-carece" className="text-[11px] font-bold text-slate-700 cursor-pointer select-none">
+                      Esta comunicação carece/exige resposta oficial da assessoria
+                    </label>
                   </div>
                 </div>
 
@@ -3565,16 +3672,6 @@ export default function TcuModule({
 
         return (
           <div className="space-y-6 animate-fade-in no-print">
-            {/* Elegant Header Banner (Monitoramento-styled) */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-[#003366]" />
-                  Acompanhamento de TCE
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">Tribunal de Contas da União - TCU</p>
-              </div>
-            </div>
 
             {/* TWO ELEGANT PRIMARY NAVIGATION SWITCHERS (Bento Card Style) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4338,7 +4435,7 @@ export default function TcuModule({
                 </p>
                 <ol className="list-decimal pl-5 text-[11px] text-slate-600 space-y-1 font-sans">
                   <li>Clique em <strong>"Abrir em nova aba"</strong> (no cabeçalho do portal) para isolar o sistema.</li>
-                  <li>Use o botão <strong>"Imprimir Relatório (PDF)"</strong> e salve como PDF no próprio navegador.</li>
+                  <li>Use o botão <strong>"Tentar Acionar Impressora do Navegador"</strong> abaixo para salvar em PDF.</li>
                 </ol>
               </div>
 

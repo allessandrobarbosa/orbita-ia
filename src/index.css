@@ -15,8 +15,9 @@
 
 /* Custom styling inspired by the Br-Gov / Federal Governo Federal styling */
 .gov-header {
-  background: linear-gradient(135deg, #091c33 0%, #002c5c 50%, #001c3d 100%);
-  border-bottom: 3.5px solid #d4af37; /* Rich Gold */
+  background-color: #f0f6ff !important;
+  background-image: none !important;
+  border-bottom: 3.5px solid #003366 !important;
 }
 
 .gov-border-gold {
@@ -47,15 +48,19 @@
     color: black !important;
     font-size: 12pt;
   }
+
   .no-print {
     display: none !important;
   }
+
   .print-only {
     display: block !important;
   }
+
   .print-page-break {
     page-break-after: always;
   }
+
   .card {
     border: 1px solid #ccc !important;
     box-shadow: none !important;
@@ -65,18 +70,56 @@
 
 /* custom scrollbars */
 ::-webkit-scrollbar {
-  width: 12px; /* Increased vertical thickness for robust drag/touch target */
-  height: 10px; /* Thicker horizontal targets */
+  width: 12px;
+  /* Increased vertical thickness for robust drag/touch target */
+  height: 10px;
+  /* Thicker horizontal targets */
 }
+
 ::-webkit-scrollbar-track {
-  background: #f1f5f9; /* Clear Slate track for easy boundary tracking */
+  background: #f1f5f9;
+  /* Clear Slate track for easy boundary tracking */
   border-radius: 6px;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: #94a3b8; /* Rich slate thumb for crisp contrast */
-  border: 2.5px solid #f1f5f9; /* Generously sized inset borders */
+  background: #94a3b8;
+  /* Rich slate thumb for crisp contrast */
+  border: 2.5px solid #f1f5f9;
+  /* Generously sized inset borders */
   border-radius: 6px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569; /* Darker slate hover effect */
+  background: #475569;
+  /* Darker slate hover effect */
+}
+
+/* Flat Gov.br navigation buttons */
+.nav-btn-inactive {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #003366 !important;
+  border: 1.5px solid #003366 !important;
+  box-shadow: none !important;
+  transition: all 0.15s ease-in-out !important;
+  transform: none !important;
+}
+
+.nav-btn-inactive:hover {
+  background-color: #e6f1fe !important;
+  background-image: none !important;
+  border-color: #003366 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.nav-btn-active {
+  background-color: #003366 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: 1.5px solid #003366 !important;
+  box-shadow: none !important;
+  transition: all 0.15s ease-in-out !important;
+  transform: none !important;
 }

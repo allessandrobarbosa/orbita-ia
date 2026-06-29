@@ -121,7 +121,7 @@ export default function RolModule({ rol, onAddRol, onUpdateRol, onDeleteRol }: R
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 justify-start">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="bg-[#003366] text-amber-400 font-extrabold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded">
+            <span className="bg-[#003366]/10 text-[#003366] border border-[#003366]/20 font-extrabold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded">
               Conformidade IN 84/TCU
             </span>
             <span className="text-[10px] text-slate-400 font-mono">ESTADO: COMPILADO</span>
@@ -307,7 +307,7 @@ export default function RolModule({ rol, onAddRol, onUpdateRol, onDeleteRol }: R
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-lg w-full max-w-lg overflow-hidden border shadow-xl flex flex-col">
             
-            <div className="bg-emerald-800 px-5 py-4 text-white flex justify-between items-center">
+            <div className="bg-[#003366] px-5 py-4 text-white flex justify-between items-center">
               <div>
                 <h3 className="text-sm font-bold font-display uppercase tracking-wider">Vincular Dirigente - IN 84/TCU</h3>
               </div>

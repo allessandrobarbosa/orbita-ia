@@ -133,6 +133,7 @@ export interface ComunicacaoDemand {
   DATA_EXPEDICAO: string; // DD/MM/YYYY
   DATA_RESPOSTA: string; // DD/MM/YYYY or filled
   ANO: number; // Year extracted ofício (e.g. 2022, 2023, etc)
+  CARECE_RESPOSTA?: boolean; // If this communication requires a response
   ULTIMA_ATUALIZACAO?: string; // Metadata time
 }
 

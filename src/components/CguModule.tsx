@@ -1184,35 +1184,18 @@ export default function CguModule({
               {showImporter ? "Ocultar Importador" : "Importar Planilha CGU (.xlsx)"}
             </button>
           ) : (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  setShowReportsImporter(!showReportsImporter);
-                  setReportsImportError(null);
-                  setReportsImportSuccessMessage(null);
-                  setParsedReportItems(null);
-                }}
-                className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  showReportsImporter
-                    ? "bg-slate-800 text-white shadow-xs"
-                    : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                {showReportsImporter ? "Ocultar Importador" : "Importar Relatórios CGU (.xlsx)"}
-              </button>
-
+            <>
               {onSyncCguReports && (
                 <button
                   onClick={handleSyncReports}
                   disabled={isSyncingReports}
-                  className={`px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 shadow-sm cursor-pointer`}
+                  className={`px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 shadow-sm cursor-pointer`}
                 >
                   <RefreshCw className={`w-4 h-4 ${isSyncingReports ? "animate-spin" : ""}`} />
-                  {isSyncingReports ? "Sincronizando..." : "Sincronizar com Dados Abertos"}
+                  {isSyncingReports ? "Sincronizando..." : "Sincronizar Relatórios"}
                 </button>
               )}
-            </div>
+            </>
           )}
 
           <button
@@ -1222,14 +1205,6 @@ export default function CguModule({
           >
             <Download className="w-4 h-4" />
             Exportar Excel
-          </button>
-
-          <button
-            onClick={handlePrintPDF}
-            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-[#003366] hover:text-[#003366] transition duration-200 shadow-xs"
-          >
-            <Printer className="w-4 h-4" />
-            Imprimir (PDF)
           </button>
         </div>
       </div>
@@ -1256,7 +1231,7 @@ export default function CguModule({
               }`}
             >
               <div className="flex items-center gap-2.5">
-                <SubIcon className={`w-5 h-5 ${isActive ? "text-amber-400" : "text-slate-400"}`} />
+                <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
                 <div className="text-left">
                   <span className="block text-xs font-black uppercase tracking-wide leading-none">{subSection.label}</span>
                   <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{subSection.desc}</span>
@@ -2606,9 +2581,9 @@ export default function CguModule({
       {detailItem && (
         <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center z-50 p-4 no-print animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl overflow-hidden font-sans">
-            <div className="bg-slate-900 text-white p-5 flex items-center justify-between">
+            <div className="bg-[#003366] text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-[#003366]" />
+                <Building2 className="w-5 h-5 text-blue-200" />
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-wider">Dossiê Técnico CGU</h3>
                   <p className="text-[10px] text-slate-400 font-mono mt-0.5">Demanda: {detailItem.idTarefa}</p>

@@ -122,6 +122,7 @@ import RolModule from "./components/RolModule";
 import EticaModule from "./components/EticaModule";
 import SrteModule from "./components/SrteModule";
 import CguModule from "./components/CguModule";
+// import logoImg from "./assets/images/orbita_logo.png";
 
 import { 
   AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, 
@@ -991,35 +992,90 @@ export default function App() {
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased">
 
       {/* 1. Header Federal Government Layout */}
-      <header className="gov-header text-white border-b-2 gov-border-gold shadow-md no-print shrink-0">
-        <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-black tracking-tight font-display text-white" style={{ fontFamily: '"Outfit", sans-serif' }}>
-                  ÓRBITA-AECI
-                </h1>
-              </div>
-              <p className="text-[11px] text-slate-300/90 tracking-wide font-sans mt-1">Assessoria Especial de Controle Interno</p>
+      <header className="gov-header border-b-2 shadow-xs no-print shrink-0 font-sans">
+        <div className="max-w-7xl mx-auto px-5 py-3.5 flex flex-col md:flex-row items-center gap-6">
+          
+          {/* 1. Left Side: Flat Geometric Logo (GOV.BR Style) */}
+          <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-center md:justify-start">
+            <svg 
+              className="w-10 h-10 text-[#003366] shrink-0" 
+              viewBox="0 0 100 100" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Three Orbit Rings */}
+              <ellipse cx="50" cy="50" rx="38" ry="11" transform="rotate(30 50 50)" stroke="currentColor" strokeWidth="3.5" />
+              <ellipse cx="50" cy="50" rx="38" ry="11" transform="rotate(90 50 50)" stroke="currentColor" strokeWidth="3.5" />
+              <ellipse cx="50" cy="50" rx="38" ry="11" transform="rotate(150 50 50)" stroke="currentColor" strokeWidth="3.5" />
+              {/* Central nucleus */}
+              <circle cx="50" cy="50" r="7.5" fill="currentColor" />
+              {/* Electron nodes on the paths */}
+              <circle cx="21" cy="33.5" r="3.5" fill="currentColor" />
+              <circle cx="79" cy="66.5" r="3.5" fill="currentColor" />
+              <circle cx="50" cy="12" r="3.5" fill="currentColor" />
+            </svg>
+            <div className="text-left font-sans">
+              <h1 className="text-[#003366] text-base font-black tracking-tight leading-none uppercase">
+                ÓRBITA-AECI
+              </h1>
+              <p className="text-[#003366]/70 text-[9px] font-bold tracking-wide mt-1 leading-none uppercase">
+                AECI - ASSESSORIA ESPECIAL DE CONTROLE INTERNO
+              </p>
+              <span className="text-[#003366]/45 text-[8px] font-extrabold tracking-widest mt-1 block leading-none">
+                VERSÃO 2.6.0
+              </span>
             </div>
           </div>
 
-          {/* Interactive User Controller Dropdown */}
-          <div className="relative">
+          {/* 2. Middle/Left: Integrated Navigation Menu (aligned next to logo on desktop, rounded pills) */}
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 flex-1 w-full md:w-auto">
+            {[
+              { id: "dashboard", label: "INÍCIO", icon: LayoutDashboard, title: "Painel de Controle e Monitoramento" },
+              { id: "tcu", label: "TCU", icon: Database, title: "Tribunal de Contas da União" },
+              { id: "cgu", label: "CGU", icon: ShieldCheck, title: "Controladoria-Geral da União" },
+              { id: "etica", label: "ÉTICA", icon: ShieldAlert, title: "Comissão de Ética Coletiva" },
+              { id: "rol", label: "ROL", icon: Users, title: "Gestão do Rol de Responsáveis" },
+              { id: "srte", label: "STRES", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
+              { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
+            ].filter(link => hasModulePermission(link.id)).map((moduleLink) => {
+              const ModuleIcon = moduleLink.icon;
+              const isSelected = activeTab === moduleLink.id;
+              return (
+                <button
+                  key={moduleLink.id}
+                  onClick={() => {
+                    setActiveTab(moduleLink.id);
+                  }}
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
+                    isSelected
+                      ? "nav-btn-active shadow-sm"
+                      : "nav-btn-inactive hover:bg-slate-100"
+                  }`}
+                  title={moduleLink.title}
+                >
+                  <ModuleIcon className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-[#003366]"}`} />
+                  <span>{moduleLink.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 3. Right Side: Interactive User Controller Dropdown (pushed to far right via md:ml-auto) */}
+          <div className="relative shrink-0 w-full md:w-auto flex justify-center md:justify-end md:ml-auto">
             <button
               onClick={() => setShowUserDropdown(!showUserDropdown)}
-              className="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-slate-800/40 border border-white/10 hover:border-blue-400/40 transition cursor-pointer text-left focus:outline-hidden"
+              className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-[#003366]/30 hover:border-[#003366] bg-white hover:bg-[#e6f1fe] transition cursor-pointer text-left focus:outline-hidden shadow-2xs"
               id="btn-user-dropdown-toggle"
             >
               <div className="text-right hidden sm:block">
-                <span className="text-xs font-black block text-white tracking-tight">{currentUser.name}</span>
-                <span className="text-[10px] text-blue-300 font-bold block flex items-center gap-1 justify-end">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="text-[10px] font-black block text-[#003366] tracking-tight leading-none">{currentUser.name}</span>
+                <span className="text-[9px] text-[#003366]/70 font-bold block flex items-center gap-1 justify-end mt-1 leading-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                   {currentUser.badgeText}
                 </span>
               </div>
 
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs border-2 select-none uppercase ${currentUser.avatarColor}`}>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center font-extrabold text-[10px] border border-[#003366] bg-[#dbeafe] text-[#003366] select-none uppercase">
                 {currentUser.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
               </div>
             </button>
@@ -1069,7 +1125,6 @@ export default function App() {
                     </button>
                   )}
 
-
                   {/* Trancar com senha */}
                   <button
                     onClick={async () => {
@@ -1102,41 +1157,7 @@ export default function App() {
               </div>
             )}
           </div>
-        </div>
 
-        {/* 2. Primary Navigation Bar - Integrated into Header with Government Colors */}
-        <div className="border-t border-white/10 bg-black/20 py-3 px-5 no-print">
-          <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-extrabold uppercase text-slate-300/80 tracking-widest mr-3 hidden lg:inline">Navegação Integrada:</span>
-            {[
-              { id: "dashboard", label: "Início", icon: LayoutDashboard, title: "Painel de Controle e Monitoramento" },
-              { id: "tcu", label: "TCU", icon: Database, title: "Tribunal de Contas da União" },
-              { id: "cgu", label: "CGU", icon: ShieldCheck, title: "Controladoria-Geral da União" },
-              { id: "etica", label: "Ética", icon: ShieldAlert, title: "Comissão de Ética Coletiva" },
-              { id: "rol", label: "Rol", icon: Users, title: "Gestão do Rol de Responsáveis" },
-              { id: "srte", label: "STRES", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
-              { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
-            ].filter(link => hasModulePermission(link.id)).map((moduleLink) => {
-              const ModuleIcon = moduleLink.icon;
-              const isSelected = activeTab === moduleLink.id;
-              return (
-                <button
-                  key={moduleLink.id}
-                  onClick={() => {
-                    setActiveTab(moduleLink.id);
-                  }}
-                  className={`flex items-center gap-2.5 px-4 py-2 rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all border cursor-pointer ${isSelected
-                      ? "bg-[#1351b4] text-white border-[#1351b4] font-extrabold shadow-md shadow-blue-950/45 scale-102"
-                      : "bg-white/5 hover:bg-white/10 text-slate-100 border-white/10 hover:border-white/20"
-                    }`}
-                  title={moduleLink.title}
-                >
-                  <ModuleIcon className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-blue-300"}`} />
-                  <span>{moduleLink.label}</span>
-                </button>
-              );
-            })}
-          </div>
         </div>
       </header>
 

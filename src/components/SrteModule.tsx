@@ -589,7 +589,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             {/* Modal Header */}
             <div className="bg-[#003366] text-white px-6 py-4 flex justify-between items-center select-none shrink-0">
               <div className="flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-amber-400" />
+                <Building2 className="w-5 h-5 text-blue-200" />
                 <h3 className="font-extrabold text-sm font-display tracking-tight text-white">
                   Inteiro Teor — {selectedAcordao.TITULO}
                 </h3>
@@ -806,7 +806,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
               {/* Modal Header */}
               <div className="bg-[#1351b4] text-white px-6 py-4 flex justify-between items-center select-none shrink-0 border-b border-blue-700">
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-amber-400" />
+                  <Building2 className="w-5 h-5 text-blue-200" />
                   <h3 className="font-extrabold text-sm font-display tracking-tight text-white uppercase">
                     {title}
                   </h3>
