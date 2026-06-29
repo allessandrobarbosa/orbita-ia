@@ -229,4 +229,111 @@ export interface CguPublishedReport {
   ultimaAtualizacao?: string; // YYYY-MM-DD HH:MM
 }
 
+// Interfaces para Gestão de Contratos e Consumo (SRTE)
+export interface Contrato {
+  id: string;
+  srteId: string; // Referência para SuperintendenciaRegional.uf (ex: 'RJ', 'SP')
+  numero: string; // Ex: '12/2024'
+  tipo: string; // Ex: 'Vigilância', 'Limpeza', 'TI'
+  fornecedor: string;
+  valorTotal: number;
+  valorMensal: number;
+  inicioVigencia: string; // YYYY-MM-DD
+  fimVigencia: string; // YYYY-MM-DD
+  status: "Ativo" | "Encerrado" | "Suspenso";
+  objeto: string;
+}
+
+export interface ContratoConsumoMensal {
+  id: string;
+  contratoId: string;
+  mesAno: string; // MM/YYYY
+  valor: number;
+  variacao: number; // percentual de variação em relação ao mês anterior (ex: 5.4 ou -2.1)
+}
+
+// Interfaces para Gestão de Frota (SRTE)
+export interface Viatura {
+  id: string;
+  srteId: string; // Referência para SuperintendenciaRegional.uf (ex: 'RJ', 'SP')
+  placa: string;
+  marca: string;
+  modelo: string;
+  anoFabricacao: number;
+  chassi: string;
+  renavam: string;
+  alocacao: "Fiscalização" | "Administração";
+  kmAtual: number;
+  proximaRevisaoKm: number;
+  status: "Ativo" | "Manutenção" | "Inativo" | "Baixado";
+  destinacaoBaixa?: string; // Preenchido se status for 'Baixado'
+}
+
+export interface ViaturaAbastecimento {
+  id: string;
+  viaturaId: string;
+  data: string; // YYYY-MM-DD
+  litros: number;
+  km: number;
+  custo: number;
+}
+
+export interface ViaturaManutencao {
+  id: string;
+  viaturaId: string;
+  tipo: string; // Ex: 'Preventiva', 'Corretiva'
+  data: string; // YYYY-MM-DD
+  custo: number;
+  kmManutencao: number;
+  proximaRevisaoKm?: number;
+}
+
+// ======================================================
+// Interfaces para Rol de Responsáveis (IN 84/2020 TCU)
+// ======================================================
+
+export interface UnidadeRol {
+  id: string;
+  nome: string;
+  sigla: string;
+}
+
+// Dirigente = PESSOA (independente de cargo ou unidade)
+export interface Dirigente {
+  id: string;
+  nome: string;
+  cpf: string;   // Mascarado na UI (ex: XXX.848.518-XX)
+  email: string;
+  status: "Ativo" | "Inativo";
+}
+
+// DirigenteCargo = vínculo entre PESSOA e UNIDADE, com cargo e atos legais
+// Um dirigente pode ter múltiplos cargos (titular em SE + substituto no GM)
+export interface DirigenteCargo {
+  id: string;
+  dirigenteId: string;             // FK → Dirigente
+  unidadeId: string;               // FK → UnidadeRol
+  cargo: string;                   // ex: Ministro de Estado, Secretário-Executivo
+  tipoVinculo: "Titular" | "Substituto Legal";  // como foi designado nesta unidade
+  inicioExercicio: string;         // YYYY-MM-DD
+  fimExercicio?: string;           // YYYY-MM-DD vazio = vigente
+  atoNomeacao: string;             // Link DOU / Portaria de nomeação
+  atoExoneracao?: string;          // Link DOU / Portaria de exoneração (quando encerrado)
+  status: "Ativo" | "Encerrado";
+}
+
+export interface DirigenteEvento {
+  id: string;
+  dirigenteId: string;             // FK → Dirigente (Titular afastado)
+  cargoId: string;                 // FK → DirigenteCargo (qual cargo está sendo substituído)
+  dataInicio: string;              // YYYY-MM-DD
+  dataFim: string;                 // YYYY-MM-DD
+  motivo: "Férias" | "Licença Médica" | "Viagem Internacional" | "Exoneração";
+  atoAutorizacao: string;          // Link DOU ou atestado médico
+  substitutoId?: string;           // FK → Dirigente (substituto que assumiu)
+}
+
+
+
+
 

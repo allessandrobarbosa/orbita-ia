@@ -32,7 +32,9 @@ declare module 'express-session' {
 import { 
   AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, 
   ComunicacaoDemand, CguDemand, CguPublishedReport,
-  EticaMembro, EticaReuniao, EticaAta, EticaProcesso 
+  EticaMembro, EticaReuniao, EticaAta, EticaProcesso,
+  Contrato, ContratoConsumoMensal, Viatura, ViaturaAbastecimento, ViaturaManutencao,
+  UnidadeRol, Dirigente, DirigenteCargo, DirigenteEvento
 } from "./src/types";
 import { SEED_COMUNICACOES } from "./src/data/seed_comunicacoes";
 import { SEED_CGU } from "./src/data/seed_cgu";
@@ -856,6 +858,260 @@ const SEED_PROFILES = [
   }
 ];
 
+const SEED_UNIDADES_ROL: UnidadeRol[] = [
+  { id: "U-1", nome: "Gabinete do Ministro", sigla: "GM" },
+  { id: "U-2", nome: "Secretaria-Executiva", sigla: "SE" },
+  { id: "U-3", nome: "Assessoria Especial de Controle Interno", sigla: "AECI" },
+  { id: "U-4", nome: "Secretaria de Trabalho", sigla: "STRAB" },
+  { id: "U-5", nome: "Secretaria de Inspeção do Trabalho", sigla: "SIT" }
+];
+
+// Dirigentes = PESSOAS (sem vínculo direto de cargo/unidade)
+const SEED_DIRIGENTES: Dirigente[] = [
+  {
+    id: "D-1",
+    nome: "LUIZ MARINHO",
+    cpf: "XXX.848.518-XX",
+    email: "luiz.marinho@trabalho.gov.br",
+    status: "Ativo"
+  },
+  {
+    id: "D-2",
+    nome: "FRANCISCO MACENA DA SILVA",
+    cpf: "XXX.239.928-XX",
+    email: "chico.macena@trabalho.gov.br",
+    status: "Ativo"
+  }
+];
+
+// DirigenteCargo = vínculos de cargo por unidade
+// Francisco Macena é Titular na SE e também Substituto Legal no GM
+const SEED_DIRIGENTES_CARGOS: DirigenteCargo[] = [
+  {
+    id: "DC-1",
+    dirigenteId: "D-1",
+    unidadeId: "U-1",
+    cargo: "Ministro de Estado",
+    tipoVinculo: "Titular",
+    inicioExercicio: "2023-01-01",
+    atoNomeacao: "DECRETO DE 31 DE JANEIRO DE 2023 - DOU: https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    status: "Ativo"
+  },
+  {
+    id: "DC-2",
+    dirigenteId: "D-2",
+    unidadeId: "U-2",
+    cargo: "Secretário-Executivo",
+    tipoVinculo: "Titular",
+    inicioExercicio: "2023-01-03",
+    atoNomeacao: "Nomeação - Secretário Executivo Decreto s/nº de 11/01/2023 Publicado em 11/01/2023 | Edição: 8 A | Seção: 2 Extra A | Página: 1-2 | https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    status: "Ativo"
+  },
+  {
+    // Francisco Macena: também é Substituto Legal do Ministro (GM)
+    id: "DC-3",
+    dirigenteId: "D-2",
+    unidadeId: "U-1",
+    cargo: "Ministro de Estado Substituto",
+    tipoVinculo: "Substituto Legal",
+    inicioExercicio: "2023-01-03",
+    atoNomeacao: "Nomeação - Secretário Executivo Decreto s/nº de 11/01/2023 Publicado em 11/01/2023 | Edição: 8 A | Seção: 2 Extra A | Página: 1-2 | https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    status: "Ativo"
+  }
+];
+
+const SEED_DIRIGENTES_EVENTOS: DirigenteEvento[] = [
+  {
+    id: "DE-1",
+    dirigenteId: "D-1",
+    cargoId: "DC-1",
+    dataInicio: "2026-05-22",
+    dataFim: "2026-05-23",
+    motivo: "Viagem Internacional",
+    atoAutorizacao: "DECRETO DE 31 DE JANEIRO DE 2025 - DESPACHO DO PRESIDENTE DA REPÚBLICA: https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    substitutoId: "D-2"
+  },
+  {
+    id: "DE-2",
+    dirigenteId: "D-1",
+    cargoId: "DC-1",
+    dataInicio: "2026-06-06",
+    dataFim: "2026-06-12",
+    motivo: "Viagem Internacional",
+    atoAutorizacao: "DECRETO DE 31 DE JANEIRO DE 2025 - DESPACHO DO PRESIDENTE DA REPÚBLICA: file:///C:/Users/claudio.py/Downloads/Genebra.pdf",
+    substitutoId: "D-2"
+  }
+];
+
+const SEED_CONTRATOS: Contrato[] = [
+  {
+    id: "C-1",
+    srteId: "SP",
+    numero: "45/2023",
+    tipo: "Vigilância",
+    fornecedor: "Segurança Total Ltda",
+    valorTotal: 1200000.00,
+    valorMensal: 100000.00,
+    inicioVigencia: "2023-11-01",
+    fimVigencia: "2026-10-31",
+    status: "Ativo",
+    objeto: "Prestação de serviços continuados de vigilância armada e desarmada para a sede da SRTE-SP e Gerências Regionais."
+  },
+  {
+    id: "C-2",
+    srteId: "SP",
+    numero: "12/2024",
+    tipo: "Limpeza",
+    fornecedor: "LimpeBem Serviços Gerais",
+    valorTotal: 600000.00,
+    valorMensal: 50000.00,
+    inicioVigencia: "2024-08-01",
+    fimVigencia: "2026-07-31",
+    status: "Ativo",
+    objeto: "Serviços de limpeza, conservação e higienização com fornecimento de mão de obra e insumos."
+  },
+  {
+    id: "C-3",
+    srteId: "RJ",
+    numero: "88/2022",
+    tipo: "TI",
+    fornecedor: "Conecta Gov Soluções",
+    valorTotal: 2400000.00,
+    valorMensal: 200000.00,
+    inicioVigencia: "2022-09-01",
+    fimVigencia: "2027-08-31",
+    status: "Ativo",
+    objeto: "Suporte técnico local e remoto de infraestrutura de rede e servidores para a SRTE-RJ."
+  },
+  {
+    id: "C-4",
+    srteId: "RJ",
+    numero: "02/2025",
+    tipo: "Copa",
+    fornecedor: "Sabor do Brasil Refeições",
+    valorTotal: 180000.00,
+    valorMensal: 15000.00,
+    inicioVigencia: "2025-02-01",
+    fimVigencia: "2026-08-31",
+    status: "Ativo",
+    objeto: "Serviços continuados de copeiragem e fornecimento de lanches rápidos para eventos."
+  },
+  {
+    id: "C-5",
+    srteId: "DF",
+    numero: "15/2021",
+    tipo: "Vigilância",
+    fornecedor: "Sentinela do Planalto S.A.",
+    valorTotal: 3600000.00,
+    valorMensal: 300000.00,
+    inicioVigencia: "2021-06-01",
+    fimVigencia: "2026-09-30",
+    status: "Ativo",
+    objeto: "Vigilância patrimonial armada de postos de trabalho no Distrito Federal."
+  }
+];
+
+const SEED_CONTRATOS_CONSUMO: ContratoConsumoMensal[] = [
+  { id: "CC-1", contratoId: "C-1", mesAno: "04/2026", valor: 98000.00, variacao: 0 },
+  { id: "CC-2", contratoId: "C-1", mesAno: "05/2026", valor: 102000.00, variacao: 4.08 },
+  { id: "CC-3", contratoId: "C-1", mesAno: "06/2026", valor: 99500.00, variacao: -2.45 },
+  { id: "CC-4", contratoId: "C-2", mesAno: "04/2026", valor: 48000.00, variacao: 0 },
+  { id: "CC-5", contratoId: "C-2", mesAno: "05/2026", valor: 51200.00, variacao: 6.67 },
+  { id: "CC-6", contratoId: "C-2", mesAno: "06/2026", valor: 49800.00, variacao: -2.73 },
+  { id: "CC-7", contratoId: "C-3", mesAno: "04/2026", valor: 195000.00, variacao: 0 },
+  { id: "CC-8", contratoId: "C-3", mesAno: "05/2026", valor: 201000.00, variacao: 3.08 },
+  { id: "CC-9", contratoId: "C-3", mesAno: "06/2026", valor: 200500.00, variacao: -0.25 }
+];
+
+const SEED_VIATURAS: Viatura[] = [
+  {
+    id: "V-1",
+    srteId: "SP",
+    placa: "BRA2E19",
+    marca: "Toyota",
+    modelo: "Hilux CD 4x4 Diesel",
+    anoFabricacao: 2022,
+    chassi: "9BWAB459SJF020111",
+    renavam: "12839402911",
+    alocacao: "Fiscalização",
+    kmAtual: 49200,
+    proximaRevisaoKm: 50000,
+    status: "Ativo"
+  },
+  {
+    id: "V-2",
+    srteId: "SP",
+    placa: "DKW4512",
+    marca: "Chevrolet",
+    modelo: "Spin 1.8 Flex LTZ",
+    anoFabricacao: 2021,
+    chassi: "9BWAB459SJF020122",
+    renavam: "12839402912",
+    alocacao: "Administração",
+    kmAtual: 68100,
+    proximaRevisaoKm: 70000,
+    status: "Ativo"
+  },
+  {
+    id: "V-3",
+    srteId: "RJ",
+    placa: "RIO2B30",
+    marca: "Mitsubishi",
+    modelo: "L200 Triton Sport",
+    anoFabricacao: 2023,
+    chassi: "9BWAB459SJF020133",
+    renavam: "12839402913",
+    alocacao: "Fiscalização",
+    kmAtual: 24500,
+    proximaRevisaoKm: 25000,
+    status: "Ativo"
+  },
+  {
+    id: "V-4",
+    srteId: "RJ",
+    placa: "ABC1234",
+    marca: "Fiat",
+    modelo: "Cronos Drive 1.3",
+    anoFabricacao: 2020,
+    chassi: "9BWAB459SJF020144",
+    renavam: "12839402914",
+    alocacao: "Administração",
+    kmAtual: 85000,
+    proximaRevisaoKm: 85000,
+    status: "Baixado",
+    destinacaoBaixa: "Leilão administrativo nº 03/2025 de bens inservíveis. Lote arrematado pela empresa Recicla Metais."
+  },
+  {
+    id: "V-5",
+    srteId: "DF",
+    placa: "GDF0112",
+    marca: "Jeep",
+    modelo: "Compass Longitude 2.0 Turbodiesel",
+    anoFabricacao: 2022,
+    chassi: "9BWAB459SJF020155",
+    renavam: "12839402915",
+    alocacao: "Fiscalização",
+    kmAtual: 39500,
+    proximaRevisaoKm: 40000,
+    status: "Ativo"
+  }
+];
+
+const SEED_VIATURAS_ABASTECIMENTOS: ViaturaAbastecimento[] = [
+  { id: "A-1", viaturaId: "V-1", data: "2026-06-10", litros: 65, km: 48500, custo: 390.00 },
+  { id: "A-2", viaturaId: "V-1", data: "2026-06-25", litros: 60, km: 49200, custo: 360.00 },
+  { id: "A-3", viaturaId: "V-2", data: "2026-06-05", litros: 45, km: 67600, custo: 260.00 },
+  { id: "A-4", viaturaId: "V-2", data: "2026-06-20", litros: 48, km: 68100, custo: 278.40 },
+  { id: "A-5", viaturaId: "V-3", data: "2026-06-15", litros: 70, km: 23800, custo: 420.00 },
+  { id: "A-6", viaturaId: "V-3", data: "2026-06-28", litros: 68, km: 24500, custo: 408.00 }
+];
+
+const SEED_VIATURAS_MANUTENCOES: ViaturaManutencao[] = [
+  { id: "M-1", viaturaId: "V-1", tipo: "Preventiva (Revisão 40k)", data: "2025-10-15", custo: 1200.00, kmManutencao: 40100, proximaRevisaoKm: 50000 },
+  { id: "M-2", viaturaId: "V-2", tipo: "Corretiva (Troca Pastilhas de Freio)", data: "2026-03-22", custo: 680.00, kmManutencao: 65000 },
+  { id: "M-3", viaturaId: "V-3", tipo: "Preventiva (Revisão 20k)", data: "2025-12-05", custo: 1500.00, kmManutencao: 20050, proximaRevisaoKm: 25000 }
+];
+
 function migrateProcessTypes(data: any): boolean {
   if (!data || !Array.isArray(data.acordaos)) return false;
   let modified = false;
@@ -921,7 +1177,16 @@ function loadDatabase() {
       eticaMembros: SEED_ETICA_MEMBROS,
       eticaReunioes: SEED_ETICA_REUNIOES,
       eticaAtas: SEED_ETICA_ATAS,
-      eticaProcessos: SEED_ETICA_PROCESSOS
+      eticaProcessos: SEED_ETICA_PROCESSOS,
+      contratos: SEED_CONTRATOS,
+      contratosConsumoMensal: SEED_CONTRATOS_CONSUMO,
+      viaturas: SEED_VIATURAS,
+      viaturasAbastecimentos: SEED_VIATURAS_ABASTECIMENTOS,
+      viaturasManutencoes: SEED_VIATURAS_MANUTENCOES,
+      unidadesRol: SEED_UNIDADES_ROL,
+      dirigentes: SEED_DIRIGENTES,
+      dirigentesCargos: SEED_DIRIGENTES_CARGOS,
+      dirigentesEventos: SEED_DIRIGENTES_EVENTOS
     };
 
     // Also run migration on seed data to ensure it's diverse
@@ -990,6 +1255,42 @@ function loadDatabase() {
       data.eticaProcessos = SEED_ETICA_PROCESSOS;
       dataModified = true;
     }
+    if (!data.contratos) {
+      data.contratos = SEED_CONTRATOS;
+      dataModified = true;
+    }
+    if (!data.contratosConsumoMensal) {
+      data.contratosConsumoMensal = SEED_CONTRATOS_CONSUMO;
+      dataModified = true;
+    }
+    if (!data.viaturas) {
+      data.viaturas = SEED_VIATURAS;
+      dataModified = true;
+    }
+    if (!data.viaturasAbastecimentos) {
+      data.viaturasAbastecimentos = SEED_VIATURAS_ABASTECIMENTOS;
+      dataModified = true;
+    }
+    if (!data.viaturasManutencoes) {
+      data.viaturasManutencoes = SEED_VIATURAS_MANUTENCOES;
+      dataModified = true;
+    }
+    if (!data.unidadesRol) {
+      data.unidadesRol = SEED_UNIDADES_ROL;
+      dataModified = true;
+    }
+    if (!data.dirigentes) {
+      data.dirigentes = SEED_DIRIGENTES;
+      dataModified = true;
+    }
+    if (!data.dirigentesCargos) {
+      data.dirigentesCargos = SEED_DIRIGENTES_CARGOS;
+      dataModified = true;
+    }
+    if (!data.dirigentesEventos) {
+      data.dirigentesEventos = SEED_DIRIGENTES_EVENTOS;
+      dataModified = true;
+    }
 
     // Run database self-repair/migration of process types
     if (migrateProcessTypes(data)) {
@@ -1009,7 +1310,16 @@ function loadDatabase() {
       comissaoEtica: SEED_COMISSAO_ETICA,
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
-      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS
+      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
+      contratos: SEED_CONTRATOS,
+      contratosConsumoMensal: SEED_CONTRATOS_CONSUMO,
+      viaturas: SEED_VIATURAS,
+      viaturasAbastecimentos: SEED_VIATURAS_ABASTECIMENTOS,
+      viaturasManutencoes: SEED_VIATURAS_MANUTENCOES,
+      unidadesRol: SEED_UNIDADES_ROL,
+      dirigentes: SEED_DIRIGENTES,
+      dirigentesCargos: SEED_DIRIGENTES_CARGOS,
+      dirigentesEventos: SEED_DIRIGENTES_EVENTOS
     };
   }
 }
@@ -3020,7 +3330,22 @@ async function startServer() {
       comissaoEtica: SEED_COMISSAO_ETICA,
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
-      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS
+      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
+      users: SEED_PROFILES,
+      cgu: SEED_CGU,
+      cguReports: [],
+      eticaMembros: SEED_ETICA_MEMBROS,
+      eticaReunioes: SEED_ETICA_REUNIOES,
+      eticaAtas: SEED_ETICA_ATAS,
+      eticaProcessos: SEED_ETICA_PROCESSOS,
+      contratos: SEED_CONTRATOS,
+      contratosConsumoMensal: SEED_CONTRATOS_CONSUMO,
+      viaturas: SEED_VIATURAS,
+      viaturasAbastecimentos: SEED_VIATURAS_ABASTECIMENTOS,
+      viaturasManutencoes: SEED_VIATURAS_MANUTENCOES,
+      unidadesRol: SEED_UNIDADES_ROL,
+      dirigentes: SEED_DIRIGENTES,
+      dirigentesEventos: SEED_DIRIGENTES_EVENTOS
     };
     saveDatabase(defaultData);
     res.json({ success: true, message: "Banco de dados redefinido com sucesso para os dados padrão de fábrica." });
@@ -3084,6 +3409,382 @@ async function startServer() {
       }
     });
 
+  });
+
+  // ==========================================
+  // API GESTÃO DE CONTRATOS (SRTE)
+  // ==========================================
+  app.get("/api/contratos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.contratos || []);
+  });
+
+  app.get("/api/contratos/srte/:uf", (req, res) => {
+    const db = loadDatabase();
+    const uf = req.params.uf.toUpperCase();
+    const list = (db.contratos || []).filter((x: any) => x.srteId === uf);
+    res.json(list);
+  });
+
+  app.post("/api/contratos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as Contrato;
+    newItem.id = "C-" + Date.now();
+    if (!db.contratos) db.contratos = [];
+    db.contratos.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/contratos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.contratos.findIndex((x: any) => x.id === id);
+
+    if (index >= 0) {
+      db.contratos[index] = { ...db.contratos[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.contratos[index]);
+    } else {
+      res.status(404).json({ error: "Contrato não encontrado." });
+    }
+  });
+
+  app.delete("/api/contratos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.contratos = (db.contratos || []).filter((x: any) => x.id !== id);
+    db.contratosConsumoMensal = (db.contratosConsumoMensal || []).filter((x: any) => x.contratoId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  app.get("/api/contratos/:id/consumo", (req, res) => {
+    const db = loadDatabase();
+    const contratoId = req.params.id;
+    const list = (db.contratosConsumoMensal || []).filter((x: any) => x.contratoId === contratoId);
+    res.json(list);
+  });
+
+  app.post("/api/contratos/:id/consumo", (req, res) => {
+    const db = loadDatabase();
+    const contratoId = req.params.id;
+    const { mesAno, valor } = req.body;
+    if (!mesAno || valor === undefined) {
+      return res.status(400).json({ error: "Mês/Ano e Valor são obrigatórios." });
+    }
+
+    if (!db.contratosConsumoMensal) db.contratosConsumoMensal = [];
+
+    // Calculate variation
+    const currentConsumos = db.contratosConsumoMensal
+      .filter((x: any) => x.contratoId === contratoId)
+      .sort((a: any, b: any) => {
+        const [mA, yA] = a.mesAno.split("/").map(Number);
+        const [mB, yB] = b.mesAno.split("/").map(Number);
+        return (yA - yB) * 12 + (mA - mB);
+      });
+
+    let variacao = 0;
+    if (currentConsumos.length > 0) {
+      const lastVal = currentConsumos[currentConsumos.length - 1].valor;
+      if (lastVal > 0) {
+        variacao = parseFloat((((valor - lastVal) / lastVal) * 100).toFixed(2));
+      }
+    }
+
+    const newItem: ContratoConsumoMensal = {
+      id: "CC-" + Date.now(),
+      contratoId,
+      mesAno,
+      valor: Number(valor),
+      variacao
+    };
+
+    db.contratosConsumoMensal.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.delete("/api/contratos/consumo/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.contratosConsumoMensal = (db.contratosConsumoMensal || []).filter((x: any) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  // ==========================================
+  // API GESTÃO DE FROTA (SRTE)
+  // ==========================================
+  app.get("/api/viaturas", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.viaturas || []);
+  });
+
+  app.get("/api/viaturas/srte/:uf", (req, res) => {
+    const db = loadDatabase();
+    const uf = req.params.uf.toUpperCase();
+    const list = (db.viaturas || []).filter((x: any) => x.srteId === uf);
+    res.json(list);
+  });
+
+  app.post("/api/viaturas", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as Viatura;
+    newItem.id = "V-" + Date.now();
+    if (!db.viaturas) db.viaturas = [];
+    db.viaturas.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/viaturas/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.viaturas.findIndex((x: any) => x.id === id);
+
+    if (index >= 0) {
+      db.viaturas[index] = { ...db.viaturas[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.viaturas[index]);
+    } else {
+      res.status(404).json({ error: "Viatura não encontrada." });
+    }
+  });
+
+  app.delete("/api/viaturas/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.viaturas = (db.viaturas || []).filter((x: any) => x.id !== id);
+    db.viaturasAbastecimentos = (db.viaturasAbastecimentos || []).filter((x: any) => x.viaturaId !== id);
+    db.viaturasManutencoes = (db.viaturasManutencoes || []).filter((x: any) => x.viaturaId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  app.get("/api/viaturas/:id/abastecimentos", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const list = (db.viaturasAbastecimentos || []).filter((x: any) => x.viaturaId === viaturaId);
+    res.json(list);
+  });
+
+  app.post("/api/viaturas/:id/abastecimentos", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const newItem = req.body as ViaturaAbastecimento;
+    newItem.id = "A-" + Date.now();
+    newItem.viaturaId = viaturaId;
+    
+    if (!db.viaturasAbastecimentos) db.viaturasAbastecimentos = [];
+    db.viaturasAbastecimentos.unshift(newItem);
+    
+    // Update vehicle mileage if higher
+    const viatIdx = (db.viaturas || []).findIndex((x: any) => x.id === viaturaId);
+    if (viatIdx >= 0 && newItem.km > db.viaturas[viatIdx].kmAtual) {
+      db.viaturas[viatIdx].kmAtual = newItem.km;
+    }
+    
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.get("/api/viaturas/:id/manutencoes", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const list = (db.viaturasManutencoes || []).filter((x: any) => x.viaturaId === viaturaId);
+    res.json(list);
+  });
+
+  app.post("/api/viaturas/:id/manutencoes", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const newItem = req.body as ViaturaManutencao;
+    newItem.id = "M-" + Date.now();
+    newItem.viaturaId = viaturaId;
+
+    if (!db.viaturasManutencoes) db.viaturasManutencoes = [];
+    db.viaturasManutencoes.unshift(newItem);
+
+    // Update vehicle mileage and next review if provided
+    const viatIdx = (db.viaturas || []).findIndex((x: any) => x.id === viaturaId);
+    if (viatIdx >= 0) {
+      if (newItem.kmManutencao > db.viaturas[viatIdx].kmAtual) {
+        db.viaturas[viatIdx].kmAtual = newItem.kmManutencao;
+      }
+      if (newItem.proximaRevisaoKm && newItem.proximaRevisaoKm > db.viaturas[viatIdx].proximaRevisaoKm) {
+        db.viaturas[viatIdx].proximaRevisaoKm = newItem.proximaRevisaoKm;
+      }
+    }
+
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  // ==========================================
+  // API ROL DE RESPONSÁVEIS (IN 84/2020 TCU)
+  // ==========================================
+
+  // --- Unidades ---
+  app.get("/api/unidades-rol", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.unidadesRol || []);
+  });
+
+  app.post("/api/unidades-rol", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as UnidadeRol;
+    newItem.id = "U-" + Date.now();
+    if (!db.unidadesRol) db.unidadesRol = [];
+    db.unidadesRol.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/unidades-rol/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const idx = (db.unidadesRol || []).findIndex((x: any) => x.id === id);
+    if (idx >= 0) {
+      db.unidadesRol[idx] = { ...db.unidadesRol[idx], ...req.body };
+      saveDatabase(db);
+      res.json(db.unidadesRol[idx]);
+    } else {
+      res.status(404).json({ error: "Unidade não encontrada." });
+    }
+  });
+
+  app.delete("/api/unidades-rol/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.unidadesRol = (db.unidadesRol || []).filter((x: any) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  // --- Dirigentes (PESSOAS) ---
+  app.get("/api/dirigentes", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.dirigentes || []);
+  });
+
+  app.post("/api/dirigentes", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as Dirigente;
+    newItem.id = "D-" + Date.now();
+    if (!db.dirigentes) db.dirigentes = [];
+    db.dirigentes.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/dirigentes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.dirigentes.findIndex((x: any) => x.id === id);
+    if (index >= 0) {
+      db.dirigentes[index] = { ...db.dirigentes[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.dirigentes[index]);
+    } else {
+      res.status(404).json({ error: "Dirigente não localizado." });
+    }
+  });
+
+  app.delete("/api/dirigentes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.dirigentes = (db.dirigentes || []).filter((x: any) => x.id !== id);
+    db.dirigentesCargos = (db.dirigentesCargos || []).filter((x: any) => x.dirigenteId !== id);
+    db.dirigentesEventos = (db.dirigentesEventos || []).filter((x: any) => x.dirigenteId !== id && x.substitutoId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  // --- Cargos (vínculos dirigente ⇢ unidade) ---
+  app.get("/api/dirigentes/cargos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.dirigentesCargos || []);
+  });
+
+  app.post("/api/dirigentes/cargos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as DirigenteCargo;
+    newItem.id = "DC-" + Date.now();
+    if (!db.dirigentesCargos) db.dirigentesCargos = [];
+    db.dirigentesCargos.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.put("/api/dirigentes/cargos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = (db.dirigentesCargos || []).findIndex((x: any) => x.id === id);
+    if (index >= 0) {
+      db.dirigentesCargos[index] = { ...db.dirigentesCargos[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.dirigentesCargos[index]);
+    } else {
+      res.status(404).json({ error: "Cargo não localizado." });
+    }
+  });
+
+  app.delete("/api/dirigentes/cargos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.dirigentesCargos = (db.dirigentesCargos || []).filter((x: any) => x.id !== id);
+    db.dirigentesEventos = (db.dirigentesEventos || []).filter((x: any) => x.cargoId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+
+  // --- Eventos de Gestão (Afastamentos) ---
+  app.get("/api/dirigentes/eventos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.dirigentesEventos || []);
+  });
+
+  app.post("/api/dirigentes/eventos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body as DirigenteEvento;
+    newItem.id = "DE-" + Date.now();
+    if (!db.dirigentesEventos) db.dirigentesEventos = [];
+
+    // Regra de Negócio: Exoneração encerra o CARGO específico e define status do dirigente
+    if (newItem.motivo === "Exoneração") {
+      // Encerra o cargo correspondente
+      const cIdx = (db.dirigentesCargos || []).findIndex((x: any) => x.id === newItem.cargoId);
+      if (cIdx >= 0) {
+        db.dirigentesCargos[cIdx].fimExercicio = newItem.dataFim || newItem.dataInicio;
+        db.dirigentesCargos[cIdx].status = "Encerrado";
+      }
+      // Se o dirigente não tem mais nenhum cargo ativo, marca como Inativo
+      const cargosAtivos = (db.dirigentesCargos || []).filter(
+        (x: any) => x.dirigenteId === newItem.dirigenteId && x.status === "Ativo"
+      );
+      if (cargosAtivos.length === 0) {
+        const dIdx = (db.dirigentes || []).findIndex((x: any) => x.id === newItem.dirigenteId);
+        if (dIdx >= 0) db.dirigentes[dIdx].status = "Inativo";
+      }
+    }
+
+    db.dirigentesEventos.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+
+  app.delete("/api/dirigentes/eventos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.dirigentesEventos = (db.dirigentesEventos || []).filter((x: any) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
   });
 
   // Vite Integration context handling

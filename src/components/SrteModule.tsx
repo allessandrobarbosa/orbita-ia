@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { Building2, Search, Phone, Mail, MapPin, AlertCircle, Edit, Save, ExternalLink, FileText, X } from "lucide-react";
 import { SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand } from "../types";
+import SRTEDetailView from "./SRTEDetailView";
 
 interface SrteModuleProps {
   superintendencias: SuperintendenciaRegional[];
@@ -210,6 +211,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [activeRegion, setActiveRegion] = useState("TODOS");
   const [editingUf, setEditingUf] = useState<string | null>(null);
+  const [selectedSrte, setSelectedSrte] = useState<SuperintendenciaRegional | null>(null);
   
   // Modal preview states
   const [selectedAcordao, setSelectedAcordao] = useState<AcordaoDemand | null>(null);
@@ -297,6 +299,19 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
     const matchesRegion = activeRegion === "TODOS" || getRegionByUF(s.uf) === activeRegion;
     return matchesSearch && matchesStatus && matchesRegion;
   });
+
+  if (selectedSrte) {
+    const currentSrState = calculatedSrtes.find(s => s.uf === selectedSrte.uf) || selectedSrte;
+    return (
+      <SRTEDetailView
+        sr={currentSrState}
+        onBack={() => setSelectedSrte(null)}
+        acordaos={acordaos}
+        comunicacoes={comunicacoes}
+        tces={tces}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 font-sans">
@@ -571,9 +586,14 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                     </button>
                   </>
                 ) : (
-                  <button onClick={() => handleOpenEdit(sr)} className="px-2.5 py-1 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium inline-flex items-center gap-1 text-[10px] cursor-pointer">
-                    <Edit className="w-3 h-3" /> Atualizar Unidade
-                  </button>
+                  <>
+                    <button onClick={() => handleOpenEdit(sr)} className="px-2.5 py-1 text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 font-medium inline-flex items-center gap-1 text-[10px] cursor-pointer">
+                      <Edit className="w-3 h-3" /> Atualizar Unidade
+                    </button>
+                    <button onClick={() => setSelectedSrte(sr)} className="px-2.5 py-1 bg-[#003366] text-white rounded-lg hover:bg-blue-900 font-medium inline-flex items-center gap-1 text-[10px] cursor-pointer">
+                      <Building2 className="w-3.5 h-3.5 text-white" /> Gestão Detalhada
+                    </button>
+                  </>
                 )}
               </div>
 
