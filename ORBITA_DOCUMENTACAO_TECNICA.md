@@ -668,7 +668,7 @@ MODO B (Via codigo):
 ---
 
 ## 11. ESTRUTURA DE ARQUIVOS
-
+```
   orbita-projeto/
   +-- server.ts                Backend Node.js/Express (3.815 linhas, 149 KB)
   +-- package.json             Dependencias e scripts npm
@@ -707,7 +707,7 @@ MODO B (Via codigo):
   |
   +-- assets/
   +-- ORBITA_DOCUMENTACAO_TECNICA.md  Este documento
-
+```
 ---
 
 ## 12. GLOSSARIO
