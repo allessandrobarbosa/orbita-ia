@@ -473,6 +473,31 @@ export default function App() {
     return { success: false, error: "Falha de conexão ao tentar importar os acórdãos." };
   };
 
+  const handleSyncLocalAcordaos = async (): Promise<any> => {
+    if (!checkPermission("TCU")) return null;
+    try {
+      const res = await fetch("/api/acordaos/sync-local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.updatedAcordaos) {
+          setAcordaos(data.updatedAcordaos);
+        }
+        await fetchAllData();
+        return data;
+      } else {
+        console.error("Falha na sincronização local de acórdãos.");
+        return { success: false, message: "O servidor retornou um erro durante a sincronização local." };
+      }
+    } catch (err) {
+      console.error("Falha na sincronização local de acórdãos:", err);
+    }
+    return { success: false, message: "Falha de conexão ao tentar sincronizar os acórdãos localmente." };
+  };
+
+
   // Comunicacoes API actions
   const handleUpdateComunicacao = async (updated: ComunicacaoDemand): Promise<boolean> => {
     if (!checkPermission("TCU")) return false;
@@ -1278,7 +1303,9 @@ export default function App() {
                   onUpdateAcordao={handleUpdateAcordao}
                   onDeleteAcordao={handleDeleteAcordao}
                   onImportAcordaos={handleImportAcordaos}
+                  onSyncLocalAcordaos={handleSyncLocalAcordaos}
                   comunicacoes={comunicacoes}
+
                   onUpdateComunicacao={handleUpdateComunicacao}
                   onDeleteComunicacao={handleDeleteComunicacao}
                   onImportComunicacoes={handleImportComunicacoes}

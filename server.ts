@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import https from "https";
 import readline from "readline";
+import { Readable } from "stream";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -45,10 +46,14 @@ import {
 // DB Path Definition
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "orbita_db.json");
+const TCU_DIR = path.join(DATA_DIR, "tcu");
 
-// Ensure data directory exists
+// Ensure directories exist
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+if (!fs.existsSync(TCU_DIR)) {
+  fs.mkdirSync(TCU_DIR, { recursive: true });
 }
 
 // Initial High-Quality Mock/Seed Data in Portuguese (Brazilian Gov Pattern)
@@ -1410,10 +1415,284 @@ function generateFullAcordaoText(ac: any): string {
     `9.3. Dar ciência desta deliberação à Unidade Técnica do TCU e à entidade fiscalizada.`;
 }
 
+// Helper to parse a CSV stream character-by-character using readline interface
+function parseCsvStream(stream: Readable, onRecord: (record: any) => Promise<boolean> | boolean | Promise<void> | void): Promise<void> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const rl = readline.createInterface({
+        input: stream,
+        crlfDelay: Infinity
+      });
+
+      let headers: string[] = [];
+      let fields: string[] = [];
+      let currentField = "";
+      let inQuotes = false;
+      let isHeaderParsed = false;
+      let isPipeDelimited: boolean | null = null;
+
+      for await (let line of rl) {
+        if (line.charCodeAt(0) === 0xFEFF) {
+          line = line.substring(1);
+        }
+
+        if (line.includes("Parâmetros de pesquisa:")) {
+          continue;
+        }
+
+        if (isPipeDelimited === null) {
+          isPipeDelimited = line.includes('|');
+        }
+
+        if (!isPipeDelimited) {
+          const rawFields = line.split('""');
+          const parsedFields = rawFields.map(f => {
+            let clean = f.trim();
+            if (clean.startsWith('"')) clean = clean.substring(1);
+            if (clean.endsWith('"')) clean = clean.substring(0, clean.length - 1);
+            return clean;
+          });
+
+          if (parsedFields.length < 2) continue;
+
+          if (!isHeaderParsed) {
+            headers = parsedFields.map(h => h.trim().toUpperCase());
+            isHeaderParsed = true;
+            continue;
+          }
+
+          const record: any = {};
+          headers.forEach((h, idx) => {
+            record[h] = parsedFields[idx] || "";
+          });
+
+          const acordaoVal = record["ACÓRDÃO"] || record["ACORDÃO"] || record["ACORDAO"] || "";
+          if (acordaoVal) {
+            const match = acordaoVal.match(/^(\d+)[\/\-](\d{4})/);
+            if (match) {
+              record.NUMACORDAO = match[1];
+              record.ANOACORDAO = match[2];
+            }
+          }
+          
+          if (record["DATA DA SESSÃO"] || record["DATA SESSÃO"]) {
+            record.DATASESSAO = record["DATA DA SESSÃO"] || record["DATA SESSÃO"];
+          }
+          if (record["PROCESSO"]) {
+            record.PROC = record["PROCESSO"];
+          }
+          if (record["TIPO DE PROCESSO"]) {
+            record.TIPOPROCESSO = record["TIPO DE PROCESSO"];
+          }
+          if (record["UNIDADE TÉCNICA DO TCU"] || record["UNIDADE TECNICA DO TCU"]) {
+            record.UNIDADETECNICA = record["UNIDADE TÉCNICA DO TCU"] || record["UNIDADE TECNICA DO TCU"];
+          }
+
+          if (record.NUMACORDAO && record.ANOACORDAO) {
+            const stop = await onRecord(record);
+            if (stop) {
+              rl.close();
+              resolve();
+              return;
+            }
+          }
+        } else {
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              if (inQuotes && line[i + 1] === '"') {
+                currentField += '"';
+                i++; // skip next quote
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === '|' && !inQuotes) {
+              fields.push(currentField);
+              currentField = "";
+            } else {
+              currentField += char;
+            }
+          }
+
+          if (inQuotes) {
+            currentField += "\n";
+          } else {
+            fields.push(currentField);
+            currentField = "";
+
+            if (!isHeaderParsed) {
+              headers = fields.map(h => h.trim().toUpperCase());
+              isHeaderParsed = true;
+            } else {
+              const record: any = {};
+              headers.forEach((h, idx) => {
+                record[h] = fields[idx] || "";
+              });
+              
+              const stop = await onRecord(record);
+              if (stop) {
+                rl.close();
+                resolve();
+                return;
+              }
+            }
+            fields = [];
+          }
+        }
+      }
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+// Helper function to download an online CSV to a temporary file in TCU_DIR
+async function downloadTempCsv(year: number): Promise<string | null> {
+  const tempPath = path.join(TCU_DIR, `temp-acordao-completo-${year}.csv`);
+  if (fs.existsSync(tempPath)) {
+    return tempPath;
+  }
+
+  const onlineUrl = `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/acordao-completo/acordao-completo-${year}.csv`;
+  console.log(`[TCU CSV] Downloading ${onlineUrl} to temporary file ${tempPath}...`);
+  
+  try {
+    const fileStream = fs.createWriteStream(tempPath);
+    await new Promise<void>((resolve, reject) => {
+      https.get(onlineUrl, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`HTTP error ${response.statusCode}`));
+          return;
+        }
+        response.pipe(fileStream);
+        fileStream.on("finish", () => {
+          fileStream.close();
+          resolve();
+        });
+      }).on("error", (err) => {
+        fs.unlink(tempPath, () => {});
+        reject(err);
+      });
+    });
+    
+    console.log(`[TCU CSV] Download completed for year ${year}.`);
+    return tempPath;
+  } catch (err: any) {
+    console.error(`[TCU CSV] Failed to download temporary CSV for year ${year}:`, err.message);
+    if (fs.existsSync(tempPath)) {
+      try { fs.unlinkSync(tempPath); } catch {}
+    }
+    return null;
+  }
+}
+
+// Helper function to search for an acórdão in local CSVs or stream from public online CSV
+async function fetchAcordaoFromCSV(numAcordao: number, anoAcordao: number): Promise<any> {
+  const targetNum = String(numAcordao);
+  const targetAno = String(anoAcordao);
+
+  // 1. Check local files in TCU_DIR first
+  const localFileNameOptions = [
+    `Acórdãos${anoAcordao}.csv`,
+    `acordao-completo-${anoAcordao}.csv`,
+    `Acordãos${anoAcordao}.csv`,
+    `acordaos-${anoAcordao}.csv`
+  ];
+
+  let localFilePath = null;
+  for (const name of localFileNameOptions) {
+    const p = path.join(TCU_DIR, name);
+    if (fs.existsSync(p)) {
+      localFilePath = p;
+      break;
+    }
+  }
+
+  // Case-insensitive fallback scan in TCU_DIR
+  if (!localFilePath && fs.existsSync(TCU_DIR)) {
+    const files = fs.readdirSync(TCU_DIR);
+    const lowerOptions = localFileNameOptions.map(o => o.toLowerCase());
+    const matched = files.find(f => lowerOptions.includes(f.toLowerCase()));
+    if (matched) {
+      localFilePath = path.join(TCU_DIR, matched);
+    }
+  }
+
+  let localRecord: any = null;
+
+  if (localFilePath) {
+    console.log(`[TCU CSV] Searching locally in ${localFilePath} for ${numAcordao}/${anoAcordao}...`);
+    try {
+      const fileStream = fs.createReadStream(localFilePath, { encoding: "utf8" });
+      await parseCsvStream(fileStream, (record) => {
+        if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
+          localRecord = record;
+          return true; // Stop parsing
+        }
+        return false;
+      });
+      // If we found a record and it already contains the full text (from a complete CSV), return it immediately
+      if (localRecord && localRecord.ACORDAO && localRecord.ACORDAO.trim().length > 100) {
+        console.log(`[TCU CSV] Found ${numAcordao}/${anoAcordao} locally in ${localFilePath} with full text!`);
+        return localRecord;
+      }
+    } catch (err: any) {
+      console.error(`[TCU CSV] Error reading local CSV:`, err.message);
+    }
+  }
+
+  // 2. Fetch from online public open data URL (via single temp download cache in TCU_DIR) to get full text
+  console.log(`[TCU CSV] Local full text not found. Searching/downloading complete CSV for year ${anoAcordao}...`);
+  const tempPath = await downloadTempCsv(anoAcordao);
+  if (tempPath) {
+    console.log(`[TCU CSV] Searching in complete CSV ${tempPath} for ${numAcordao}/${anoAcordao}...`);
+    try {
+      const fileStream = fs.createReadStream(tempPath, { encoding: "utf8" });
+      let fullRecord: any = null;
+      await parseCsvStream(fileStream, (record) => {
+        if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
+          fullRecord = record;
+          return true; // Stop parsing
+        }
+        return false;
+      });
+      if (fullRecord) {
+        console.log(`[TCU CSV] Found full text for ${numAcordao}/${anoAcordao} in complete CSV!`);
+        // If we have local record metadata, merge it, otherwise return full record
+        return {
+          ...localRecord,
+          ...fullRecord
+        };
+      }
+    } catch (err: any) {
+      console.error(`[TCU CSV] Error reading complete temporary CSV:`, err.message);
+    }
+  }
+
+  // 3. Fallback: if we found a local metadata record but couldn't get the full text, return it
+  if (localRecord) {
+    console.log(`[TCU CSV] Full text not found, returning metadata-only record for ${numAcordao}/${anoAcordao}.`);
+    return localRecord;
+  }
+
+  return null;
+}
+
 async function fetchAcordaoFromTCU(numAcordao: number, anoAcordao: number): Promise<any> {
   try {
+    // 1. Try to search inside local or remote CSV
+    const csvDoc = await fetchAcordaoFromCSV(numAcordao, anoAcordao);
+    if (csvDoc) {
+      if (!csvDoc.KEY) {
+        csvDoc.KEY = `AC-${numAcordao}-${anoAcordao}`;
+      }
+      return csvDoc;
+    }
+
+    // 2. Backup Fallback: fetch from original portal API (will likely fail due to WAF)
     const searchUrl = `https://pesquisa.apps.tcu.gov.br/rest/publico/base/acordao-completo/documentosResumidos?termo=${numAcordao}/${anoAcordao}&quantidade=10`;
-    console.log(`[TCU API] Searching for ${numAcordao}/${anoAcordao}...`);
+    console.log(`[TCU API] Searching for ${numAcordao}/${anoAcordao} via backup API...`);
     
     const searchRes = await fetch(searchUrl, {
       headers: {
@@ -1427,12 +1706,20 @@ async function fetchAcordaoFromTCU(numAcordao: number, anoAcordao: number): Prom
       throw new Error(`Search request failed with status ${searchRes.status}`);
     }
 
-    const searchData = (await searchRes.json()) as any;
+    const contentType = searchRes.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await searchRes.text();
+      if (text.includes("firewall") || text.includes("rejeitada") || text.includes("WAF")) {
+        throw new Error("Request blocked by TCU Firewall (WAF).");
+      }
+      throw new Error(`Invalid content type received: ${contentType}`);
+    }
+
+    const searchData = await searchRes.json();
     const docs = (searchData.documentos || []).map(fixDocEncoding);
     
-    // Find exact match
     const exactDoc = docs.find(
-      (d: any) => String(d.NUMACORDAO) === String(numAcordao) && String(d.ANOACORDAO) === String(anoAcordao)
+      (d) => String(d.NUMACORDAO) === String(numAcordao) && String(d.ANOACORDAO) === String(anoAcordao)
     );
     if (!exactDoc) {
       console.log(`[TCU API] No exact match found for ${numAcordao}/${anoAcordao} in search results.`);
@@ -1454,14 +1741,18 @@ async function fetchAcordaoFromTCU(numAcordao: number, anoAcordao: number): Prom
       throw new Error(`Detail request failed with status ${docRes.status}`);
     }
 
-    const docData = (await docRes.json()) as any;
+    const docContentType = docRes.headers.get("content-type") || "";
+    if (!docContentType.includes("application/json")) {
+      throw new Error("Detail request returned HTML (WAF block).");
+    }
+
+    const docData = await docRes.json();
     if (docData.documentos && docData.documentos.length > 0) {
-      // Fix Latin-1/UTF-8 mojibake from TCU API encoding mismatch
       return fixDocEncoding(docData.documentos[0]);
     }
 
     return null;
-  } catch (err: any) {
+  } catch (err) {
     console.error(`[TCU API] Error fetching ${numAcordao}/${anoAcordao}:`, err.message);
     return null;
   }
@@ -1576,8 +1867,8 @@ async function startServer() {
 
       if (shouldCheck && req.session.lastHeartbeat) {
         const diff = now - req.session.lastHeartbeat;
-        // If no heartbeat has been received for more than 25 seconds, expire the session.
-        if (diff > 25000) {
+        // If no heartbeat has been received for more than 2 minutes, expire the session.
+        if (diff > 120000) {
           console.log(`[Orbita Session] Session expired due to lack of client heartbeat. Last seen: ${diff}ms ago.`);
           req.session.destroy(() => {});
           if (req.path.startsWith("/api/")) {
@@ -2683,334 +2974,527 @@ async function startServer() {
   // It handles Grouping input strings (e.g. "14068/2023-1C") or direct parsed structured items
   // from our base spreadsheet file inside a full dual crossing/merging engine.
   app.post("/api/acordaos/import", async (req, res) => {
-    const db = loadDatabase();
-    const { acordaosList, items } = req.body; // acordaosList = codes, items = parsed file rows
+    try {
+      const db = loadDatabase();
+      const { acordaosList, items } = req.body;
 
-    const results: {
-      input: string;
-      parsedNumero: number | null;
-      parsedAno: number | null;
-      status: "cached" | "imported" | "updated" | "error";
-      item?: AcordaoDemand;
-      message: string;
-    }[] = [];
+      const results = [];
 
-    // --- MODE A: Reconnecting and Merging from compiled Base File Items ---
-    if (items && Array.isArray(items) && items.length > 0) {
-      for (const rawItem of items) {
-        if (!rawItem.NUMACORDAO || !rawItem.ANOACORDAO) continue;
+      // --- MODE A: Reconnecting and Merging from compiled Base File Items ---
+      if (items && Array.isArray(items) && items.length > 0) {
+        for (const rawItem of items) {
+          if (!rawItem.NUMACORDAO || !rawItem.ANOACORDAO) continue;
 
-        const numAcordao = Number(rawItem.NUMACORDAO);
-        const anoAcordao = Number(rawItem.ANOACORDAO);
-        const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
+          const numAcordao = Number(rawItem.NUMACORDAO);
+          const anoAcordao = Number(rawItem.ANOACORDAO);
+          const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
 
-        // Locate preexisting monitoring trace to protect user changes
-        const existingIndex = db.acordaos.findIndex(
-          (x: any) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
-        );
+          const existingIndex = db.acordaos.findIndex(
+            (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
+          );
 
-        // Simulated API values if missing in base file
-        const colegiadoOptions = ["Plenário", "Primeira Câmara", "Segunda Câmara"];
-        const chosenColegiado = rawItem.COLEGIADO || colegiadoOptions[numAcordao % 3];
-        const numAta = rawItem.NUMATA || `${Math.floor((numAcordao % 45) + 1)}/${anoAcordao}`;
-        const dataSessao = rawItem.DATASESSAO || `${String(Math.floor((numAcordao % 28) + 1)).padStart(2, "0")}/${String(Math.floor((numAcordao % 12) + 1)).padStart(2, "0")}/${anoAcordao}`;
-        const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do Rêgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
-        const chosenRelator = rawItem.RELATOR || relatorOptions[numAcordao % 5];
-        const utOptions = ["AudContratações (Unidade de Auditoria de Contratações)", "AudBenefícios (Unidade de Auditoria de Benefícios Sociais)", "AudGovernança (Unidade de Auditoria de Governança de Pessoas)", "AudPatrimônio (Unidade de Auditoria de Infraestrutura e Logística)"];
-        const chosenUT = rawItem.UNIDADETECNICA || utOptions[numAcordao % 4];
+          const colegiadoOptions = ["Plenário", "Primeira Câmara", "Segunda Câmara"];
+          const chosenColegiado = rawItem.COLEGIADO || colegiadoOptions[numAcordao % 3];
+          const numAta = rawItem.NUMATA || `${Math.floor((numAcordao % 45) + 1)}/${anoAcordao}`;
+          const dataSessao = rawItem.DATASESSAO || `${String(Math.floor((numAcordao % 28) + 1)).padStart(2, "0")}/${String(Math.floor((numAcordao % 12) + 1)).padStart(2, "0")}/${anoAcordao}`;
+          const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do Rêgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
+          const chosenRelator = rawItem.RELATOR || relatorOptions[numAcordao % 5];
+          const utOptions = ["AudContratações (Unidade de Auditoria de Contratações)", "AudBenefícios (Unidade de Auditoria de Benefícios Sociais)", "AudGovernança (Unidade de Auditoria de Governança de Pessoas)", "AudPatrimônio (Unidade de Auditoria de Infraestrutura e Logística)"];
+          const chosenUT = rawItem.UNIDADETECNICA || utOptions[numAcordao % 4];
 
-        const defaultAssuntos = [
-          "Aprimoramento dos controles de governança de TI e sistemas de apoio.",
-          "Prestação de contas simplificada dos convênios regionais pactuados.",
-          "Análise de inconsistências em bancos de dados de seguro-desemprego."
-        ];
-        const chosenAssunto = rawItem.ASSUNTO || defaultAssuntos[numAcordao % 3];
+          const defaultAssuntos = [
+            "Aprimoramento dos controles de governança de TI e sistemas de apoio.",
+            "Prestação de contas simplificada dos convênios regionais pactuados.",
+            "Análise de inconsistências em bancos de dados de seguro-desemprego."
+          ];
+          const chosenAssunto = rawItem.ASSUNTO || defaultAssuntos[numAcordao % 3];
 
-        const defaultDecisoes = [
-          "Julgar as presentes contas regulares com ressalva e recomendar o aprimoramento operacional.",
-          "Determinar à assessoria interna o recadastramento de convênios.",
-          "Instaurar monitoramento sistemático para mitigar desvios cadastrais de conformidade."
-        ];
-        const chosenDecisao = rawItem.DECISAO || defaultDecisoes[numAcordao % 3];
+          const defaultDecisoes = [
+            "Julgar as presentes contas regulares com ressalva e recomendar o aprimoramento operacional.",
+            "Determinar à assessoria interna o recadastramento de convênios.",
+            "Instaurar monitoramento sistemático para mitigar desvios cadastrais de conformidade."
+          ];
+          const chosenDecisao = rawItem.DECISAO || defaultDecisoes[numAcordao % 3];
 
-        // Format and clean text strings — convert HTML from API to plain text first
-        const rawAcordao = rawItem.ACORDAO;
-        const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
+          const rawAcordao = rawItem.ACORDAO;
+          const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
 
-        // Only generate fallback text if the cleaned content is truly empty/placeholder
-        // (removed "..." condition — legitimate legal texts often contain ellipsis)
-        // (lowered threshold from 200 to 50 chars — short but valid texts should be preserved)
-        const needsGeneration = !cleanedAcordao ||
-          cleanedAcordao.includes("DADOS HISTÓRICOS") ||
-          cleanedAcordao.includes("DADOS OBTIDOS") ||
-          cleanedAcordao.trim().length < 50;
+          const needsGeneration = !cleanedAcordao ||
+            cleanedAcordao.includes("DADOS HISTÓRICOS") ||
+            cleanedAcordao.includes("DADOS OBTIDOS") ||
+            cleanedAcordao.trim().length < 50;
 
-        let finalAcordaoText = cleanedAcordao;
-        let isSimulated = false;
+          let finalAcordaoText = cleanedAcordao;
+          let isSimulated = false;
 
-        if (needsGeneration) {
-          console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
-          const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
-          if (apiDoc && apiDoc.ACORDAO) {
-            finalAcordaoText = stripHtmlToText(apiDoc.ACORDAO);
-            rawItem.RELATOR = rawItem.RELATOR || apiDoc.RELATOR;
-            rawItem.COLEGIADO = rawItem.COLEGIADO || apiDoc.COLEGIADO;
-            rawItem.NUMATA = rawItem.NUMATA || apiDoc.NUMATA;
-            rawItem.DATASESSAO = rawItem.DATASESSAO || apiDoc.DATASESSAO;
-            rawItem.PROC = rawItem.PROC || (apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : undefined);
-            rawItem.INTERESSADOS = rawItem.INTERESSADOS || apiDoc.INTERESSADOS;
-            rawItem.ENTIDADE = rawItem.ENTIDADE || apiDoc.ENTIDADE;
-            rawItem.UNIDADETECNICA = rawItem.UNIDADETECNICA || apiDoc.UNIDADETECNICA;
-            rawItem.ASSUNTO = rawItem.ASSUNTO || apiDoc.ASSUNTO;
-            rawItem.TIPOPROCESSO = rawItem.TIPOPROCESSO || apiDoc.TIPOPROCESSO;
+          if (needsGeneration) {
+            console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
+            const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
+            if (apiDoc && apiDoc.ACORDAO) {
+              finalAcordaoText = stripHtmlToText(apiDoc.ACORDAO);
+              rawItem.RELATOR = rawItem.RELATOR || apiDoc.RELATOR;
+              rawItem.COLEGIADO = rawItem.COLEGIADO || apiDoc.COLEGIADO;
+              rawItem.NUMATA = rawItem.NUMATA || apiDoc.NUMATA;
+              rawItem.DATASESSAO = rawItem.DATASESSAO || apiDoc.DATASESSAO;
+              rawItem.PROC = rawItem.PROC || (apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : undefined);
+              rawItem.INTERESSADOS = rawItem.INTERESSADOS || apiDoc.INTERESSADOS;
+              rawItem.ENTIDADE = rawItem.ENTIDADE || apiDoc.ENTIDADE;
+              rawItem.UNIDADETECNICA = rawItem.UNIDADETECNICA || apiDoc.UNIDADETECNICA;
+              rawItem.ASSUNTO = rawItem.ASSUNTO || apiDoc.ASSUNTO;
+              rawItem.TIPOPROCESSO = rawItem.TIPOPROCESSO || apiDoc.TIPOPROCESSO;
+            } else {
+              isSimulated = true;
+              finalAcordaoText = generateFullAcordaoText({
+                RELATOR: chosenRelator,
+                NUMACORDAO: numAcordao,
+                ANOACORDAO: anoAcordao,
+                COLEGIADO: chosenColegiado,
+                PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+                TIPOPROCESSO: rawItem.TIPOPROCESSO || "Julgamento",
+                INTERESSADOS: rawItem.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
+                ENTIDADE: rawItem.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
+                UNIDADETECNICA: chosenUT,
+                ASSUNTO: chosenAssunto,
+                DECISAO: chosenDecisao
+              });
+            }
+          }
+
+          const compiledItem = {
+            KEY: generatedKey,
+            TITULO: rawItem.TITULO || `ACÓRDÃO ${numAcordao}/${anoAcordao} - ATA ${rawItem.NUMATA || numAta} - ${(rawItem.COLEGIADO || chosenColegiado).toUpperCase()}`,
+            NUMACORDAO: numAcordao,
+            ANOACORDAO: anoAcordao,
+            NUMATA: rawItem.NUMATA || numAta,
+            COLEGIADO: rawItem.COLEGIADO || chosenColegiado,
+            DATASESSAO: rawItem.DATASESSAO || dataSessao,
+            SITUACAO: rawItem.SITUACAO || (isSimulated ? "OFICIALIZADO" : "OFICIALIZADO (VIA API)"),
+            PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+            ACORDAOSRELACIONADOS: rawItem.ACORDAOSRELACIONADOS || "Nenhum",
+            TIPOPROCESSO: rawItem.TIPOPROCESSO || "",
+            INTERESSADOS: rawItem.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
+            ENTIDADE: rawItem.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
+            UNIDADETECNICA: rawItem.UNIDADETECNICA || chosenUT,
+            RELATOR: rawItem.RELATOR || chosenRelator,
+            ASSUNTO: rawItem.ASSUNTO || chosenAssunto,
+            SUMARIO: rawItem.SUMARIO || `Acórdão nº ${numAcordao}/${anoAcordao} importado de arquivo unificado e cruzado com base TCU.`,
+            ACORDAO: finalAcordaoText,
+            DECISAO: rawItem.DECISAO || chosenDecisao,
+
+            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : (rawItem.STATUS_MONITORAMENTO || "Pendente"),
+            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : (rawItem.RESPONSAVEL_INTERNO || "AECI - Divisão de Monitoramento"),
+            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : (rawItem.PRAZO_LIMITE || `${anoAcordao + 1}-12-31`),
+            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : (rawItem.OBSERVACOES || "Importado do arquivo base. Cruzamento automático de metadados concluído."),
+            ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
+          };
+
+          if (existingIndex >= 0) {
+            db.acordaos[existingIndex] = compiledItem;
+            results.push({
+              input: `${numAcordao}/${anoAcordao}`,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: "updated",
+              item: compiledItem,
+              message: "Reconciliado e atualizado (banco de monitoramento local preservado)"
+            });
           } else {
-            isSimulated = true;
-            finalAcordaoText = generateFullAcordaoText({
-              RELATOR: chosenRelator,
-              NUMACORDAO: numAcordao,
-              ANOACORDAO: anoAcordao,
-              COLEGIADO: chosenColegiado,
-              PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-              TIPOPROCESSO: rawItem.TIPOPROCESSO || "Julgamento",
-              INTERESSADOS: rawItem.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
-              ENTIDADE: rawItem.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
-              UNIDADETECNICA: chosenUT,
-              ASSUNTO: chosenAssunto,
-              DECISAO: chosenDecisao
+            db.acordaos.unshift(compiledItem);
+            results.push({
+              input: `${numAcordao}/${anoAcordao}`,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: "imported",
+              item: compiledItem,
+              message: "Acórdão cadastrado e cruzado com sucesso via arquivo base!"
             });
           }
         }
 
-        const compiledItem: AcordaoDemand = {
-          KEY: generatedKey,
-          TITULO: rawItem.TITULO || `ACÓRDÃO ${numAcordao}/${anoAcordao} - ATA ${rawItem.NUMATA || numAta} - ${(rawItem.COLEGIADO || chosenColegiado).toUpperCase()}`,
-          NUMACORDAO: numAcordao,
-          ANOACORDAO: anoAcordao,
-          NUMATA: rawItem.NUMATA || numAta,
-          COLEGIADO: rawItem.COLEGIADO || chosenColegiado,
-          DATASESSAO: rawItem.DATASESSAO || dataSessao,
-          SITUACAO: rawItem.SITUACAO || (isSimulated ? "OFICIALIZADO" : "OFICIALIZADO (VIA API)"),
-          PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-          ACORDAOSRELACIONADOS: rawItem.ACORDAOSRELACIONADOS || "Nenhum",
-          TIPOPROCESSO: rawItem.TIPOPROCESSO || "",
-          INTERESSADOS: rawItem.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
-          ENTIDADE: rawItem.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
-          UNIDADETECNICA: rawItem.UNIDADETECNICA || chosenUT,
-          RELATOR: rawItem.RELATOR || chosenRelator,
-          ASSUNTO: rawItem.ASSUNTO || chosenAssunto,
-          SUMARIO: rawItem.SUMARIO || `Acórdão nº ${numAcordao}/${anoAcordao} importado de arquivo unificado e cruzado com base TCU.`,
-          ACORDAO: finalAcordaoText,
-          DECISAO: rawItem.DECISAO || chosenDecisao,
-
-          // Preserving editing variables
-          STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : (rawItem.STATUS_MONITORAMENTO || "Pendente"),
-          RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : (rawItem.RESPONSAVEL_INTERNO || "AECI - Divisão de Monitoramento"),
-          PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : (rawItem.PRAZO_LIMITE || `${anoAcordao + 1}-12-31`),
-          OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : (rawItem.OBSERVACOES || "Importado do arquivo base. Cruzamento automático de metadados concluído."),
-          ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
-        };
-
-        if (existingIndex >= 0) {
-          db.acordaos[existingIndex] = compiledItem;
-          results.push({
-            input: `${numAcordao}/${anoAcordao}`,
-            parsedNumero: numAcordao,
-            parsedAno: anoAcordao,
-            status: "updated",
-            item: compiledItem,
-            message: "Reconciliado e atualizado (banco de monitoramento local preservado)"
-          });
-        } else {
-          db.acordaos.unshift(compiledItem);
-          results.push({
-            input: `${numAcordao}/${anoAcordao}`,
-            parsedNumero: numAcordao,
-            parsedAno: anoAcordao,
-            status: "imported",
-            item: compiledItem,
-            message: "Acórdão cadastrado e cruzado com sucesso via arquivo base!"
-          });
-        }
-      }
-
-      saveDatabase(db);
-      return res.json({ success: true, results, updatedAcordaos: db.acordaos });
-    }
-
-    // --- MODE B: Direct API crawl search logic based on codesList ---
-    if (!acordaosList || !Array.isArray(acordaosList)) {
-      return res.status(400).json({ error: "Lista de acórdãos em formato inválido. Envie 'items' ou 'acordaosList'." });
-    }
-
-    for (const itemString of acordaosList) {
-      if (!itemString || typeof itemString !== "string") continue;
-
-      // Extract number and year using flexible regex (\d+)\/(\d{4})
-      const match = itemString.match(/(\d+)\/(\d{4})/);
-      if (!match) {
-        results.push({
-          input: itemString,
-          parsedNumero: null,
-          parsedAno: null,
-          status: "error",
-          message: "Formato inválido. Use Número/Ano (ex: 14068/2023-1C ou 987/2024)"
-        });
-        continue;
-      }
-
-      const numAcordao = parseInt(match[1]);
-      const anoAcordao = parseInt(match[2]);
-      const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
-
-      const existingIndex = db.acordaos.findIndex(
-        (x: any) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
-      );
-
-      try {
-        const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
-        
-        let newAcordao: AcordaoDemand;
-
-        if (apiDoc) {
-          const cleanProc = apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
-          const cleanTitulo = apiDoc.TITULO ? stripHtmlToText(apiDoc.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
-          const cleanAcordaoText = apiDoc.ACORDAO ? stripHtmlToText(apiDoc.ACORDAO) : "";
-
-          newAcordao = {
-            KEY: generatedKey,
-            TITULO: cleanTitulo,
-            NUMACORDAO: numAcordao,
-            ANOACORDAO: anoAcordao,
-            NUMATA: apiDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
-            COLEGIADO: apiDoc.COLEGIADO || "Plenário",
-            DATASESSAO: apiDoc.DATASESSAO || "",
-            SITUACAO: apiDoc.SITUACAO || "OFICIALIZADO",
-            PROC: cleanProc,
-            ACORDAOSRELACIONADOS: "Nenhum",
-            TIPOPROCESSO: apiDoc.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
-            INTERESSADOS: apiDoc.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
-            ENTIDADE: apiDoc.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
-            RELATOR: apiDoc.RELATOR || "",
-            UNIDADETECNICA: apiDoc.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
-            ASSUNTO: apiDoc.ASSUNTO || "Jurisprudência TCU",
-            SUMARIO: apiDoc.ASSUNTO || "Importado via API de Pesquisa do TCU.",
-            ACORDAO: cleanAcordaoText,
-            DECISAO: cleanAcordaoText,
-
-            // Operational defaults:
-            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
-            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
-            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
-            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado do repositório público de jurisprudência do TCU em " + new Date().toLocaleDateString("pt-BR") + ".",
-            ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
-          };
-        } else {
-          // Mock API data generation fallback
-          const colegiadoOptions = ["Plenário", "Primeira Câmara", "Segunda Câmara"];
-          const chosenColegiado = colegiadoOptions[numAcordao % 3];
-          const numAta = `${Math.floor(Math.random() * 45) + 1}/${anoAcordao}`;
-          const dataSessao = `${String(Math.floor((numAcordao % 28) + 1)).padStart(2, "0")}/${String(Math.floor((numAcordao % 12) + 1)).padStart(2, "0")}/${anoAcordao}`;
-          const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do Rêgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
-          const chosenRelator = relatorOptions[numAcordao % 5];
-          const utOptions = ["AudContratações (Unidade de Auditoria de Contratações)", "AudBenefícios (Unidade de Auditoria de Benefícios Sociais)", "AudGovernança (Unidade de Auditoria de Governança de Pessoas)", "AudPatrimônio (Unidade de Auditoria de Infraestrutura e Logística)"];
-          const chosenUT = utOptions[numAcordao % 4];
-
-          const subjectsAndSummaries = [
-            {
-              assunto: "Acompanhamento de recomendações de transparência passiva e divulgação de painéis do MTE.",
-              sumario: "Acompanhamento técnico gerado a partir do cruzamento de dados institucionais dos canais oficiais do Ministério do Trabalho e Emprego. Recomenda-se a reestruturação da seção de perguntas frequentes e canais de Ouvidoria.",
-              texto: `ACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão de ${chosenColegiado}, em:\n1. Recomendar à AECI-MTE o aprimoramento dos portais para facilidade do cidadão;\n2. Remeter os relatórios de andamento al Tribunal no prazo regimental de 120 dias.`,
-              decisao: "Acolhimento da representação governamental com expedição de ciência e plano de monitoramento em 120 dias ordinários."
-            },
-            {
-              assunto: "Prestação de Contas Simplificada e gestão integrada de políticas de fomento ao emprego.",
-              sumario: "Exame de regularidade das despesas efetuadas na capacitação de jovens e adultos pelo Sistema Sine. Averiguação de termos de fomento operacionalizados pelas Superintendências Regionais.",
-              texto: `Determina-se à Assessoria Especial de Controle Interno do MTE que realize auditoria interna amostral nos repasses efetuados às conveniadas estaduais, com encaminhamento dos relatórios de conformidade técnica em 150 dias.`,
-              decisao: "Julgamento de regularidade com ressalva, com determinações urgentes para saneamento de contas sob diligência amostral."
-            },
-            {
-              assunto: "Inconsistências cadastrais na emissão de Carteiras de Trabalho Digitais e abonos salariais.",
-              sumario: "Medida preventiva de auditoria para mapear riscos de homofonias ou CPFs inativos recebendo seguro-desemprego irregularmente. Recomendado plano de governança conjunto de dados abertos.",
-              texto: `O TCU determina à Secretaria de Emprego e Relações do Trabalho do MTE que estabeleça, no prazo de 60 dias, um comitê interno de conciliação estatística sob supervisão e auditoria da AECI-MTE.`,
-              decisao: "Adoção de medida proativa mediante constituição de comissão paritária de saneamento cadastral e fiscal sob auditoria da AECI-MTE."
-            }
-          ];
-
-          const selection = subjectsAndSummaries[numAcordao % 3];
-
-          newAcordao = {
-            KEY: generatedKey,
-            TITULO: `ACÓRDÃO ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
-            NUMACORDAO: numAcordao,
-            ANOACORDAO: anoAcordao,
-            NUMATA: numAta,
-            COLEGIADO: chosenColegiado,
-            DATASESSAO: dataSessao,
-            SITUACAO: "OFICIALIZADO (SIMULADO)",
-            PROC: `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-            ACORDAOSRELACIONADOS: `Nenhum`,
-            TIPOPROCESSO: [
-              "JULGAMENTO DE TCE",
-              "MONITORAMENTO",
-              "TOMADA DE CONTAS ESPECIAL",
-              "REPRESENTAÇÃO (REPR)",
-              "RELATÓRIO DE AUDITORIA (RA)",
-              "RELATÓRIO DE ACOMPANHAMENTO",
-              "DENÚNCIA (DEN)"
-            ][numAcordao % 7],
-            INTERESSADOS: "Ministério do Trabalho e Emprego (AECI-MTE); Controladoria-Geral da União",
-            ENTIDADE: "MTE - Ministério do Trabalho e Emprego",
-            RELATOR: chosenRelator,
-            UNIDADETECNICA: chosenUT,
-            ASSUNTO: selection.assunto,
-            SUMARIO: selection.sumario,
-            ACORDAO: "", 
-            DECISAO: selection.decisao,
-            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
-            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
-            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
-            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Gerado automaticamente (TCU offline).",
-            ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
-          };
-
-          newAcordao.ACORDAO = generateFullAcordaoText(newAcordao);
-        }
-
-        // Cache it in DB
-        if (existingIndex >= 0) {
-          db.acordaos[existingIndex] = newAcordao;
-        } else {
-          db.acordaos.unshift(newAcordao);
-        }
         saveDatabase(db);
+      } 
+      
+      // --- MODE B: Direct API crawl search logic based on codesList ---
+      else if (acordaosList && Array.isArray(acordaosList)) {
+        for (const itemString of acordaosList) {
+          if (!itemString || typeof itemString !== "string") continue;
 
-        results.push({
-          input: itemString,
-          parsedNumero: numAcordao,
-          parsedAno: anoAcordao,
-          status: existingIndex >= 0 ? "updated" : "imported",
-          item: newAcordao,
-          message: existingIndex >= 0 
-            ? "Acórdão atualizado e metadados de monitoramento local preservados!"
-            : "Acórdão localizado na API de Jurisprudência do TCU e incorporado ao monitoramento interno!"
-        });
+          const match = itemString.match(/(\d+)\/(\d{4})/);
+          if (!match) {
+            results.push({
+              input: itemString,
+              parsedNumero: null,
+              parsedAno: null,
+              status: "error",
+              message: "Formato inválido. Use Número/Ano (ex: 14068/2023-1C ou 987/2024)"
+            });
+            continue;
+          }
 
-      } catch (error: any) {
-        console.error(`[API Import] Failed to process ${itemString}:`, error);
-        results.push({
-          input: itemString,
-          parsedNumero: numAcordao,
-          parsedAno: anoAcordao,
-          status: "error",
-          message: `Falha na consulta à API externa: ${error.message || "Erro desconhecido"}`
-        });
+          const numAcordao = parseInt(match[1]);
+          const anoAcordao = parseInt(match[2]);
+          const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
+
+          const existingIndex = db.acordaos.findIndex(
+            (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
+          );
+
+          try {
+            const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
+            
+            let newAcordao;
+
+            if (apiDoc) {
+              const cleanProc = apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+              const cleanTitulo = apiDoc.TITULO ? stripHtmlToText(apiDoc.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
+              const cleanAcordaoText = apiDoc.ACORDAO ? stripHtmlToText(apiDoc.ACORDAO) : "";
+
+              newAcordao = {
+                KEY: generatedKey,
+                TITULO: cleanTitulo,
+                NUMACORDAO: numAcordao,
+                ANOACORDAO: anoAcordao,
+                NUMATA: apiDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
+                COLEGIADO: apiDoc.COLEGIADO || "Plenário",
+                DATASESSAO: apiDoc.DATASESSAO || "",
+                SITUACAO: apiDoc.SITUACAO || "OFICIALIZADO",
+                PROC: cleanProc,
+                ACORDAOSRELACIONADOS: "Nenhum",
+                TIPOPROCESSO: apiDoc.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+                INTERESSADOS: apiDoc.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
+                ENTIDADE: apiDoc.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
+                RELATOR: apiDoc.RELATOR || "",
+                UNIDADETECNICA: apiDoc.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+                ASSUNTO: apiDoc.ASSUNTO || "Jurisprudência TCU",
+                SUMARIO: apiDoc.ASSUNTO || "Importado via API de Pesquisa do TCU.",
+                ACORDAO: cleanAcordaoText,
+                DECISAO: cleanAcordaoText,
+
+                STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
+                PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado do repositório público de jurisprudência do TCU em " + new Date().toLocaleDateString("pt-BR") + ".",
+                ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
+              };
+            } else {
+              const colegiadoOptions = ["Plenário", "Primeira Câmara", "Segunda Câmara"];
+              const chosenColegiado = colegiadoOptions[numAcordao % 3];
+              const numAta = `${Math.floor(Math.random() * 45) + 1}/${anoAcordao}`;
+              const dataSessao = `${String(Math.floor((numAcordao % 28) + 1)).padStart(2, "0")}/${String(Math.floor((numAcordao % 12) + 1)).padStart(2, "0")}/${anoAcordao}`;
+              const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do Rêgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
+              const chosenRelator = relatorOptions[numAcordao % 5];
+              const utOptions = ["AudContratações (Unidade de Auditoria de Contratações)", "AudBenefícios (Unidade de Auditoria de Benefícios Sociais)", "AudGovernança (Unidade de Auditoria de Governança de Pessoas)", "AudPatrimônio (Unidade de Auditoria de Infraestrutura e Logística)"];
+              const chosenUT = utOptions[numAcordao % 4];
+
+              const subjectsAndSummaries = [
+                {
+                  assunto: "Acompanhamento de recomendações de transparência passiva e divulgação de painéis do MTE.",
+                  sumario: "Acompanhamento técnico gerado a partir do cruzamento de dados institucionais dos canais oficiais do Ministério do Trabalho e Emprego. Recomenda-se a reestruturação da seção de perguntas frequentes e canais de Ouvidoria.",
+                  texto: `ACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão de ${chosenColegiado}, em:\n1. Recomendar à AECI-MTE o aprimoramento dos portais para facilidade do cidadão;\n2. Remeter os relatórios de andamento ao Tribunal no prazo regimental de 120 dias.`,
+                  decisao: "Acolhimento da representação governamental com expedição de ciência e plano de monitoramento em 120 dias ordinários."
+                },
+                {
+                  assunto: "Prestação de Contas Simplificada e gestão integrada de políticas de fomento ao emprego.",
+                  sumario: "Exame de regularidade das despesas efetuadas na capacitação de jovens e adultos pelo Sistema Sine. Averiguação de termos de fomento operacionalizados pelas Superintendências Regionais.",
+                  texto: `Determina-se à Assessoria Especial de Controle Interno do MTE que realize auditoria interna amostral nos repasses efetuados às conveniadas estaduais, com encaminhamento dos relatórios de conformidade técnica em 150 dias.`,
+                  decisao: "Julgamento de regularidade com ressalva, com determinações urgentes para saneamento de contas sob diligência amostral."
+                },
+                {
+                  assunto: "Inconsistências cadastrais na emissão de Carteiras de Trabalho Digitais e abonos salariais.",
+                  sumario: "Medida preventiva de auditoria para mapear risks de homofonias ou CPFs inativos recebendo seguro-desemprego irregularmente. Recomendado plano de governança conjunto de dados abertos.",
+                  texto: `O TCU determina à Secretaria de Emprego e Relações do Trabalho do MTE que estabeleça, no prazo de 60 dias, um comitê interno de conciliação estatística sob supervisão e auditoria da AECI-MTE.`,
+                  decisao: "Adoção de medida proativa mediante constituição de comissão paritária de saneamento cadastral e fiscal sob auditoria da AECI-MTE."
+                }
+              ];
+
+              const selection = subjectsAndSummaries[numAcordao % 3];
+
+              newAcordao = {
+                KEY: generatedKey,
+                TITULO: `ACÓRDÃO ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
+                NUMACORDAO: numAcordao,
+                ANOACORDAO: anoAcordao,
+                NUMATA: numAta,
+                COLEGIADO: chosenColegiado,
+                DATASESSAO: dataSessao,
+                SITUACAO: "OFICIALIZADO (SIMULADO)",
+                PROC: `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+                ACORDAOSRELACIONADOS: `Nenhum`,
+                TIPOPROCESSO: [
+                  "JULGAMENTO DE TCE",
+                  "MONITORAMENTO",
+                  "TOMADA DE CONTAS ESPECIAL",
+                  "REPRESENTAÇÃO (REPR)",
+                  "RELATÓRIO DE AUDITORIA (RA)",
+                  "RELATÓRIO DE ACOMPANHAMENTO",
+                  "DENÚNCIA (DEN)"
+                ][numAcordao % 7],
+                INTERESSADOS: "Ministério do Trabalho e Emprego (AECI-MTE); Controladoria-Geral da União",
+                ENTIDADE: "MTE - Ministério do Trabalho e Emprego",
+                RELATOR: chosenRelator,
+                UNIDADETECNICA: chosenUT,
+                ASSUNTO: selection.assunto,
+                SUMARIO: selection.sumario,
+                ACORDAO: "", 
+                DECISAO: selection.decisao,
+                STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
+                PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Gerado automaticamente (TCU offline).",
+                ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
+              };
+
+              newAcordao.ACORDAO = generateFullAcordaoText(newAcordao);
+            }
+
+            if (existingIndex >= 0) {
+              db.acordaos[existingIndex] = newAcordao;
+            } else {
+              db.acordaos.unshift(newAcordao);
+            }
+            saveDatabase(db);
+
+            results.push({
+              input: itemString,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: existingIndex >= 0 ? "updated" : "imported",
+              item: newAcordao,
+              message: existingIndex >= 0 
+                ? "Acórdão atualizado e metadados de monitoramento local preservados!"
+                : (apiDoc 
+                    ? "Acórdão localizado na API de Jurisprudência do TCU e incorporado ao monitoramento interno!" 
+                    : "Acórdão gerado via simulação local (API do TCU indisponível/bloqueada).")
+            });
+
+          } catch (error) {
+            console.error(`[API Import] Failed to process ${itemString}:`, error);
+            results.push({
+              input: itemString,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: "error",
+              message: `Falha na consulta à API externa: ${error.message || "Erro desconhecido"}`
+            });
+          }
+        }
+      }
+
+      if (req.session) {
+        req.session.lastHeartbeat = Date.now();
+      }
+      res.json({ success: true, results, updatedAcordaos: db.acordaos });
+    } finally {
+      if (fs.existsSync(TCU_DIR)) {
+        try {
+          const files = fs.readdirSync(TCU_DIR);
+          const tempFiles = files.filter(f => f.startsWith("temp-acordao-completo-") && f.endsWith(".csv"));
+          for (const file of tempFiles) {
+            try {
+              fs.unlinkSync(path.join(TCU_DIR, file));
+              console.log(`[TCU CSV] Deleted temporary file: ${file}`);
+            } catch (e) {
+              console.error(`[TCU CSV] Failed to delete temporary file ${file}:`, e);
+            }
+          }
+        } catch (e) {
+          console.error(`[TCU CSV] Error during directory cleanup:`, e);
+        }
       }
     }
-
-    res.json({ success: true, results, updatedAcordaos: db.acordaos });
   });
 
-  // API 4: Rol de Responsáveis - GET & CRUD
+  // API 3.5: Incremental Synchronization of Acórdãos via local CSV files in the TCU directory
+  app.post("/api/acordaos/sync-local", async (req, res) => {
+    const db = loadDatabase();
+    
+    if (!fs.existsSync(TCU_DIR)) {
+      return res.status(400).json({ success: false, message: "Diretório de arquivos do TCU não encontrado." });
+    }
+
+    const files = fs.readdirSync(TCU_DIR);
+    const csvFiles = files.filter(f => {
+      const lower = f.toLowerCase();
+      return (lower.startsWith("acórdãos") || lower.startsWith("acordaos") || lower.startsWith("acordao-completo-")) && lower.endsWith(".csv");
+    });
+
+    if (csvFiles.length === 0) {
+      return res.json({
+        success: false,
+        message: "Nenhum arquivo local 'Acórdãos*.csv' ou 'acordao-completo-*.csv' encontrado na pasta data/tcu/ do projeto."
+      });
+    }
+
+    const report = [];
+
+    let totalImported = 0;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+
+    try {
+      for (const file of csvFiles) {
+        const filePath = path.join(TCU_DIR, file);
+        console.log(`[Local Sync] Processing local CSV file: ${filePath}...`);
+        
+        let imported = 0;
+        let updated = 0;
+        let skipped = 0;
+
+        try {
+          const fileStream = fs.createReadStream(filePath, { encoding: "utf8" });
+          await parseCsvStream(fileStream, async (record) => {
+            const numAcordao = Number(record.NUMACORDAO);
+            const anoAcordao = Number(record.ANOACORDAO);
+            
+            if (!numAcordao || !anoAcordao) return false;
+
+            const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
+            const existingIndex = db.acordaos.findIndex(
+              (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
+            );
+
+            if (existingIndex >= 0) {
+              const current = db.acordaos[existingIndex];
+              const currentIsSimulated = current.SITUACAO?.includes("SIMULADO") || current.OBSERVACOES?.includes("Gerado automaticamente");
+              const hasFullText = current.ACORDAO && current.ACORDAO.trim().length > 100;
+              
+              if (!currentIsSimulated && hasFullText) {
+                skipped++;
+                return false;
+              }
+            }
+
+            try {
+              // Fetch the complete document (from the complete CSV file) to get the full ACORDAO text
+              const fullDoc = await fetchAcordaoFromCSV(numAcordao, anoAcordao);
+              if (fullDoc) {
+                const cleanProc = fullDoc.PROC ? stripHtmlToText(fullDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+                const cleanTitulo = fullDoc.TITULO ? stripHtmlToText(fullDoc.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
+                const cleanAcordaoText = fullDoc.ACORDAO ? stripHtmlToText(fullDoc.ACORDAO) : "";
+
+                const newAcordao = {
+                  KEY: generatedKey,
+                  TITULO: cleanTitulo,
+                  NUMACORDAO: numAcordao,
+                  ANOACORDAO: anoAcordao,
+                  NUMATA: fullDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
+                  COLEGIADO: fullDoc.COLEGIADO || record.COLEGIADO || "Plenário",
+                  DATASESSAO: fullDoc.DATASESSAO || record.DATASESSAO || "",
+                  SITUACAO: fullDoc.SITUACAO || "OFICIALIZADO",
+                  PROC: cleanProc,
+                  ACORDAOSRELACIONADOS: fullDoc.ACORDAOSRELACIONADOS || "Nenhum",
+                  TIPOPROCESSO: fullDoc.TIPOPROCESSO || record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+                  INTERESSADOS: fullDoc.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
+                  ENTIDADE: fullDoc.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
+                  RELATOR: fullDoc.RELATOR || record.RELATOR || "",
+                  UNIDADETECNICA: fullDoc.UNIDADETECNICA || record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+                  ASSUNTO: fullDoc.ASSUNTO || "Jurisprudência TCU",
+                  SUMARIO: fullDoc.SUMARIO || "Importado via Sincronização Local do TCU.",
+                  ACORDAO: cleanAcordaoText,
+                  DECISAO: fullDoc.DECISAO || cleanAcordaoText,
+
+                  // Operational defaults
+                  STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                  RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
+                  PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                  OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado via Sincronização Local do TCU em " + new Date().toLocaleDateString("pt-BR") + ".",
+                  ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
+                };
+
+                if (existingIndex >= 0) {
+                  db.acordaos[existingIndex] = newAcordao;
+                  updated++;
+                } else {
+                  db.acordaos.unshift(newAcordao);
+                  imported++;
+                }
+              } else {
+                // Fallback metadata only
+                const cleanProc = record.PROC ? stripHtmlToText(record.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+                const cleanTitulo = record.TITULO ? stripHtmlToText(record.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
+
+                const fallbackAcordao = {
+                  KEY: generatedKey,
+                  TITULO: cleanTitulo,
+                  NUMACORDAO: numAcordao,
+                  ANOACORDAO: anoAcordao,
+                  NUMATA: record.NUMATA || `${numAcordao}/${anoAcordao}`,
+                  COLEGIADO: record.COLEGIADO || "Plenário",
+                  DATASESSAO: record.DATASESSAO || "",
+                  SITUACAO: "OFICIALIZADO (SEM INTEIRO TEOR)",
+                  PROC: cleanProc,
+                  ACORDAOSRELACIONADOS: "Nenhum",
+                  TIPOPROCESSO: record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+                  INTERESSADOS: "Ministério do Trabalho e Emprego (AECI-MTE)",
+                  ENTIDADE: "MTE - Ministério do Trabalho e Emprego",
+                  RELATOR: record.RELATOR || "",
+                  UNIDADETECNICA: record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+                  ASSUNTO: "Jurisprudência TCU",
+                  SUMARIO: "Importado via Sincronização Local (Metadados apenas).",
+                  ACORDAO: "",
+                  DECISAO: "",
+
+                  STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                  RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
+                  PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                  OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado via Sincronização Local (apenas metadados) em " + new Date().toLocaleDateString("pt-BR") + ".",
+                  ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
+                };
+
+                if (existingIndex >= 0) {
+                  skipped++;
+                } else {
+                  db.acordaos.unshift(fallbackAcordao);
+                  imported++;
+                }
+              }
+            } catch (err) {
+              console.error(`[Local Sync] Error fetching full doc for ${numAcordao}/${anoAcordao}:`, err);
+              skipped++;
+            }
+            return false; // Continue parsing
+          });
+
+          report.push({ file, imported, updated, skipped });
+          totalImported += imported;
+          totalUpdated += updated;
+          totalSkipped += skipped;
+        } catch (err) {
+          console.error(`[Local Sync] Error processing file ${file}:`, err);
+          report.push({ file, imported: 0, updated: 0, skipped: 0, error: err.message });
+        }
+      }
+    } finally {
+      // Clean up temporary downloaded files
+      try {
+        const files = fs.readdirSync(TCU_DIR);
+        for (const file of files) {
+          if (file.startsWith("temp-acordao-completo-") && file.endsWith(".csv")) {
+            fs.unlinkSync(path.join(TCU_DIR, file));
+            console.log(`[Local Sync] Deleted temporary file: ${file}`);
+          }
+        }
+      } catch (e) {
+        console.error(`[Local Sync] Error cleaning up temporary files:`, e);
+      }
+    }
+
+    if (totalImported > 0 || totalUpdated > 0) {
+      saveDatabase(db);
+    }
+
+    if (req.session) {
+      req.session.lastHeartbeat = Date.now();
+    }
+
+    return res.json({
+      success: true,
+      message: `Sincronização local concluída! ${totalImported} importados, ${totalUpdated} atualizados, ${totalSkipped} ignorados.`,
+      report,
+      updatedAcordaos: db.acordaos
+    });
+  });
+// API 4: Rol de Responsáveis - GET & CRUD
   app.get("/api/rol-responsaveis", (req, res) => {
     const db = loadDatabase();
     res.json(db.rolResponsaveis);
@@ -3349,6 +3833,220 @@ async function startServer() {
     saveDatabase(defaultData);
     res.json({ success: true, message: "Banco de dados redefinido com sucesso para os dados padrão de fábrica." });
   });
+
+  // API 3.8: SCDP Diárias e Passagens CGU proxy route
+  app.get("/api/scdp/viagens", async (req, res) => {
+    const apiKey = req.headers["chave-api-dados"];
+    const { dataIdaDe, dataIdaAte, maxPages } = req.query;
+
+    if (!apiKey) {
+      // Return simulated MTE viajes
+      const data = generateSimulatedViagens(dataIdaDe, dataIdaAte);
+      return res.json({ success: true, isSimulated: true, data });
+    }
+
+    const pages = Number(maxPages) || 5;
+    const allRecords = [];
+    const base_url = "https://api.portaldatransparencia.gov.br/api-de-dados/viagens";
+
+    try {
+      for (let page = 1; page <= pages; page++) {
+        const url = `${base_url}?dataIdaDe=${dataIdaDe}&dataIdaAte=${dataIdaAte}&codigoOrgao=38000&pagina=${page}`;
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "chave-api-dados": String(apiKey),
+            "Accept": "application/json"
+          }
+        });
+
+        if (response.status === 401) {
+          return res.status(401).json({ success: false, error: "Chave API inválida ou expirada." });
+        } else if (response.status === 429) {
+          if (allRecords.length > 0) break; // Return what we got
+          return res.status(429).json({ success: false, error: "Limite de requisições excedido no Portal da Transparência." });
+        } else if (response.status !== 200) {
+          if (allRecords.length > 0) break;
+          return res.status(response.status).json({ success: false, error: `Erro na API da CGU (HTTP ${response.status})` });
+        }
+
+        const data = await response.json();
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          break;
+        }
+
+        allRecords.push(...data);
+        if (data.length < 15) {
+          break;
+        }
+      }
+
+      const processed = processViagens(allRecords);
+      return res.json({ success: true, isSimulated: false, data: processed });
+    } catch (err) {
+      console.error("[SCDP Route] Error fetching from CGU:", err);
+      // Fallback to simulated on connection failure
+      const data = generateSimulatedViagens(dataIdaDe, dataIdaAte);
+      return res.json({ success: true, isSimulated: true, data, warning: "Falha de conexão com a API da CGU. Exibindo dados simulados." });
+    }
+  });
+
+  function parseDateJS(dStr) {
+    if (!dStr) return null;
+    const parts = dStr.split("/");
+    if (parts.length !== 3) return null;
+    return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  }
+
+  function generateSimulatedViagens(dateStartStr, dateEndStr) {
+    const names = [
+      "ANA GOMES DA SILVA", "CARLOS EDUARDO SANTOS", "MARIA SOUZA DE OLIVEIRA",
+      "ROBERTO PEREIRA ALMEIDA", "JULIANA RODRIGUES LIMA", "FRANCISCO ARAUJO GOMES",
+      "PATRICIA COSTA BARBOSA", "FERNANDO MELLO DE ASSIS", "CAMILA LINS CARDOSO",
+      "BRUNO MEDEIROS ALVES", "ALINE DIAS PINHEIRO", "GABRIEL SCHMIDT BARROS"
+    ];
+    const cpfs = [
+      "***.104.991-**", "***.342.115-**", "***.881.092-**",
+      "***.451.988-**", "***.209.776-**", "***.552.124-**",
+      "***.908.553-**", "***.671.229-**", "***.115.448-**",
+      "***.765.221-**", "***.892.404-**", "***.332.901-**"
+    ];
+    const cities = [
+      "Belo Horizonte/MG", "São Paulo/SP", "Rio de Janeiro/RJ",
+      "Salvador/BA", "Recife/PE", "Fortaleza/CE", "Manaus/AM",
+      "Curitiba/PR", "Porto Alegre/RS", "Goiânia/GO", "Belém/PA"
+    ];
+
+    const dateStart = parseDateJS(dateStartStr) || new Date(Date.now() - 120 * 24 * 3600 * 1000);
+    const dateEnd = parseDateJS(dateEndStr) || new Date();
+    const diffTime = Math.abs(dateEnd.getTime() - dateStart.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 30;
+
+    const data = [];
+    const today = new Date();
+
+    for (let i = 0; i < 185; i++) {
+      const idx = Math.floor(Math.random() * names.length);
+      const name = names[idx];
+      const cpf = cpfs[idx];
+
+      const tripLen = Math.floor(Math.random() * 6) + 2; // 2 to 7 days
+      const startOffset = Math.floor(Math.random() * diffDays);
+      const tripStart = new Date(dateStart.getTime() + startOffset * 24 * 3600 * 1000);
+      const tripEnd = new Date(tripStart.getTime() + tripLen * 24 * 3600 * 1000);
+
+      let prestacaoDate = null;
+      const rand = Math.random();
+      if (rand < 0.70) {
+        const offset = Math.floor(Math.random() * 4) + 1; // 1 to 4 days
+        prestacaoDate = new Date(tripEnd.getTime() + offset * 24 * 3600 * 1000);
+      } else if (rand < 0.85) {
+        const offset = Math.floor(Math.random() * 10) + 6; // 6 to 15 days
+        prestacaoDate = new Date(tripEnd.getTime() + offset * 24 * 3600 * 1000);
+      }
+
+      const diarias = (Math.floor(Math.random() * 5) + 1) * 450;
+      const passagem = Math.random() < 0.15 ? 0 : (Math.floor(Math.random() * 3) + 1) * 600;
+      const total = diarias + passagem;
+      const devolucao = Math.random() < 0.90 ? 0 : (Math.floor(Math.random() * 2) + 1) * 150;
+      const recebido = total - devolucao;
+
+      // Status
+      let statusPrestacao = "Em Aberto - No Prazo";
+      if (prestacaoDate) {
+        const diff = Math.ceil((prestacaoDate.getTime() - tripEnd.getTime()) / (1000 * 60 * 60 * 24));
+        statusPrestacao = diff <= 5 ? "No Prazo" : "Fora do Prazo (Prestado)";
+      } else {
+        const diffToday = Math.ceil((today.getTime() - tripEnd.getTime()) / (1000 * 60 * 60 * 24));
+        statusPrestacao = diffToday <= 5 ? "Em Aberto - No Prazo" : "Em Aberto - Atrasado";
+      }
+
+      const formatDateStr = (d) => {
+        if (!d) return null;
+        return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+      };
+
+      const origin = Math.random() < 0.75 ? "Brasília/DF" : cities[Math.floor(Math.random() * cities.length)];
+      const destination = cities[Math.floor(Math.random() * cities.length)];
+
+      data.push({
+        id: 22000000 + i,
+        numeroViagem: `${String(Math.floor(Math.random() * 90000) + 10000)}/${String(tripStart.getFullYear()).substring(2)}`,
+        cpfViajante: cpf,
+        nomeViajante: name,
+        dataInicio: formatDateStr(tripStart),
+        dataFim: formatDateStr(tripEnd),
+        dataPrestacaoContas: formatDateStr(prestacaoDate),
+        origem: origin,
+        destino: destination,
+        trecho: `${origin} ➔ ${destination}`,
+        valorTotal: total,
+        valorPassagens: passagem,
+        valorDiarias: diarias,
+        valorOutros: 0,
+        valorDevolucao: devolucao,
+        valorRecebido: recebido,
+        statusPrestacao
+      });
+    }
+
+    // Sort by startDate descending
+    data.sort((a, b) => {
+      const dateA = parseDateJS(a.dataInicio);
+      const dateB = parseDateJS(b.dataInicio);
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    return data;
+  }
+
+  function processViagens(records) {
+    const today = new Date();
+    return records.map((r, i) => {
+      const tripStart = parseDateJS(r.dataInicio);
+      const tripEnd = parseDateJS(r.dataFim);
+      const prestacaoDate = parseDateJS(r.dataPrestacaoContas);
+
+      let statusPrestacao = "Em Aberto - No Prazo";
+      if (prestacaoDate && tripEnd) {
+        const diff = Math.ceil((prestacaoDate.getTime() - tripEnd.getTime()) / (1000 * 60 * 60 * 24));
+        statusPrestacao = diff <= 5 ? "No Prazo" : "Fora do Prazo (Prestado)";
+      } else if (tripEnd) {
+        const diffToday = Math.ceil((today.getTime() - tripEnd.getTime()) / (1000 * 60 * 60 * 24));
+        statusPrestacao = diffToday <= 5 ? "Em Aberto - No Prazo" : "Em Aberto - Atrasado";
+      }
+
+      const total = Number(r.valorTotal) || 0;
+      const diarias = Number(r.valorDiarias) || 0;
+      const passagem = Number(r.valorPassagens) || 0;
+      const devolucao = Number(r.valorDevolucao) || 0;
+      const recebido = Number(r.valorRecebido) || (total - devolucao);
+
+      const origin = r.origem || "Brasília/DF";
+      const destination = r.destino || "Não Informado";
+
+      return {
+        id: r.id || (22000000 + i),
+        numeroViagem: r.numeroViagem || "",
+        cpfViajante: r.cpfViajante || "***.***.***-**",
+        nomeViajante: String(r.nomeViajante || "Desconhecido").toUpperCase(),
+        dataInicio: r.dataInicio,
+        dataFim: r.dataFim,
+        dataPrestacaoContas: r.dataPrestacaoContas || null,
+        origem: origin,
+        destino: destination,
+        trecho: `${origin} ➔ 
+${destination}`.replace("\n", ""),
+        valorTotal: total,
+        valorPassagens: passagem,
+        valorDiarias: diarias,
+        valorOutros: Number(r.valorOutros) || 0,
+        valorDevolucao: devolucao,
+        valorRecebido: recebido,
+        statusPrestacao
+      };
+    });
+  }
 
   // API 7: Dashboard Unified Stats for charts
   app.get("/api/dashboard-stats", (req, res) => {

@@ -1,4 +1,4 @@
-﻿# MINISTERIO DO TRABALHO E EMPREGO
+# MINISTERIO DO TRABALHO E EMPREGO
 ## Assessoria Especial de Controle Interno - AECI/MTE
 
 ---
@@ -575,18 +575,27 @@ O projeto foi desenvolvido com Desenvolvimento Agil (iteracoes curtas, entregas 
 
 ## 9. APIS E INTEGRACOES EXTERNAS
 
-### 9.1 API Publica do TCU
+### 9.1 API e Dados Abertos do TCU
+
+Devido a restrições rígidas de firewall (WAF) no portal de busca do TCU (`pesquisa.apps.tcu.gov.br`), que bloqueia requisições programáticas diretas, o Órbita-IA utiliza uma arquitetura híbrida inteligente baseada na base de **Dados Abertos do TCU**:
 
 | Atributo | Valor |
 |---|---|
-| URL Base | https://pesquisa.apps.tcu.gov.br/rest/publico/base/acordao-completo/ |
-| Autenticacao | Publica (sem token) |
-| Formato | JSON |
-| Encoding | Windows-1252 (corrigido pelo fixMojibake() no servidor) |
+| URL Base (Dados Abertos) | `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/acordao-completo/` |
+| Formato | CSV (delimitado por `|`, codificação UTF-8) |
+| Fallback API Base | `https://pesquisa.apps.tcu.gov.br/rest/publico/base/acordao-completo/` |
 
-Endpoints utilizados:
-  GET /documentosResumidos?termo={num}/{ano}&quantidade=10  -> Busca acordao
-  GET /documento?termo=KEY:{key}                            -> Detalhes completos
+#### Estratégias de Coleta e Sincronização:
+
+1. **Sincronização Incremental Local (Recomendado):**
+   - Varre a pasta local `data/` por arquivos de acórdãos salvos como `Acórdãos{ANO}.csv` ou `acordao-completo-{ANO}.csv` (ex: `Acórdãos2026.csv`).
+   - Processa o arquivo em streaming de forma offline e atualiza ou insere novos acórdãos no banco de dados com teor oficial.
+2. **Busca Direta sob Demanda (com Auto-Abort):**
+   - Se o arquivo do ano não existir localmente, o servidor realiza um streaming da URL pública oficial do TCU correspondente ao ano.
+   - Assim que o acórdão é localizado, o download é imediatamente **abortado** (economizando largura de banda e tempo) e o acórdão é importado.
+3. **Fallback Resiliente:**
+   - Caso nenhuma das opções anteriores encontre o acórdão, o sistema tenta a API direta como contingência ou gera uma simulação local proativa, informando o status ao usuário de forma transparente.
+
 
 ### 9.2 Google Gemini AI
 

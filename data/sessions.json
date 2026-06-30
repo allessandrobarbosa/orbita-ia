@@ -1,5 +1,5 @@
 {
-  "FlXPwAdHWFOZZJHYVRxP5-i1_0_NY4as": {
+  "Nn4pTKyJ8bRNFbnfRUx2usBCCgsqN4xI": {
     "cookie": {
       "originalMaxAge": null,
       "expires": null,
@@ -12,11 +12,11 @@
       "name": "Alessandro Barbosa",
       "role": "Analista de Controle Interno Especial",
       "email": "alessandro@trabalho.gov.br",
-      "register": "Matricula: 1792381",
+      "register": "Matrícula: 1792381",
       "clearance": "ADMIN",
       "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
       "badgeText": "AECI - ADMIN"
     },
-    "lastHeartbeat": 1782776342783
+    "lastHeartbeat": 1782848989277
   }
 }

@@ -572,8 +572,12 @@ var SEED_ETICA_PROCESSOS = [
 import_dotenv.default.config();
 var DATA_DIR = import_path.default.join(process.cwd(), "data");
 var DB_PATH = import_path.default.join(DATA_DIR, "orbita_db.json");
+var TCU_DIR = import_path.default.join(DATA_DIR, "tcu");
 if (!import_fs.default.existsSync(DATA_DIR)) {
   import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+}
+if (!import_fs.default.existsSync(TCU_DIR)) {
+  import_fs.default.mkdirSync(TCU_DIR, { recursive: true });
 }
 var SEED_ACORDAOS = [
   {
@@ -1290,88 +1294,262 @@ var SEED_PROFILES = [
   {
     id: "alessandro",
     name: "Alessandro Barbosa",
-    cpf: "111.222.333-44",
-    phone: "(61) 99999-1111",
+    cpf: "416.526.491-15",
+    phone: "(61) 2031-6261",
     unidade: "AECI",
     role: "Analista de Controle Interno Especial",
-    email: "alessandro.barbosa@mte.gov.br",
-    register: "Matr\xEDcula: AECI-8409-G",
+    email: "alessandro@trabalho.gov.br",
+    register: "Matr\xEDcula: 1792381",
     clearance: "ADMIN",
     avatarColor: "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
-    pin: "1234",
-    password: "1234",
+    pin: "Cmnsg@102030",
+    password: "Cmnsg@102030",
     requiresPasswordChange: false,
     status: "ACTIVE",
     badgeText: "AECI - ADMIN"
-  },
-  {
-    id: "heloisa",
-    name: "Dra. Helo\xEDsa Mendes",
-    cpf: "222.333.444-55",
-    phone: "(61) 99999-2222",
-    unidade: "Corregedoria",
-    role: "Membro Presid\xEAncia / Corregedora Geral",
-    email: "heloisa.mendes@mte.gov.br",
-    register: "Matr\xEDcula: COR-4421-E",
-    clearance: "ETHICS",
-    avatarColor: "bg-teal-700 text-teal-100 border-teal-500 ring-teal-500/30",
-    pin: "2026",
-    password: "2026",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "CORREGEDORIA"
-  },
-  {
-    id: "jorge",
-    name: "Jorge Luiz Santos",
-    cpf: "333.444.555-66",
-    phone: "(61) 99999-3333",
-    unidade: "Gabinete",
-    role: "Chefe de Gabinete Adjunto",
-    email: "jorge.santos@mte.gov.br",
-    register: "Matr\xEDcula: GAB-0938-A",
-    clearance: "AUDITOR",
-    avatarColor: "bg-slate-700 text-slate-100 border-slate-500 ring-slate-500/30",
-    pin: "1984",
-    password: "1984",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "GABINETE"
-  },
-  {
-    id: "srte_rj",
-    name: "Superintendente Regional RJ",
-    cpf: "444.555.666-77",
-    phone: "(21) 99999-4444",
-    unidade: "SRTE-RJ",
-    role: "Superintendente da SRTE-RJ",
-    email: "srte.rj@mte.gov.br",
-    register: "Matr\xEDcula: SRTE-1052-S",
-    clearance: "SRTE",
-    avatarColor: "bg-amber-700 text-amber-100 border-amber-500 ring-amber-500/30",
-    pin: "7777",
-    password: "7777",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "SRTE-RJ"
-  },
-  {
-    id: "public",
-    name: "Consulta P\xFAblica",
-    cpf: "000.000.000-00",
-    phone: "",
-    unidade: "P\xFAblico Externo",
-    role: "Cidad\xE3o / Acesso Externo",
-    email: "cidadao@mte.gov.br",
-    register: "Acesso: CPF Simplificado",
-    clearance: "PUBLIC",
-    avatarColor: "bg-emerald-700 text-emerald-100 border-emerald-500 ring-emerald-500/30",
-    pin: "0000",
-    password: "0000",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "P\xDABLICO"
   }
+];
+var SEED_UNIDADES_ROL = [
+  { id: "U-1", nome: "Gabinete do Ministro", sigla: "GM" },
+  { id: "U-2", nome: "Secretaria-Executiva", sigla: "SE" },
+  { id: "U-3", nome: "Assessoria Especial de Controle Interno", sigla: "AECI" },
+  { id: "U-4", nome: "Secretaria de Trabalho", sigla: "STRAB" },
+  { id: "U-5", nome: "Secretaria de Inspe\xE7\xE3o do Trabalho", sigla: "SIT" }
+];
+var SEED_DIRIGENTES = [
+  {
+    id: "D-1",
+    nome: "LUIZ MARINHO",
+    cpf: "XXX.848.518-XX",
+    email: "luiz.marinho@trabalho.gov.br",
+    status: "Ativo"
+  },
+  {
+    id: "D-2",
+    nome: "FRANCISCO MACENA DA SILVA",
+    cpf: "XXX.239.928-XX",
+    email: "chico.macena@trabalho.gov.br",
+    status: "Ativo"
+  }
+];
+var SEED_DIRIGENTES_CARGOS = [
+  {
+    id: "DC-1",
+    dirigenteId: "D-1",
+    unidadeId: "U-1",
+    cargo: "Ministro de Estado",
+    tipoVinculo: "Titular",
+    inicioExercicio: "2023-01-01",
+    atoNomeacao: "DECRETO DE 31 DE JANEIRO DE 2023 - DOU: https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    status: "Ativo"
+  },
+  {
+    id: "DC-2",
+    dirigenteId: "D-2",
+    unidadeId: "U-2",
+    cargo: "Secret\xE1rio-Executivo",
+    tipoVinculo: "Titular",
+    inicioExercicio: "2023-01-03",
+    atoNomeacao: "Nomea\xE7\xE3o - Secret\xE1rio Executivo Decreto s/n\xBA de 11/01/2023 Publicado em 11/01/2023 | Edi\xE7\xE3o: 8 A | Se\xE7\xE3o: 2 Extra A | P\xE1gina: 1-2 | https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    status: "Ativo"
+  },
+  {
+    // Francisco Macena: também é Substituto Legal do Ministro (GM)
+    id: "DC-3",
+    dirigenteId: "D-2",
+    unidadeId: "U-1",
+    cargo: "Ministro de Estado Substituto",
+    tipoVinculo: "Substituto Legal",
+    inicioExercicio: "2023-01-03",
+    atoNomeacao: "Nomea\xE7\xE3o - Secret\xE1rio Executivo Decreto s/n\xBA de 11/01/2023 Publicado em 11/01/2023 | Edi\xE7\xE3o: 8 A | Se\xE7\xE3o: 2 Extra A | P\xE1gina: 1-2 | https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    status: "Ativo"
+  }
+];
+var SEED_DIRIGENTES_EVENTOS = [
+  {
+    id: "DE-1",
+    dirigenteId: "D-1",
+    cargoId: "DC-1",
+    dataInicio: "2026-05-22",
+    dataFim: "2026-05-23",
+    motivo: "Viagem Internacional",
+    atoAutorizacao: "DECRETO DE 31 DE JANEIRO DE 2025 - DESPACHO DO PRESIDENTE DA REP\xDABLICA: https://www.in.gov.br/web/dou/-/despacho-do-presidente-da-republica-655768137",
+    substitutoId: "D-2"
+  },
+  {
+    id: "DE-2",
+    dirigenteId: "D-1",
+    cargoId: "DC-1",
+    dataInicio: "2026-06-06",
+    dataFim: "2026-06-12",
+    motivo: "Viagem Internacional",
+    atoAutorizacao: "DECRETO DE 31 DE JANEIRO DE 2025 - DESPACHO DO PRESIDENTE DA REP\xDABLICA: file:///C:/Users/claudio.py/Downloads/Genebra.pdf",
+    substitutoId: "D-2"
+  }
+];
+var SEED_CONTRATOS = [
+  {
+    id: "C-1",
+    srteId: "SP",
+    numero: "45/2023",
+    tipo: "Vigil\xE2ncia",
+    fornecedor: "Seguran\xE7a Total Ltda",
+    valorTotal: 12e5,
+    valorMensal: 1e5,
+    inicioVigencia: "2023-11-01",
+    fimVigencia: "2026-10-31",
+    status: "Ativo",
+    objeto: "Presta\xE7\xE3o de servi\xE7os continuados de vigil\xE2ncia armada e desarmada para a sede da SRTE-SP e Ger\xEAncias Regionais."
+  },
+  {
+    id: "C-2",
+    srteId: "SP",
+    numero: "12/2024",
+    tipo: "Limpeza",
+    fornecedor: "LimpeBem Servi\xE7os Gerais",
+    valorTotal: 6e5,
+    valorMensal: 5e4,
+    inicioVigencia: "2024-08-01",
+    fimVigencia: "2026-07-31",
+    status: "Ativo",
+    objeto: "Servi\xE7os de limpeza, conserva\xE7\xE3o e higieniza\xE7\xE3o com fornecimento de m\xE3o de obra e insumos."
+  },
+  {
+    id: "C-3",
+    srteId: "RJ",
+    numero: "88/2022",
+    tipo: "TI",
+    fornecedor: "Conecta Gov Solu\xE7\xF5es",
+    valorTotal: 24e5,
+    valorMensal: 2e5,
+    inicioVigencia: "2022-09-01",
+    fimVigencia: "2027-08-31",
+    status: "Ativo",
+    objeto: "Suporte t\xE9cnico local e remoto de infraestrutura de rede e servidores para a SRTE-RJ."
+  },
+  {
+    id: "C-4",
+    srteId: "RJ",
+    numero: "02/2025",
+    tipo: "Copa",
+    fornecedor: "Sabor do Brasil Refei\xE7\xF5es",
+    valorTotal: 18e4,
+    valorMensal: 15e3,
+    inicioVigencia: "2025-02-01",
+    fimVigencia: "2026-08-31",
+    status: "Ativo",
+    objeto: "Servi\xE7os continuados de copeiragem e fornecimento de lanches r\xE1pidos para eventos."
+  },
+  {
+    id: "C-5",
+    srteId: "DF",
+    numero: "15/2021",
+    tipo: "Vigil\xE2ncia",
+    fornecedor: "Sentinela do Planalto S.A.",
+    valorTotal: 36e5,
+    valorMensal: 3e5,
+    inicioVigencia: "2021-06-01",
+    fimVigencia: "2026-09-30",
+    status: "Ativo",
+    objeto: "Vigil\xE2ncia patrimonial armada de postos de trabalho no Distrito Federal."
+  }
+];
+var SEED_CONTRATOS_CONSUMO = [
+  { id: "CC-1", contratoId: "C-1", mesAno: "04/2026", valor: 98e3, variacao: 0 },
+  { id: "CC-2", contratoId: "C-1", mesAno: "05/2026", valor: 102e3, variacao: 4.08 },
+  { id: "CC-3", contratoId: "C-1", mesAno: "06/2026", valor: 99500, variacao: -2.45 },
+  { id: "CC-4", contratoId: "C-2", mesAno: "04/2026", valor: 48e3, variacao: 0 },
+  { id: "CC-5", contratoId: "C-2", mesAno: "05/2026", valor: 51200, variacao: 6.67 },
+  { id: "CC-6", contratoId: "C-2", mesAno: "06/2026", valor: 49800, variacao: -2.73 },
+  { id: "CC-7", contratoId: "C-3", mesAno: "04/2026", valor: 195e3, variacao: 0 },
+  { id: "CC-8", contratoId: "C-3", mesAno: "05/2026", valor: 201e3, variacao: 3.08 },
+  { id: "CC-9", contratoId: "C-3", mesAno: "06/2026", valor: 200500, variacao: -0.25 }
+];
+var SEED_VIATURAS = [
+  {
+    id: "V-1",
+    srteId: "SP",
+    placa: "BRA2E19",
+    marca: "Toyota",
+    modelo: "Hilux CD 4x4 Diesel",
+    anoFabricacao: 2022,
+    chassi: "9BWAB459SJF020111",
+    renavam: "12839402911",
+    alocacao: "Fiscaliza\xE7\xE3o",
+    kmAtual: 49200,
+    proximaRevisaoKm: 5e4,
+    status: "Ativo"
+  },
+  {
+    id: "V-2",
+    srteId: "SP",
+    placa: "DKW4512",
+    marca: "Chevrolet",
+    modelo: "Spin 1.8 Flex LTZ",
+    anoFabricacao: 2021,
+    chassi: "9BWAB459SJF020122",
+    renavam: "12839402912",
+    alocacao: "Administra\xE7\xE3o",
+    kmAtual: 68100,
+    proximaRevisaoKm: 7e4,
+    status: "Ativo"
+  },
+  {
+    id: "V-3",
+    srteId: "RJ",
+    placa: "RIO2B30",
+    marca: "Mitsubishi",
+    modelo: "L200 Triton Sport",
+    anoFabricacao: 2023,
+    chassi: "9BWAB459SJF020133",
+    renavam: "12839402913",
+    alocacao: "Fiscaliza\xE7\xE3o",
+    kmAtual: 24500,
+    proximaRevisaoKm: 25e3,
+    status: "Ativo"
+  },
+  {
+    id: "V-4",
+    srteId: "RJ",
+    placa: "ABC1234",
+    marca: "Fiat",
+    modelo: "Cronos Drive 1.3",
+    anoFabricacao: 2020,
+    chassi: "9BWAB459SJF020144",
+    renavam: "12839402914",
+    alocacao: "Administra\xE7\xE3o",
+    kmAtual: 85e3,
+    proximaRevisaoKm: 85e3,
+    status: "Baixado",
+    destinacaoBaixa: "Leil\xE3o administrativo n\xBA 03/2025 de bens inserv\xEDveis. Lote arrematado pela empresa Recicla Metais."
+  },
+  {
+    id: "V-5",
+    srteId: "DF",
+    placa: "GDF0112",
+    marca: "Jeep",
+    modelo: "Compass Longitude 2.0 Turbodiesel",
+    anoFabricacao: 2022,
+    chassi: "9BWAB459SJF020155",
+    renavam: "12839402915",
+    alocacao: "Fiscaliza\xE7\xE3o",
+    kmAtual: 39500,
+    proximaRevisaoKm: 4e4,
+    status: "Ativo"
+  }
+];
+var SEED_VIATURAS_ABASTECIMENTOS = [
+  { id: "A-1", viaturaId: "V-1", data: "2026-06-10", litros: 65, km: 48500, custo: 390 },
+  { id: "A-2", viaturaId: "V-1", data: "2026-06-25", litros: 60, km: 49200, custo: 360 },
+  { id: "A-3", viaturaId: "V-2", data: "2026-06-05", litros: 45, km: 67600, custo: 260 },
+  { id: "A-4", viaturaId: "V-2", data: "2026-06-20", litros: 48, km: 68100, custo: 278.4 },
+  { id: "A-5", viaturaId: "V-3", data: "2026-06-15", litros: 70, km: 23800, custo: 420 },
+  { id: "A-6", viaturaId: "V-3", data: "2026-06-28", litros: 68, km: 24500, custo: 408 }
+];
+var SEED_VIATURAS_MANUTENCOES = [
+  { id: "M-1", viaturaId: "V-1", tipo: "Preventiva (Revis\xE3o 40k)", data: "2025-10-15", custo: 1200, kmManutencao: 40100, proximaRevisaoKm: 5e4 },
+  { id: "M-2", viaturaId: "V-2", tipo: "Corretiva (Troca Pastilhas de Freio)", data: "2026-03-22", custo: 680, kmManutencao: 65e3 },
+  { id: "M-3", viaturaId: "V-3", tipo: "Preventiva (Revis\xE3o 20k)", data: "2025-12-05", custo: 1500, kmManutencao: 20050, proximaRevisaoKm: 25e3 }
 ];
 function migrateProcessTypes(data) {
   if (!data || !Array.isArray(data.acordaos)) return false;
@@ -1432,14 +1610,23 @@ function loadDatabase() {
       eticaMembros: SEED_ETICA_MEMBROS,
       eticaReunioes: SEED_ETICA_REUNIOES,
       eticaAtas: SEED_ETICA_ATAS,
-      eticaProcessos: SEED_ETICA_PROCESSOS
+      eticaProcessos: SEED_ETICA_PROCESSOS,
+      contratos: SEED_CONTRATOS,
+      contratosConsumoMensal: SEED_CONTRATOS_CONSUMO,
+      viaturas: SEED_VIATURAS,
+      viaturasAbastecimentos: SEED_VIATURAS_ABASTECIMENTOS,
+      viaturasManutencoes: SEED_VIATURAS_MANUTENCOES,
+      unidadesRol: SEED_UNIDADES_ROL,
+      dirigentes: SEED_DIRIGENTES,
+      dirigentesCargos: SEED_DIRIGENTES_CARGOS,
+      dirigentesEventos: SEED_DIRIGENTES_EVENTOS
     };
     migrateProcessTypes(defaultData);
     import_fs.default.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf-8");
     return defaultData;
   }
   try {
-    const raw = import_fs.default.readFileSync(DB_PATH, "utf-8");
+    const raw = import_fs.default.readFileSync(DB_PATH, "utf-8").replace(/^\uFEFF/, "");
     const data = JSON.parse(raw);
     let dataModified = false;
     if (!data.superintendencias || !Array.isArray(data.superintendencias) || data.superintendencias.length === 0) {
@@ -1496,6 +1683,42 @@ function loadDatabase() {
       data.eticaProcessos = SEED_ETICA_PROCESSOS;
       dataModified = true;
     }
+    if (!data.contratos) {
+      data.contratos = SEED_CONTRATOS;
+      dataModified = true;
+    }
+    if (!data.contratosConsumoMensal) {
+      data.contratosConsumoMensal = SEED_CONTRATOS_CONSUMO;
+      dataModified = true;
+    }
+    if (!data.viaturas) {
+      data.viaturas = SEED_VIATURAS;
+      dataModified = true;
+    }
+    if (!data.viaturasAbastecimentos) {
+      data.viaturasAbastecimentos = SEED_VIATURAS_ABASTECIMENTOS;
+      dataModified = true;
+    }
+    if (!data.viaturasManutencoes) {
+      data.viaturasManutencoes = SEED_VIATURAS_MANUTENCOES;
+      dataModified = true;
+    }
+    if (!data.unidadesRol) {
+      data.unidadesRol = SEED_UNIDADES_ROL;
+      dataModified = true;
+    }
+    if (!data.dirigentes) {
+      data.dirigentes = SEED_DIRIGENTES;
+      dataModified = true;
+    }
+    if (!data.dirigentesCargos) {
+      data.dirigentesCargos = SEED_DIRIGENTES_CARGOS;
+      dataModified = true;
+    }
+    if (!data.dirigentesEventos) {
+      data.dirigentesEventos = SEED_DIRIGENTES_EVENTOS;
+      dataModified = true;
+    }
     if (migrateProcessTypes(data)) {
       dataModified = true;
     }
@@ -1512,7 +1735,16 @@ function loadDatabase() {
       comissaoEtica: SEED_COMISSAO_ETICA,
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
-      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS
+      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
+      contratos: SEED_CONTRATOS,
+      contratosConsumoMensal: SEED_CONTRATOS_CONSUMO,
+      viaturas: SEED_VIATURAS,
+      viaturasAbastecimentos: SEED_VIATURAS_ABASTECIMENTOS,
+      viaturasManutencoes: SEED_VIATURAS_MANUTENCOES,
+      unidadesRol: SEED_UNIDADES_ROL,
+      dirigentes: SEED_DIRIGENTES,
+      dirigentesCargos: SEED_DIRIGENTES_CARGOS,
+      dirigentesEventos: SEED_DIRIGENTES_EVENTOS
     };
   }
 }
@@ -1522,6 +1754,80 @@ function saveDatabase(data) {
   } catch (err) {
     console.error("Failed to save database file:", err);
   }
+}
+var WIN1252_MAP = {
+  128: 8364,
+  130: 8218,
+  131: 402,
+  132: 8222,
+  133: 8230,
+  134: 8224,
+  135: 8225,
+  136: 710,
+  137: 8240,
+  138: 352,
+  139: 8249,
+  140: 338,
+  142: 381,
+  145: 8216,
+  146: 8217,
+  147: 8220,
+  148: 8221,
+  149: 8226,
+  150: 8211,
+  151: 8212,
+  152: 732,
+  153: 8482,
+  154: 353,
+  155: 8250,
+  156: 339,
+  158: 382,
+  159: 376
+};
+var REVERSE_WIN1252 = {};
+for (const [byteVal, uniCode] of Object.entries(WIN1252_MAP)) {
+  REVERSE_WIN1252[uniCode] = parseInt(byteVal);
+}
+function fixMojibake(text) {
+  if (!text) return "";
+  try {
+    const chars = [...text];
+    const bytes = [];
+    let hasMojibake = false;
+    for (const ch of chars) {
+      const code = ch.codePointAt(0);
+      if (code >= 128 && code <= 255) {
+        bytes.push(code);
+        hasMojibake = true;
+      } else if (REVERSE_WIN1252[code] !== void 0) {
+        bytes.push(REVERSE_WIN1252[code]);
+        hasMojibake = true;
+      } else if (code > 255) {
+        const enc = new TextEncoder().encode(ch);
+        for (const b of enc) bytes.push(b);
+      } else {
+        bytes.push(code);
+      }
+    }
+    if (!hasMojibake) return text;
+    const decoded = new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(bytes));
+    if (decoded && !decoded.includes("\uFFFD")) return decoded;
+    return text;
+  } catch {
+    return text;
+  }
+}
+function fixDocEncoding(doc) {
+  if (!doc || typeof doc !== "object") return doc;
+  const fixed = {};
+  for (const [key, val] of Object.entries(doc)) {
+    if (typeof val === "string") {
+      fixed[key] = fixMojibake(val);
+    } else {
+      fixed[key] = val;
+    }
+  }
+  return fixed;
 }
 function stripHtmlToText(html) {
   if (!html) return "";
@@ -1592,10 +1898,248 @@ ACORDAM os Ministros do Tribunal de Contas da Uni\xE3o, reunidos em Sess\xE3o de
 
 9.3. Dar ci\xEAncia desta delibera\xE7\xE3o \xE0 Unidade T\xE9cnica do TCU e \xE0 entidade fiscalizada.`;
 }
+function parseCsvStream(stream, onRecord) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const rl = import_readline.default.createInterface({
+        input: stream,
+        crlfDelay: Infinity
+      });
+      let headers = [];
+      let fields = [];
+      let currentField = "";
+      let inQuotes = false;
+      let isHeaderParsed = false;
+      let isPipeDelimited = null;
+      for await (let line of rl) {
+        if (line.charCodeAt(0) === 65279) {
+          line = line.substring(1);
+        }
+        if (line.includes("Par\xE2metros de pesquisa:")) {
+          continue;
+        }
+        if (isPipeDelimited === null) {
+          isPipeDelimited = line.includes("|");
+        }
+        if (!isPipeDelimited) {
+          const rawFields = line.split('""');
+          const parsedFields = rawFields.map((f) => {
+            let clean = f.trim();
+            if (clean.startsWith('"')) clean = clean.substring(1);
+            if (clean.endsWith('"')) clean = clean.substring(0, clean.length - 1);
+            return clean;
+          });
+          if (parsedFields.length < 2) continue;
+          if (!isHeaderParsed) {
+            headers = parsedFields.map((h) => h.trim().toUpperCase());
+            isHeaderParsed = true;
+            continue;
+          }
+          const record = {};
+          headers.forEach((h, idx) => {
+            record[h] = parsedFields[idx] || "";
+          });
+          const acordaoVal = record["AC\xD3RD\xC3O"] || record["ACORD\xC3O"] || record["ACORDAO"] || "";
+          if (acordaoVal) {
+            const match = acordaoVal.match(/^(\d+)[\/\-](\d{4})/);
+            if (match) {
+              record.NUMACORDAO = match[1];
+              record.ANOACORDAO = match[2];
+            }
+          }
+          if (record["DATA DA SESS\xC3O"] || record["DATA SESS\xC3O"]) {
+            record.DATASESSAO = record["DATA DA SESS\xC3O"] || record["DATA SESS\xC3O"];
+          }
+          if (record["PROCESSO"]) {
+            record.PROC = record["PROCESSO"];
+          }
+          if (record["TIPO DE PROCESSO"]) {
+            record.TIPOPROCESSO = record["TIPO DE PROCESSO"];
+          }
+          if (record["UNIDADE T\xC9CNICA DO TCU"] || record["UNIDADE TECNICA DO TCU"]) {
+            record.UNIDADETECNICA = record["UNIDADE T\xC9CNICA DO TCU"] || record["UNIDADE TECNICA DO TCU"];
+          }
+          if (record.NUMACORDAO && record.ANOACORDAO) {
+            const stop = await onRecord(record);
+            if (stop) {
+              rl.close();
+              resolve();
+              return;
+            }
+          }
+        } else {
+          for (let i = 0; i < line.length; i++) {
+            const char = line[i];
+            if (char === '"') {
+              if (inQuotes && line[i + 1] === '"') {
+                currentField += '"';
+                i++;
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (char === "|" && !inQuotes) {
+              fields.push(currentField);
+              currentField = "";
+            } else {
+              currentField += char;
+            }
+          }
+          if (inQuotes) {
+            currentField += "\n";
+          } else {
+            fields.push(currentField);
+            currentField = "";
+            if (!isHeaderParsed) {
+              headers = fields.map((h) => h.trim().toUpperCase());
+              isHeaderParsed = true;
+            } else {
+              const record = {};
+              headers.forEach((h, idx) => {
+                record[h] = fields[idx] || "";
+              });
+              const stop = await onRecord(record);
+              if (stop) {
+                rl.close();
+                resolve();
+                return;
+              }
+            }
+            fields = [];
+          }
+        }
+      }
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+async function downloadTempCsv(year) {
+  const tempPath = import_path.default.join(TCU_DIR, `temp-acordao-completo-${year}.csv`);
+  if (import_fs.default.existsSync(tempPath)) {
+    return tempPath;
+  }
+  const onlineUrl = `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/acordao-completo/acordao-completo-${year}.csv`;
+  console.log(`[TCU CSV] Downloading ${onlineUrl} to temporary file ${tempPath}...`);
+  try {
+    const fileStream = import_fs.default.createWriteStream(tempPath);
+    await new Promise((resolve, reject) => {
+      import_https.default.get(onlineUrl, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`HTTP error ${response.statusCode}`));
+          return;
+        }
+        response.pipe(fileStream);
+        fileStream.on("finish", () => {
+          fileStream.close();
+          resolve();
+        });
+      }).on("error", (err) => {
+        import_fs.default.unlink(tempPath, () => {
+        });
+        reject(err);
+      });
+    });
+    console.log(`[TCU CSV] Download completed for year ${year}.`);
+    return tempPath;
+  } catch (err) {
+    console.error(`[TCU CSV] Failed to download temporary CSV for year ${year}:`, err.message);
+    if (import_fs.default.existsSync(tempPath)) {
+      try {
+        import_fs.default.unlinkSync(tempPath);
+      } catch {
+      }
+    }
+    return null;
+  }
+}
+async function fetchAcordaoFromCSV(numAcordao, anoAcordao) {
+  const targetNum = String(numAcordao);
+  const targetAno = String(anoAcordao);
+  const localFileNameOptions = [
+    `Ac\xF3rd\xE3os${anoAcordao}.csv`,
+    `acordao-completo-${anoAcordao}.csv`,
+    `Acord\xE3os${anoAcordao}.csv`,
+    `acordaos-${anoAcordao}.csv`
+  ];
+  let localFilePath = null;
+  for (const name of localFileNameOptions) {
+    const p = import_path.default.join(TCU_DIR, name);
+    if (import_fs.default.existsSync(p)) {
+      localFilePath = p;
+      break;
+    }
+  }
+  if (!localFilePath && import_fs.default.existsSync(TCU_DIR)) {
+    const files = import_fs.default.readdirSync(TCU_DIR);
+    const lowerOptions = localFileNameOptions.map((o) => o.toLowerCase());
+    const matched = files.find((f) => lowerOptions.includes(f.toLowerCase()));
+    if (matched) {
+      localFilePath = import_path.default.join(TCU_DIR, matched);
+    }
+  }
+  let localRecord = null;
+  if (localFilePath) {
+    console.log(`[TCU CSV] Searching locally in ${localFilePath} for ${numAcordao}/${anoAcordao}...`);
+    try {
+      const fileStream = import_fs.default.createReadStream(localFilePath, { encoding: "utf8" });
+      await parseCsvStream(fileStream, (record) => {
+        if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
+          localRecord = record;
+          return true;
+        }
+        return false;
+      });
+      if (localRecord && localRecord.ACORDAO && localRecord.ACORDAO.trim().length > 100) {
+        console.log(`[TCU CSV] Found ${numAcordao}/${anoAcordao} locally in ${localFilePath} with full text!`);
+        return localRecord;
+      }
+    } catch (err) {
+      console.error(`[TCU CSV] Error reading local CSV:`, err.message);
+    }
+  }
+  console.log(`[TCU CSV] Local full text not found. Searching/downloading complete CSV for year ${anoAcordao}...`);
+  const tempPath = await downloadTempCsv(anoAcordao);
+  if (tempPath) {
+    console.log(`[TCU CSV] Searching in complete CSV ${tempPath} for ${numAcordao}/${anoAcordao}...`);
+    try {
+      const fileStream = import_fs.default.createReadStream(tempPath, { encoding: "utf8" });
+      let fullRecord = null;
+      await parseCsvStream(fileStream, (record) => {
+        if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
+          fullRecord = record;
+          return true;
+        }
+        return false;
+      });
+      if (fullRecord) {
+        console.log(`[TCU CSV] Found full text for ${numAcordao}/${anoAcordao} in complete CSV!`);
+        return {
+          ...localRecord,
+          ...fullRecord
+        };
+      }
+    } catch (err) {
+      console.error(`[TCU CSV] Error reading complete temporary CSV:`, err.message);
+    }
+  }
+  if (localRecord) {
+    console.log(`[TCU CSV] Full text not found, returning metadata-only record for ${numAcordao}/${anoAcordao}.`);
+    return localRecord;
+  }
+  return null;
+}
 async function fetchAcordaoFromTCU(numAcordao, anoAcordao) {
   try {
+    const csvDoc = await fetchAcordaoFromCSV(numAcordao, anoAcordao);
+    if (csvDoc) {
+      if (!csvDoc.KEY) {
+        csvDoc.KEY = `AC-${numAcordao}-${anoAcordao}`;
+      }
+      return csvDoc;
+    }
     const searchUrl = `https://pesquisa.apps.tcu.gov.br/rest/publico/base/acordao-completo/documentosResumidos?termo=${numAcordao}/${anoAcordao}&quantidade=10`;
-    console.log(`[TCU API] Searching for ${numAcordao}/${anoAcordao}...`);
+    console.log(`[TCU API] Searching for ${numAcordao}/${anoAcordao} via backup API...`);
     const searchRes = await fetch(searchUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -1606,8 +2150,16 @@ async function fetchAcordaoFromTCU(numAcordao, anoAcordao) {
     if (!searchRes.ok) {
       throw new Error(`Search request failed with status ${searchRes.status}`);
     }
+    const contentType = searchRes.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await searchRes.text();
+      if (text.includes("firewall") || text.includes("rejeitada") || text.includes("WAF")) {
+        throw new Error("Request blocked by TCU Firewall (WAF).");
+      }
+      throw new Error(`Invalid content type received: ${contentType}`);
+    }
     const searchData = await searchRes.json();
-    const docs = searchData.documentos || [];
+    const docs = (searchData.documentos || []).map(fixDocEncoding);
     const exactDoc = docs.find(
       (d) => String(d.NUMACORDAO) === String(numAcordao) && String(d.ANOACORDAO) === String(anoAcordao)
     );
@@ -1627,9 +2179,13 @@ async function fetchAcordaoFromTCU(numAcordao, anoAcordao) {
     if (!docRes.ok) {
       throw new Error(`Detail request failed with status ${docRes.status}`);
     }
+    const docContentType = docRes.headers.get("content-type") || "";
+    if (!docContentType.includes("application/json")) {
+      throw new Error("Detail request returned HTML (WAF block).");
+    }
     const docData = await docRes.json();
     if (docData.documentos && docData.documentos.length > 0) {
-      return docData.documentos[0];
+      return fixDocEncoding(docData.documentos[0]);
     }
     return null;
   } catch (err) {
@@ -1723,6 +2279,30 @@ async function startServer() {
       httpOnly: true
     }
   }));
+  app.use((req, res, next) => {
+    if (req.session && req.session.user) {
+      const now = Date.now();
+      const isAuthRoute = req.path.startsWith("/api/auth");
+      const shouldCheck = !isAuthRoute || req.path === "/api/auth/session";
+      if (shouldCheck && req.session.lastHeartbeat) {
+        const diff = now - req.session.lastHeartbeat;
+        if (diff > 25e3) {
+          console.log(`[Orbita Session] Session expired due to lack of client heartbeat. Last seen: ${diff}ms ago.`);
+          req.session.destroy(() => {
+          });
+          if (req.path.startsWith("/api/")) {
+            return res.status(401).json({ authenticated: false, error: "Sess\xE3o encerrada por inatividade/fechamento do navegador." });
+          } else {
+            return res.redirect("/");
+          }
+        }
+      }
+      if (req.path !== "/api/auth/heartbeat") {
+        req.session.lastHeartbeat = now;
+      }
+    }
+    next();
+  });
   app.use(import_express.default.json({ limit: "50mb" }));
   app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
   app.get("/api/auth/session", (req, res) => {
@@ -1745,6 +2325,13 @@ async function startServer() {
       return res.json({ authenticated: true, user: req.session.user });
     }
     return res.json({ authenticated: false });
+  });
+  app.post("/api/auth/heartbeat", (req, res) => {
+    if (req.session && req.session.user) {
+      req.session.lastHeartbeat = Date.now();
+      return res.json({ success: true });
+    }
+    return res.json({ success: false });
   });
   app.post("/api/auth/login-pin", (req, res) => {
     const { profileId, pin } = req.body;
@@ -2051,11 +2638,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
             document.getElementById('profileId').value = id;
             
             let mockCPF = "000.000.000-00";
-            if (id === "alessandro") mockCPF = "142.890.344-01";
-            if (id === "heloisa") mockCPF = "202.441.984-75";
-            if (id === "jorge") mockCPF = "093.819.220-41";
-            if (id === "srte_rj") mockCPF = "105.289.441-29";
-            if (id === "public") mockCPF = "999.999.999-99";
+            if (id === "alessandro") mockCPF = "416.526.491-15";
             
             document.getElementById('cpfInput').value = mockCPF;
             
@@ -2613,277 +3196,451 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     });
   });
   app.post("/api/acordaos/import", async (req, res) => {
-    const db = loadDatabase();
-    const { acordaosList, items } = req.body;
-    const results = [];
-    if (items && Array.isArray(items) && items.length > 0) {
-      for (const rawItem of items) {
-        if (!rawItem.NUMACORDAO || !rawItem.ANOACORDAO) continue;
-        const numAcordao = Number(rawItem.NUMACORDAO);
-        const anoAcordao = Number(rawItem.ANOACORDAO);
-        const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
-        const existingIndex = db.acordaos.findIndex(
-          (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
-        );
-        const colegiadoOptions = ["Plen\xE1rio", "Primeira C\xE2mara", "Segunda C\xE2mara"];
-        const chosenColegiado = rawItem.COLEGIADO || colegiadoOptions[numAcordao % 3];
-        const numAta = rawItem.NUMATA || `${Math.floor(numAcordao % 45 + 1)}/${anoAcordao}`;
-        const dataSessao = rawItem.DATASESSAO || `${String(Math.floor(numAcordao % 28 + 1)).padStart(2, "0")}/${String(Math.floor(numAcordao % 12 + 1)).padStart(2, "0")}/${anoAcordao}`;
-        const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do R\xEAgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
-        const chosenRelator = rawItem.RELATOR || relatorOptions[numAcordao % 5];
-        const utOptions = ["AudContrata\xE7\xF5es (Unidade de Auditoria de Contrata\xE7\xF5es)", "AudBenef\xEDcios (Unidade de Auditoria de Benef\xEDcios Sociais)", "AudGovernan\xE7a (Unidade de Auditoria de Governan\xE7a de Pessoas)", "AudPatrim\xF4nio (Unidade de Auditoria de Infraestrutura e Log\xEDstica)"];
-        const chosenUT = rawItem.UNIDADETECNICA || utOptions[numAcordao % 4];
-        const defaultAssuntos = [
-          "Aprimoramento dos controles de governan\xE7a de TI e sistemas de apoio.",
-          "Presta\xE7\xE3o de contas simplificada dos conv\xEAnios regionais pactuados.",
-          "An\xE1lise de inconsist\xEAncias em bancos de dados de seguro-desemprego."
-        ];
-        const chosenAssunto = rawItem.ASSUNTO || defaultAssuntos[numAcordao % 3];
-        const defaultDecisoes = [
-          "Julgar as presentes contas regulares com ressalva e recomendar o aprimoramento operacional.",
-          "Determinar \xE0 assessoria interna o recadastramento de conv\xEAnios.",
-          "Instaurar monitoramento sistem\xE1tico para mitigar desvios cadastrais de conformidade."
-        ];
-        const chosenDecisao = rawItem.DECISAO || defaultDecisoes[numAcordao % 3];
-        const rawAcordao = rawItem.ACORDAO;
-        const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
-        const needsGeneration = !cleanedAcordao || cleanedAcordao.includes("DADOS HIST\xD3RICOS") || cleanedAcordao.includes("DADOS OBTIDOS") || cleanedAcordao.trim().length < 50;
-        let finalAcordaoText = cleanedAcordao;
-        let isSimulated = false;
-        if (needsGeneration) {
-          console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
-          const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
-          if (apiDoc && apiDoc.ACORDAO) {
-            finalAcordaoText = stripHtmlToText(apiDoc.ACORDAO);
-            rawItem.RELATOR = rawItem.RELATOR || apiDoc.RELATOR;
-            rawItem.COLEGIADO = rawItem.COLEGIADO || apiDoc.COLEGIADO;
-            rawItem.NUMATA = rawItem.NUMATA || apiDoc.NUMATA;
-            rawItem.DATASESSAO = rawItem.DATASESSAO || apiDoc.DATASESSAO;
-            rawItem.PROC = rawItem.PROC || (apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : void 0);
-            rawItem.INTERESSADOS = rawItem.INTERESSADOS || apiDoc.INTERESSADOS;
-            rawItem.ENTIDADE = rawItem.ENTIDADE || apiDoc.ENTIDADE;
-            rawItem.UNIDADETECNICA = rawItem.UNIDADETECNICA || apiDoc.UNIDADETECNICA;
-            rawItem.ASSUNTO = rawItem.ASSUNTO || apiDoc.ASSUNTO;
-            rawItem.TIPOPROCESSO = rawItem.TIPOPROCESSO || apiDoc.TIPOPROCESSO;
+    try {
+      const db = loadDatabase();
+      const { acordaosList, items } = req.body;
+      const results = [];
+      if (items && Array.isArray(items) && items.length > 0) {
+        for (const rawItem of items) {
+          if (!rawItem.NUMACORDAO || !rawItem.ANOACORDAO) continue;
+          const numAcordao = Number(rawItem.NUMACORDAO);
+          const anoAcordao = Number(rawItem.ANOACORDAO);
+          const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
+          const existingIndex = db.acordaos.findIndex(
+            (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
+          );
+          const colegiadoOptions = ["Plen\xE1rio", "Primeira C\xE2mara", "Segunda C\xE2mara"];
+          const chosenColegiado = rawItem.COLEGIADO || colegiadoOptions[numAcordao % 3];
+          const numAta = rawItem.NUMATA || `${Math.floor(numAcordao % 45 + 1)}/${anoAcordao}`;
+          const dataSessao = rawItem.DATASESSAO || `${String(Math.floor(numAcordao % 28 + 1)).padStart(2, "0")}/${String(Math.floor(numAcordao % 12 + 1)).padStart(2, "0")}/${anoAcordao}`;
+          const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do R\xEAgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
+          const chosenRelator = rawItem.RELATOR || relatorOptions[numAcordao % 5];
+          const utOptions = ["AudContrata\xE7\xF5es (Unidade de Auditoria de Contrata\xE7\xF5es)", "AudBenef\xEDcios (Unidade de Auditoria de Benef\xEDcios Sociais)", "AudGovernan\xE7a (Unidade de Auditoria de Governan\xE7a de Pessoas)", "AudPatrim\xF4nio (Unidade de Auditoria de Infraestrutura e Log\xEDstica)"];
+          const chosenUT = rawItem.UNIDADETECNICA || utOptions[numAcordao % 4];
+          const defaultAssuntos = [
+            "Aprimoramento dos controles de governan\xE7a de TI e sistemas de apoio.",
+            "Presta\xE7\xE3o de contas simplificada dos conv\xEAnios regionais pactuados.",
+            "An\xE1lise de inconsist\xEAncias em bancos de dados de seguro-desemprego."
+          ];
+          const chosenAssunto = rawItem.ASSUNTO || defaultAssuntos[numAcordao % 3];
+          const defaultDecisoes = [
+            "Julgar as presentes contas regulares com ressalva e recomendar o aprimoramento operacional.",
+            "Determinar \xE0 assessoria interna o recadastramento de conv\xEAnios.",
+            "Instaurar monitoramento sistem\xE1tico para mitigar desvios cadastrais de conformidade."
+          ];
+          const chosenDecisao = rawItem.DECISAO || defaultDecisoes[numAcordao % 3];
+          const rawAcordao = rawItem.ACORDAO;
+          const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
+          const needsGeneration = !cleanedAcordao || cleanedAcordao.includes("DADOS HIST\xD3RICOS") || cleanedAcordao.includes("DADOS OBTIDOS") || cleanedAcordao.trim().length < 50;
+          let finalAcordaoText = cleanedAcordao;
+          let isSimulated = false;
+          if (needsGeneration) {
+            console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
+            const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
+            if (apiDoc && apiDoc.ACORDAO) {
+              finalAcordaoText = stripHtmlToText(apiDoc.ACORDAO);
+              rawItem.RELATOR = rawItem.RELATOR || apiDoc.RELATOR;
+              rawItem.COLEGIADO = rawItem.COLEGIADO || apiDoc.COLEGIADO;
+              rawItem.NUMATA = rawItem.NUMATA || apiDoc.NUMATA;
+              rawItem.DATASESSAO = rawItem.DATASESSAO || apiDoc.DATASESSAO;
+              rawItem.PROC = rawItem.PROC || (apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : void 0);
+              rawItem.INTERESSADOS = rawItem.INTERESSADOS || apiDoc.INTERESSADOS;
+              rawItem.ENTIDADE = rawItem.ENTIDADE || apiDoc.ENTIDADE;
+              rawItem.UNIDADETECNICA = rawItem.UNIDADETECNICA || apiDoc.UNIDADETECNICA;
+              rawItem.ASSUNTO = rawItem.ASSUNTO || apiDoc.ASSUNTO;
+              rawItem.TIPOPROCESSO = rawItem.TIPOPROCESSO || apiDoc.TIPOPROCESSO;
+            } else {
+              isSimulated = true;
+              finalAcordaoText = generateFullAcordaoText({
+                RELATOR: chosenRelator,
+                NUMACORDAO: numAcordao,
+                ANOACORDAO: anoAcordao,
+                COLEGIADO: chosenColegiado,
+                PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+                TIPOPROCESSO: rawItem.TIPOPROCESSO || "Julgamento",
+                INTERESSADOS: rawItem.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
+                ENTIDADE: rawItem.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
+                UNIDADETECNICA: chosenUT,
+                ASSUNTO: chosenAssunto,
+                DECISAO: chosenDecisao
+              });
+            }
+          }
+          const compiledItem = {
+            KEY: generatedKey,
+            TITULO: rawItem.TITULO || `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${rawItem.NUMATA || numAta} - ${(rawItem.COLEGIADO || chosenColegiado).toUpperCase()}`,
+            NUMACORDAO: numAcordao,
+            ANOACORDAO: anoAcordao,
+            NUMATA: rawItem.NUMATA || numAta,
+            COLEGIADO: rawItem.COLEGIADO || chosenColegiado,
+            DATASESSAO: rawItem.DATASESSAO || dataSessao,
+            SITUACAO: rawItem.SITUACAO || (isSimulated ? "OFICIALIZADO" : "OFICIALIZADO (VIA API)"),
+            PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+            ACORDAOSRELACIONADOS: rawItem.ACORDAOSRELACIONADOS || "Nenhum",
+            TIPOPROCESSO: rawItem.TIPOPROCESSO || "",
+            INTERESSADOS: rawItem.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
+            ENTIDADE: rawItem.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
+            UNIDADETECNICA: rawItem.UNIDADETECNICA || chosenUT,
+            RELATOR: rawItem.RELATOR || chosenRelator,
+            ASSUNTO: rawItem.ASSUNTO || chosenAssunto,
+            SUMARIO: rawItem.SUMARIO || `Ac\xF3rd\xE3o n\xBA ${numAcordao}/${anoAcordao} importado de arquivo unificado e cruzado com base TCU.`,
+            ACORDAO: finalAcordaoText,
+            DECISAO: rawItem.DECISAO || chosenDecisao,
+            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : rawItem.STATUS_MONITORAMENTO || "Pendente",
+            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : rawItem.RESPONSAVEL_INTERNO || "AECI - Divis\xE3o de Monitoramento",
+            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : rawItem.PRAZO_LIMITE || `${anoAcordao + 1}-12-31`,
+            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : rawItem.OBSERVACOES || "Importado do arquivo base. Cruzamento autom\xE1tico de metadados conclu\xEDdo.",
+            ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+          };
+          if (existingIndex >= 0) {
+            db.acordaos[existingIndex] = compiledItem;
+            results.push({
+              input: `${numAcordao}/${anoAcordao}`,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: "updated",
+              item: compiledItem,
+              message: "Reconciliado e atualizado (banco de monitoramento local preservado)"
+            });
           } else {
-            isSimulated = true;
-            finalAcordaoText = generateFullAcordaoText({
-              RELATOR: chosenRelator,
-              NUMACORDAO: numAcordao,
-              ANOACORDAO: anoAcordao,
-              COLEGIADO: chosenColegiado,
-              PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-              TIPOPROCESSO: rawItem.TIPOPROCESSO || "Julgamento",
-              INTERESSADOS: rawItem.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
-              ENTIDADE: rawItem.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
-              UNIDADETECNICA: chosenUT,
-              ASSUNTO: chosenAssunto,
-              DECISAO: chosenDecisao
+            db.acordaos.unshift(compiledItem);
+            results.push({
+              input: `${numAcordao}/${anoAcordao}`,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: "imported",
+              item: compiledItem,
+              message: "Ac\xF3rd\xE3o cadastrado e cruzado com sucesso via arquivo base!"
             });
           }
         }
-        const compiledItem = {
-          KEY: generatedKey,
-          TITULO: rawItem.TITULO || `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${rawItem.NUMATA || numAta} - ${(rawItem.COLEGIADO || chosenColegiado).toUpperCase()}`,
-          NUMACORDAO: numAcordao,
-          ANOACORDAO: anoAcordao,
-          NUMATA: rawItem.NUMATA || numAta,
-          COLEGIADO: rawItem.COLEGIADO || chosenColegiado,
-          DATASESSAO: rawItem.DATASESSAO || dataSessao,
-          SITUACAO: rawItem.SITUACAO || (isSimulated ? "OFICIALIZADO" : "OFICIALIZADO (VIA API)"),
-          PROC: rawItem.PROC || `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-          ACORDAOSRELACIONADOS: rawItem.ACORDAOSRELACIONADOS || "Nenhum",
-          TIPOPROCESSO: rawItem.TIPOPROCESSO || "",
-          INTERESSADOS: rawItem.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
-          ENTIDADE: rawItem.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
-          UNIDADETECNICA: rawItem.UNIDADETECNICA || chosenUT,
-          RELATOR: rawItem.RELATOR || chosenRelator,
-          ASSUNTO: rawItem.ASSUNTO || chosenAssunto,
-          SUMARIO: rawItem.SUMARIO || `Ac\xF3rd\xE3o n\xBA ${numAcordao}/${anoAcordao} importado de arquivo unificado e cruzado com base TCU.`,
-          ACORDAO: finalAcordaoText,
-          DECISAO: rawItem.DECISAO || chosenDecisao,
-          // Preserving editing variables
-          STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : rawItem.STATUS_MONITORAMENTO || "Pendente",
-          RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : rawItem.RESPONSAVEL_INTERNO || "AECI - Divis\xE3o de Monitoramento",
-          PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : rawItem.PRAZO_LIMITE || `${anoAcordao + 1}-12-31`,
-          OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : rawItem.OBSERVACOES || "Importado do arquivo base. Cruzamento autom\xE1tico de metadados conclu\xEDdo.",
-          ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
-        };
-        if (existingIndex >= 0) {
-          db.acordaos[existingIndex] = compiledItem;
-          results.push({
-            input: `${numAcordao}/${anoAcordao}`,
-            parsedNumero: numAcordao,
-            parsedAno: anoAcordao,
-            status: "updated",
-            item: compiledItem,
-            message: "Reconciliado e atualizado (banco de monitoramento local preservado)"
-          });
-        } else {
-          db.acordaos.unshift(compiledItem);
-          results.push({
-            input: `${numAcordao}/${anoAcordao}`,
-            parsedNumero: numAcordao,
-            parsedAno: anoAcordao,
-            status: "imported",
-            item: compiledItem,
-            message: "Ac\xF3rd\xE3o cadastrado e cruzado com sucesso via arquivo base!"
-          });
-        }
-      }
-      saveDatabase(db);
-      return res.json({ success: true, results, updatedAcordaos: db.acordaos });
-    }
-    if (!acordaosList || !Array.isArray(acordaosList)) {
-      return res.status(400).json({ error: "Lista de ac\xF3rd\xE3os em formato inv\xE1lido. Envie 'items' ou 'acordaosList'." });
-    }
-    for (const itemString of acordaosList) {
-      if (!itemString || typeof itemString !== "string") continue;
-      const match = itemString.match(/(\d+)\/(\d{4})/);
-      if (!match) {
-        results.push({
-          input: itemString,
-          parsedNumero: null,
-          parsedAno: null,
-          status: "error",
-          message: "Formato inv\xE1lido. Use N\xFAmero/Ano (ex: 14068/2023-1C ou 987/2024)"
-        });
-        continue;
-      }
-      const numAcordao = parseInt(match[1]);
-      const anoAcordao = parseInt(match[2]);
-      const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
-      const existingIndex = db.acordaos.findIndex(
-        (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
-      );
-      try {
-        const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
-        let newAcordao;
-        if (apiDoc) {
-          const cleanProc = apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
-          const cleanTitulo = apiDoc.TITULO ? stripHtmlToText(apiDoc.TITULO) : `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao}`;
-          const cleanAcordaoText = apiDoc.ACORDAO ? stripHtmlToText(apiDoc.ACORDAO) : "";
-          newAcordao = {
-            KEY: generatedKey,
-            TITULO: cleanTitulo,
-            NUMACORDAO: numAcordao,
-            ANOACORDAO: anoAcordao,
-            NUMATA: apiDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
-            COLEGIADO: apiDoc.COLEGIADO || "Plen\xE1rio",
-            DATASESSAO: apiDoc.DATASESSAO || "",
-            SITUACAO: apiDoc.SITUACAO || "OFICIALIZADO",
-            PROC: cleanProc,
-            ACORDAOSRELACIONADOS: "Nenhum",
-            TIPOPROCESSO: apiDoc.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
-            INTERESSADOS: apiDoc.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
-            ENTIDADE: apiDoc.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
-            RELATOR: apiDoc.RELATOR || "",
-            UNIDADETECNICA: apiDoc.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
-            ASSUNTO: apiDoc.ASSUNTO || "Jurisprud\xEAncia TCU",
-            SUMARIO: apiDoc.ASSUNTO || "Importado via API de Pesquisa do TCU.",
-            ACORDAO: cleanAcordaoText,
-            DECISAO: cleanAcordaoText,
-            // Operational defaults:
-            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
-            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
-            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
-            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado do reposit\xF3rio p\xFAblico de jurisprud\xEAncia do TCU em " + (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR") + ".",
-            ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
-          };
-        } else {
-          const colegiadoOptions = ["Plen\xE1rio", "Primeira C\xE2mara", "Segunda C\xE2mara"];
-          const chosenColegiado = colegiadoOptions[numAcordao % 3];
-          const numAta = `${Math.floor(Math.random() * 45) + 1}/${anoAcordao}`;
-          const dataSessao = `${String(Math.floor(numAcordao % 28 + 1)).padStart(2, "0")}/${String(Math.floor(numAcordao % 12 + 1)).padStart(2, "0")}/${anoAcordao}`;
-          const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do R\xEAgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
-          const chosenRelator = relatorOptions[numAcordao % 5];
-          const utOptions = ["AudContrata\xE7\xF5es (Unidade de Auditoria de Contrata\xE7\xF5es)", "AudBenef\xEDcios (Unidade de Auditoria de Benef\xEDcios Sociais)", "AudGovernan\xE7a (Unidade de Auditoria de Governan\xE7a de Pessoas)", "AudPatrim\xF4nio (Unidade de Auditoria de Infraestrutura e Log\xEDstica)"];
-          const chosenUT = utOptions[numAcordao % 4];
-          const subjectsAndSummaries = [
-            {
-              assunto: "Acompanhamento de recomenda\xE7\xF5es de transpar\xEAncia passiva e divulga\xE7\xE3o de pain\xE9is do MTE.",
-              sumario: "Acompanhamento t\xE9cnico gerado a partir do cruzamento de dados institucionais dos canais oficiais do Minist\xE9rio do Trabalho e Emprego. Recomenda-se a reestrutura\xE7\xE3o da se\xE7\xE3o de perguntas frequentes e canais de Ouvidoria.",
-              texto: `ACORDAM os Ministros do Tribunal de Contas da Uni\xE3o, reunidos em sess\xE3o de ${chosenColegiado}, em:
-1. Recomendar \xE0 AECI-MTE o aprimoramento dos portais para facilidade do cidad\xE3o;
-2. Remeter os relat\xF3rios de andamento al Tribunal no prazo regimental de 120 dias.`,
-              decisao: "Acolhimento da representa\xE7\xE3o governamental com expedi\xE7\xE3o de ci\xEAncia e plano de monitoramento em 120 dias ordin\xE1rios."
-            },
-            {
-              assunto: "Presta\xE7\xE3o de Contas Simplificada e gest\xE3o integrada de pol\xEDticas de fomento ao emprego.",
-              sumario: "Exame de regularidade das despesas efetuadas na capacita\xE7\xE3o de jovens e adultos pelo Sistema Sine. Averigua\xE7\xE3o de termos de fomento operacionalizados pelas Superintend\xEAncias Regionais.",
-              texto: `Determina-se \xE0 Assessoria Especial de Controle Interno do MTE que realize auditoria interna amostral nos repasses efetuados \xE0s conveniadas estaduais, com encaminhamento dos relat\xF3rios de conformidade t\xE9cnica em 150 dias.`,
-              decisao: "Julgamento de regularidade com ressalva, com determina\xE7\xF5es urgentes para saneamento de contas sob dilig\xEAncia amostral."
-            },
-            {
-              assunto: "Inconsist\xEAncias cadastrais na emiss\xE3o de Carteiras de Trabalho Digitais e abonos salariais.",
-              sumario: "Medida preventiva de auditoria para mapear riscos de homofonias ou CPFs inativos recebendo seguro-desemprego irregularmente. Recomendado plano de governan\xE7a conjunto de dados abertos.",
-              texto: `O TCU determina \xE0 Secretaria de Emprego e Rela\xE7\xF5es do Trabalho do MTE que estabele\xE7a, no prazo de 60 dias, um comit\xEA interno de concilia\xE7\xE3o estat\xEDstica sob supervis\xE3o e auditoria da AECI-MTE.`,
-              decisao: "Ado\xE7\xE3o de medida proativa mediante constitui\xE7\xE3o de comiss\xE3o parit\xE1ria de saneamento cadastral e fiscal sob auditoria da AECI-MTE."
-            }
-          ];
-          const selection = subjectsAndSummaries[numAcordao % 3];
-          newAcordao = {
-            KEY: generatedKey,
-            TITULO: `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
-            NUMACORDAO: numAcordao,
-            ANOACORDAO: anoAcordao,
-            NUMATA: numAta,
-            COLEGIADO: chosenColegiado,
-            DATASESSAO: dataSessao,
-            SITUACAO: "OFICIALIZADO (SIMULADO)",
-            PROC: `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
-            ACORDAOSRELACIONADOS: `Nenhum`,
-            TIPOPROCESSO: [
-              "JULGAMENTO DE TCE",
-              "MONITORAMENTO",
-              "TOMADA DE CONTAS ESPECIAL",
-              "REPRESENTA\xC7\xC3O (REPR)",
-              "RELAT\xD3RIO DE AUDITORIA (RA)",
-              "RELAT\xD3RIO DE ACOMPANHAMENTO",
-              "DEN\xDANCIA (DEN)"
-            ][numAcordao % 7],
-            INTERESSADOS: "Minist\xE9rio do Trabalho e Emprego (AECI-MTE); Controladoria-Geral da Uni\xE3o",
-            ENTIDADE: "MTE - Minist\xE9rio do Trabalho e Emprego",
-            RELATOR: chosenRelator,
-            UNIDADETECNICA: chosenUT,
-            ASSUNTO: selection.assunto,
-            SUMARIO: selection.sumario,
-            ACORDAO: "",
-            DECISAO: selection.decisao,
-            STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
-            RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
-            PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
-            OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Gerado automaticamente (TCU offline).",
-            ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
-          };
-          newAcordao.ACORDAO = generateFullAcordaoText(newAcordao);
-        }
-        if (existingIndex >= 0) {
-          db.acordaos[existingIndex] = newAcordao;
-        } else {
-          db.acordaos.unshift(newAcordao);
-        }
         saveDatabase(db);
-        results.push({
-          input: itemString,
-          parsedNumero: numAcordao,
-          parsedAno: anoAcordao,
-          status: existingIndex >= 0 ? "updated" : "imported",
-          item: newAcordao,
-          message: existingIndex >= 0 ? "Ac\xF3rd\xE3o atualizado e metadados de monitoramento local preservados!" : "Ac\xF3rd\xE3o localizado na API de Jurisprud\xEAncia do TCU e incorporado ao monitoramento interno!"
-        });
-      } catch (error) {
-        console.error(`[API Import] Failed to process ${itemString}:`, error);
-        results.push({
-          input: itemString,
-          parsedNumero: numAcordao,
-          parsedAno: anoAcordao,
-          status: "error",
-          message: `Falha na consulta \xE0 API externa: ${error.message || "Erro desconhecido"}`
-        });
+      } else if (acordaosList && Array.isArray(acordaosList)) {
+        for (const itemString of acordaosList) {
+          if (!itemString || typeof itemString !== "string") continue;
+          const match = itemString.match(/(\d+)\/(\d{4})/);
+          if (!match) {
+            results.push({
+              input: itemString,
+              parsedNumero: null,
+              parsedAno: null,
+              status: "error",
+              message: "Formato inv\xE1lido. Use N\xFAmero/Ano (ex: 14068/2023-1C ou 987/2024)"
+            });
+            continue;
+          }
+          const numAcordao = parseInt(match[1]);
+          const anoAcordao = parseInt(match[2]);
+          const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
+          const existingIndex = db.acordaos.findIndex(
+            (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
+          );
+          try {
+            const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
+            let newAcordao;
+            if (apiDoc) {
+              const cleanProc = apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+              const cleanTitulo = apiDoc.TITULO ? stripHtmlToText(apiDoc.TITULO) : `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao}`;
+              const cleanAcordaoText = apiDoc.ACORDAO ? stripHtmlToText(apiDoc.ACORDAO) : "";
+              newAcordao = {
+                KEY: generatedKey,
+                TITULO: cleanTitulo,
+                NUMACORDAO: numAcordao,
+                ANOACORDAO: anoAcordao,
+                NUMATA: apiDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
+                COLEGIADO: apiDoc.COLEGIADO || "Plen\xE1rio",
+                DATASESSAO: apiDoc.DATASESSAO || "",
+                SITUACAO: apiDoc.SITUACAO || "OFICIALIZADO",
+                PROC: cleanProc,
+                ACORDAOSRELACIONADOS: "Nenhum",
+                TIPOPROCESSO: apiDoc.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+                INTERESSADOS: apiDoc.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
+                ENTIDADE: apiDoc.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
+                RELATOR: apiDoc.RELATOR || "",
+                UNIDADETECNICA: apiDoc.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+                ASSUNTO: apiDoc.ASSUNTO || "Jurisprud\xEAncia TCU",
+                SUMARIO: apiDoc.ASSUNTO || "Importado via API de Pesquisa do TCU.",
+                ACORDAO: cleanAcordaoText,
+                DECISAO: cleanAcordaoText,
+                STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
+                PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado do reposit\xF3rio p\xFAblico de jurisprud\xEAncia do TCU em " + (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR") + ".",
+                ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+              };
+            } else {
+              const colegiadoOptions = ["Plen\xE1rio", "Primeira C\xE2mara", "Segunda C\xE2mara"];
+              const chosenColegiado = colegiadoOptions[numAcordao % 3];
+              const numAta = `${Math.floor(Math.random() * 45) + 1}/${anoAcordao}`;
+              const dataSessao = `${String(Math.floor(numAcordao % 28 + 1)).padStart(2, "0")}/${String(Math.floor(numAcordao % 12 + 1)).padStart(2, "0")}/${anoAcordao}`;
+              const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do R\xEAgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
+              const chosenRelator = relatorOptions[numAcordao % 5];
+              const utOptions = ["AudContrata\xE7\xF5es (Unidade de Auditoria de Contrata\xE7\xF5es)", "AudBenef\xEDcios (Unidade de Auditoria de Benef\xEDcios Sociais)", "AudGovernan\xE7a (Unidade de Auditoria de Governan\xE7a de Pessoas)", "AudPatrim\xF4nio (Unidade de Auditoria de Infraestrutura e Log\xEDstica)"];
+              const chosenUT = utOptions[numAcordao % 4];
+              const subjectsAndSummaries = [
+                {
+                  assunto: "Acompanhamento de recomenda\xE7\xF5es de transpar\xEAncia passiva e divulga\xE7\xE3o de pain\xE9is do MTE.",
+                  sumario: "Acompanhamento t\xE9cnico gerado a partir do cruzamento de dados institucionais dos canais oficiais do Minist\xE9rio do Trabalho e Emprego. Recomenda-se a reestrutura\xE7\xE3o da se\xE7\xE3o de perguntas frequentes e canais de Ouvidoria.",
+                  texto: `ACORDAM os Ministros do Tribunal de Contas da Uni\xE3o, reunidos em sess\xE3o de ${chosenColegiado}, em:
+1. Recomendar \xE0 AECI-MTE o aprimoramento dos portais para facilidade do cidad\xE3o;
+2. Remeter os relat\xF3rios de andamento ao Tribunal no prazo regimental de 120 dias.`,
+                  decisao: "Acolhimento da representa\xE7\xE3o governamental com expedi\xE7\xE3o de ci\xEAncia e plano de monitoramento em 120 dias ordin\xE1rios."
+                },
+                {
+                  assunto: "Presta\xE7\xE3o de Contas Simplificada e gest\xE3o integrada de pol\xEDticas de fomento ao emprego.",
+                  sumario: "Exame de regularidade das despesas efetuadas na capacita\xE7\xE3o de jovens e adultos pelo Sistema Sine. Averigua\xE7\xE3o de termos de fomento operacionalizados pelas Superintend\xEAncias Regionais.",
+                  texto: `Determina-se \xE0 Assessoria Especial de Controle Interno do MTE que realize auditoria interna amostral nos repasses efetuados \xE0s conveniadas estaduais, com encaminhamento dos relat\xF3rios de conformidade t\xE9cnica em 150 dias.`,
+                  decisao: "Julgamento de regularidade com ressalva, com determina\xE7\xF5es urgentes para saneamento de contas sob dilig\xEAncia amostral."
+                },
+                {
+                  assunto: "Inconsist\xEAncias cadastrais na emiss\xE3o de Carteiras de Trabalho Digitais e abonos salariais.",
+                  sumario: "Medida preventiva de auditoria para mapear risks de homofonias ou CPFs inativos recebendo seguro-desemprego irregularmente. Recomendado plano de governan\xE7a conjunto de dados abertos.",
+                  texto: `O TCU determina \xE0 Secretaria de Emprego e Rela\xE7\xF5es do Trabalho do MTE que estabele\xE7a, no prazo de 60 dias, um comit\xEA interno de concilia\xE7\xE3o estat\xEDstica sob supervis\xE3o e auditoria da AECI-MTE.`,
+                  decisao: "Ado\xE7\xE3o de medida proativa mediante constitui\xE7\xE3o de comiss\xE3o parit\xE1ria de saneamento cadastral e fiscal sob auditoria da AECI-MTE."
+                }
+              ];
+              const selection = subjectsAndSummaries[numAcordao % 3];
+              newAcordao = {
+                KEY: generatedKey,
+                TITULO: `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao} - ATA ${numAta} - ${chosenColegiado.toUpperCase()}`,
+                NUMACORDAO: numAcordao,
+                ANOACORDAO: anoAcordao,
+                NUMATA: numAta,
+                COLEGIADO: chosenColegiado,
+                DATASESSAO: dataSessao,
+                SITUACAO: "OFICIALIZADO (SIMULADO)",
+                PROC: `TC ${String(numAcordao % 999).padStart(3, "0")}.${String(Math.floor(numAcordao / 100)).padStart(3, "0")}/${anoAcordao}-0`,
+                ACORDAOSRELACIONADOS: `Nenhum`,
+                TIPOPROCESSO: [
+                  "JULGAMENTO DE TCE",
+                  "MONITORAMENTO",
+                  "TOMADA DE CONTAS ESPECIAL",
+                  "REPRESENTA\xC7\xC3O (REPR)",
+                  "RELAT\xD3RIO DE AUDITORIA (RA)",
+                  "RELAT\xD3RIO DE ACOMPANHAMENTO",
+                  "DEN\xDANCIA (DEN)"
+                ][numAcordao % 7],
+                INTERESSADOS: "Minist\xE9rio do Trabalho e Emprego (AECI-MTE); Controladoria-Geral da Uni\xE3o",
+                ENTIDADE: "MTE - Minist\xE9rio do Trabalho e Emprego",
+                RELATOR: chosenRelator,
+                UNIDADETECNICA: chosenUT,
+                ASSUNTO: selection.assunto,
+                SUMARIO: selection.sumario,
+                ACORDAO: "",
+                DECISAO: selection.decisao,
+                STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
+                PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Gerado automaticamente (TCU offline).",
+                ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+              };
+              newAcordao.ACORDAO = generateFullAcordaoText(newAcordao);
+            }
+            if (existingIndex >= 0) {
+              db.acordaos[existingIndex] = newAcordao;
+            } else {
+              db.acordaos.unshift(newAcordao);
+            }
+            saveDatabase(db);
+            results.push({
+              input: itemString,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: existingIndex >= 0 ? "updated" : "imported",
+              item: newAcordao,
+              message: existingIndex >= 0 ? "Ac\xF3rd\xE3o atualizado e metadados de monitoramento local preservados!" : apiDoc ? "Ac\xF3rd\xE3o localizado na API de Jurisprud\xEAncia do TCU e incorporado ao monitoramento interno!" : "Ac\xF3rd\xE3o gerado via simula\xE7\xE3o local (API do TCU indispon\xEDvel/bloqueada)."
+            });
+          } catch (error) {
+            console.error(`[API Import] Failed to process ${itemString}:`, error);
+            results.push({
+              input: itemString,
+              parsedNumero: numAcordao,
+              parsedAno: anoAcordao,
+              status: "error",
+              message: `Falha na consulta \xE0 API externa: ${error.message || "Erro desconhecido"}`
+            });
+          }
+        }
+      }
+      res.json({ success: true, results, updatedAcordaos: db.acordaos });
+    } finally {
+      if (import_fs.default.existsSync(TCU_DIR)) {
+        try {
+          const files = import_fs.default.readdirSync(TCU_DIR);
+          const tempFiles = files.filter((f) => f.startsWith("temp-acordao-completo-") && f.endsWith(".csv"));
+          for (const file of tempFiles) {
+            try {
+              import_fs.default.unlinkSync(import_path.default.join(TCU_DIR, file));
+              console.log(`[TCU CSV] Deleted temporary file: ${file}`);
+            } catch (e) {
+              console.error(`[TCU CSV] Failed to delete temporary file ${file}:`, e);
+            }
+          }
+        } catch (e) {
+          console.error(`[TCU CSV] Error during directory cleanup:`, e);
+        }
       }
     }
-    res.json({ success: true, results, updatedAcordaos: db.acordaos });
+  });
+  app.post("/api/acordaos/sync-local", async (req, res) => {
+    const db = loadDatabase();
+    if (!import_fs.default.existsSync(TCU_DIR)) {
+      return res.status(400).json({ success: false, message: "Diret\xF3rio de arquivos do TCU n\xE3o encontrado." });
+    }
+    const files = import_fs.default.readdirSync(TCU_DIR);
+    const csvFiles = files.filter((f) => {
+      const lower = f.toLowerCase();
+      return (lower.startsWith("ac\xF3rd\xE3os") || lower.startsWith("acordaos") || lower.startsWith("acordao-completo-")) && lower.endsWith(".csv");
+    });
+    if (csvFiles.length === 0) {
+      return res.json({
+        success: false,
+        message: "Nenhum arquivo local 'Ac\xF3rd\xE3os*.csv' ou 'acordao-completo-*.csv' encontrado na pasta data/tcu/ do projeto."
+      });
+    }
+    const report = [];
+    let totalImported = 0;
+    let totalUpdated = 0;
+    let totalSkipped = 0;
+    try {
+      for (const file of csvFiles) {
+        const filePath = import_path.default.join(TCU_DIR, file);
+        console.log(`[Local Sync] Processing local CSV file: ${filePath}...`);
+        let imported = 0;
+        let updated = 0;
+        let skipped = 0;
+        try {
+          const fileStream = import_fs.default.createReadStream(filePath, { encoding: "utf8" });
+          await parseCsvStream(fileStream, async (record) => {
+            const numAcordao = Number(record.NUMACORDAO);
+            const anoAcordao = Number(record.ANOACORDAO);
+            if (!numAcordao || !anoAcordao) return false;
+            const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
+            const existingIndex = db.acordaos.findIndex(
+              (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
+            );
+            if (existingIndex >= 0) {
+              const current = db.acordaos[existingIndex];
+              const currentIsSimulated = current.SITUACAO?.includes("SIMULADO") || current.OBSERVACOES?.includes("Gerado automaticamente");
+              const hasFullText = current.ACORDAO && current.ACORDAO.trim().length > 100;
+              if (!currentIsSimulated && hasFullText) {
+                skipped++;
+                return false;
+              }
+            }
+            try {
+              const fullDoc = await fetchAcordaoFromCSV(numAcordao, anoAcordao);
+              if (fullDoc) {
+                const cleanProc = fullDoc.PROC ? stripHtmlToText(fullDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+                const cleanTitulo = fullDoc.TITULO ? stripHtmlToText(fullDoc.TITULO) : `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao}`;
+                const cleanAcordaoText = fullDoc.ACORDAO ? stripHtmlToText(fullDoc.ACORDAO) : "";
+                const newAcordao = {
+                  KEY: generatedKey,
+                  TITULO: cleanTitulo,
+                  NUMACORDAO: numAcordao,
+                  ANOACORDAO: anoAcordao,
+                  NUMATA: fullDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
+                  COLEGIADO: fullDoc.COLEGIADO || record.COLEGIADO || "Plen\xE1rio",
+                  DATASESSAO: fullDoc.DATASESSAO || record.DATASESSAO || "",
+                  SITUACAO: fullDoc.SITUACAO || "OFICIALIZADO",
+                  PROC: cleanProc,
+                  ACORDAOSRELACIONADOS: fullDoc.ACORDAOSRELACIONADOS || "Nenhum",
+                  TIPOPROCESSO: fullDoc.TIPOPROCESSO || record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+                  INTERESSADOS: fullDoc.INTERESSADOS || "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
+                  ENTIDADE: fullDoc.ENTIDADE || "MTE - Minist\xE9rio do Trabalho e Emprego",
+                  RELATOR: fullDoc.RELATOR || record.RELATOR || "",
+                  UNIDADETECNICA: fullDoc.UNIDADETECNICA || record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+                  ASSUNTO: fullDoc.ASSUNTO || "Jurisprud\xEAncia TCU",
+                  SUMARIO: fullDoc.SUMARIO || "Importado via Sincroniza\xE7\xE3o Local do TCU.",
+                  ACORDAO: cleanAcordaoText,
+                  DECISAO: fullDoc.DECISAO || cleanAcordaoText,
+                  // Operational defaults
+                  STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                  RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
+                  PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                  OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado via Sincroniza\xE7\xE3o Local do TCU em " + (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR") + ".",
+                  ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+                };
+                if (existingIndex >= 0) {
+                  db.acordaos[existingIndex] = newAcordao;
+                  updated++;
+                } else {
+                  db.acordaos.unshift(newAcordao);
+                  imported++;
+                }
+              } else {
+                const cleanProc = record.PROC ? stripHtmlToText(record.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+                const cleanTitulo = record.TITULO ? stripHtmlToText(record.TITULO) : `AC\xD3RD\xC3O ${numAcordao}/${anoAcordao}`;
+                const fallbackAcordao = {
+                  KEY: generatedKey,
+                  TITULO: cleanTitulo,
+                  NUMACORDAO: numAcordao,
+                  ANOACORDAO: anoAcordao,
+                  NUMATA: record.NUMATA || `${numAcordao}/${anoAcordao}`,
+                  COLEGIADO: record.COLEGIADO || "Plen\xE1rio",
+                  DATASESSAO: record.DATASESSAO || "",
+                  SITUACAO: "OFICIALIZADO (SEM INTEIRO TEOR)",
+                  PROC: cleanProc,
+                  ACORDAOSRELACIONADOS: "Nenhum",
+                  TIPOPROCESSO: record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+                  INTERESSADOS: "Minist\xE9rio do Trabalho e Emprego (AECI-MTE)",
+                  ENTIDADE: "MTE - Minist\xE9rio do Trabalho e Emprego",
+                  RELATOR: record.RELATOR || "",
+                  UNIDADETECNICA: record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+                  ASSUNTO: "Jurisprud\xEAncia TCU",
+                  SUMARIO: "Importado via Sincroniza\xE7\xE3o Local (Metadados apenas).",
+                  ACORDAO: "",
+                  DECISAO: "",
+                  STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                  RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
+                  PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                  OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado via Sincroniza\xE7\xE3o Local (apenas metadados) em " + (/* @__PURE__ */ new Date()).toLocaleDateString("pt-BR") + ".",
+                  ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+                };
+                if (existingIndex >= 0) {
+                  skipped++;
+                } else {
+                  db.acordaos.unshift(fallbackAcordao);
+                  imported++;
+                }
+              }
+            } catch (err) {
+              console.error(`[Local Sync] Error fetching full doc for ${numAcordao}/${anoAcordao}:`, err);
+              skipped++;
+            }
+            return false;
+          });
+          report.push({ file, imported, updated, skipped });
+          totalImported += imported;
+          totalUpdated += updated;
+          totalSkipped += skipped;
+        } catch (err) {
+          console.error(`[Local Sync] Error processing file ${file}:`, err);
+          report.push({ file, imported: 0, updated: 0, skipped: 0, error: err.message });
+        }
+      }
+    } finally {
+      try {
+        const files2 = import_fs.default.readdirSync(TCU_DIR);
+        for (const file of files2) {
+          if (file.startsWith("temp-acordao-completo-") && file.endsWith(".csv")) {
+            import_fs.default.unlinkSync(import_path.default.join(TCU_DIR, file));
+            console.log(`[Local Sync] Deleted temporary file: ${file}`);
+          }
+        }
+      } catch (e) {
+        console.error(`[Local Sync] Error cleaning up temporary files:`, e);
+      }
+    }
+    if (totalImported > 0 || totalUpdated > 0) {
+      saveDatabase(db);
+    }
+    return res.json({
+      success: true,
+      message: `Sincroniza\xE7\xE3o local conclu\xEDda! ${totalImported} importados, ${totalUpdated} atualizados, ${totalSkipped} ignorados.`,
+      report,
+      updatedAcordaos: db.acordaos
+    });
   });
   app.get("/api/rol-responsaveis", (req, res) => {
     const db = loadDatabase();
@@ -3165,7 +3922,22 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       comissaoEtica: SEED_COMISSAO_ETICA,
       superintendencias: SEED_SUPERINTENDENCIAS,
       tces: SEED_TCES,
-      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS
+      tceAcordaoMappings: SEED_TCE_ACORDAO_MAPPINGS,
+      users: SEED_PROFILES,
+      cgu: SEED_CGU,
+      cguReports: [],
+      eticaMembros: SEED_ETICA_MEMBROS,
+      eticaReunioes: SEED_ETICA_REUNIOES,
+      eticaAtas: SEED_ETICA_ATAS,
+      eticaProcessos: SEED_ETICA_PROCESSOS,
+      contratos: SEED_CONTRATOS,
+      contratosConsumoMensal: SEED_CONTRATOS_CONSUMO,
+      viaturas: SEED_VIATURAS,
+      viaturasAbastecimentos: SEED_VIATURAS_ABASTECIMENTOS,
+      viaturasManutencoes: SEED_VIATURAS_MANUTENCOES,
+      unidadesRol: SEED_UNIDADES_ROL,
+      dirigentes: SEED_DIRIGENTES,
+      dirigentesEventos: SEED_DIRIGENTES_EVENTOS
     };
     saveDatabase(defaultData);
     res.json({ success: true, message: "Banco de dados redefinido com sucesso para os dados padr\xE3o de f\xE1brica." });
@@ -3220,6 +3992,313 @@ Sua senha provis\xF3ria \xE9: ${provPass}
         regulares: db.superintendencias.filter((x) => x.statusGeral === "Regular").length
       }
     });
+  });
+  app.get("/api/contratos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.contratos || []);
+  });
+  app.get("/api/contratos/srte/:uf", (req, res) => {
+    const db = loadDatabase();
+    const uf = req.params.uf.toUpperCase();
+    const list = (db.contratos || []).filter((x) => x.srteId === uf);
+    res.json(list);
+  });
+  app.post("/api/contratos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "C-" + Date.now();
+    if (!db.contratos) db.contratos = [];
+    db.contratos.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/contratos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.contratos.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.contratos[index] = { ...db.contratos[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.contratos[index]);
+    } else {
+      res.status(404).json({ error: "Contrato n\xE3o encontrado." });
+    }
+  });
+  app.delete("/api/contratos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.contratos = (db.contratos || []).filter((x) => x.id !== id);
+    db.contratosConsumoMensal = (db.contratosConsumoMensal || []).filter((x) => x.contratoId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.get("/api/contratos/:id/consumo", (req, res) => {
+    const db = loadDatabase();
+    const contratoId = req.params.id;
+    const list = (db.contratosConsumoMensal || []).filter((x) => x.contratoId === contratoId);
+    res.json(list);
+  });
+  app.post("/api/contratos/:id/consumo", (req, res) => {
+    const db = loadDatabase();
+    const contratoId = req.params.id;
+    const { mesAno, valor } = req.body;
+    if (!mesAno || valor === void 0) {
+      return res.status(400).json({ error: "M\xEAs/Ano e Valor s\xE3o obrigat\xF3rios." });
+    }
+    if (!db.contratosConsumoMensal) db.contratosConsumoMensal = [];
+    const currentConsumos = db.contratosConsumoMensal.filter((x) => x.contratoId === contratoId).sort((a, b) => {
+      const [mA, yA] = a.mesAno.split("/").map(Number);
+      const [mB, yB] = b.mesAno.split("/").map(Number);
+      return (yA - yB) * 12 + (mA - mB);
+    });
+    let variacao = 0;
+    if (currentConsumos.length > 0) {
+      const lastVal = currentConsumos[currentConsumos.length - 1].valor;
+      if (lastVal > 0) {
+        variacao = parseFloat(((valor - lastVal) / lastVal * 100).toFixed(2));
+      }
+    }
+    const newItem = {
+      id: "CC-" + Date.now(),
+      contratoId,
+      mesAno,
+      valor: Number(valor),
+      variacao
+    };
+    db.contratosConsumoMensal.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.delete("/api/contratos/consumo/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.contratosConsumoMensal = (db.contratosConsumoMensal || []).filter((x) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.get("/api/viaturas", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.viaturas || []);
+  });
+  app.get("/api/viaturas/srte/:uf", (req, res) => {
+    const db = loadDatabase();
+    const uf = req.params.uf.toUpperCase();
+    const list = (db.viaturas || []).filter((x) => x.srteId === uf);
+    res.json(list);
+  });
+  app.post("/api/viaturas", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "V-" + Date.now();
+    if (!db.viaturas) db.viaturas = [];
+    db.viaturas.unshift(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/viaturas/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.viaturas.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.viaturas[index] = { ...db.viaturas[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.viaturas[index]);
+    } else {
+      res.status(404).json({ error: "Viatura n\xE3o encontrada." });
+    }
+  });
+  app.delete("/api/viaturas/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.viaturas = (db.viaturas || []).filter((x) => x.id !== id);
+    db.viaturasAbastecimentos = (db.viaturasAbastecimentos || []).filter((x) => x.viaturaId !== id);
+    db.viaturasManutencoes = (db.viaturasManutencoes || []).filter((x) => x.viaturaId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.get("/api/viaturas/:id/abastecimentos", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const list = (db.viaturasAbastecimentos || []).filter((x) => x.viaturaId === viaturaId);
+    res.json(list);
+  });
+  app.post("/api/viaturas/:id/abastecimentos", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const newItem = req.body;
+    newItem.id = "A-" + Date.now();
+    newItem.viaturaId = viaturaId;
+    if (!db.viaturasAbastecimentos) db.viaturasAbastecimentos = [];
+    db.viaturasAbastecimentos.unshift(newItem);
+    const viatIdx = (db.viaturas || []).findIndex((x) => x.id === viaturaId);
+    if (viatIdx >= 0 && newItem.km > db.viaturas[viatIdx].kmAtual) {
+      db.viaturas[viatIdx].kmAtual = newItem.km;
+    }
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.get("/api/viaturas/:id/manutencoes", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const list = (db.viaturasManutencoes || []).filter((x) => x.viaturaId === viaturaId);
+    res.json(list);
+  });
+  app.post("/api/viaturas/:id/manutencoes", (req, res) => {
+    const db = loadDatabase();
+    const viaturaId = req.params.id;
+    const newItem = req.body;
+    newItem.id = "M-" + Date.now();
+    newItem.viaturaId = viaturaId;
+    if (!db.viaturasManutencoes) db.viaturasManutencoes = [];
+    db.viaturasManutencoes.unshift(newItem);
+    const viatIdx = (db.viaturas || []).findIndex((x) => x.id === viaturaId);
+    if (viatIdx >= 0) {
+      if (newItem.kmManutencao > db.viaturas[viatIdx].kmAtual) {
+        db.viaturas[viatIdx].kmAtual = newItem.kmManutencao;
+      }
+      if (newItem.proximaRevisaoKm && newItem.proximaRevisaoKm > db.viaturas[viatIdx].proximaRevisaoKm) {
+        db.viaturas[viatIdx].proximaRevisaoKm = newItem.proximaRevisaoKm;
+      }
+    }
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.get("/api/unidades-rol", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.unidadesRol || []);
+  });
+  app.post("/api/unidades-rol", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "U-" + Date.now();
+    if (!db.unidadesRol) db.unidadesRol = [];
+    db.unidadesRol.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/unidades-rol/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const idx = (db.unidadesRol || []).findIndex((x) => x.id === id);
+    if (idx >= 0) {
+      db.unidadesRol[idx] = { ...db.unidadesRol[idx], ...req.body };
+      saveDatabase(db);
+      res.json(db.unidadesRol[idx]);
+    } else {
+      res.status(404).json({ error: "Unidade n\xE3o encontrada." });
+    }
+  });
+  app.delete("/api/unidades-rol/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.unidadesRol = (db.unidadesRol || []).filter((x) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.get("/api/dirigentes", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.dirigentes || []);
+  });
+  app.post("/api/dirigentes", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "D-" + Date.now();
+    if (!db.dirigentes) db.dirigentes = [];
+    db.dirigentes.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/dirigentes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = db.dirigentes.findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.dirigentes[index] = { ...db.dirigentes[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.dirigentes[index]);
+    } else {
+      res.status(404).json({ error: "Dirigente n\xE3o localizado." });
+    }
+  });
+  app.delete("/api/dirigentes/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.dirigentes = (db.dirigentes || []).filter((x) => x.id !== id);
+    db.dirigentesCargos = (db.dirigentesCargos || []).filter((x) => x.dirigenteId !== id);
+    db.dirigentesEventos = (db.dirigentesEventos || []).filter((x) => x.dirigenteId !== id && x.substitutoId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.get("/api/dirigentes/cargos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.dirigentesCargos || []);
+  });
+  app.post("/api/dirigentes/cargos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "DC-" + Date.now();
+    if (!db.dirigentesCargos) db.dirigentesCargos = [];
+    db.dirigentesCargos.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.put("/api/dirigentes/cargos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    const updateData = req.body;
+    const index = (db.dirigentesCargos || []).findIndex((x) => x.id === id);
+    if (index >= 0) {
+      db.dirigentesCargos[index] = { ...db.dirigentesCargos[index], ...updateData };
+      saveDatabase(db);
+      res.json(db.dirigentesCargos[index]);
+    } else {
+      res.status(404).json({ error: "Cargo n\xE3o localizado." });
+    }
+  });
+  app.delete("/api/dirigentes/cargos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.dirigentesCargos = (db.dirigentesCargos || []).filter((x) => x.id !== id);
+    db.dirigentesEventos = (db.dirigentesEventos || []).filter((x) => x.cargoId !== id);
+    saveDatabase(db);
+    res.json({ success: true });
+  });
+  app.get("/api/dirigentes/eventos", (req, res) => {
+    const db = loadDatabase();
+    res.json(db.dirigentesEventos || []);
+  });
+  app.post("/api/dirigentes/eventos", (req, res) => {
+    const db = loadDatabase();
+    const newItem = req.body;
+    newItem.id = "DE-" + Date.now();
+    if (!db.dirigentesEventos) db.dirigentesEventos = [];
+    if (newItem.motivo === "Exonera\xE7\xE3o") {
+      const cIdx = (db.dirigentesCargos || []).findIndex((x) => x.id === newItem.cargoId);
+      if (cIdx >= 0) {
+        db.dirigentesCargos[cIdx].fimExercicio = newItem.dataFim || newItem.dataInicio;
+        db.dirigentesCargos[cIdx].status = "Encerrado";
+      }
+      const cargosAtivos = (db.dirigentesCargos || []).filter(
+        (x) => x.dirigenteId === newItem.dirigenteId && x.status === "Ativo"
+      );
+      if (cargosAtivos.length === 0) {
+        const dIdx = (db.dirigentes || []).findIndex((x) => x.id === newItem.dirigenteId);
+        if (dIdx >= 0) db.dirigentes[dIdx].status = "Inativo";
+      }
+    }
+    db.dirigentesEventos.push(newItem);
+    saveDatabase(db);
+    res.status(201).json(newItem);
+  });
+  app.delete("/api/dirigentes/eventos/:id", (req, res) => {
+    const db = loadDatabase();
+    const id = req.params.id;
+    db.dirigentesEventos = (db.dirigentesEventos || []).filter((x) => x.id !== id);
+    saveDatabase(db);
+    res.json({ success: true });
   });
   if (process.env.NODE_ENV !== "production") {
     console.log("Starting server in DEVELOPMENT mode with Vite Middleware...");

@@ -37,7 +37,8 @@ import {
   Users,
   Building2,
   ArrowLeftRight,
-  Archive
+  Archive,
+  RefreshCw
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
 
@@ -46,6 +47,7 @@ interface TcuModuleProps {
   onUpdateAcordao: (updated: AcordaoDemand) => Promise<boolean>;
   onDeleteAcordao: (key: string) => Promise<boolean>;
   onImportAcordaos: (listOrItems: string[] | any[]) => Promise<any>;
+  onSyncLocalAcordaos: () => Promise<any>;
   comunicacoes?: ComunicacaoDemand[];
   onUpdateComunicacao?: (updated: ComunicacaoDemand) => Promise<boolean>;
   onDeleteComunicacao?: (key: string) => Promise<boolean>;
@@ -66,6 +68,7 @@ export default function TcuModule({
   onUpdateAcordao, 
   onDeleteAcordao, 
   onImportAcordaos,
+  onSyncLocalAcordaos,
   comunicacoes: rawComunicacoes = [],
   onUpdateComunicacao,
   onDeleteComunicacao,
@@ -391,12 +394,6 @@ export default function TcuModule({
 
   // Importer states
   const [showImporter, setShowImporter] = useState(false);
-  const [pasteContent, setPasteContent] = useState("");
-  const [importResults, setImportResults] = useState<any[] | null>(null);
-  const [isImporting, setIsImporting] = useState(false);
-  const [acordaoImportMessage, setAcordaoImportMessage] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isReadingFile, setIsReadingFile] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [copySuccessAlert, setCopySuccessAlert] = useState(false);
   const [fullTextAcordao, setFullTextAcordao] = useState<AcordaoDemand | null>(null);
@@ -404,6 +401,11 @@ export default function TcuModule({
 
   // Trace / Sync audit logs states
   const [showSyncLogModal, setShowSyncLogModal] = useState(false);
+
+  // Local Sync states
+  const [isSyncingLocal, setIsSyncingLocal] = useState(false);
+  const [syncLocalMessage, setSyncLocalMessage] = useState<string | null>(null);
+  const [localSyncReport, setLocalSyncReport] = useState<any[] | null>(null);
 
   // Communications module states
   const [comSearchTerm, setComSearchTerm] = useState("");
@@ -509,59 +511,7 @@ export default function TcuModule({
     reader.readAsArrayBuffer(file);
   };
 
-  // File Upload and drag-and-drop parsing handlers
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    readFileContent(file);
-  };
 
-  const readFileContent = (file: File) => {
-    setAcordaoImportMessage(null);
-    const fileName = file.name.toLowerCase();
-    if (!fileName.startsWith("acordaos") && !fileName.startsWith("acórdãos")) {
-      setAcordaoImportMessage(`Arquivo rejeitado! Para acórdãos, o nome do arquivo deve obrigatoriamente começar com "acordaos" (ex: acordaos.csv). Você enviou: "${file.name}".`);
-      setIsReadingFile(false);
-      return;
-    }
-
-    setIsReadingFile(true);
-    readAndDecodeFile(
-      file,
-      (text) => {
-        if (text) {
-          setPasteContent((prev) => {
-            if (prev.trim()) {
-              return prev + "\n" + text;
-            }
-            return text;
-          });
-        }
-      },
-      () => {
-        setIsReadingFile(false);
-      }
-    );
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      readFileContent(file);
-    }
-  };
 
   // Communications parser and handlers
   const parseCommunicationsCSV = (csvText: string): ComunicacaoDemand[] => {
@@ -1323,220 +1273,25 @@ export default function TcuModule({
     return -1;
   };
 
-  // Helper to parse CSV formatted Acórdãos base file with RFC 4180 multiline support
-  const parseAcordaosCSV = (csvText: string): any[] => {
-    if (!csvText || csvText.trim().length < 10) return [];
+  // Trigger Local Sync Action
+  const handleLocalSync = async () => {
+    setIsSyncingLocal(true);
+    setSyncLocalMessage(null);
+    setLocalSyncReport(null);
 
-    // Detect delimiter from the first line (header)
-    const firstLineEnd = csvText.indexOf('\n');
-    const headerLine = firstLineEnd > 0 ? csvText.substring(0, firstLineEnd) : csvText;
-    const semiCount = (headerLine.match(/;/g) || []).length;
-    const commaCount = (headerLine.match(/,/g) || []).length;
-    const tabCount = (headerLine.match(/\t/g) || []).length;
-    let delimiter = ",";
-    if (semiCount > commaCount && semiCount > tabCount) {
-      delimiter = ";";
-    } else if (tabCount > commaCount && tabCount > semiCount) {
-      delimiter = "\t";
-    };
-
-    // Parse entire CSV with multiline support
-    const allRows = parseCSVRobust(csvText, delimiter);
-    if (allRows.length < 2) return [];
-
-    // Extract and normalize headers
-    const rawHeaders = allRows[0].map(h => h.replace(/^["']|["']$/g, "").trim().toUpperCase());
-    const normalizedHeaders = rawHeaders.map(normalizeHeaderName);
-
-    // Map important indices using fuzzy matching for robustness
-    const idxNum = findHeaderIdx(normalizedHeaders, "NUMACORDAO", "NUM ACORDAO", "NUMEROACORDAO");
-    const idxAno = findHeaderIdx(normalizedHeaders, "ANOACORDAO", "ANO ACORDAO");
-    const idxAta = findHeaderIdx(normalizedHeaders, "NUMATA", "NUM ATA", "NUMEROATA");
-    const idxColegiado = findHeaderIdx(normalizedHeaders, "COLEGIADO");
-    const idxSessao = findHeaderIdx(normalizedHeaders, "DATASESSAO", "DATA SESSAO", "DATA DA SESSAO");
-    const idxRelator = findHeaderIdx(normalizedHeaders, "RELATOR");
-    const idxSituacao = findHeaderIdx(normalizedHeaders, "SITUACAO");
-    const idxProc = findHeaderIdx(normalizedHeaders, "PROC", "PROCESSO");
-    const idxRelacionados = findHeaderIdx(normalizedHeaders, "ACORDAOSRELACIONADOS", "ACORDAOS RELACIONADOS");
-    const idxTipo = findHeaderIdx(normalizedHeaders, "TIPOPROCESSO", "TIPO PROCESSO", "TIPO DE PROCESSO", "TIPO_PROCESSO", "TIPODEPROCESSO", "TIPO", "CLASSE", "CLASSEPROCESSO", "CLASSE PROCESSO", "CLASSE_PROCESSO", "NMCLASSE", "NM_CLASSE", "NATUREZA", "NATUREZAPROCESSO", "NATUREZA DO PROCESSO", "NATUREZA_PROCESSO");
-    const idxEntidade = findHeaderIdx(normalizedHeaders, "ENTIDADE");
-    const idxUT = findHeaderIdx(normalizedHeaders, "UNIDADETECNICA", "UNIDADE TECNICA");
-    const idxAssunto = findHeaderIdx(normalizedHeaders, "ASSUNTO");
-    const idxAcordaoDoc = findHeaderIdx(normalizedHeaders, "INTEIROTEOR", "INTEIRO TEOR", "TEXTO", "ACORDAO");
-    const idxDecisaoDoc = findHeaderIdx(normalizedHeaders, "DECISAO");
-    const idxInteressados = findHeaderIdx(normalizedHeaders, "INTERESSADOS", "INTERESSADO");
-    const idxSumario = findHeaderIdx(normalizedHeaders, "SUMARIO", "SUMÁRIO");
-    const idxTitulo = findHeaderIdx(normalizedHeaders, "TITULO");
-
-    // If both NUMACORDAO and ANOACORDAO indices are missing, look for a reference/code column (like 'Acórdão' containing '7321/2025')
-    let idxRef = -1;
-    if (idxNum === -1 || idxAno === -1) {
-      idxRef = findHeaderIdx(normalizedHeaders, "ACORDAO", "ACORDAOREF", "REFERENCIA", "TITULO", "KEY", "CODIGO");
-      if (idxRef === -1) {
-        return [];
+    try {
+      const res = await onSyncLocalAcordaos();
+      if (res && res.success) {
+        setSyncLocalMessage(res.message);
+        setLocalSyncReport(res.report || []);
+      } else {
+        setSyncLocalMessage(res?.message || "Erro na sincronização local de acórdãos.");
       }
+    } catch (err: any) {
+      setSyncLocalMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
+    } finally {
+      setIsSyncingLocal(false);
     }
-
-    const items: any[] = [];
-
-    // Helper to get a clean field value from a row
-    const getField = (row: string[], idx: number): string | undefined => {
-      if (idx < 0 || idx >= row.length) return undefined;
-      const val = row[idx]?.replace(/^["']|["']$/g, "").trim();
-      return val || undefined;
-    };
-
-    const maxIdxToCheck = Math.max(idxNum, idxAno, idxRef);
-
-    for (let i = 1; i < allRows.length; i++) {
-      const row = allRows[i];
-      if (row.length < maxIdxToCheck + 1) continue;
-
-      let numAcordaoVal = 0;
-      let anoAcordaoVal = 0;
-
-      if (idxNum !== -1 && idxAno !== -1) {
-        numAcordaoVal = parseInt(getField(row, idxNum)?.replace(/[^\d]/g, "") || "0");
-        anoAcordaoVal = parseInt(getField(row, idxAno)?.replace(/[^\d]/g, "") || "0");
-      } else if (idxRef !== -1) {
-        const refVal = getField(row, idxRef) || "";
-        const match = refVal.match(/(\d+)[\/\-](\d{4})/);
-        if (match) {
-          numAcordaoVal = parseInt(match[1]);
-          anoAcordaoVal = parseInt(match[2]);
-        }
-      }
-
-      if (!numAcordaoVal || !anoAcordaoVal) continue;
-
-      const item: any = {
-        NUMACORDAO: numAcordaoVal,
-        ANOACORDAO: anoAcordaoVal,
-        NUMATA: getField(row, idxAta),
-        COLEGIADO: getField(row, idxColegiado),
-        DATASESSAO: getField(row, idxSessao),
-        RELATOR: getField(row, idxRelator),
-        SITUACAO: getField(row, idxSituacao),
-        PROC: getField(row, idxProc),
-        ACORDAOSRELACIONADOS: getField(row, idxRelacionados),
-        TIPOPROCESSO: getField(row, idxTipo),
-        ENTIDADE: getField(row, idxEntidade),
-        UNIDADETECNICA: getField(row, idxUT),
-        ASSUNTO: getField(row, idxAssunto),
-        ACORDAO: getField(row, idxAcordaoDoc),
-        DECISAO: getField(row, idxDecisaoDoc),
-        INTERESSADOS: getField(row, idxInteressados),
-        SUMARIO: getField(row, idxSumario),
-        TITULO: getField(row, idxTitulo)
-      };
-
-      items.push(item);
-    }
-
-    return items;
-  };
-
-  // Trigger Import Action
-  const handleRunImport = async () => {
-    if (!pasteContent.trim()) return;
-    setIsImporting(true);
-    setImportResults(null);
-    setAcordaoImportMessage(null);
-
-    // Try parsing as CSV first!
-    const parsedCSVItems = parseAcordaosCSV(pasteContent);
-
-    let res: any = null;
-    let totalItemsProcessed = 0;
-
-    if (parsedCSVItems.length > 0) {
-      totalItemsProcessed = parsedCSVItems.length;
-      res = await onImportAcordaos(parsedCSVItems);
-    } else {
-      // Split input on newline or commas/semicolons of keys
-      const items = pasteContent
-        .split(/[\n,;]+/)
-        .map(x => x.trim())
-        .filter(x => x.length > 0);
-
-      if (items.length === 0) {
-        setIsImporting(false);
-        return;
-      }
-      totalItemsProcessed = items.length;
-      res = await onImportAcordaos(items);
-    }
-
-    if (res && res.results) {
-      setImportResults(res.results);
-      setPasteContent(""); // Clear paste area after success
-      
-      const successCount = res.results.filter((r: any) => r.status === "imported" || r.status === "success").length;
-      const updatedCount = res.results.filter((r: any) => r.status === "updated").length;
-      const cachedCount = res.results.filter((r: any) => r.status === "cached").length;
-      const errorCount = res.results.filter((r: any) => r.status === "error").length;
-      
-      setAcordaoImportMessage(
-        `Cruzamento finalizado com sucesso! Dos ${totalItemsProcessed} acórdãos processados: ` +
-        `${successCount} novos inseridos, ${updatedCount} reconciliados/atualizados, ` +
-        `${cachedCount} sem alterações (banco atualizado) e ${errorCount} falhas de processamento.`
-      );
-
-      // Auto-close import area after 5 seconds
-      setTimeout(() => {
-        setShowImporter(false);
-        setAcordaoImportMessage(null);
-      }, 5000);
-    } else {
-      setAcordaoImportMessage(res?.error || "Erro ao conectar ao importador de jurisprudência. Verifique o console para mais detalhes.");
-    }
-    setIsImporting(false);
-  };
-
-  const getAuditLogTxt = (): string => {
-    if (!importResults) return "";
-    
-    // Calculate stats
-    const totalCount = importResults.length;
-    const successCount = importResults.filter((r: any) => r.status === "imported").length;
-    const updatedCount = importResults.filter((r: any) => r.status === "updated" || r.status === "success").length;
-    const cachedCount = importResults.filter((r: any) => r.status === "cached").length;
-    const errorCount = importResults.filter((r: any) => r.status === "error").length;
-
-    let log = "======================================================================\n";
-    log += "     RELATÓRIO OFICIAL DE AUDITORIA, CRAWLER E CONCILIAÇÃO DE DADOS   \n";
-    log += "               ÓRBITA-AECI - MINISTÉRIO DO TRABALHO E EMPREGO         \n";
-    log += "======================================================================\n";
-    log += `Data/Hora da Execução  : ${new Date().toLocaleString("pt-BR")}\n`;
-    log += "Serviço Responsável    : Assessoria Especial de Controle Interno (AECI)\n";
-    log += `Protocolo de Carga     : CGU-MTE-SYNC-${Date.now().toString().substring(5)}\n`;
-    log += "----------------------------------------------------------------------\n";
-    log += "RESUMO DO PROCESSAMENTO:\n";
-    log += `- Total de Entradas Submetidas  : ${totalCount}\n`;
-    log += `- Acórdãos Novos Importados     : ${successCount}\n`;
-    log += `- Acórdãos Atualizados          : ${updatedCount}\n`;
-    log += `- Registros já Cadastrados      : ${cachedCount}\n`;
-    log += `- Erros / Desvios de Rastreamento: ${errorCount}\n`;
-    log += "----------------------------------------------------------------------\n\n";
-    log += "DETALHAMENTO DO RASTREAMENTO (RASTREAMENTO DE JURISPRUDÊNCIA / TRACING LINE-BY-LINE):\n";
-    
-    importResults.forEach((res: any, idx: number) => {
-      const lineNum = String(idx + 1).padStart(3, "0");
-      let prefix = "[SUCESSO]";
-      if (res.status === "error") prefix = "[FALHA  ]";
-      if (res.status === "cached") prefix = "[IGNORADO]";
-      
-      log += `${lineNum} | ${prefix} Entrada original: "${res.input}"\n`;
-      log += `      -> Status: ${res.status.toUpperCase()}\n`;
-      log += `      -> Mensagem do Sistema MTE: ${res.message}\n`;
-      if (res.parsedNumero || res.parsedAno) {
-        log += `      -> Parâmetros Extraídos: Nº ${res.parsedNumero || "Não extraído"} / Ano: ${res.parsedAno || "Não extraído"}\n`;
-      }
-      log += "----------------------------------------------------------------------\n";
-    });
-    
-    log += "\n[FIM DO ARQUIVO DE LOG - ÓRBITA-AECI INTERNAL AUDITING ENGINE]";
-    return log;
   };
 
 
@@ -1726,7 +1481,7 @@ export default function TcuModule({
             <>
               <button 
                 id="btn-importer-toggle"
-                onClick={() => { setShowImporter(!showImporter); setImportResults(null); }}
+                onClick={() => { setShowImporter(!showImporter); }}
                 className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
                   showImporter 
                     ? "bg-slate-800 text-white shadow-xs" 
@@ -1820,11 +1575,10 @@ export default function TcuModule({
           <div className="relative z-10 flex justify-between items-start mb-4">
             <div className="space-y-1">
               <h3 className="text-sm font-black text-[#003366] uppercase tracking-wide">
-                Importação Direta de Jurisprudência (Dados Abertos)
+                Painel de Importação e Carga do TCU
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed max-w-4xl">
-                Insira ou cole a lista de acórdãos conforme constam na planilha do TCU. O ORBITA processará a cadeia de texto, isolará o número e ano e captará os dados detalhados na API. 
-                <span className="font-extrabold text-[#003366] bg-slate-100 px-1.5 py-0.5 rounded ml-1 font-mono">Exemplo: 14068/2023-1C ou 2345/2024-PL</span>
+                O sistema realiza a sincronização automática de acórdãos lendo os arquivos consolidados e atualizando o inteiro teor das decisões.
               </p>
             </div>
             <button onClick={() => setShowImporter(false)} className="text-slate-400 hover:text-slate-600 transition">
@@ -1832,220 +1586,64 @@ export default function TcuModule({
             </button>
           </div>
 
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Drag & Drop File Zone */}
-              <div 
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center transition text-center cursor-pointer ${
-                  isDragOver 
-                    ? "border-[#003366] bg-blue-50/50" 
-                    : "border-slate-200 hover:border-slate-300 bg-slate-50/55"
-                }`}
-                onClick={() => document.getElementById("file-import-input")?.click()}
-              >
-                <input 
-                  type="file" 
-                  id="file-import-input" 
-                  accept=".txt,.csv" 
-                  className="hidden" 
-                  onChange={handleFileChange} 
-                />
-                
-                <div className="p-3 bg-white rounded-full shadow-2xs mb-2 text-slate-500">
-                  <FileUp className="w-6 h-6 text-[#003366]" />
-                </div>
-                
-                <h4 className="text-xs font-bold text-slate-800">
-                  {isReadingFile ? "Lendo arquivo..." : "Arraste um arquivo (.txt, .csv) ou clique"}
+          <div className="space-y-4 relative z-10">
+            {/* Sincronização Local Incremental - Premium Card */}
+            <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-[#003366] uppercase tracking-wider flex items-center gap-1.5">
+                  <RefreshCw className={`w-4 h-4 text-[#003366] ${isSyncingLocal ? "animate-spin" : ""}`} />
+                  Sincronização Automática via Planilhas Locais
                 </h4>
-                <p className="text-[10px] text-slate-400 mt-1 max-w-[200px]">
-                  O arquivo será lido localmente e adicionado à lista para processamento
+                <p className="text-[11px] text-slate-500 max-w-[650px] leading-relaxed">
+                  Para maior segurança e controle de dados, salve as planilhas completas obtidas no TCU (ex: <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">Acórdãos2026.csv</code>) dentro da pasta segura <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">data/tcu/</code> do projeto.
                 </p>
-                <span className="mt-2 text-[9px] bg-[#003366] hover:bg-slate-900 text-white font-bold px-3 py-1 rounded-lg shadow-2xs">
-                  Selecionar Arquivo
-                </span>
+                <p className="text-[10px] text-slate-400">
+                  O sistema fará a leitura local em lote de forma otimizada para atualizar os teores das decisões sem depender da conexão externa do TCU.
+                </p>
               </div>
-
-              {/* Textarea View of Content */}
-              <div className="flex flex-col">
-                <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
-                  Códigos de Acórdãos a Importar
-                </label>
-                <textarea
-                  id="txt-importer-input"
-                  className="w-full flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition"
-                  placeholder="Selecione um arquivo ou cole os acórdãos diretamente aqui (ex: 14068/2023-1C ou 2345/2024-PL)"
-                  value={pasteContent}
-                  onChange={(e) => setPasteContent(e.target.value)}
-                  style={{ minHeight: "140px" }}
-                ></textarea>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 text-xs">
               <button
-                id="btn-clear-importer"
-                onClick={() => setPasteContent("")}
-                className="px-4 py-2 font-bold text-slate-600 hover:text-slate-800 transition"
+                id="btn-sync-local"
+                onClick={handleLocalSync}
+                disabled={isSyncingLocal}
+                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 flex items-center gap-1.5 transition duration-200 cursor-pointer"
               >
-                Limpar Campo
-              </button>
-              <button
-                id="btn-execute-import"
-                onClick={handleRunImport}
-                disabled={isImporting || !pasteContent.trim()}
-                className="px-4 py-2 bg-[#003366] hover:bg-slate-900 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center gap-1.5 transition duration-200"
-              >
-                {isImporting ? "Iniciando Rastreamento..." : "Processar e Sincronizar da API TCU"}
+                {isSyncingLocal ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Sincronizando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    Sincronizar Arquivos Locais
+                  </>
+                )}
               </button>
             </div>
 
-            {acordaoImportMessage && (
-              <div className="p-3.5 bg-blue-50 border border-blue-100 text-[#003366] rounded-xl text-xs font-semibold flex items-center gap-2 animate-fade-in">
-                <AlertCircle className="w-4 h-4 shrink-0 text-[#003366]" />
-                <span>{acordaoImportMessage}</span>
-              </div>
-            )}
-
-            {/* Import Feedback Report */}
-            {importResults && (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-4 space-y-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
-                  <div>
-                    <h4 className="font-extrabold text-[10px] text-[#003366] uppercase tracking-wider">
-                      Relatório de Carga Automatizada:
-                    </h4>
-                    <p className="text-[9px] text-slate-500 mt-0.5">Sincronização processada localmente e integrada ao painel secundário.</p>
-                  </div>
-                  <button
-                    onClick={() => setShowSyncLogModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-250 hover:bg-slate-105 text-[#003366] font-extrabold rounded-lg text-[10px] transition shadow-3xs cursor-pointer"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-[#003366]" />
-                    <span>Ver Log de Auditoria & Erros ({importResults.filter((r: any) => r.status === "error").length} falhas)</span>
-                  </button>
-                </div>
-                
-                <div className="max-h-40 overflow-y-auto space-y-1.5 divide-y divide-slate-100 pr-1">
-                  {importResults.map((res: any, i: number) => {
-                    const isErr = res.status === "error";
-                    const isCached = res.status === "cached";
-                    return (
-                      <div key={i} className="flex items-center justify-between text-xs py-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${
-                            isErr ? "bg-rose-500 animate-pulse" : isCached ? "bg-sky-550 text-sky-800" : "bg-emerald-500"
-                          }`} />
-                          <span className="font-mono text-slate-800 font-bold">{res.input}</span>
-                          <span className="text-slate-500 text-[11px]">{res.message}</span>
+            {syncLocalMessage && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold flex items-start gap-2 animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                <div className="space-y-1">
+                  <span>{syncLocalMessage}</span>
+                  {localSyncReport && localSyncReport.length > 0 && (
+                    <div className="mt-2 text-[10px] text-emerald-700 font-mono space-y-1">
+                      {localSyncReport.map((rep: any, idx: number) => (
+                        <div key={idx}>
+                          • {rep.file}: {rep.imported} importados, {rep.updated} atualizados, {rep.skipped} ignorados.
+                          {rep.error && <span className="text-rose-600"> (Erro: {rep.error})</span>}
                         </div>
-                        {res.item && (
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            Ano: {res.parsedAno} | Nº {res.parsedNumero}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
-
           </div>
         </div>
       )}
 
-      {/* Audit Log Modal Viewport */}
-      {showSyncLogModal && importResults && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-all-normal">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Header */}
-            <div className="p-4 bg-[#003366] text-white flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-blue-200">
-                  <FileText className="w-4 h-4 stroke-[2.5]" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-tight font-sans">
-                    Log Oficial de Conciliação e Rastreamento
-                  </h3>
-                  <code className="text-[9px] text-slate-300 block leading-none mt-0.5 tracking-wider font-mono">
-                    SINC-TCU-AUDIT-REPORT
-                  </code>
-                </div>
-              </div>
-              <button 
-                onClick={() => setShowSyncLogModal(false)}
-                className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
 
-            {/* Actions for log */}
-            <div className="p-4 bg-slate-50 border-b border-slate-150 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <span className="text-[11px] text-slate-500">
-                Filtrado por: <strong className="text-[#003366] font-bold">Todos os Registros Submetidos</strong>
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const txt = getAuditLogTxt();
-                    navigator.clipboard.writeText(txt);
-                    alert("Copiado com sucesso para a área de transferência!");
-                  }}
-                  className="px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-250 text-slate-700 font-bold rounded-lg text-[10px] transition cursor-pointer flex items-center gap-1"
-                >
-                  <Check className="w-3.5 h-3.5 text-emerald-600" /> Copiar Texto
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const txt = getAuditLogTxt();
-                    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = `LOG-SYNC-TCU-${new Date().toISOString().slice(0,10)}.txt`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="px-3 py-1.5 bg-[#003366] hover:bg-[#002244] text-white font-bold rounded-lg text-[10px] transition cursor-pointer flex items-center gap-1"
-                >
-                  <Download className="w-3.5 h-3.5 text-white" /> Baixar Log (.TXT)
-                </button>
-              </div>
-            </div>
-
-            {/* Monospace Code Editor Log Viewer */}
-            <div className="p-5 bg-slate-950 font-mono text-emerald-400 text-xs overflow-hidden">
-              <div className="max-h-[380px] overflow-y-auto space-y-0.5 leading-relaxed antialiased pr-2 custom-terminal scrollbar-thin select-text">
-                <pre className="whitespace-pre-wrap font-mono tracking-tight text-left">{getAuditLogTxt()}</pre>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-3.5 bg-slate-50 border-t border-slate-150 flex items-center justify-between">
-              <p className="text-[9.5px] text-slate-400 leading-normal max-w-md">
-                Gerado automaticamente pelo motor de sincronização Órbita-AECI. Para reportar falhas críticas no rastreador do TCU, envie o log acima para STI.
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowSyncLogModal(false)}
-                className="px-4 py-1.5 bg-slate-900 hover:bg-slate-950 text-white font-black rounded-lg text-xs transition cursor-pointer"
-              >
-                Fechar Visualização
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Dynamic Year Tabs & KPIs Bento Grid (Standardized UX) */}
       {(() => {
