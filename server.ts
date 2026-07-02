@@ -1644,6 +1644,31 @@ async function downloadTempCsv(year: number): Promise<string | null> {
   }
 }
 
+// Helper to check if an acórdão belongs or mentions Ministry of Labor (MTE) and its departments
+function isMteRelevant(record: any): boolean {
+  if (!record) return false;
+  if (record.filteredOut) return false;
+  
+  const textToSearch = [
+    record.ENTIDADE,
+    record.INTERESSADOS,
+    record.UNIDADETECNICA,
+    record.ASSUNTO,
+    record.SUMARIO,
+    record.ACORDAO,
+    record.DECISAO,
+    record.TITULO,
+    record.PROC
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  return (
+    textToSearch.includes("trabalho") ||
+    textToSearch.includes("mte") ||
+    textToSearch.includes("aeci") ||
+    textToSearch.includes("srte")
+  );
+}
+
 // Helper function to search for an acórdão in local CSVs or stream from public online CSV
 async function fetchAcordaoFromCSV(numAcordao: number, anoAcordao: number): Promise<any> {
   const targetNum = String(numAcordao);
@@ -1684,7 +1709,11 @@ async function fetchAcordaoFromCSV(numAcordao: number, anoAcordao: number): Prom
       const fileStream = fs.createReadStream(localFilePath, { encoding: "utf8" });
       await parseCsvStream(fileStream, (record) => {
         if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
-          localRecord = record;
+          if (isMteRelevant(record)) {
+            localRecord = record;
+          } else {
+            localRecord = { filteredOut: true };
+          }
           return true; // Stop parsing
         }
         return false;
@@ -1709,7 +1738,11 @@ async function fetchAcordaoFromCSV(numAcordao: number, anoAcordao: number): Prom
       let fullRecord: any = null;
       await parseCsvStream(fileStream, (record) => {
         if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
-          fullRecord = record;
+          if (isMteRelevant(record)) {
+            fullRecord = record;
+          } else {
+            fullRecord = { filteredOut: true };
+          }
           return true; // Stop parsing
         }
         return false;

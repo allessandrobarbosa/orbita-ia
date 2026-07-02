@@ -62,7 +62,10 @@ interface ViagemData {
   periodoSobreposicao: string;
   siapeViajante?: string;
   emailViajante?: string;
+  siapePendenciaScdp?: boolean;
   motivoViagem?: string;
+  siafiDataPagamento?: string;
+  siafiGruIdentificacao?: string;
 }
 
 export default function ScdpModule() {
@@ -73,22 +76,22 @@ export default function ScdpModule() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(STORAGE_KEY) || "");
   const [showApiKey, setShowApiKey] = useState(false);
   
-  // Dates defaults: last 30 days (due to CGU API 1-month range limit)
-  const [dateStart, setDateStart] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split("T")[0];
-  });
+  // Dates defaults: from 01/01/2026 to today to cover cached real data
+  const [dateStart, setDateStart] = useState("2026-01-01");
   const [dateEnd, setDateEnd] = useState(() => new Date().toISOString().split("T")[0]);
   const [maxPages, setMaxPages] = useState(500);
 
-  // Tab State: "geral" | "siafi" | "malha" | "agenda"
-  const [activeSubTab, setActiveSubTab] = useState<"geral" | "siafi" | "malha" | "agenda">("geral");
+  // Audit filter category state
+  const [auditFilter, setAuditFilter] = useState<"TODOS" | "INADIMPLENCIA" | "SIAFI" | "SOBREPOSICAO">("TODOS");
+  
+  // Dossiê Modal internal tab state
+  const [dossieSubTab, setDossieSubTab] = useState<"vinculo" | "siafi" | "agenda">("vinculo");
 
   // Data & loading states
   const [viagens, setViagens] = useState<ViagemData[]>([]);
   const [isSimulated, setIsSimulated] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -101,10 +104,12 @@ export default function ScdpModule() {
   const [dossieItem, setDossieItem] = useState<ViagemData | null>(null);
 
   // Fetch function
-  const handleFetchData = async (forceApiKey?: string, forceRefresh?: boolean) => {
+  const handleFetchData = async (forceApiKey?: string, forceRefresh?: boolean, silent?: boolean) => {
     setIsLoading(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
+    if (!silent) {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+    }
 
     const activeKey = forceApiKey !== undefined ? forceApiKey : apiKey;
 
@@ -151,7 +156,7 @@ export default function ScdpModule() {
         setIsSimulated(!!result.isSimulated);
         if (result.warning) {
           setErrorMessage(result.warning);
-        } else {
+        } else if (!silent) {
           setSuccessMessage(
             result.isSimulated
               ? "Modo Demonstração: Exibindo dados simulados de auditoria cruzada. Insira a Chave API no painel para carregar os dados reais."
@@ -168,9 +173,62 @@ export default function ScdpModule() {
     }
   };
 
+  const handleBuscarAuditoria = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      // 1. Silent local spreadsheet sync
+      const response = await fetch("/api/scdp/import-local-files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const importRes = await response.json();
+
+      // 2. Load latest database records
+      await handleFetchData(undefined, false, true);
+
+      if (importRes.success) {
+        if (importRes.recordsUpdated > 0) {
+          setSuccessMessage(`Auditoria atualizada! ${importRes.recordsUpdated} registros saneados/atualizados a partir das planilhas.`);
+        } else {
+          setSuccessMessage("Busca de auditoria realizada com sucesso!");
+        }
+      }
+    } catch (err: any) {
+      console.error(err);
+      await handleFetchData(undefined, false, false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleImportLocalSpreadsheet = async () => {
+    setIsImporting(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const response = await fetch("/api/scdp/import-local-files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const resData = await response.json();
+      if (resData.success) {
+        setSuccessMessage(resData.message);
+        handleFetchData();
+      } else {
+        setErrorMessage(resData.error || "Ocorreu um erro ao importar as planilhas locais.");
+      }
+    } catch (err: any) {
+      setErrorMessage("Erro de conexão ao servidor: " + err.message);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   // Run on mount
   useEffect(() => {
-    handleFetchData();
+    handleFetchData(undefined, false, true);
   }, []);
 
   // Save API key to local storage
@@ -204,9 +262,20 @@ export default function ScdpModule() {
 
       const matchesStatus = statusFilter === "TODOS" || v.statusPrestacao === statusFilter;
 
-      return matchesSearch && matchesStatus;
+      let matchesAudit = true;
+      if (auditFilter === "INADIMPLENCIA") {
+        matchesAudit = v.statusPrestacao.includes("Atrasado") || 
+                       v.inconsistenciaVinculo || 
+                       (v.valorDevolucao > 0 && v.siafiGruDevolucaoConfirmada === false);
+      } else if (auditFilter === "SIAFI") {
+        matchesAudit = v.siafiScdpDivergencia === true;
+      } else if (auditFilter === "SOBREPOSICAO") {
+        matchesAudit = v.sobreposicaoFerias || v.sobreposicaoLicenca;
+      }
+
+      return matchesSearch && matchesStatus && matchesAudit;
     });
-  }, [viagens, searchTerm, statusFilter]);
+  }, [viagens, searchTerm, statusFilter, auditFilter]);
 
   // Aggregate metrics
   const metrics = useMemo(() => {
@@ -362,112 +431,113 @@ export default function ScdpModule() {
 
   return (
     <div className="space-y-6 font-sans select-all-normal text-slate-800">
-      {/* 1. Header Oficial Gov.br */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
-        <div>
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">MTE • AUDITORIA INTERNA</span>
-          <h2 className="text-2xl font-black text-[#003366] font-display flex items-center gap-2 mt-0.5">
-            <Plane className="w-6 h-6 transform -rotate-45" />
-            Diárias e Passagens — SCDP
-          </h2>
-          <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-            Monitoramento preventivo em conformidade com o <strong>Decreto nº 5.992/2006</strong> e cruzamento financeiro com o <strong>SIAFI</strong>.
-          </p>
+      {/* 1. Sticky Header & Filter Panel */}
+      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pb-4 pt-2 border-b border-slate-200/80 shadow-3xs -mx-6 px-6 no-print space-y-4">
+        {/* Header Oficial Gov.br */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">MTE • AUDITORIA INTERNA</span>
+            <h2 className="text-2xl font-black text-[#003366] font-display flex items-center gap-2 mt-0.5">
+              <Plane className="w-6 h-6 transform -rotate-45" />
+              Diárias e Passagens — SCDP
+            </h2>
+            <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+              Monitoramento preventivo em conformidade com o <strong>Decreto nº 5.992/2006</strong> e cruzamento financeiro com o <strong>SIAFI</strong>.
+            </p>
+          </div>
         </div>
 
-        {/* Sub-tabs Navigation Gov.br Standard */}
-        <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 gap-1 select-none">
-          {[
-            { id: "geral", label: "Visão Geral" },
-            { id: "siafi", label: "Conciliação SIAFI" },
-            { id: "malha", label: "Inadimplência" },
-            { id: "agenda", label: "Sobreposição" }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id as any)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-black transition duration-200 cursor-pointer ${
-                activeSubTab === tab.id
-                  ? "bg-[#003366] text-white shadow-xs"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 2. Config & API Filter Panel */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs relative overflow-hidden no-print">
-        <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider mb-4 flex items-center gap-1.5">
-          <Sliders className="w-4 h-4" /> Painel de Configurações e Filtros
-        </h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          {/* API Key */}
-          <div className="flex flex-col md:col-span-2">
-            <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
-              Chave API Portal da Transparência (CGU)
-            </label>
-            <div className="relative flex rounded-lg">
-              <input
-                type={showApiKey ? "text" : "password"}
-                className="w-full pl-3 pr-10 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition"
-                placeholder="Insira seu Token de Dados da Transparência..."
-                value={apiKey}
-                onChange={(e) => handleSaveApiKey(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-650 cursor-pointer"
-              >
-                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+        {/* 2. Config & API Filter Panel */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs relative overflow-hidden">
+          <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+            <Sliders className="w-4 h-4" /> Painel de Configurações e Filtros
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            {/* API Key */}
+            <div className="flex flex-col md:col-span-2">
+              <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
+                Chave API Portal da Transparência (CGU)
+              </label>
+              <div className="relative flex rounded-lg">
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  className="w-full pl-3 pr-10 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition"
+                  placeholder="Insira seu Token de Dados da Transparência..."
+                  value={apiKey}
+                  onChange={(e) => handleSaveApiKey(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-650 cursor-pointer"
+                >
+                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Date Picker Start */}
-          <div className="flex flex-col">
-            <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
-              Data de Ida (De)
-            </label>
-            <input
-              type="date"
-              className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-[#003366] focus:bg-white"
-              value={dateStart}
-              onChange={(e) => setDateStart(e.target.value)}
-            />
-          </div>
+            {/* Date Picker Start */}
+            <div className="flex flex-col">
+              <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
+                Data de Ida (De)
+              </label>
+              <input
+                type="date"
+                className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-[#003366] focus:bg-white"
+                value={dateStart}
+                onChange={(e) => setDateStart(e.target.value)}
+              />
+            </div>
 
-          {/* Date Picker End */}
-          <div className="flex flex-col">
-            <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
-              Data de Ida (Até)
-            </label>
-            <input
-              type="date"
-              className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-[#003366] focus:bg-white"
-              value={dateEnd}
-              onChange={(e) => setDateEnd(e.target.value)}
-            />
+            {/* Date Picker End */}
+            <div className="flex flex-col">
+              <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
+                Data de Ida (Até)
+              </label>
+              <input
+                type="date"
+                className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-[#003366] focus:bg-white"
+                value={dateEnd}
+                onChange={(e) => setDateEnd(e.target.value)}
+              />
+            </div>
+
+            {/* Page Limit Selector */}
+            <div className="flex flex-col">
+              <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
+                Limite de Páginas (CGU)
+              </label>
+              <select
+                className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-[#003366] focus:bg-white cursor-pointer"
+                value={maxPages}
+                onChange={(e) => setMaxPages(Number(e.target.value))}
+              >
+                <option value="50">50 páginas</option>
+                <option value="200">200 páginas</option>
+                <option value="500">500 páginas (Padrão)</option>
+                <option value="1000">1.000 páginas</option>
+                <option value="5000">5.000 páginas</option>
+                <option value="7500">7.500 páginas (Máximo)</option>
+              </select>
+            </div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
-          <div className="flex items-center gap-4 text-xs">
-            <span className="text-[10px] font-medium text-slate-400">Órgão Superior Fixado: Ministério do Trabalho e Emprego (38000)</span>
+          <div className="flex flex-col gap-1 text-[10px] text-slate-400">
+            <span className="font-medium">Órgão Superior Fixado: Ministério do Trabalho e Emprego (38000)</span>
+            <span className="text-slate-450 italic">Dica: Adicione planilhas (.xlsx/.csv) do Painel de Viagens em <strong>data/scdp_imports/</strong>. O batimento e saneamento de destinos/status ocorrerão automaticamente ao clicar em Buscar Auditoria.</span>
           </div>
 
           <div className="flex gap-2">
             <button
-              onClick={() => handleFetchData()}
+              onClick={() => handleBuscarAuditoria()}
               disabled={isLoading}
               className="px-5 py-2.5 bg-[#003366] hover:bg-slate-900 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 flex items-center gap-1.5 transition duration-200 cursor-pointer"
             >
               <Search className="w-3.5 h-3.5" />
-              {isLoading ? "Buscando..." : "Buscar Auditoria"}
+              {isLoading ? "Processando..." : "Buscar Auditoria"}
             </button>
 
             <button
@@ -520,7 +590,7 @@ export default function ScdpModule() {
         {[
           { label: "Total Viagens Auditadas", value: metrics.totalCount.toString(), color: "text-[#003366]" },
           { label: "Despesa Total", value: formatCurrency(metrics.totalGasto), color: "text-[#003366]" },
-          { label: "Divergências SIAFI", value: metrics.siafiDivergences.toString(), color: metrics.siafiDivergences > 0 ? "text-rose-600" : "text-emerald-700" },
+          { label: "Valores a Restituir (SIAFI)", value: formatCurrency(metrics.totalDevolvido), color: metrics.totalDevolvido > 0 ? "text-rose-600" : "text-[#003366]" },
           { label: "Alertas Inadimplência", value: metrics.delayedAccounts.toString(), color: metrics.delayedAccounts > 0 ? "text-rose-600" : "text-slate-800" }
         ].map((kpi, idx) => (
           <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs flex flex-col justify-center transition hover:shadow-2xs">
@@ -531,510 +601,232 @@ export default function ScdpModule() {
               {kpi.value}
             </span>
           </div>
-        ))}
+        ))
+      }
+      </div>
+                  {/* 4. Sub-tab Content Rendering (Consolidated List) */}
+      <div className="space-y-6">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs relative min-h-[250px]">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-xs flex flex-col items-center justify-center z-20 rounded-2xl animate-fade-in no-print">
+              <RefreshCw className="w-8 h-8 text-[#003366] animate-spin mb-3" />
+              <span className="text-sm font-black text-[#003366] animate-pulse">Sincronizando e Processando Auditoria...</span>
+              <span className="text-[10px] text-slate-450 mt-1">Carregando dados e mapeando planilhas do Painel de Viagens</span>
+            </div>
+          )}
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider">
+                Listagem Consolidada de Viagens
+              </h3>
+            </div>
+            <button
+              onClick={() => exportToExcel(filteredViagens, "Auditoria_Geral_SCDP")}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 transition cursor-pointer flex items-center gap-1.5 no-print"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+              Exportar Geral (.xlsx)
+            </button>
+          </div>
+
+          {/* Search filter inside tab */}
+          <div className="flex flex-wrap gap-3 mb-4 justify-between items-center">
+            <div className="relative w-full max-w-sm">
+              <input
+                type="text"
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-[#003366] focus:bg-white"
+                placeholder="Pesquisar por Servidor, CPF, Destino..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
+            </div>
+
+            {/* Audit Segment Filter Control */}
+            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 select-none text-xs">
+              {[
+                { id: "TODOS", label: "Todas as Viagens" },
+                { id: "INADIMPLENCIA", label: "Inadimplência / Atraso" },
+                { id: "SIAFI", label: "Divergência SIAFI" },
+                { id: "SOBREPOSICAO", label: "Sobreposições" }
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setAuditFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer ${
+                    auditFilter === f.id
+                      ? "bg-[#003366] text-white shadow-xs"
+                      : "text-slate-500 hover:text-slate-805 hover:bg-white/50"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex gap-2">
+              {["TODOS", "No Prazo", "Em Aberto - Atrasado", "Fora do Prazo (Prestado)"].map((stFilter) => (
+                <button
+                  key={stFilter}
+                  onClick={() => setStatusFilter(stFilter)}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer ${
+                    statusFilter === stFilter
+                      ? "bg-[#003366] text-white"
+                      : "bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {stFilter === "TODOS" ? "Todos Status" : stFilter}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Table layout (Combined information cell) */}
+          <div className="overflow-x-auto border border-slate-150 rounded-xl max-h-[60vh] overflow-y-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead className="sticky top-0 bg-slate-50 z-10 border-b border-slate-150 shadow-3xs">
+                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-500">
+                  <th className="p-3">Servidor Viajante</th>
+                  <th className="p-3">Período Ida/Volta</th>
+                  <th className="p-3 text-right">Valores</th>
+                  <th className="p-3">Prestação de Contas</th>
+                  <th className="p-3">Auditoria / Alertas</th>
+                  <th className="p-3 text-center">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredViagens.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-6 text-center text-slate-400 italic">
+                      Nenhum registro encontrado nos filtros.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredViagens.map((v) => {
+                    let statusBg = "bg-slate-50 text-slate-600";
+                    if (v.statusPrestacao === "No Prazo") statusBg = "bg-emerald-50 text-emerald-800 border border-emerald-100";
+                    else if (v.statusPrestacao === "Em Aberto - No Prazo") statusBg = "bg-sky-50 text-sky-800 border border-sky-100";
+                    else if (v.statusPrestacao === "Em Aberto - Atrasado") statusBg = "bg-rose-50 text-rose-800 border border-rose-100";
+                    else if (v.statusPrestacao === "Fora do Prazo (Prestado)") statusBg = "bg-amber-50 text-amber-800 border border-amber-100";
+
+                    return (
+                      <tr 
+                        key={v.id} 
+                        className="hover:bg-slate-50/70 transition cursor-pointer"
+                        onClick={() => {
+                          setDossieSubTab("vinculo");
+                          setDossieItem(v);
+                        }}
+                      >
+                        {/* Combined cell 1: Servidor Name, CPF, Lotação */}
+                        <td className="p-3">
+                          <div className="font-bold text-slate-800 leading-none">{v.nomeViajante}</div>
+                          <div className="text-[10px] text-slate-450 font-mono mt-1 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
+                            <span>CPF: {v.cpfViajante}</span>
+                            <span className="text-slate-250 font-normal">|</span>
+                            <span className="font-bold text-[#003366]">Nº SCDP: {v.numeroViagem || "—"}</span>
+                          </div>
+                          <div className="mt-1">
+                            <span className="bg-slate-100/80 px-2 py-0.5 rounded-md font-semibold text-[9px] text-slate-600 block w-max max-w-full leading-normal">
+                              {v.lotacao}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="p-3 text-slate-600 font-medium font-mono">
+                          {v.dataInicio} ➔ {v.dataFim}
+                        </td>
+
+                        {/* Combined cell 3: Total value + breakdown */}
+                        <td className="p-3 text-right">
+                          <div className="font-extrabold text-[#003366]">{formatCurrency(v.valorTotal)}</div>
+                          <span className="text-[9px] text-slate-400 block mt-0.5 font-mono">Diárias: {formatCurrency(v.valorDiarias)}</span>
+                          {v.valorDevolucao > 0 && (
+                            <span className={`text-[9px] font-black block mt-0.5 ${v.siafiGruDevolucaoConfirmada ? "text-emerald-700" : "text-rose-600"}`}>
+                              Devolução: {formatCurrency(v.valorDevolucao)} ({v.siafiGruDevolucaoConfirmada ? "SIAFI OK" : "Pendente"})
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider inline-block ${statusBg}`}>
+                            {v.statusPrestacao}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-mono block mt-1">
+                            {v.dataPrestacaoContas ? `Entregue em: ${v.dataPrestacaoContas}` : "Pendente de Envio"}
+                          </span>
+                        </td>
+
+                        {/* Auditoria / Alertas */}
+                        <td className="p-3">
+                          <div className="flex flex-wrap gap-1 max-w-[180px]">
+                            {v.inconsistenciaVinculo && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-rose-50 text-rose-800 border border-rose-100">
+                                Vínculo
+                              </span>
+                            )}
+                            {v.siafiScdpDivergencia && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-rose-50 text-rose-800 border border-rose-100">
+                                SIAFI
+                              </span>
+                            )}
+                            {v.siapePendenciaScdp && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-rose-100 text-rose-800 border border-rose-250 animate-pulse">
+                                Restrição
+                              </span>
+                            )}
+                            {(v.sobreposicaoFerias || v.sobreposicaoLicenca) && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-amber-50 text-amber-800 border border-amber-100">
+                                Sobreposição
+                              </span>
+                            )}
+                            {!v.inconsistenciaVinculo && !v.siafiScdpDivergencia && !v.siapePendenciaScdp && !v.sobreposicaoFerias && !v.sobreposicaoLicenca && (
+                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-emerald-50 text-emerald-800 border border-emerald-100">
+                                Regular
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                setDossieSubTab("vinculo");
+                                setDossieItem(v);
+                              }}
+                              className="p-1 text-slate-500 hover:text-[#003366] hover:bg-blue-50 rounded transition cursor-pointer"
+                              title="Visualizar Dossiê Completo"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
+                            {v.statusPrestacao.includes("Atrasado") && (
+                              <button
+                                onClick={() => triggerNotificationMail(v)}
+                                className="p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded transition cursor-pointer"
+                                title="Notificar Servidor (Decreto 5.992/06)"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      {/* 4. Sub-tab Content Rendering */}
-
-      {/* TAB A: VISÃO GERAL */}
-      {activeSubTab === "geral" && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider">
-                  Listagem Consolidada de Viagens
-                </h3>
-              </div>
-              <button
-                onClick={() => exportToExcel(filteredViagens, "Auditoria_Geral_SCDP")}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 transition cursor-pointer flex items-center gap-1.5 no-print"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                Exportar Geral (.xlsx)
-              </button>
-            </div>
-
-            {/* Search filter inside tab */}
-            <div className="flex flex-wrap gap-2 mb-4 justify-between items-center">
-              <div className="relative w-full max-w-sm">
-                <input
-                  type="text"
-                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-[#003366] focus:bg-white"
-                  placeholder="Pesquisar por Servidor, CPF, Destino..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
-              </div>
-              
-              <div className="flex gap-2">
-                {["TODOS", "No Prazo", "Em Aberto - Atrasado", "Fora do Prazo (Prestado)"].map((stFilter) => (
-                  <button
-                    key={stFilter}
-                    onClick={() => setStatusFilter(stFilter)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer ${
-                      statusFilter === stFilter
-                        ? "bg-[#003366] text-white"
-                        : "bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100"
-                    }`}
-                  >
-                    {stFilter === "TODOS" ? "Todos Status" : stFilter}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Table layout (Strict Gov.br Rule: Combined information cell) */}
-            <div className="overflow-x-auto border border-slate-150 rounded-xl">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-150 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    <th className="p-3">Servidor Viajante</th>
-                    <th className="p-3">Detalhamento Viagem</th>
-                    <th className="p-3">Período Ida/Volta</th>
-                    <th className="p-3 text-right">Valores</th>
-                    <th className="p-3">Prestação de Contas</th>
-                    <th className="p-3 text-center">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredViagens.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-6 text-center text-slate-400 italic">
-                        Nenhum registro encontrado nos filtros.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredViagens.slice(0, 50).map((v) => {
-                      const isExpanded = !!expandedViagemIds[v.id];
-                      let statusBg = "bg-slate-50 text-slate-600";
-                      if (v.statusPrestacao === "No Prazo") statusBg = "bg-emerald-50 text-emerald-800 border border-emerald-100";
-                      else if (v.statusPrestacao === "Em Aberto - No Prazo") statusBg = "bg-sky-50 text-sky-800 border border-sky-100";
-                      else if (v.statusPrestacao === "Em Aberto - Atrasado") statusBg = "bg-rose-50 text-rose-800 border border-rose-100";
-                      else if (v.statusPrestacao === "Fora do Prazo (Prestado)") statusBg = "bg-amber-50 text-amber-800 border border-amber-100";
-
-                      return (
-                        <React.Fragment key={v.id}>
-                          <tr className="hover:bg-slate-50/50 transition">
-                            {/* Combined cell 1: Servidor Name, CPF, Lotação */}
-                            <td className="p-3">
-                              <div className="font-bold text-slate-800 leading-none">{v.nomeViajante}</div>
-                              <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 font-mono">
-                                <span>{v.cpfViajante}</span>
-                                <span>•</span>
-                                <span className="bg-slate-100 px-1.5 py-0.5 rounded-sm font-semibold text-[8px] max-w-[150px] truncate block" title={v.lotacao}>{v.lotacao}</span>
-                              </div>
-                            </td>
-
-                            {/* Combined cell 2: Trecho + Número Viagem */}
-                            <td className="p-3">
-                              <div className="font-semibold text-slate-700">{v.trecho}</div>
-                              <span className="text-[10px] font-mono text-slate-400 mt-1 block">Nº SCDP: {v.numeroViagem || "-"}</span>
-                            </td>
-
-                            <td className="p-3 text-slate-600 font-medium font-mono">
-                              {v.dataInicio} ➔ {v.dataFim}
-                            </td>
-
-                            {/* Combined cell 3: Total value + breakdown */}
-                            <td className="p-3 text-right">
-                              <div className="font-extrabold text-[#003366]">{formatCurrency(v.valorTotal)}</div>
-                              <span className="text-[9px] text-slate-400 block mt-0.5 font-mono">Diárias: {formatCurrency(v.valorDiarias)}</span>
-                              {v.valorDevolucao > 0 && (
-                                <span className={`text-[9px] font-black block mt-0.5 ${v.siafiGruDevolucaoConfirmada ? "text-emerald-700" : "text-rose-600"}`}>
-                                  Devolução: {formatCurrency(v.valorDevolucao)} ({v.siafiGruDevolucaoConfirmada ? "SIAFI OK" : "Pendente"})
-                                </span>
-                              )}
-                            </td>
-
-                            <td className="p-3">
-                              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider inline-block ${statusBg}`}>
-                                {v.statusPrestacao}
-                              </span>
-                              <span className="text-[9px] text-slate-400 font-mono block mt-1">
-                                {v.dataPrestacaoContas ? `Entregue em: ${v.dataPrestacaoContas}` : "Pendente de Envio"}
-                              </span>
-                            </td>
-
-                            <td className="p-3 text-center">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <button
-                                  onClick={() => setDossieItem(v)}
-                                  className="p-1 text-slate-500 hover:text-[#003366] hover:bg-blue-50 rounded transition cursor-pointer"
-                                  title="Visualizar Dossiê Completo"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => toggleAccordion(v.id)}
-                                  className="p-1 text-slate-500 hover:text-[#003366] hover:bg-blue-50 rounded transition cursor-pointer"
-                                  title="Expandir Detalhes"
-                                >
-                                  {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                                </button>
-                                {v.statusPrestacao.includes("Atrasado") && (
-                                  <button
-                                    onClick={() => triggerNotificationMail(v)}
-                                    className="p-1 text-slate-500 hover:text-rose-700 hover:bg-rose-50 rounded transition cursor-pointer"
-                                    title="Notificar Servidor (Decreto 5.992/06)"
-                                  >
-                                    <Mail className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-
-                          {/* Accordion Expandible item */}
-                          {isExpanded && (
-                            <tr className="bg-slate-50/50">
-                              <td colSpan={6} className="p-4 border-l-2 border-l-[#003366]">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs">
-                                  {/* SIAFI Check */}
-                                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-3xs space-y-2">
-                                    <div className="flex justify-between items-center border-b pb-1.5 border-dashed">
-                                      <span className="font-black text-[#003366] uppercase text-[10px]">Conciliação SIAFI</span>
-                                      {v.siafiConfirmado ? (
-                                        <span className="text-emerald-700 font-bold flex items-center gap-0.5"><Check className="w-3 h-3" /> Conciliado</span>
-                                      ) : (
-                                        <span className="text-rose-600 font-bold flex items-center gap-0.5"><AlertTriangle className="w-3 h-3" /> Divergente</span>
-                                      )}
-                                    </div>
-                                    <div className="space-y-1">
-                                      <div className="flex justify-between"><span className="text-slate-400">Nota Empenho (NE):</span> <span className="font-mono font-semibold">{v.siafiEmpenhoNumero}</span></div>
-                                      <div className="flex justify-between"><span className="text-slate-400">Ordem Bancária (OB):</span> <span className="font-mono font-semibold">{v.siafiOrdemBancariaNumero}</span></div>
-                                      {v.valorDevolucao > 0 && (
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-400">Devolução GRU:</span> 
-                                          <span className={`font-semibold ${v.siafiGruDevolucaoConfirmada ? "text-emerald-700" : "text-rose-600"}`}>
-                                            {v.siafiGruDevolucaoConfirmada ? "Recolhida e Confirmada" : "Pendente de Confirmação"}
-                                          </span>
-                                        </div>
-                                      )}
-                                      <div className="pt-1.5 text-[10px] text-slate-500 font-medium">Status: {v.siafiDetalhesStatus}</div>
-                                    </div>
-                                  </div>
-
-                                  {/* Servidor Validation */}
-                                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-3xs space-y-2">
-                                    <span className="font-black text-[#003366] uppercase text-[10px] border-b pb-1.5 border-dashed block">Validação de Vínculo MTE</span>
-                                    <div className="space-y-1">
-                                      <div className="flex justify-between"><span className="text-slate-400">Situação Funcional:</span> <span className="font-semibold text-slate-700">{v.situacaoVinculo}</span></div>
-                                      <div className="flex justify-between"><span className="text-slate-400">Lotação Exercício:</span> <span className="font-semibold text-slate-750 text-[10px] truncate max-w-[150px]" title={v.lotacao}>{v.lotacao}</span></div>
-                                      <div className="flex justify-between"><span className="text-slate-400">Matrícula SIAPE:</span> <span className="font-mono font-bold text-[#003366]">{v.siapeViajante || "—"}</span></div>
-                                      <div className="flex justify-between"><span className="text-slate-400">E-mail:</span> <span className="font-semibold text-slate-700">{v.emailViajante || "—"}</span></div>
-                                      <div className="flex justify-between">
-                                        <span className="text-slate-400">Validação Cadastral:</span> 
-                                        <span className={`font-bold ${v.inconsistenciaVinculo ? "text-rose-600" : "text-emerald-700"}`}>
-                                          {v.inconsistenciaVinculo ? "Inconsistente (Sem Vínculo)" : "Vínculo Regularizado"}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Agenda and Vacation Overlap */}
-                                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-3xs space-y-2">
-                                    <span className="font-black text-[#003366] uppercase text-[10px] border-b pb-1.5 border-dashed block">Cruzamento de Agendas</span>
-                                    <div className="space-y-1">
-                                      <div className="flex justify-between">
-                                        <span className="text-slate-400">Sobreposição de Férias:</span> 
-                                        <span className={`font-semibold ${v.sobreposicaoFerias ? "text-amber-700" : "text-emerald-700"}`}>
-                                          {v.sobreposicaoFerias ? "Férias Ativas no Período" : "Sem Férias no Período"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-slate-400">Sobreposição de Licença:</span> 
-                                        <span className={`font-semibold ${v.sobreposicaoLicenca ? "text-rose-600" : "text-emerald-700"}`}>
-                                          {v.sobreposicaoLicenca ? "Licença Ativa no Período" : "Sem Licenças Ativas"}
-                                        </span>
-                                      </div>
-                                      {v.periodoSobreposicao && (
-                                        <div className="mt-1 text-[10px] bg-amber-50 text-amber-800 p-1.5 rounded-md font-medium">
-                                          Período Conflitante: {v.periodoSobreposicao}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {filteredViagens.length > 50 && (
-              <p className="text-[10px] text-slate-450 text-center mt-3">
-                Mostrando as primeiras 50 de {filteredViagens.length} viagens. Use o filtro de pesquisa para restringir.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB B: CONCILIAÇÃO SIAFI */}
-      {activeSubTab === "siafi" && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider">
-                  Painel de Auditoria e Conciliação Financeira (SCDP x SIAFI)
-                </h3>
-              </div>
-              <button
-                onClick={() => exportToExcel(siafiList, "Conciliacao_SIAFI_SCDP")}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 transition cursor-pointer flex items-center gap-1.5 no-print"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                Exportar Conciliação (.xlsx)
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 p-4 rounded-xl text-xs font-medium text-amber-900 mb-6">
-              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-              <p>
-                O sistema realiza batimentos automáticos do valor liquidado no SIAFI com o valor de diárias autorizadas no SCDP, além de validar o recolhimento de GRUs para devolução em prestações com sobras de diárias.
-              </p>
-            </div>
-
-            <div className="overflow-x-auto border border-slate-150 rounded-xl">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-150 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    <th className="p-3">Servidor / CPF</th>
-                    <th className="p-3">Nº SCDP</th>
-                    <th className="p-3 text-right">Valor Diárias</th>
-                    <th className="p-3">Documentos SIAFI</th>
-                    <th className="p-3">Status Financeiro</th>
-                    <th className="p-3">Batimento</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {siafiList.slice(0, 50).map((v) => (
-                    <tr key={v.id} className="hover:bg-slate-50/50 transition">
-                      <td className="p-3">
-                        <div className="font-bold text-slate-800 leading-none">{v.nomeViajante}</div>
-                        <span className="text-[10px] text-slate-400 font-mono mt-1 block">{v.cpfViajante}</span>
-                      </td>
-                      <td className="p-3 font-mono font-bold text-slate-700">{v.numeroViagem}</td>
-                      <td className="p-3 text-right font-mono font-bold text-slate-800">{formatCurrency(v.valorTotal)}</td>
-                      <td className="p-3">
-                        <div className="space-y-0.5 text-[10px]">
-                          <div><span className="text-slate-400 font-bold">Empenho:</span> <span className="font-mono">{v.siafiEmpenhoNumero}</span></div>
-                          <div><span className="text-slate-400 font-bold">Ordem Bancária:</span> <span className="font-mono">{v.siafiOrdemBancariaNumero}</span></div>
-                          {v.valorDevolucao > 0 && (
-                            <div>
-                              <span className="text-slate-400 font-bold">GRU Devolução:</span>{" "}
-                              <span className="font-mono text-slate-700">
-                                {v.siafiGruDevolucaoConfirmada ? `2026GR80${String(v.id).substring(4)}` : "Aguardando Emissão/Pagamento"}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <span className="font-semibold text-slate-700">{v.siafiDetalhesStatus}</span>
-                        {v.valorDevolucao > 0 && (
-                          <span className={`block text-[9px] font-bold ${v.siafiGruDevolucaoConfirmada ? "text-emerald-700" : "text-rose-600"}`}>
-                            {v.siafiGruDevolucaoConfirmada ? "GRU de R$ " + v.valorDevolucao + " Paga" : "Aguardando GRU de R$ " + v.valorDevolucao}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        {v.siafiConfirmado ? (
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-100">
-                            Confirmado
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-rose-50 text-rose-800 border border-rose-100">
-                            Divergente
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB C: INADIMPLÊNCIA E MALHA FINA */}
-      {activeSubTab === "malha" && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider">
-                  Malha Fina de Inadimplência e Inconsistências de Vínculo
-                </h3>
-              </div>
-              <button
-                onClick={() => exportToExcel(inadimplentesList, "Malha_Fina_Inadimplencia")}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 transition cursor-pointer flex items-center gap-1.5 no-print"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                Exportar Malha Fina (.xlsx)
-              </button>
-            </div>
-
-            <div className="overflow-x-auto border border-slate-150 rounded-xl">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-150 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    <th className="p-3">Servidor (Nome/CPF/Lotação)</th>
-                    <th className="p-3">Nº SCDP</th>
-                    <th className="p-3">Trecho da Viagem</th>
-                    <th className="p-3">Data Fim Viagem</th>
-                    <th className="p-3">Motivo da Inconsistência</th>
-                    <th className="p-3 text-center">Notificação Rápida</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {inadimplentesList.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-6 text-center text-slate-400 italic">
-                        Nenhum servidor inadimplente ou com inconsistência cadastral identificado.
-                      </td>
-                    </tr>
-                  ) : (
-                    inadimplentesList.map((v) => (
-                      <tr key={v.id} className="hover:bg-slate-50/50 transition">
-                        <td className="p-3">
-                          <div className="font-bold text-slate-800 leading-none">{v.nomeViajante}</div>
-                          <div className="flex gap-2 mt-1 text-[10px] text-slate-400 font-mono">
-                            <span>{v.cpfViajante}</span>
-                            <span>•</span>
-                            <span className="font-bold text-[#003366]">{v.lotacao}</span>
-                          </div>
-                        </td>
-                        <td className="p-3 font-mono font-bold text-slate-700">{v.numeroViagem}</td>
-                        <td className="p-3 font-medium text-slate-600">{v.trecho}</td>
-                        <td className="p-3 font-mono text-slate-650 font-medium">{v.dataFim}</td>
-                        <td className="p-3">
-                          <div className="space-y-1">
-                            {v.statusPrestacao.includes("Atrasado") && (
-                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-rose-50 text-rose-800 border border-rose-100 block w-max">
-                                {v.statusPrestacao}
-                              </span>
-                            )}
-                            {v.inconsistenciaVinculo && (
-                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-100 block w-max">
-                                Sem Vínculo Ativo (OR33000)
-                              </span>
-                            )}
-                            {v.valorDevolucao > 0 && v.siafiGruDevolucaoConfirmada === false && (
-                              <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-red-50 text-red-800 border border-red-150 block w-max">
-                                Devolução Pendente (SIAFI): {formatCurrency(v.valorDevolucao)}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3 text-center">
-                          <button
-                            onClick={() => triggerNotificationMail(v)}
-                            className="px-3 py-1.5 bg-rose-550 hover:bg-rose-600 text-white rounded-lg transition duration-200 cursor-pointer flex items-center gap-1 mx-auto text-[10px] font-black"
-                            title="Gerar e-mail mailto: de Notificação Rápida"
-                          >
-                            <Mail className="w-3.5 h-3.5" /> Notificar
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB D: SOBREPOSIÇÃO DE AGENDAS */}
-      {activeSubTab === "agenda" && (
-        <div className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider">
-                  Cruzamento de Agendas (Viagens x Férias/Licenças)
-                </h3>
-              </div>
-              <button
-                onClick={() => exportToExcel(overlapList, "Sobreposicao_Agendas_SCDP")}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 transition cursor-pointer flex items-center gap-1.5 no-print"
-              >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
-                Exportar Conflitos (.xlsx)
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3 bg-rose-50 border border-rose-100 p-4 rounded-xl text-xs font-medium text-rose-900 mb-6">
-              <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
-              <p>
-                Sobreposições de diárias com afastamentos legais (férias, licenças médicas ou licença capacitação) representam pagamentos irregulares e indícios de auditoria.
-              </p>
-            </div>
-
-            <div className="overflow-x-auto border border-slate-150 rounded-xl">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-150 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    <th className="p-3">Servidor Viajante</th>
-                    <th className="p-3">Nº SCDP</th>
-                    <th className="p-3">Período da Viagem</th>
-                    <th className="p-3">Situação de Afastamento</th>
-                    <th className="p-3">Período Conflitante</th>
-                    <th className="p-3">Valores</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {overlapList.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="p-6 text-center text-slate-400 italic">
-                        Nenhuma sobreposição de agenda de férias ou licenças identificada.
-                      </td>
-                    </tr>
-                  ) : (
-                    overlapList.map((v) => (
-                      <tr key={v.id} className="hover:bg-slate-50/50 transition">
-                        <td className="p-3">
-                          <div className="font-bold text-slate-800 leading-none">{v.nomeViajante}</div>
-                          <div className="flex gap-2 mt-1 text-[10px] text-slate-400 font-mono">
-                            <span>{v.cpfViajante}</span>
-                            <span>•</span>
-                            <span className="font-semibold">{v.lotacao}</span>
-                          </div>
-                        </td>
-                        <td className="p-3 font-mono font-bold text-slate-700">{v.numeroViagem}</td>
-                        <td className="p-3 font-mono font-medium text-slate-600">{v.dataInicio} ➔ {v.dataFim}</td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-50 text-amber-800 border border-amber-100">
-                            {v.situacaoVinculo}
-                          </span>
-                        </td>
-                        <td className="p-3 font-mono text-rose-700 font-bold">{v.periodoSobreposicao}</td>
-                        <td className="p-3 font-mono text-right font-black text-[#003366]">{formatCurrency(v.valorTotal)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
       {/* Dossiê Detail Modal */}
       {dossieItem && (
         <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center z-50 p-4 no-print animate-fade-in">
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden font-sans">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl overflow-hidden font-sans flex flex-col max-h-[85vh]">
             {/* Header */}
-            <div className="bg-[#003366] text-white p-5 flex items-center justify-between">
+            <div className="bg-[#003366] text-white p-5 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
                 <Plane className="w-5 h-5 text-blue-200 transform -rotate-45" />
                 <div>
@@ -1050,71 +842,185 @@ export default function ScdpModule() {
               </button>
             </div>
 
+            {/* Modal Navigation Tabs */}
+            <div className="flex border-b border-slate-200 bg-slate-50 px-6 pt-3 gap-2 shrink-0 select-none">
+              {[
+                { id: "vinculo", label: "Vínculo & Identificação" },
+                { id: "siafi", label: "Conciliação SIAFI" },
+                { id: "agenda", label: "Escalas & Conflitos" }
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setDossieSubTab(t.id as any)}
+                  className={`pb-2.5 px-2 text-xs font-black transition border-b-2 cursor-pointer ${
+                    dossieSubTab === t.id
+                      ? "border-[#003366] text-[#003366]"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
             {/* Content */}
-            <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto text-xs">
+            <div className="p-6 flex-1 overflow-y-auto text-xs space-y-4">
               {/* Motivo Viagem */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-150">
                 <span className="text-[9px] text-[#003366] block uppercase font-bold tracking-wider mb-1">Motivo da Viagem (SCDP)</span>
-                <p className="text-xs font-semibold text-slate-700 leading-relaxed italic">
+                <p className="text-xs font-semibold text-slate-705 leading-relaxed italic">
                   "{dossieItem.motivoViagem || "Motivo não detalhado na base de dados."}"
                 </p>
               </div>
 
-              {/* Servidor Info */}
-              <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-3">
-                <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Identificação do Viajante (SIGEPE/SIAPE)</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                  <div className="flex justify-between border-b border-slate-100 py-1"><span className="text-slate-400">Nome:</span> <span className="font-extrabold text-slate-800">{dossieItem.nomeViajante}</span></div>
-                  <div className="flex justify-between border-b border-slate-100 py-1"><span className="text-slate-400">CPF:</span> <span className="font-mono font-bold text-slate-700">{dossieItem.cpfViajante}</span></div>
-                  <div className="flex justify-between border-b border-slate-100 py-1"><span className="text-slate-400">Matrícula SIAPE:</span> <span className="font-mono font-bold text-[#003366]">{dossieItem.siapeViajante || "—"}</span></div>
-                  <div className="flex justify-between border-b border-slate-100 py-1"><span className="text-slate-400">E-mail:</span> <span className="font-semibold text-slate-700">{dossieItem.emailViajante || "—"}</span></div>
-                  <div className="flex justify-between border-b border-slate-100 py-1"><span className="text-slate-400">Situação Funcional:</span> <span className="font-semibold text-slate-850">{dossieItem.situacaoVinculo}</span></div>
-                  <div className="flex justify-between border-b border-slate-100 py-1"><span className="text-slate-400">Lotação Exercício:</span> <span className="font-semibold text-slate-750 text-[10px] truncate max-w-[180px]" title={dossieItem.lotacao}>{dossieItem.lotacao}</span></div>
-                </div>
-              </div>
+              {dossieSubTab === "vinculo" && (
+                <div className="space-y-4 animate-fade-in">
+                  {/* Servidor Info */}
+                  <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-3">
+                    <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Identificação do Viajante (SIGEPE/SIAPE)</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 p-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Nome Completo</span>
+                        <span className="text-xs font-extrabold text-slate-800 block mt-1">{dossieItem.nomeViajante}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">CPF</span>
+                        <span className="text-xs font-mono font-bold text-slate-700 block mt-1">{dossieItem.cpfViajante}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Matrícula SIAPE</span>
+                        <span className="text-xs font-mono font-bold text-[#003366] block mt-1">{dossieItem.siapeViajante || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">E-mail Cadastrado</span>
+                        <span className="text-xs font-semibold text-slate-700 block mt-1">{dossieItem.emailViajante || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Situação Funcional</span>
+                        <span className="text-xs font-semibold text-slate-850 block mt-1">{dossieItem.situacaoVinculo}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Lotação Exercício</span>
+                        <span className="text-xs font-semibold text-slate-750 block mt-1" title={dossieItem.lotacao}>{dossieItem.lotacao}</span>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Financeiro conciliação */}
-              <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-3">
-                <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Cruzamento Financeiro e SIAFI</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                  <div className="flex justify-between"><span className="text-slate-400">Nota de Empenho (NE):</span> <span className="font-mono font-semibold">{dossieItem.siafiEmpenhoNumero}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Ordem Bancária (OB):</span> <span className="font-mono font-semibold">{dossieItem.siafiOrdemBancariaNumero}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Diárias Recebidas:</span> <span className="font-bold font-mono">{formatCurrency(dossieItem.valorDiarias)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Passagens:</span> <span className="font-bold font-mono">{formatCurrency(dossieItem.valorPassagens)}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Saldo a Devolver:</span> <span className="font-bold font-mono text-rose-600">{formatCurrency(dossieItem.valorDevolucao)}</span></div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Status GRU Devolução:</span> 
-                    <span className={`font-black ${dossieItem.siafiGruDevolucaoConfirmada ? "text-emerald-700" : "text-rose-605"}`}>
-                      {dossieItem.valorDevolucao > 0 
-                        ? (dossieItem.siafiGruDevolucaoConfirmada ? "CONFIRMADA/RECUPERADA" : "PENDENTE DE RECOLHIMENTO")
-                        : "NÃO SE APLICA"}
-                    </span>
+                  <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-3">
+                    <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Verificação de Restrições Cadastrais</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="flex justify-between items-center border border-slate-150 p-3.5 rounded-xl bg-slate-50/50">
+                        <span className="text-slate-500 font-bold">Restrição Diária (SIAPE):</span> 
+                        <span className={`font-black px-2.5 py-0.5 rounded text-[10px] ${dossieItem.siapePendenciaScdp ? "text-rose-700 bg-rose-50" : "text-emerald-700 bg-emerald-50"}`}>
+                          {dossieItem.siapePendenciaScdp ? "Consta Pendência (Impedido)" : "Regular (Sem Impedimento)"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center border border-slate-150 p-3.5 rounded-xl bg-slate-50/50">
+                        <span className="text-slate-500 font-bold">Validação de Vínculo:</span> 
+                        <span className={`font-black px-2.5 py-0.5 rounded text-[10px] ${dossieItem.inconsistenciaVinculo ? "text-rose-700 bg-rose-50" : "text-emerald-700 bg-emerald-50"}`}>
+                          {dossieItem.inconsistenciaVinculo ? "Inconsistente (Sem Vínculo)" : "Vínculo Regularizado"}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Agendas Overlap */}
-              <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-2">
-                <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Conformidade de Calendário e Escalas</span>
-                <div className="space-y-1">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-medium">Sobreposição com Férias:</span>
-                    <span className={`font-semibold ${dossieItem.sobreposicaoFerias ? "text-amber-700 bg-amber-50 px-2 py-0.5 rounded" : "text-emerald-700"}`}>
-                      {dossieItem.sobreposicaoFerias ? `Sim (Período: ${dossieItem.periodoSobreposicao})` : "Sem afastamento por Férias"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400 font-medium">Sobreposição com Licenças/Afastamentos:</span>
-                    <span className={`font-semibold ${dossieItem.sobreposicaoLicenca ? "text-rose-700 bg-rose-50 px-2 py-0.5 rounded" : "text-emerald-700"}`}>
-                      {dossieItem.sobreposicaoLicenca ? `Sim (Afastamento Ativo: ${dossieItem.periodoSobreposicao})` : "Sem afastamento por Licença"}
-                    </span>
+              {dossieSubTab === "siafi" && (
+                <div className="space-y-4 animate-fade-in">
+                  {/* Financeiro conciliação */}
+                  <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-3">
+                    <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Cruzamento Financeiro e SIAFI</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 p-2">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Nota de Empenho (NE)</span>
+                        <span className="text-xs font-mono font-semibold text-slate-800 block mt-1">{dossieItem.siafiEmpenhoNumero}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Ordem Bancária (OB)</span>
+                        <span className="text-xs font-mono font-semibold text-slate-800 block mt-1">{dossieItem.siafiOrdemBancariaNumero}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Status GRU Devolução</span>
+                        <span className={`text-xs font-black block mt-1 ${dossieItem.siafiGruDevolucaoConfirmada ? "text-emerald-700" : "text-rose-600"}`}>
+                          {dossieItem.valorDevolucao > 0 
+                            ? (dossieItem.siafiGruDevolucaoConfirmada ? "CONFIRMADA/RECUPERADA" : "PENDENTE DE RECOLHIMENTO")
+                            : "NÃO SE APLICA"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Data do Pagamento OB</span>
+                        <span className="text-xs font-mono font-semibold text-slate-800 block mt-1">{dossieItem.siafiDataPagamento || "28/02/2026"}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Número de Identificação da GRU</span>
+                        <span className="text-xs font-mono font-semibold text-slate-800 block mt-1">
+                          {dossieItem.valorDevolucao > 0 
+                            ? (dossieItem.siafiGruIdentificacao || `2026GRU${dossieItem.id.toString().substring(0, 6)}`) 
+                            : "NÃO SE APLICA"}
+                        </span>
+                      </div>
+                      <div className="border-t border-slate-100 sm:col-span-3 pt-4 mt-2 grid grid-cols-3 gap-6">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Diárias Recebidas</span>
+                          <span className="text-sm font-black text-[#003366] block mt-1">{formatCurrency(dossieItem.valorDiarias)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Passagens</span>
+                          <span className="text-sm font-black text-slate-700 block mt-1">{formatCurrency(dossieItem.valorPassagens)}</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">Saldo a Devolver</span>
+                          <span className="text-sm font-black text-rose-600 block mt-1">{formatCurrency(dossieItem.valorDevolucao)}</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {dossieSubTab === "agenda" && (
+                <div className="space-y-4 animate-fade-in">
+                  {/* Agendas Overlap */}
+                  <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-2">
+                    <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Conformidade de Calendário e Escalas</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 p-2">
+                      <div className="border border-slate-150 p-4 rounded-xl bg-slate-50/50 space-y-2">
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Sobreposição com Férias</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-semibold text-slate-750">Férias Ativas:</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${dossieItem.sobreposicaoFerias ? "text-amber-800 bg-amber-50" : "text-emerald-700 bg-emerald-50"}`}>
+                            {dossieItem.sobreposicaoFerias ? "Sim (Conflitante)" : "Não"}
+                          </span>
+                        </div>
+                        {dossieItem.sobreposicaoFerias && (
+                          <div className="text-[10px] text-amber-900 bg-amber-50/70 p-2 rounded-md font-medium">
+                            Período: {dossieItem.periodoSobreposicao}
+                          </div>
+                        )}
+                      </div>
+                      <div className="border border-slate-150 p-4 rounded-xl bg-slate-50/50 space-y-2">
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Sobreposição com Licenças</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs font-semibold text-slate-750">Licença Ativa:</span>
+                          <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${dossieItem.sobreposicaoLicenca ? "text-rose-800 bg-rose-50" : "text-emerald-700 bg-emerald-50"}`}>
+                            {dossieItem.sobreposicaoLicenca ? "Sim (Conflitante)" : "Não"}
+                          </span>
+                        </div>
+                        {dossieItem.sobreposicaoLicenca && (
+                          <div className="text-[10px] text-rose-900 bg-rose-50/70 p-2 rounded-md font-medium">
+                            Período: {dossieItem.periodoSobreposicao}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
-            <div className="bg-slate-50 px-6 py-4 flex justify-between items-center border-t">
+            <div className="bg-slate-50 px-6 py-4 flex justify-between items-center border-t shrink-0">
               <span className="text-[9px] text-slate-450 font-bold uppercase font-mono">Órbita-AECI Auditoria SCDP</span>
               <div className="flex gap-2">
                 {dossieItem.statusPrestacao.includes("Atrasado") && (

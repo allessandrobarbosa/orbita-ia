@@ -34,7 +34,8 @@ import {
   UserPlus,
   X,
   User,
-  Plane
+  Plane,
+  ArrowUp
 } from "lucide-react";
 
 // User Access Profile Management Schema
@@ -156,6 +157,20 @@ export default function App() {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [activeTab]);
+
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowBackToTop(true);
+      } else {
+        setShowBackToTop(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const [sidebarExpanded, setSidebarExpanded] = useState<boolean>(false);
   const [controlOrgsOpen, setControlOrgsOpen] = useState<boolean>(false);
@@ -1398,6 +1413,16 @@ export default function App() {
         <p>© 2026 ORBITA.AECI — Ministério do Trabalho e Emprego — República Federativa do Brasil</p>
         <p className="opacity-60 text-[10px] mt-0.5">Ambiente Integrado de Apoio às decisões de Controle e Auditoria Governamental da IN 84/TCU.</p>
       </footer>
+
+      {showBackToTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-6 right-6 p-3.5 bg-[#003366] hover:bg-slate-900 text-white rounded-full shadow-2xl border border-white/25 transition duration-300 hover:scale-110 cursor-pointer z-50 flex items-center justify-center animate-fade-in"
+          title="Voltar ao Topo"
+        >
+          <ArrowUp className="w-5 h-5 stroke-[3]" />
+        </button>
+      )}
 
       {/* Admin Panel Modal */}
       {isAdminPanelOpen && (
