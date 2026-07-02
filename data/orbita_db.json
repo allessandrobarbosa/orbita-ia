@@ -21506,7 +21506,11 @@
       "DATA_EXPEDICAO": "05/01/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "30/06/2026, 16:45:17"
+      "ULTIMA_ATUALIZACAO": "02/07/2026, 09:28:04",
+      "CARECE_RESPOSTA": false,
+      "UNIDADE_EXECUTORA": "",
+      "PROCESSO_SEI": "",
+      "DESTINACAO": "ARQUIVAMENTO"
     },
     {
       "KEY": "COM-000126-2026",
