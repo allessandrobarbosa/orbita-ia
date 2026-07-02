@@ -33,7 +33,8 @@ import {
   BookOpen,
   UserPlus,
   X,
-  User
+  User,
+  Plane
 } from "lucide-react";
 
 // User Access Profile Management Schema
@@ -122,6 +123,7 @@ import RolModule from "./components/RolModule";
 import EticaModule from "./components/EticaModule";
 import SrteModule from "./components/SrteModule";
 import CguModule from "./components/CguModule";
+import ScdpModule from "./components/ScdpModule";
 // import logoImg from "./assets/images/orbita_logo.png";
 
 import { 
@@ -204,7 +206,8 @@ export default function App() {
       etica: "ETHICS",
       rol: "ROL",
       srte: "SRTE",
-      bi: "BI"
+      bi: "BI",
+      scdp: "SCDP"
     };
 
     const mod = idToMod[tabId];
@@ -1128,6 +1131,7 @@ export default function App() {
               { id: "rol", label: "ROL", icon: Users, title: "Gestão do Rol de Responsáveis" },
               { id: "srte", label: "STRES", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
               { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
+              { id: "scdp", label: "SCDP", icon: Plane, title: "Diárias e Passagens (SCDP)" },
             ].filter(link => hasModulePermission(link.id)).map((moduleLink) => {
               const ModuleIcon = moduleLink.icon;
               const isSelected = activeTab === moduleLink.id;
@@ -1376,6 +1380,10 @@ export default function App() {
                   onDeleteCguReport={handleDeleteCguReport}
                   isLoading={isLoading}
                 />
+              )}
+
+              {activeTab === "scdp" && (
+                <ScdpModule />
               )}
 
             </div>

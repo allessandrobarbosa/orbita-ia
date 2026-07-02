@@ -16,7 +16,8 @@ import {
   FileText,
   TrendingUp,
   BrainCircuit,
-  Award
+  Award,
+  Plane
 } from "lucide-react";
 
 interface DashboardOverviewProps {
@@ -112,6 +113,17 @@ export default function DashboardOverview({
       accent: "border-t-4 border-l-0 border-indigo-500",
       bg: "bg-white",
       hoverRing: "hover:ring-2 hover:ring-indigo-500/20"
+    },
+    {
+      id: "scdp",
+      title: "Diárias e Passagens (SCDP)",
+      acronym: "SCDP",
+      desc: "Monitoramento de viagens a serviço, prestação de contas de diárias e passagens aéreas conforme Decreto nº 5.992/2006.",
+      indicator: "Viagens • Prestação de Contas",
+      icon: Plane,
+      accent: "border-t-4 border-l-0 border-sky-500",
+      bg: "bg-white",
+      hoverRing: "hover:ring-2 hover:ring-sky-500/20"
     }
   ].filter(module => hasModulePermission(module.id));
 

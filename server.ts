@@ -3861,7 +3861,8 @@ async function startServer() {
         });
 
         if (response.status === 401) {
-          return res.status(401).json({ success: false, error: "Chave API inválida ou expirada." });
+          const data = generateSimulatedViagens(dataIdaDe, dataIdaAte);
+          return res.json({ success: true, isSimulated: true, data, warning: "Chave API inválida ou expirada. Exibindo dados simulados. Verifique sua chave no Portal da Transparência (portaldatransparencia.gov.br)." });
         } else if (response.status === 429) {
           if (allRecords.length > 0) break; // Return what we got
           return res.status(429).json({ success: false, error: "Limite de requisições excedido no Portal da Transparência." });
