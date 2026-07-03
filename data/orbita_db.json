@@ -21738,7 +21738,11 @@
       "DATA_EXPEDICAO": "12/02/2026",
       "DATA_RESPOSTA": "",
       "ANO": 2026,
-      "ULTIMA_ATUALIZACAO": "30/06/2026, 16:45:17"
+      "ULTIMA_ATUALIZACAO": "03/07/2026, 10:17:35",
+      "CARECE_RESPOSTA": false,
+      "UNIDADE_EXECUTORA": "",
+      "PROCESSO_SEI": "",
+      "DESTINACAO": "RESPOSTA"
     },
     {
       "KEY": "COM-003363-2026",
@@ -33000,34 +33004,34 @@
       "tituloRelatorio": "Relatório 1821987  Emendas parlamentares destinadas à entidade Organização Popular de Articulação e Assessoria - OPARÁ (ADPF 854)",
       "dataPublicacao": "19/11/2025",
       "idAuditoria": "1821987",
-      "siglaUnidadeAuditada": "MS;MTE;MIDR",
-      "nomeUnidadeAuditada": "Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério da Integração e do Desenvolvimento Regional",
-      "siglaOrgaoSuperior": "MS;MTE;MIDR",
-      "nomeOrgaoSuperior": "Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério da Integração e do Desenvolvimento Regional",
+      "siglaUnidadeAuditada": "MTE;MS;MIDR",
+      "nomeUnidadeAuditada": "Ministério do Trabalho e Emprego;Ministério da Saúde;Ministério da Integração e do Desenvolvimento Regional",
+      "siglaOrgaoSuperior": "MTE;MS;MIDR",
+      "nomeOrgaoSuperior": "Ministério do Trabalho e Emprego;Ministério da Saúde;Ministério da Integração e do Desenvolvimento Regional",
       "uf": "BA",
       "municipio": "Salvador",
       "tipoServico": "Avaliação",
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1731215",
       "tituloRelatorio": "Relatório 1728323 - Emendas parlamentares destinadas a entidades sem fins lucrativos: capacidade operacional das destinatárias, execução dos planos de trabalho e monitoramento (ADPF 854)",
       "dataPublicacao": "19/11/2024",
       "idAuditoria": "1728323",
-      "siglaUnidadeAuditada": "MTE;MEC;MESP;MS;MMULHERES",
-      "nomeUnidadeAuditada": "Ministério do Trabalho e Emprego;Ministério da Educação;Ministério do Esporte;Ministério da Saúde;Ministério das Mulheres",
-      "siglaOrgaoSuperior": "MTE;MEC;MESP;MS;MMULHERES",
-      "nomeOrgaoSuperior": "Ministério do Trabalho e Emprego;Ministério da Educação;Ministério do Esporte;Ministério da Saúde;Ministério das Mulheres",
+      "siglaUnidadeAuditada": "MEC;MESP;MMULHERES;MS;MTE",
+      "nomeUnidadeAuditada": "Ministério da Educação;Ministério do Esporte;Ministério das Mulheres;Ministério da Saúde;Ministério do Trabalho e Emprego",
+      "siglaOrgaoSuperior": "MEC;MESP;MMULHERES;MS;MTE",
+      "nomeOrgaoSuperior": "Ministério da Educação;Ministério do Esporte;Ministério das Mulheres;Ministério da Saúde;Ministério do Trabalho e Emprego",
       "uf": "DF",
       "municipio": "Brasília",
       "tipoServico": "Avaliação",
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1828136",
@@ -33044,24 +33048,24 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1529141",
       "tituloRelatorio": "Relatório 1401457 - Articulação e interação do governo federal com o Serviço Nacional de Aprendizagem Comercial (Senac): instrumentos utilizados pela Secretaria de Educação Profissional e Tecnológica (Setec/MEC) e pelo Ministério do Trabalho e Emprego (MTE)",
       "dataPublicacao": "09/09/2025",
       "idAuditoria": "1401457",
-      "siglaUnidadeAuditada": "SENAC-NACIONAL;MTE;MEC",
-      "nomeUnidadeAuditada": "Serviço Nacional de Aprendizagem Comercial - Departamento Nacional;Ministério do Trabalho e Emprego;Ministério da Educação",
-      "siglaOrgaoSuperior": "MF;MTE;MEC",
-      "nomeOrgaoSuperior": "Ministério da Fazenda;Ministério do Trabalho e Emprego;Ministério da Educação",
+      "siglaUnidadeAuditada": "MTE;SENAC-NACIONAL;MEC",
+      "nomeUnidadeAuditada": "Ministério do Trabalho e Emprego;Serviço Nacional de Aprendizagem Comercial - Departamento Nacional;Ministério da Educação",
+      "siglaOrgaoSuperior": "MTE;MF;MEC",
+      "nomeOrgaoSuperior": "Ministério do Trabalho e Emprego;Ministério da Fazenda;Ministério da Educação",
       "uf": "DF",
       "municipio": "Brasília",
       "tipoServico": "Avaliação",
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1517796",
@@ -33078,7 +33082,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1404107",
@@ -33095,7 +33099,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Análise de Alertas de Licitações",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1400421",
@@ -33112,7 +33116,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1267245",
@@ -33129,7 +33133,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1269926",
@@ -33146,24 +33150,24 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1881960",
       "tituloRelatorio": "Relatório 1881876 - Emendas parlamentares destinadas a entidades sem fins lucrativos: capacidade operacional, execução dos planos de trabalho e acompanhamento (ADPF 854 - Decisão 02.12.2024)",
       "dataPublicacao": "19/11/2025",
       "idAuditoria": "1881876",
-      "siglaUnidadeAuditada": "MDA;MinC;MDHC;MEC;MESP;MS;MAPA;MMA;MTE",
-      "nomeUnidadeAuditada": "Ministério do Desenvolvimento Agrário e Agricultura Familiar;Ministério da Cultura;Ministério dos Direitos Humanos e da Cidadania;Ministério da Educação;Ministério do Esporte;Ministério da Saúde;Ministério da Agricultura e Pecuária;Ministério do Meio Ambiente e Mudança do Clima;Ministério do Trabalho e Emprego",
-      "siglaOrgaoSuperior": "MDA;MinC;MDHC;MEC;MESP;MS;MAPA;MMA;MTE",
-      "nomeOrgaoSuperior": "Ministério do Desenvolvimento Agrário e Agricultura Familiar;Ministério da Cultura;Ministério dos Direitos Humanos e da Cidadania;Ministério da Educação;Ministério do Esporte;Ministério da Saúde;Ministério da Agricultura e Pecuária;Ministério do Meio Ambiente e Mudança do Clima;Ministério do Trabalho e Emprego",
+      "siglaUnidadeAuditada": "MEC;MinC;MDHC;MDA;MTE;MS;MMA;MAPA;MESP",
+      "nomeUnidadeAuditada": "Ministério da Educação;Ministério da Cultura;Ministério dos Direitos Humanos e da Cidadania;Ministério do Desenvolvimento Agrário e Agricultura Familiar;Ministério do Trabalho e Emprego;Ministério da Saúde;Ministério do Meio Ambiente e Mudança do Clima;Ministério da Agricultura e Pecuária;Ministério do Esporte",
+      "siglaOrgaoSuperior": "MEC;MinC;MDHC;MDA;MTE;MS;MMA;MAPA;MESP",
+      "nomeOrgaoSuperior": "Ministério da Educação;Ministério da Cultura;Ministério dos Direitos Humanos e da Cidadania;Ministério do Desenvolvimento Agrário e Agricultura Familiar;Ministério do Trabalho e Emprego;Ministério da Saúde;Ministério do Meio Ambiente e Mudança do Clima;Ministério da Agricultura e Pecuária;Ministério do Esporte",
       "uf": "DF",
       "municipio": "Brasília",
       "tipoServico": "Avaliação",
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1732365",
@@ -33180,24 +33184,24 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Avaliação da Prestação Anual de Contas",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1562659",
       "tituloRelatorio": "Avaliação - Infraestrutura do Governo Federal - Aplicação da redução de ICMS sobre links de comunicação - 2024",
       "dataPublicacao": "23/12/2024",
       "idAuditoria": "1557977",
-      "siglaUnidadeAuditada": "ICMBio/AUDIT-ICMBIO;SGD/MGI;TELEBRAS;ANTT;IPHAN;INSS;PF;MS;MTE;SUFRAMA",
-      "nomeUnidadeAuditada": "Instituto Chico Mendes de Conservação da Biodiversidade;Secretaria de Governo Digital;Telecomunicações Brasileiras S/A;Agência Nacional de Transportes Terrestres;Instituto do Patrimônio Histórico e Artístico Nacional;Instituto Nacional do Seguro Social;Polícia Federal;Ministério da Saúde;Ministério do Trabalho e Emprego;Superintendência da Zona Franca de Manaus",
-      "siglaOrgaoSuperior": "MMA;MGI;MCOM;MT;MinC;MPS;MJSP;MS;MTE;MDIC",
-      "nomeOrgaoSuperior": "Ministério do Meio Ambiente e Mudança do Clima;Ministério da Gestão e da Inovação em Serviços Públicos;Ministério das Comunicações;Ministério dos Transportes;Ministério da Cultura;Ministério da Previdência Social;Ministério da Justiça e Segurança Pública;Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério do Desenvolvimento, Indústria, Comércio e Serviços",
+      "siglaUnidadeAuditada": "ICMBio/AUDIT-ICMBIO;SUFRAMA;MS;MTE;PF;SGD/MGI;TELEBRAS;INSS;ANTT;IPHAN",
+      "nomeUnidadeAuditada": "Instituto Chico Mendes de Conservação da Biodiversidade;Superintendência da Zona Franca de Manaus;Ministério da Saúde;Ministério do Trabalho e Emprego;Polícia Federal;Secretaria de Governo Digital;Telecomunicações Brasileiras S/A;Instituto Nacional do Seguro Social;Agência Nacional de Transportes Terrestres;Instituto do Patrimônio Histórico e Artístico Nacional",
+      "siglaOrgaoSuperior": "MMA;MDIC;MS;MTE;MJSP;MGI;MCOM;MPS;MT;MinC",
+      "nomeOrgaoSuperior": "Ministério do Meio Ambiente e Mudança do Clima;Ministério do Desenvolvimento, Indústria, Comércio e Serviços;Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério da Justiça e Segurança Pública;Ministério da Gestão e da Inovação em Serviços Públicos;Ministério das Comunicações;Ministério da Previdência Social;Ministério dos Transportes;Ministério da Cultura",
       "uf": "DF;MG;RJ",
       "municipio": "Belo Horizonte;Rio de Janeiro;Brasília",
       "tipoServico": "Avaliação",
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1527109",
@@ -33214,7 +33218,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1421234",
@@ -33231,7 +33235,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1258293",
@@ -33248,7 +33252,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1808704",
@@ -33265,41 +33269,41 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1717711",
       "tituloRelatorio": "Relatório 1714512 - Emendas parlamentares destinadas ao Instituto de Políticas Públicas Brasil Digital (ADPF 854)",
       "dataPublicacao": "19/11/2024",
       "idAuditoria": "1714512",
-      "siglaUnidadeAuditada": "MS;MTE;MMULHERES;MinC;MESP;MIR",
-      "nomeUnidadeAuditada": "Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério das Mulheres;Ministério da Cultura;Ministério do Esporte;Ministério da Igualdade Racial",
-      "siglaOrgaoSuperior": "MS;MTE;MMULHERES;MinC;MESP;MIR",
-      "nomeOrgaoSuperior": "Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério das Mulheres;Ministério da Cultura;Ministério do Esporte;Ministério da Igualdade Racial",
+      "siglaUnidadeAuditada": "MESP;MS;MTE;MinC;MMULHERES;MIR",
+      "nomeUnidadeAuditada": "Ministério do Esporte;Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério da Cultura;Ministério das Mulheres;Ministério da Igualdade Racial",
+      "siglaOrgaoSuperior": "MESP;MS;MTE;MinC;MMULHERES;MIR",
+      "nomeOrgaoSuperior": "Ministério do Esporte;Ministério da Saúde;Ministério do Trabalho e Emprego;Ministério da Cultura;Ministério das Mulheres;Ministério da Igualdade Racial",
       "uf": "DF",
       "municipio": "Brasília",
       "tipoServico": "Avaliação",
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1644394",
       "tituloRelatorio": "Relatório 1547816 - Política Nacional para a População em Situação de Rua (PNPSR): desenho da política, governança e implementação",
       "dataPublicacao": "23/09/2025",
       "idAuditoria": "1547816",
-      "siglaUnidadeAuditada": "MDS;MCID;SNDH/MDHC;MinC;MMULHERES;MIR;MDHC;SE/MDHC;MTE;MEC;MS;MJSP",
-      "nomeUnidadeAuditada": "Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome;Ministério das Cidades;Secretaria Nacional de Promoção e Defesa dos Direitos Humanos;Ministério da Cultura;Ministério das Mulheres;Ministério da Igualdade Racial;Ministério dos Direitos Humanos e da Cidadania;Secretaria-Executiva;Ministério do Trabalho e Emprego;Ministério da Educação;Ministério da Saúde;Ministério da Justiça e Segurança Pública",
-      "siglaOrgaoSuperior": "MDS;MCID;MDHC;MinC;MMULHERES;MIR;MDHC;MDHC;MTE;MEC;MS;MJSP",
-      "nomeOrgaoSuperior": "Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome;Ministério das Cidades;Ministério dos Direitos Humanos e da Cidadania;Ministério da Cultura;Ministério das Mulheres;Ministério da Igualdade Racial;Ministério dos Direitos Humanos e da Cidadania;Ministério dos Direitos Humanos e da Cidadania;Ministério do Trabalho e Emprego;Ministério da Educação;Ministério da Saúde;Ministério da Justiça e Segurança Pública",
+      "siglaUnidadeAuditada": "MEC;MDS;MIR;MinC;MMULHERES;SNDH/MDHC;MDHC;SE/MDHC;MCID;MTE;MJSP;MS",
+      "nomeUnidadeAuditada": "Ministério da Educação;Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome;Ministério da Igualdade Racial;Ministério da Cultura;Ministério das Mulheres;Secretaria Nacional de Promoção e Defesa dos Direitos Humanos;Ministério dos Direitos Humanos e da Cidadania;Secretaria-Executiva do Ministério dos Direitos Humanos e da Cidadania;Ministério das Cidades;Ministério do Trabalho e Emprego;Ministério da Justiça e Segurança Pública;Ministério da Saúde",
+      "siglaOrgaoSuperior": "MEC;MDS;MIR;MinC;MMULHERES;MDHC;MDHC;MDHC;MCID;MTE;MJSP;MS",
+      "nomeOrgaoSuperior": "Ministério da Educação;Ministério do Desenvolvimento e Assistência Social, Família e Combate à Fome;Ministério da Igualdade Racial;Ministério da Cultura;Ministério das Mulheres;Ministério dos Direitos Humanos e da Cidadania;Ministério dos Direitos Humanos e da Cidadania;Ministério dos Direitos Humanos e da Cidadania;Ministério das Cidades;Ministério do Trabalho e Emprego;Ministério da Justiça e Segurança Pública;Ministério da Saúde",
       "uf": "CE;DF;MG;PR;RJ;RN;RR;RS;SP",
       "municipio": "Brasília",
       "tipoServico": "Avaliação",
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1532360",
@@ -33316,7 +33320,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     },
     {
       "idTarefa": "1402707",
@@ -33333,7 +33337,7 @@
       "linhaAcao": "Auditoria Interna Governamental",
       "grupoAtividade": "Outros",
       "edicaoPrograma": "",
-      "ultimaAtualizacao": "30/06/2026, 16:44:28"
+      "ultimaAtualizacao": "03/07/2026, 10:31:46"
     }
   ],
   "eticaMembros": [],
@@ -33686,6 +33690,16 @@
       "motivo": "Viagem Internacional",
       "atoAutorizacao": "DECRETO DE 31 DE JANEIRO DE 2025 - DESPACHO DO PRESIDENTE DA REPÚBLICA: file:///C:/Users/claudio.py/Downloads/Genebra.pdf",
       "substitutoId": "D-2"
+    },
+    {
+      "dirigenteId": "D-1",
+      "cargoId": "DC-1",
+      "motivo": "Licença Médica",
+      "dataInicio": "2026-07-03",
+      "dataFim": "2026-07-05",
+      "substitutoId": "D-2",
+      "atoAutorizacao": "Atestado Médico",
+      "id": "DE-1783085817725"
     }
   ],
   "dirigentesCargos": [

@@ -8,7 +8,14 @@ echo.
 
 echo [1/3] Salvando e enviando codigo do Orbita...
 cd C:\Projetos\orbita-projeto
-git add .
+
+:: Adiciona todas as modificações (incluindo subpastas e untracked submodules)
+git add --all
+
+:: Remove o arquivo gigante do index do Git caso ele tenha sido adicionado acidentalmente
+git rm --cached --ignore-unmatch data/tcu/temp-acordao-completo-2024.csv >nul 2>&1
+
+:: Realiza o commit e envia as alterações com segurança
 git commit -m "Atualizacao automatica via notebook/escritorio"
 git pull origin main --rebase -X ours
 git push origin main
