@@ -1,26 +1,34 @@
 @echo off
+title Iniciar Ambiente - MTE
 SET PATH=%PATH%;%USERPROFILE%\OneDrive - mtegovbr\Área de Trabalho\Projetos\node-v24.17.0-win-x64
 
-echo [GIT] Verificando se ha modificacoes locais nao salvas...
+echo ==========================================
+echo    PREPARANDO AMBIENTE DE TRABALHO
+echo ==========================================
+echo.
+
+echo [1/3] Atualizando repositorio do Orbita...
+cd C:\Projetos\orbita-projeto
 git add .
 git stash
-
-echo.
-echo [GIT] Atualizando o projeto trazendo o historico do GitHub...
 git pull origin main --rebase -X theirs
-echo.
-
-echo [GIT] Trazendo de volta suas configuracoes locais...
 git stash pop
-
-echo.
-echo [NPM] Verificando novas dependencias...
 call npm install
 echo.
 
-echo [NPM] Iniciando o servidor de desenvolvimento...
-call npm run dev
+echo [2/3] Iniciando o servidor do Orbita...
+:: O parametro -d faz rodar no fundo (nao trava o terminal)
+docker compose up -d
 echo.
 
-echo [FIM] Projeto atualizado e pronto para uso!
+echo [3/3] Iniciando o Hub de Dados (Airflow/Postgres)...
+cd C:\Projetos\data-application-gov-hub
+docker compose up -d airflow postgres
+echo.
+
+echo ==========================================
+echo [FIM] Tudo pronto!
+echo - Orbita:  http://localhost:3000
+echo - Airflow: http://localhost:8080
+echo ==========================================
 pause
