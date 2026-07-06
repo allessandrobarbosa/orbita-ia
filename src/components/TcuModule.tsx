@@ -378,6 +378,8 @@ export default function TcuModule({
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [colegiadoFilter, setColegiadoFilter] = useState("TODOS");
   const [anoFilter, setAnoFilter] = useState("TODOS");
+  const [prazoFilter, setPrazoFilter] = useState("TODOS");
+  const [tipoProcessoFilter, setTipoProcessoFilter] = useState("TODOS");
   const [selectedAcordao, setSelectedAcordao] = useState<AcordaoDemand | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -406,6 +408,15 @@ export default function TcuModule({
   const [isSyncingLocal, setIsSyncingLocal] = useState(false);
   const [syncLocalMessage, setSyncLocalMessage] = useState<string | null>(null);
   const [localSyncReport, setLocalSyncReport] = useState<any[] | null>(null);
+
+  // Portal da Transparência verification states
+  const [docVerifyInput, setDocVerifyInput] = useState("");
+  const [verifyResult, setVerifyResult] = useState<any>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [favorecidoInput, setFavorecidoInput] = useState("");
+  const [favorecidoDocsResult, setFavorecidoDocsResult] = useState<any[] | null>(null);
+  const [isSearchingFavorecido, setIsSearchingFavorecido] = useState(false);
+  const [searchMode, setSearchMode] = useState<"documento" | "favorecido">("documento");
 
   // Communications module states
   const [comSearchTerm, setComSearchTerm] = useState("");
@@ -1273,6 +1284,88 @@ export default function TcuModule({
     return -1;
   };
 
+  // Trigger Portal da Transparência related docs checking
+  const handleVerifyRessarcimentoDirect = async (docNum: string, ac: AcordaoDemand) => {
+    setIsVerifying(true);
+    setVerifyResult(null);
+    try {
+      const response = await fetch("/api/acordaos/verificar-ressarcimento", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: ac.KEY, documentoNumero: docNum })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setVerifyResult(data);
+        const updated = data.updatedAcordaos.find((x: any) => x.KEY === ac.KEY);
+        if (updated) {
+          onUpdateAcordao(updated);
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleVerifyRessarcimento = async (ac: AcordaoDemand) => {
+    if (!docVerifyInput.trim()) return;
+    await handleVerifyRessarcimentoDirect(docVerifyInput, ac);
+  };
+
+  const handleSearchFavorecido = async (ac: AcordaoDemand) => {
+    if (!favorecidoInput.trim()) return;
+    setIsSearchingFavorecido(true);
+    setFavorecidoDocsResult(null);
+    try {
+      const response = await fetch("/api/acordaos/verificar-ressarcimento-favorecido", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: ac.KEY, codigoFavorecido: favorecidoInput })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setFavorecidoDocsResult(data.docs);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearchingFavorecido(false);
+    }
+  };
+
+  // Helper to extract CPFs/CNPJs from the acórdão full text and interested list
+  const getAcordaoIdentifiers = (ac: AcordaoDemand) => {
+    const text = `${ac.ACORDAO || ""} ${ac.INTERESSADOS || ""}`;
+    const cpfRegex = /(?:\d{3}\.\d{3}\.\d{3}-\d{2}|\*\*\*\.\d{3}\.\d{3}-\*\*)/g;
+    const cnpjRegex = /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/g;
+
+    const cpfs = text.match(cpfRegex) || [];
+    const cnpjs = text.match(cnpjRegex) || [];
+
+    return Array.from(new Set([...cpfs, ...cnpjs]));
+  };
+
+  const isIdentifierInList = (input: string, list: string[]) => {
+    const cleanInput = input.replace(/[^0-9]/g, "");
+    if (!cleanInput) return false;
+
+    for (const id of list) {
+      const cleanId = id.replace(/[^0-9]/g, "");
+      if (cleanId.length === cleanInput.length && cleanId === cleanInput) {
+        return true;
+      }
+      if (id.includes("*")) {
+        const middleDigits = cleanInput.slice(3, 9);
+        if (cleanId === middleDigits) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   // Trigger Local Sync Action
   const handleLocalSync = async () => {
     setIsSyncingLocal(true);
@@ -1301,6 +1394,11 @@ export default function TcuModule({
     new Set(acordaos.map(ac => ac.ANOACORDAO).filter(Boolean))
   ).sort((a, b) => Number(b) - Number(a));
 
+  // Extract unique list of process types
+  const availableTiposProcesso = Array.from(
+    new Set(acordaos.map(ac => ac.TIPOPROCESSO).filter(Boolean))
+  ).sort() as string[];
+
   // Filter logic
   const filteredAcordaos = acordaos.filter(ac => {
     const term = searchTerm.toLowerCase();
@@ -1314,8 +1412,12 @@ export default function TcuModule({
     const matchesStatus = statusFilter === "TODOS" || ac.STATUS_MONITORAMENTO === statusFilter;
     const matchesColegiado = colegiadoFilter === "TODOS" || ac.COLEGIADO.toLowerCase() === colegiadoFilter.toLowerCase();
     const matchesAno = anoFilter === "TODOS" || (ac.ANOACORDAO && ac.ANOACORDAO.toString() === anoFilter);
+    const matchesPrazo = prazoFilter === "TODOS" || (
+      prazoFilter === "COM_PRAZO" ? !!ac.PRAZO_LIMITE : !ac.PRAZO_LIMITE
+    );
+    const matchesTipoProcesso = tipoProcessoFilter === "TODOS" || ac.TIPOPROCESSO === tipoProcessoFilter;
 
-    return matchesSearch && matchesStatus && matchesColegiado && matchesAno;
+    return matchesSearch && matchesStatus && matchesColegiado && matchesAno && matchesPrazo && matchesTipoProcesso;
   });
 
   // Pagination calculation
@@ -1904,7 +2006,15 @@ export default function TcuModule({
                         {/* Expand toggle icon */}
                         <td className="px-4 py-3.5 no-print">
                           <button 
-                            onClick={() => setExpandedRow(isExpanded ? null : ac.KEY)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedRow(isExpanded ? null : ac.KEY);
+                              setDocVerifyInput("");
+                              setVerifyResult(null);
+                              setFavorecidoInput("");
+                              setFavorecidoDocsResult(null);
+                              setSearchMode("documento");
+                            }}
                             className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
                           >
                             {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
@@ -1916,7 +2026,15 @@ export default function TcuModule({
                           <div>
                             <span 
                               className="font-extrabold text-[#003366] cursor-pointer hover:underline text-xs"
-                              onClick={() => setExpandedRow(isExpanded ? null : ac.KEY)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedRow(isExpanded ? null : ac.KEY);
+                                setDocVerifyInput("");
+                                setVerifyResult(null);
+                                setFavorecidoInput("");
+                                setFavorecidoDocsResult(null);
+                                setSearchMode("documento");
+                              }}
                             >
                               {ac.TITULO.split(" - ")[0]}
                             </span>
@@ -2023,6 +2141,205 @@ export default function TcuModule({
                                     </div>
                                   )}
                                 </div>
+                              </div>
+
+                              {/* Verification Panel (SIAFI / Portal da Transparência) */}
+                              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 no-print">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center gap-1.5">
+                                    <Scale className="w-3.5 h-3.5 text-blue-600" />
+                                    Verificação Financeira de Ressarcimento (SIAFI / Portal da Transparência)
+                                  </span>
+                                  <span className="text-[9px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-650 font-mono font-bold">
+                                    CONCILIAÇÃO AUTOMÁTICA GRU
+                                  </span>
+                                </div>
+                                
+                                {/* Search Mode Tabs */}
+                                <div className="flex gap-2 border-b border-slate-200 pb-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => { setSearchMode("documento"); setVerifyResult(null); setFavorecidoDocsResult(null); }}
+                                    className={`px-3 py-1 text-xs rounded-lg font-bold transition cursor-pointer ${searchMode === "documento" ? "bg-[#003366] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                  >
+                                    Por Documento (Empenho / OB)
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => { setSearchMode("favorecido"); setVerifyResult(null); setFavorecidoDocsResult(null); }}
+                                    className={`px-3 py-1 text-xs rounded-lg font-bold transition cursor-pointer ${searchMode === "favorecido" ? "bg-[#003366] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                  >
+                                    Por Favorecido / Sancionado (CPF/CNPJ)
+                                  </button>
+                                </div>
+                                
+                                {searchMode === "documento" ? (
+                                  <div className="flex flex-col sm:flex-row gap-3 items-end">
+                                    <div className="flex-1 space-y-1">
+                                      <label className="text-[9px] text-slate-450 uppercase font-extrabold tracking-wider">
+                                        Número do Empenho (NE) ou Ordem Bancária (OB) Relacionada
+                                      </label>
+                                      <input
+                                        type="text"
+                                        className="w-full bg-white border border-slate-250 rounded-lg p-2 text-xs focus:ring-1 focus:ring-[#003366] focus:outline-hidden"
+                                        placeholder="Ex: 2026NE000123 ou 2026OB800456..."
+                                        value={docVerifyInput}
+                                        onChange={(e) => setDocVerifyInput(e.target.value)}
+                                      />
+                                    </div>
+                                    <button
+                                      onClick={() => handleVerifyRessarcimento(ac)}
+                                      disabled={isVerifying || !docVerifyInput.trim()}
+                                      className="px-4 py-2 bg-[#003366] text-white hover:bg-blue-800 disabled:bg-slate-355 rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer font-sans h-[34px]"
+                                    >
+                                      {isVerifying ? (
+                                        <>Consultando...</>
+                                      ) : (
+                                        <>
+                                          <Search className="w-3.5 h-3.5" /> Verificar no SIAFI
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-3">
+                                    {/* Suggestions */}
+                                    {(() => {
+                                      const idents = getAcordaoIdentifiers(ac);
+                                      if (idents.length === 0) return null;
+                                      return (
+                                        <div className="text-[11px] text-slate-500 bg-slate-100/50 p-2.5 rounded-lg border border-slate-200">
+                                          <span className="font-bold text-slate-650 block mb-1">Identificadores localizados no texto do Acórdão:</span>
+                                          <div className="flex flex-wrap gap-1.5 mt-1">
+                                            {idents.map((id, idx) => (
+                                              <span 
+                                                key={idx} 
+                                                onClick={() => {
+                                                  if (!id.includes("*")) {
+                                                    setFavorecidoInput(id);
+                                                  } else {
+                                                    setFavorecidoInput(id.replace(/\*/g, ""));
+                                                  }
+                                                }}
+                                                className="bg-white border border-slate-250 px-2 py-0.5 rounded-md font-mono text-[10px] hover:bg-slate-50 cursor-pointer text-slate-700 hover:text-slate-900 transition font-bold"
+                                                title="Clique para preencher"
+                                              >
+                                                {id}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
+
+                                    <div className="flex flex-col sm:flex-row gap-3 items-end">
+                                      <div className="flex-1 space-y-1">
+                                        <label className="text-[9px] text-slate-450 uppercase font-extrabold tracking-wider">
+                                          CPF ou CNPJ do Sancionado / Favorecido
+                                        </label>
+                                        <input
+                                          type="text"
+                                          className="w-full bg-white border border-slate-250 rounded-lg p-2 text-xs focus:ring-1 focus:ring-[#003366] focus:outline-hidden"
+                                          placeholder="Ex: 000.000.000-00 ou CNPJ..."
+                                          value={favorecidoInput}
+                                          onChange={(e) => setFavorecidoInput(e.target.value)}
+                                        />
+                                      </div>
+                                      <button
+                                        onClick={() => handleSearchFavorecido(ac)}
+                                        disabled={isSearchingFavorecido || !favorecidoInput.trim()}
+                                        className="px-4 py-2 bg-[#003366] text-white hover:bg-blue-800 disabled:bg-slate-355 rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer font-sans h-[34px]"
+                                      >
+                                        {isSearchingFavorecido ? (
+                                          <>Buscando...</>
+                                        ) : (
+                                          <>
+                                            <Search className="w-3.5 h-3.5" /> Buscar Documentos
+                                          </>
+                                        )}
+                                      </button>
+                                    </div>
+
+                                    {/* Mismatch Warning */}
+                                    {favorecidoInput.trim() && (() => {
+                                      const idents = getAcordaoIdentifiers(ac);
+                                      const isValid = isIdentifierInList(favorecidoInput, idents);
+                                      if (idents.length > 0 && !isValid) {
+                                        return (
+                                          <div className="bg-amber-50 border border-amber-250 p-2.5 rounded-lg text-[10px] text-amber-800 flex items-start gap-1.5 font-sans">
+                                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                            <div>
+                                              <strong>Atenção:</strong> O CPF/CNPJ digitado não consta nos registros de responsáveis/interessados deste acórdão. A busca no SIAFI pode retornar registros não relacionados a este monitoramento.
+                                            </div>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </div>
+                                )}
+
+                                {searchMode === "favorecido" && favorecidoDocsResult && (
+                                  <div className="bg-white border p-3 rounded-lg space-y-2 text-xs">
+                                    <span className="font-bold text-slate-700 block border-b pb-1.5">Empenhos e Pagamentos Localizados para o Sancionado:</span>
+                                    <div className="space-y-1.5 max-h-44 overflow-y-auto scrollbar-thin">
+                                      {favorecidoDocsResult.map((doc: any, dIdx: number) => (
+                                        <div key={dIdx} className="flex justify-between items-center py-2 hover:bg-slate-50/50 rounded px-1 border-b border-slate-100 last:border-b-0">
+                                          <div>
+                                            <span className="font-mono font-bold text-[#003366]">{doc.documento}</span>
+                                            <span className="text-[10px] text-slate-450 block">{doc.fase} • {doc.orgao} • {doc.data}</span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <span className="font-bold text-slate-800">R$ {Number(doc.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setDocVerifyInput(doc.documento);
+                                                handleVerifyRessarcimentoDirect(doc.documento, ac);
+                                              }}
+                                              className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded font-bold text-[10px] transition cursor-pointer"
+                                            >
+                                              Verificar Relacionados (SIAFI)
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {verifyResult && (
+                                  <div className="bg-white border p-3 rounded-lg space-y-2 text-xs">
+                                    <div className="flex items-center justify-between border-b pb-1.5">
+                                      <span className="font-bold text-slate-700">Documentos Relacionados Encontrados para {verifyResult.documentoNumero}:</span>
+                                      {verifyResult.isSimulated && (
+                                        <span className="text-[9px] text-amber-600 bg-amber-50 border border-amber-250 px-1.5 py-0.2 rounded font-semibold font-sans">
+                                          Resultado Simulado
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      {verifyResult.relatedDocs.map((doc: any, dIdx: number) => (
+                                        <div key={dIdx} className="flex justify-between items-center py-1 hover:bg-slate-50/50 rounded px-1">
+                                          <div>
+                                            <span className="font-mono font-bold text-slate-800">{doc.documento}</span>
+                                            <span className="text-[10px] text-slate-405 block">{doc.fase} • {doc.orgao} • Favorecido: {doc.favorecido}</span>
+                                          </div>
+                                          <div className="text-right">
+                                            <span className="font-bold text-slate-800 block">R$ {Number(doc.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                                            <span className="text-[10px] text-slate-405 block">{doc.data}</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-800 flex items-center gap-1.5">
+                                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                                      <div>
+                                        <strong>Ressarcimento Conciliado!</strong> Guia de Recolhimento da União (GRU) identificada e conciliada com sucesso no SIAFI. O status do acórdão foi atualizado para <strong>Cumprido</strong>.
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* Operating values annotations */}
