@@ -1473,7 +1473,11 @@ function generateFullAcordaoText(ac: any): string {
 }
 
 // Helper to parse a CSV stream character-by-character using readline interface
-function parseCsvStream(stream: Readable, onRecord: (record: any) => Promise<boolean> | boolean | Promise<void> | void): Promise<void> {
+function parseCsvStream(
+  stream: Readable,
+  onRecord: (record: any) => Promise<boolean> | boolean | Promise<void> | void,
+  searchKeys?: { num: string; ano: string }
+): Promise<void> {
   return new Promise(async (resolve, reject) => {
     try {
       const rl = readline.createInterface({
@@ -1499,6 +1503,12 @@ function parseCsvStream(stream: Readable, onRecord: (record: any) => Promise<boo
 
         if (isPipeDelimited === null) {
           isPipeDelimited = line.includes('|');
+        }
+
+        if (searchKeys && !inQuotes) {
+          if (!line.includes(searchKeys.num) || !line.includes(searchKeys.ano)) {
+            continue;
+          }
         }
 
         if (!isPipeDelimited) {
@@ -1717,7 +1727,7 @@ async function fetchAcordaoFromCSV(numAcordao: number, anoAcordao: number): Prom
           return true; // Stop parsing
         }
         return false;
-      });
+      }, { num: targetNum, ano: targetAno });
       // If we found a record and it already contains the full text (from a complete CSV), return it immediately
       if (localRecord && localRecord.ACORDAO && localRecord.ACORDAO.trim().length > 100) {
         console.log(`[TCU CSV] Found ${numAcordao}/${anoAcordao} locally in ${localFilePath} with full text!`);
@@ -1746,7 +1756,7 @@ async function fetchAcordaoFromCSV(numAcordao: number, anoAcordao: number): Prom
           return true; // Stop parsing
         }
         return false;
-      });
+      }, { num: targetNum, ano: targetAno });
       if (fullRecord) {
         console.log(`[TCU CSV] Found full text for ${numAcordao}/${anoAcordao} in complete CSV!`);
         // If we have local record metadata, merge it, otherwise return full record
@@ -3114,18 +3124,10 @@ async function startServer() {
           const rawAcordao = rawItem.ACORDAO;
           const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
 
-          const needsGeneration = !cleanedAcordao ||
-            cleanedAcordao.includes("DADOS HISTÓRICOS") ||
-            cleanedAcordao.includes("DADOS OBTIDOS") ||
-            cleanedAcordao.trim().length < 50;
-
-          let finalAcordaoText = cleanedAcordao;
-          let isSimulated = false;
-
           if (needsGeneration) {
             console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
             const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
-            if (apiDoc && apiDoc.ACORDAO) {
+            if (apiDoc && !apiDoc.filteredOut && apiDoc.ACORDAO) {
               finalAcordaoText = stripHtmlToText(apiDoc.ACORDAO);
               rawItem.RELATOR = rawItem.RELATOR || apiDoc.RELATOR;
               rawItem.COLEGIADO = rawItem.COLEGIADO || apiDoc.COLEGIADO;
@@ -3138,6 +3140,16 @@ async function startServer() {
               rawItem.ASSUNTO = rawItem.ASSUNTO || apiDoc.ASSUNTO;
               rawItem.TIPOPROCESSO = rawItem.TIPOPROCESSO || apiDoc.TIPOPROCESSO;
             } else {
+              if ((apiDoc && apiDoc.filteredOut) || (!apiDoc && !isMteRelevant(rawItem))) {
+                results.push({
+                  input: `${numAcordao}/${anoAcordao}`,
+                  parsedNumero: numAcordao,
+                  parsedAno: anoAcordao,
+                  status: "skipped",
+                  message: "Ignorado: Não pertence ao Ministério do Trabalho e Emprego (MTE)"
+                });
+                continue;
+              }
               isSimulated = true;
               finalAcordaoText = generateFullAcordaoText({
                 RELATOR: chosenRelator,
@@ -3152,6 +3164,17 @@ async function startServer() {
                 ASSUNTO: chosenAssunto,
                 DECISAO: chosenDecisao
               });
+            }
+          } else {
+            if (!isMteRelevant(rawItem)) {
+              results.push({
+                input: `${numAcordao}/${anoAcordao}`,
+                parsedNumero: numAcordao,
+                parsedAno: anoAcordao,
+                status: "skipped",
+                message: "Ignorado: Não pertence ao Ministério do Trabalho e Emprego (MTE)"
+              });
+              continue;
             }
           }
 
@@ -3239,7 +3262,7 @@ async function startServer() {
             
             let newAcordao;
 
-            if (apiDoc) {
+            if (apiDoc && !apiDoc.filteredOut) {
               const cleanProc = apiDoc.PROC ? stripHtmlToText(apiDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
               const cleanTitulo = apiDoc.TITULO ? stripHtmlToText(apiDoc.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
               const cleanAcordaoText = apiDoc.ACORDAO ? stripHtmlToText(apiDoc.ACORDAO) : "";
@@ -3272,6 +3295,16 @@ async function startServer() {
                 ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
               };
             } else {
+              if (apiDoc && apiDoc.filteredOut) {
+                results.push({
+                  input: itemString,
+                  parsedNumero: numAcordao,
+                  parsedAno: anoAcordao,
+                  status: "skipped",
+                  message: "Ignorado: Não pertence ao Ministério do Trabalho e Emprego (MTE)"
+                });
+                continue;
+              }
               const colegiadoOptions = ["Plenário", "Primeira Câmara", "Segunda Câmara"];
               const chosenColegiado = colegiadoOptions[numAcordao % 3];
               const numAta = `${Math.floor(Math.random() * 45) + 1}/${anoAcordao}`;
@@ -3410,13 +3443,13 @@ async function startServer() {
     const files = fs.readdirSync(TCU_DIR);
     const csvFiles = files.filter(f => {
       const lower = f.toLowerCase();
-      return (lower.startsWith("acórdãos") || lower.startsWith("acordaos") || lower.startsWith("acordao-completo-")) && lower.endsWith(".csv");
+      return (lower.startsWith("acórdãos") || lower.startsWith("acordaos")) && lower.endsWith(".csv");
     });
 
     if (csvFiles.length === 0) {
       return res.json({
         success: false,
-        message: "Nenhum arquivo local 'Acórdãos*.csv' ou 'acordao-completo-*.csv' encontrado na pasta data/tcu/ do projeto."
+        message: "Nenhum arquivo local 'Acórdãos*.csv' ou 'acordaos-*.csv' encontrado na pasta data/tcu/ do projeto."
       });
     }
 
@@ -3435,7 +3468,36 @@ async function startServer() {
         let updated = 0;
         let skipped = 0;
 
+        const yearMatch = file.match(/(?:acórdãos|acordaos)(\d{4})/i);
+        if (!yearMatch) {
+          console.log(`[Local Sync] Could not extract year from file: ${file}. Skipping.`);
+          continue;
+        }
+        const year = Number(yearMatch[1]);
+
         try {
+          const tempPath = await downloadTempCsv(year);
+          const completeMteMap = new Map();
+          const foundKeys = new Set();
+
+          if (tempPath && fs.existsSync(tempPath)) {
+            console.log(`[Local Sync] Pre-indexing complete CSV for year ${year}: ${tempPath}...`);
+            const tempStream = fs.createReadStream(tempPath, { encoding: "utf8" });
+            await parseCsvStream(tempStream, (record) => {
+              const num = record.NUMACORDAO?.trim();
+              const ano = record.ANOACORDAO?.trim();
+              if (num && ano) {
+                const key = `${num}-${ano}`;
+                foundKeys.add(key);
+                if (isMteRelevant(record)) {
+                  completeMteMap.set(key, record);
+                }
+              }
+              return false;
+            });
+            console.log(`[Local Sync] Pre-indexing completed. Found ${completeMteMap.size} MTE-relevant records out of ${foundKeys.size} total.`);
+          }
+
           const fileStream = fs.createReadStream(filePath, { encoding: "utf8" });
           await parseCsvStream(fileStream, async (record) => {
             const numAcordao = Number(record.NUMACORDAO);
@@ -3444,6 +3506,7 @@ async function startServer() {
             if (!numAcordao || !anoAcordao) return false;
 
             const generatedKey = `AC-${numAcordao}-${anoAcordao}`;
+            const lookupKey = `${numAcordao}-${anoAcordao}`;
             const existingIndex = db.acordaos.findIndex(
               (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao
             );
@@ -3459,9 +3522,10 @@ async function startServer() {
               }
             }
 
-            try {
-              // Fetch the complete document (from the complete CSV file) to get the full ACORDAO text
-              const fullDoc = await fetchAcordaoFromCSV(numAcordao, anoAcordao);
+            const fullDoc = completeMteMap.get(lookupKey);
+            const existsInTCU = foundKeys.has(lookupKey);
+
+            if (existsInTCU) {
               if (fullDoc) {
                 const cleanProc = fullDoc.PROC ? stripHtmlToText(fullDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
                 const cleanTitulo = fullDoc.TITULO ? stripHtmlToText(fullDoc.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
@@ -3504,48 +3568,51 @@ async function startServer() {
                   imported++;
                 }
               } else {
-                // Fallback metadata only
-                const cleanProc = record.PROC ? stripHtmlToText(record.PROC) : `TC ${numAcordao}/${anoAcordao}`;
-                const cleanTitulo = record.TITULO ? stripHtmlToText(record.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
-
-                const fallbackAcordao = {
-                  KEY: generatedKey,
-                  TITULO: cleanTitulo,
-                  NUMACORDAO: numAcordao,
-                  ANOACORDAO: anoAcordao,
-                  NUMATA: record.NUMATA || `${numAcordao}/${anoAcordao}`,
-                  COLEGIADO: record.COLEGIADO || "Plenário",
-                  DATASESSAO: record.DATASESSAO || "",
-                  SITUACAO: "OFICIALIZADO (SEM INTEIRO TEOR)",
-                  PROC: cleanProc,
-                  ACORDAOSRELACIONADOS: "Nenhum",
-                  TIPOPROCESSO: record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
-                  INTERESSADOS: "Ministério do Trabalho e Emprego (AECI-MTE)",
-                  ENTIDADE: "MTE - Ministério do Trabalho e Emprego",
-                  RELATOR: record.RELATOR || "",
-                  UNIDADETECNICA: record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
-                  ASSUNTO: "Jurisprudência TCU",
-                  SUMARIO: "Importado via Sincronização Local (Metadados apenas).",
-                  ACORDAO: "",
-                  DECISAO: "",
-
-                  STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
-                  RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
-                  PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
-                  OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado via Sincronização Local (apenas metadados) em " + new Date().toLocaleDateString("pt-BR") + ".",
-                  ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
-                };
-
-                if (existingIndex >= 0) {
-                  skipped++;
-                } else {
-                  db.acordaos.unshift(fallbackAcordao);
-                  imported++;
-                }
+                skipped++;
               }
-            } catch (err) {
-              console.error(`[Local Sync] Error fetching full doc for ${numAcordao}/${anoAcordao}:`, err);
-              skipped++;
+            } else {
+              if (!isMteRelevant(record)) {
+                skipped++;
+                return false;
+              }
+              // Fallback metadata only
+              const cleanProc = record.PROC ? stripHtmlToText(record.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+              const cleanTitulo = record.TITULO ? stripHtmlToText(record.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
+
+              const fallbackAcordao = {
+                KEY: generatedKey,
+                TITULO: cleanTitulo,
+                NUMACORDAO: numAcordao,
+                ANOACORDAO: anoAcordao,
+                NUMATA: record.NUMATA || `${numAcordao}/${anoAcordao}`,
+                COLEGIADO: record.COLEGIADO || "Plenário",
+                DATASESSAO: record.DATASESSAO || "",
+                SITUACAO: "OFICIALIZADO (SEM INTEIRO TEOR)",
+                PROC: cleanProc,
+                ACORDAOSRELACIONADOS: "Nenhum",
+                TIPOPROCESSO: record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+                INTERESSADOS: "Ministério do Trabalho e Emprego (AECI-MTE)",
+                ENTIDADE: "MTE - Ministério do Trabalho e Emprego",
+                RELATOR: record.RELATOR || "",
+                UNIDADETECNICA: record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+                ASSUNTO: "Jurisprudência TCU",
+                SUMARIO: "Importado via Sincronização Local (Metadados apenas).",
+                ACORDAO: "",
+                DECISAO: "",
+
+                STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+                RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
+                PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : `${anoAcordao + 1}-12-31`,
+                OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : "Importado via Sincronização Local (apenas metadados) em " + new Date().toLocaleDateString("pt-BR") + ".",
+                ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
+              };
+
+              if (existingIndex >= 0) {
+                skipped++;
+              } else {
+                db.acordaos.unshift(fallbackAcordao);
+                imported++;
+              }
             }
             return false; // Continue parsing
           });
