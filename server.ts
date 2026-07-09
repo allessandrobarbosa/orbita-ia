@@ -3992,16 +3992,15 @@ async function startServer() {
   });
 
 async function extractTcuDataWithGemini(acordaoText: string) {
-  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "MY_GEMINI_API_KEY" || process.env.GEMINI_API_KEY.trim() === "") {
-    console.log("[Gemini AI] Chave não configurada, usando fallback nativo.");
+  const hasGemini = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY" && process.env.GEMINI_API_KEY.trim() !== "";
+  const hasGroq = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== "";
+
+  if (!hasGemini && !hasGroq) {
+    console.log("[AI] Chaves não configuradas, usando fallback nativo.");
     return extractTcuDataNativo(acordaoText);
   }
   
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `Você é um analista experiente do TCU. Leia atentamente o inteiro teor do acórdão abaixo e extraia as seguintes informações no formato JSON EXATO estipulado, e nada mais.
+  const promptText = `Você é um analista experiente do TCU. Leia atentamente o inteiro teor do acórdão abaixo e extraia as seguintes informações no formato JSON EXATO estipulado, e nada mais.
 
 O JSON DEVE ter a seguinte estrutura:
 {
@@ -4027,18 +4026,40 @@ Regras:
 4. Responda APENAS com o JSON, sem nenhum bloco de markdown extra (sem \`\`\`json).
 
 Texto do Acórdão:
-${acordaoText.slice(0, 15000)}`
-    });
+${acordaoText.slice(0, 15000)}`;
 
-    let resText = response.text?.trim() || "{}";
+  try {
+    let resText = "{}";
+
+    if (hasGroq) {
+      console.log("[Groq AI] Processando extração em massa com Groq Llama 3...");
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: promptText }],
+        model: 'llama-3.3-70b-versatile',
+      });
+      resText = chatCompletion.choices[0]?.message?.content || "{}";
+    } else {
+      console.log("[Gemini AI] Processando extração em massa com Gemini...");
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: promptText
+      });
+      resText = response.text?.trim() || "{}";
+    }
+
     if (resText.startsWith("```json")) resText = resText.substring(7);
     if (resText.startsWith("```")) resText = resText.substring(3);
     if (resText.endsWith("```")) resText = resText.substring(0, resText.length - 3);
     resText = resText.trim();
 
+    // Groq sometimes wraps in <think> tags. Let's remove them if present.
+    resText = resText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+
     return JSON.parse(resText);
   } catch (e) {
-    console.error("[Gemini AI] Checklist extração falhou, fallback para nativo.", e);
+    console.error("[AI] Checklist extração falhou, fallback para nativo.", e);
     return extractTcuDataNativo(acordaoText);
   }
 }

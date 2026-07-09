@@ -260,16 +260,16 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 13:45:12",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 19:59:44",
       "aiAnalysisData": {
         "temDebitoFinanceiro": false,
         "valoresRestituir": null,
         "recomendacoes": [],
         "determinacoes": [
-          "arquivar o presente feito, sem julgamento de mérito, em relação à sra. Cláudia de Fátima dos Santos e ao sr. Vicente Ferreira Neto, tendo em vista a ausência de pressupostos de constituição e de desenvolvimento válido e regular do processo, com fulcro nos arts. 6º, inciso II, e 19 da Instrução Normativa TCU 71/2012, c/c os arts. 169, inciso VI, e 212 do RITCU"
+          "arquivar o presente feito em relação à sra. Cláudia de Fátima dos Santos e ao sr. Vicente Ferreira Neto"
         ],
         "darCiencia": [
-          "do presente acórdão aos responsáveis, à Prefeitura Municipal de Palmares/PE e ao Ministério do Trabalho e Emprego"
+          "dar ciência do presente acórdão aos responsáveis, à Prefeitura Municipal de Palmares/PE e ao Ministério do Trabalho e Emprego"
         ],
         "determinaArquivamento": true,
         "dossieRessarcimento": []
@@ -376,18 +376,14 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 13:45:46",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 20:03:08",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": null,
         "recomendacoes": [],
-        "determinacoes": [
-          "arquivamento dos autos, em face da prescrição das pretensões punitiva e de ressarcimento"
-        ],
-        "darCiencia": [
-          "desta deliberação aos responsáveis e demais interessados"
-        ],
-        "determinaArquivamento": true,
+        "determinacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false,
         "dossieRessarcimento": []
       },
       "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
@@ -3501,7 +3497,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:26",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.2. dar ciência da presente deliberação à recorrente."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-17-2025-PL",
@@ -3528,7 +3532,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:25",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Apensar os autos ao TC 006.466/2022-2 e encerrar o presente processo."
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência à Secretaria Executiva do Ministério do Trabalho e Emprego;"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-52-2025-2C",
@@ -3555,7 +3569,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:25",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 100,000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-166-2025-PL",
@@ -3582,7 +3609,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:25",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-199-2025-2C",
@@ -3609,7 +3642,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:25",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Comunicar a deliberação aos responsáveis, ao Município de Rio Pardo-RS e ao Ministério do Trabalho e Emprego"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-204-2025-2C",
@@ -3636,7 +3677,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:25",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-207-2025-PL",
@@ -3663,7 +3710,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:24",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-253-2025-PL",
@@ -3690,7 +3743,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:24",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-356-2025-PL",
@@ -3717,7 +3776,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:24",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-357-2025-PL",
@@ -3744,7 +3809,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:24",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-365-2025-PL",
@@ -3771,7 +3842,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:24",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-395-2025-PL",
@@ -3832,7 +3909,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:23",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-397-2025-PL",
@@ -3859,7 +3942,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:23",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-407-2025-PL",
@@ -3886,7 +3975,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:23",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.9. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.9. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-428-2025-PL",
@@ -3913,7 +4012,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:23",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.2. dar ciência desta deliberação ao embargante e aos demais interessados."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-466-2025-PL",
@@ -3940,7 +4047,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:22",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-467-2025-PL",
@@ -3967,7 +4080,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:22",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-538-2025-PL",
@@ -3994,7 +4113,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:22",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-584-2025-1C",
@@ -4021,7 +4146,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:22",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-589-2025-1C",
@@ -4048,7 +4179,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:22",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-590-2025-PL",
@@ -4075,7 +4212,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:21",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.1. Determinar ao Ministério do Trabalho e Emprego que, com fundamento no art. 4º da Resolução 315/2020, realize avaliação dos objetivos, acompanhados dos indicadores de desempenho e metas, das ações ou projetos estratégicos, da forma e com a periodicidade definidas no art. 9º da Resolução Codefat 960/2022;",
+          "9.4. Orientar à Segecex que monitore as determinações e recomendações expedidas;"
+        ],
+        "recomendacoes": [
+          "9.2. Recomendar ao Ministério do Trabalho e Emprego, com fundamento no art. 11 da Resolução TCU 315/2020, que:",
+          "9.3. Recomendar ao Codefat, com fundamento no art. 11 da Resolução TCU 315/2020, que desenvolva estudos com o objetivo de aperfeiçoar o acompanhamento dos resultados dos financiamentos custeados com recursos do FAT, avaliando a viabilidade de passar a mensurar os seguintes indicadores: (i) variação anual de empregos gerados por região e por atividade; e (ii) estimativa da relação de empregos gerados por recursos do FAT aplicados de forma a contribuir para o adequado monitoramento dos resultados da aplicação dos recursos do FAT.",
+          "9.4. Orientar à Segecex que monitore as determinações e recomendações expedidas;"
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-638-2025-PL",
@@ -4102,7 +4252,22 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:21",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.2.1. determinar ao Ministério do Trabalho e Emprego, com fundamento no inciso II do art. 250 do RI/TCU, c/c os arts. 4º a 7º da Resolução 315/2020, que adote, no prazo de 90 (noventa) dias, as medidas necessárias para baixar as instruções reguladoras das eleições dos Conselhos Federal e Regionais de Fisioterapia e Terapia Ocupacional, conforme exigido pelo § 3º do art. 2º da Lei 6.316/1975, obedecendo normas gerais e princípios do processo eleitoral tais como: prazos de desincompatibilização e vedação às reeleições ilimitadas, em observância aos princípios constitucionais democrático e republicano bem como da impessoalidade e moralidade na administração pública;",
+          "9.2.2. determinar ao Conselho Federal de Fisioterapia e Terapia Ocupacional, com fundamento no inciso II do art. 250 do RI/TCU, c/c os arts. 4º a 7º da Resolução 315/2020, que:",
+          "9.5. dar ciência à Casa Civil, com base no inciso I do art. 9º da Resolução 315/2020, sobre a necessidade de regulamentação das eleições do Conselho Federal e dos conselhos regionais de Fisioterapia e Terapia Ocupacional, conforme disciplinado pelo legislador federal, nos termos do § 3º do art. 2º da Lei 6.316/1975, considerando a determinação do item 9.2 do Acórdão 1.925/2019-TCU-Plenário, alterado pelo Acórdão 1.237/2022-TCU-Plenário;"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.3. dar ciência ao Conselho Federal de Fisioterapia e Terapia Ocupacional e aos conselhos regionais de Fisioterapia e Terapia Ocupacional, com base no inciso I do art. 9º da Resolução 315/2020, de que não há fundamentação legal nem regulamentar expedida pelo Ministro do Trabalho para autorizar a reeleição ou recondução de membros dessas entidades, sendo os respectivos mandatos limitados a um período de 4 (quatro) anos, conforme disciplinado pelo legislador federal, nos termos do § 1º do art. 2º, c/c o art. 3º, todos da Lei n° 6.316/1975;",
+          "9.4. dar ciência ao Conselho Federal de Fisioterapia e Terapia Ocupacional, com base no inciso I do art. 9º da Resolução 315/2020, de que a criação de subsede do Conselho Federal nos estados da Federação viola o princípio da unicidade do sistema de fiscalização profissional previsto no § 1º do art. 1º da Lei 6.316/1975;",
+          "9.5. dar ciência à Casa Civil, com base no inciso I do art. 9º da Resolução 315/2020, sobre a necessidade de regulamentação das eleições do Conselho Federal e dos conselhos regionais de Fisioterapia e Terapia Ocupacional, conforme disciplinado pelo legislador federal, nos termos do § 3º do art. 2º da Lei 6.316/1975, considerando a determinação do item 9.2 do Acórdão 1.925/2019-TCU-Plenário, alterado pelo Acórdão 1.237/2022-TCU-Plenário;",
+          "9.6. dar ciência desta decisão ao presidente da Comissão de Fiscalização Financeira e Controle da Câmara dos Deputados, ao Ministério Público Federal, à Superintendência da Polícia Federal e aos conselhos regionais de Fisioterapia e Terapia Ocupacional;"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-693-2025-PL",
@@ -4129,7 +4294,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:21",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-694-2025-PL",
@@ -4156,7 +4327,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:21",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-739-2025-PL",
@@ -4183,7 +4360,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:21",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-744-2025-PL",
@@ -4210,7 +4393,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:20",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.4. determinar que a AudTI monitore as recomendações contidas nos subitens 9.1, 9.2 e 9.3;"
+        ],
+        "recomendacoes": [
+          "9.1. recomendar à Secretaria de Governo Digital do Ministério da Gestão e da Inovação em Serviços Públicos, com fundamento no art. 11 da Resolução-TCU 315/2020, que:",
+          "9.2. recomendar à Ouvidoria-Geral da União da Controladoria Geral da União, com fundamento no art. 11 da Resolução-TCU 315/2020, que:",
+          "9.3. recomendar à Secretaria de Governo Digital do Ministério da Gestão e da Inovação em Serviços Públicos e à Ouvidoria-Geral da União da Controladoria Geral da União, com fundamento no art. 11 da Resolução-TCU 315/2020, que:",
+          "9.4. determinar que a AudTI monitore as recomendações contidas nos subitens 9.1, 9.2 e 9.3;"
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-828-2025-2C",
@@ -4237,7 +4433,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:20",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 20.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-893-2025-2C",
@@ -4264,7 +4473,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:20",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-908-2025-PL",
@@ -4291,7 +4506,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:20",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-918-2025-2C",
@@ -4318,7 +4539,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:19",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-922-2025-PL",
@@ -4345,7 +4572,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:19",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-978-2025-2C",
@@ -4372,7 +4605,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:19",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.2. dar ciência desta deliberação ao responsável e ao Ministério do Trabalho e Emprego; e"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-1007-2025-2C",
@@ -4399,7 +4640,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:19",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 900.000,00,",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1052-2025-PL",
@@ -4426,7 +4680,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:19",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1065-2025-PL",
@@ -4453,7 +4713,24 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:18",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Nascimento Comércio CNPJ",
+            "cpf": "05.155.752/0001-45",
+            "valor": "",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1066-2025-2C",
@@ -4480,7 +4757,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:18",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1083-2025-PL",
@@ -4507,7 +4790,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:18",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1089-2025-PL",
@@ -4534,7 +4823,16 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:18",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.12. dar ciência da presente deliberação ao Procurador-Chefe da Procuradoria da República no Distrito Federal, nos termos do § 3º do art. 16 da Lei 8.443/1992, c/c o § 7º do art. 209 do RITCU; e",
+          "9.13. dar ciência do presente acórdão aos responsáveis e ao Ministério do Trabalho."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1105-2025-2C",
@@ -4561,7 +4859,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:18",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1114-2025-PL",
@@ -4588,7 +4892,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:17",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.1. determinar ao Ministério do Trabalho e Emprego (MTE), com fundamento no inciso I do art. 4º do Resolução-TCU 315/2020, que, em conjunto com a Empresa de Tecnologia e Informações da Previdência (Dataprev), viabilize e disponibilize acesso ao TCU, no prazo de dez dias de ciência desta deliberação, ao projeto DataLake, ou outro meio equivalente, voltado para os órgãos de controle que necessitam acessar dados do \"eSocial Negócio\", com especial atenção ao objetivo desta fiscalização; ou, caso o cronograma informado não possa ser cumprido, que o MTE, em conjunto com a Dataprev, apresente justificativas, no prazo de dez dias da ciência desta deliberação e indique nova data, ainda este ano, para que os dados estejam disponíveis à equipe de auditoria;"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.2. dar ciência ao MTE, com fundamento no inciso II do art. 9º do Resolução-TCU 315/2020, acerca de sua responsabilidade de assegurar o cumprimento do dever fiscalizatório no contrato firmado com a Dataprev, conforme disposto no art. 23 da Lei 7.998/1990, ressaltando que, no contexto do ciclo de políticas públicas, a custódia de dados por outro agente ou instituição destinada à análise da concessão dos benefícios não exime a pasta ministerial de exigir relatórios de desempenho que subsidiem a avaliação contínua da política pública implementada;"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1121-2025-1C",
@@ -4615,7 +4929,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:17",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1239-2025-PL",
@@ -4642,7 +4962,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:17",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1252-2025-1C",
@@ -4669,7 +4999,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:17",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1259-2025-1C",
@@ -4696,7 +5032,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:17",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1265-2025-PL",
@@ -4723,7 +5065,24 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:16",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.1. determinar ao Instituto Nacional do Seguro Social, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de um ano, adote providências para mitigar o risco apontado pelas tipologias identificadas no Achado 1, reproduzido no Relatório, e para avaliar o custo-benefício de revisar os benefícios identificados, por estarem em desacordo com a Lei 8.213/1991, a IN-INSS 77/PRES/2015, a Nota Técnica 25/2017 GT/CGIA/DATAPREV/PT/Nº76/INSS;",
+          "9.2. determinar ao Instituto Nacional do Seguro Social, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de um ano, adote providências para mitigar o risco apontado pelas tipologias identificadas no Achado 2 e para avaliar o custo-benefício de revisar os benefícios identificados, por estarem em desacordo com a Lei 8.213/1991, a IN-INSS 77/PRES/2015, a Nota Técnica 25/2017 GT/CGIA/DATAPREV/PT/Nº76/INSS;",
+          "9.3. determinar ao Instituto Nacional do Seguro Social, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de um ano, adote providências para mitigar o risco apontado pelas tipologias identificadas no Achado 3 e para avaliar o custo-benefício de revisar os benefícios identificados, por estarem em desacordo com a Lei 8.213/1991, a IN-INSS 77/PRES/2015, a Nota Técnica 25/2017 GT/CGIA/DATAPREV/PT/Nº76/INSS;",
+          "9.4. determinar ao Ministério do Trabalho e Emprego, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de 120 (cento e vinte) dias, adote providências para mitigar os riscos apontados no Achado 4, por estarem em desacordo com a Lei 7.998/1990, o art. 19 do Decreto 3.048/1999 e a Lei 13.460/2017;",
+          "9.5. determinar ao Ministério do Trabalho e Emprego, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de 120 (cento e vinte) dias, adote providências para mitigar os riscos apontados pelas tipologias do Achado 5, por estarem em desacordo com a Lei 7.998/1990, o art. 19 do Decreto 3.048/1999 e a Lei 13.460/2017;",
+          "9.6. determinar ao Ministério do Trabalho e Emprego, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de 120 (cento e vinte) dias, regulamente o pagamento do Abono Salarial conforme a situação da inscrição no Cadastro de Pessoas Físicas da Receita Federal (Achado 5);",
+          "9.7. determinar ao Ministério do Trabalho e Emprego, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de 120 (cento e vinte) dias, adote providências para mitigar os riscos apontados pelas tipologias do Achado 6, por estarem em desacordo com a Lei 7.998/1990, o art. 19 do Decreto 3.048/1999 e a Lei 13.460/2017;",
+          "9.8. determinar à Dataprev, com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, que, no prazo de 120 (cento e vinte) dias, adote providências para mitigar os riscos apontados no Achado 4 e nas tipologias 6 e 9 do Achado 5, por estarem em desacordo com a Lei 7.998/1990;"
+        ],
+        "recomendacoes": [
+          "9.9. recomendar à Receita Federal do Brasil, com fundamento no art. 11 da Resolução-TCU 315/2020, que realize procedimentos adicionais de apuração nos resultados identificados na tipologia de instituidor de pensão por morte sem registro no Sisobi ou óbito na Receita Federal do Brasil (TPL BP-E21-001), Anexo II, devido a identificação de titular de CPF com indício de óbito;"
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1297-2025-PL",
@@ -4750,7 +5109,21 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:16",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.1. determinar, com fundamento no art. 4º, inciso II, da Resolução TCU 315/2020, ao Ministério da Integração e Desenvolvimento Regional (MIDR) que, no prazo de 60 dias, avalie os requerimentos pendentes de análise e reprocessamento, corrigindo inconsistências relacionadas a erros cadastrais na validação dos locais de residência, na composição das famílias e na identificação das áreas afetadas por imagens de satélite, visando fortalecer o princípio da governança, com maior transparência e eficiência na gestão pública, em observância ao Referencial Básico de Governança do TCU (3ª ed., 2020) e ao art. 4º, inciso I, do Decreto 9.203/2017, e encaminhe o resultado ao TCU;",
+          "9.5. determinar à AudBenefícios que monitore as determinações e recomendações ora expedidas;",
+          "9.6. apensar os presentes autos ao processo TC 008.848/2024-6, no qual foi determinada a autuação deste acompanhamento."
+        ],
+        "recomendacoes": [
+          "9.2. recomendar, com fundamento no art. 11 da Resolução TCU 315/2020, ao Ministério da Integração e Desenvolvimento Regional (MIDR) que, ao estruturar futuros auxílios emergenciais em moldes semelhantes, adote medidas que aprimorem a governança e a execução das políticas, em especial:",
+          "9.3. recomendar, com fundamento no art. 11 da Resolução TCU 315/2020, ao Ministério do Trabalho e Emprego (MTE), que, ao estruturar futuros auxílios emergenciais em moldes semelhantes, avalie:",
+          "9.5. determinar à AudBenefícios que monitore as determinações e recomendações ora expedidas;"
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1320-2025-PL",
@@ -4777,7 +5150,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:16",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1327-2025-2C",
@@ -4804,7 +5187,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:16",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 110.000,00,",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1355-2025-PL",
@@ -4831,7 +5227,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:16",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.2. determinar à Central de Cooperativas e Empreendimentos Solidários do Brasil (Unisol) e ao Centro de Estudos e Assessoria (CEA), com relação, respectivamente, ao Termo de Fomento 973076/2024 e 973077/2024, cautelarmente, nos termos do art. 276, caput, do Regimento Interno do TCU, que, até ulterior decisão desta Corte, abstenham-se de efetuar qualquer pagamento ou transferência bancária utilizando recursos já recebidos ou depositados nas contas criadas no âmbito das parcerias, na forma do art. 71, inciso IX, da Constituição Federal; e"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1366-2025-2C",
@@ -4858,7 +5262,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:15",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.2. determinar ao Ministério do Trabalho e Emprego que:"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1372-2025-PL",
@@ -4927,7 +5339,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:15",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1457-2025-1C",
@@ -4954,7 +5376,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:15",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1474-2025-PL",
@@ -4981,7 +5409,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:15",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.2. dar ciência desta deliberação ao embargante."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1479-2025-2C",
@@ -5008,7 +5444,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:14",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-1501-2025-PL",
@@ -5035,7 +5481,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:14",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.2. dar ciência desta deliberação à recorrente."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1548-2025-2C",
@@ -5062,7 +5516,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:14",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 80.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1578-2025-2C",
@@ -5089,7 +5556,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:14",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1579-2025-2C",
@@ -5116,7 +5589,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:13",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1649-2025-1C",
@@ -5143,7 +5622,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:13",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1700-2025-PL",
@@ -5170,7 +5655,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:12",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.4. dar ciência ao Conselho Federal de Fisioterapia e Terapia Ocupacional, com base no inciso I do art. 9º da Resolução 315/2020, de que aquisição, manutenção ou alienação de imóveis, bem como a criação de subsedes ou representações do Conselho Federal nos estados da Federação deve atender ao interesse público, aos interesses profissionais, ao princípio da eficiência administrativa e a função social da propriedade, bem como respeitar as delimitações de competência e demais aspectos correlatos insculpidos nas normas de regência do Sistema Coffito/Crefito, sob pena de violar o princípio da unicidade do sistema de fiscalização profissional previsto no § 1º do art. 1º da Lei 6.316/1975;"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1719-2025-PL",
@@ -5197,7 +5690,19 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:12",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.1. determinar à Secretaria de Gestão e Inovação (Seges) do Ministério da Gestão e da Inovação em Serviços Públicos, com fundamento no art. 4º, inciso I, c/c art. 7º, § 3º, da Resolução-TCU 315/2020, que, no prazo de 120 (cento e vinte) dias, elabore e apresente a este Tribunal um plano de ação para a efetiva correção das fragilidades no sistema Siasgnet que resultam na inserção de dados inconsistentes, contemplando, no mínimo: i) as medidas, os responsáveis e os prazos para sanar a falha que impede o registro de valores com casas decimais; ii) o aprimoramento dos controles de validação de dados que alertem ou impeçam o registro de valores manifestamente desarrazoados; iii) a análise de impacto da mudança nos sistemas que integram o ecossistema do Compras.gov.br; iv) o estudo de soluções alternativas ou de implementação escalonada; e v) as métricas e os indicadores para aferir a redução de inconsistências;",
+          "9.3. determinar à AudContratações, com fundamento no art. 43, inciso I, da Lei 8.443/1992 c/c o art. 250, inciso II, do Regimento Interno do TCU, que realize o monitoramento da determinação e da recomendação constantes dos itens 9.1 e 9.2 deste Acórdão;"
+        ],
+        "recomendacoes": [
+          "9.2. recomendar ao Comitê Gestor da Rede Nacional de Contratações Públicas (CGRNCP), com fundamento no art. 11 da Resolução-TCU 315/2020, que institua, no âmbito do Portal Nacional de Contratações Públicas (PNCP), campo de preenchimento obrigatório ou outro mecanismo que permita a identificação clara e inequívoca da utilização de recursos de origem federal nas contratações realizadas por estados, municípios e Distrito Federal;",
+          "9.3. determinar à AudContratações, com fundamento no art. 43, inciso I, da Lei 8.443/1992 c/c o art. 250, inciso II, do Regimento Interno do TCU, que realize o monitoramento da determinação e da recomendação constantes dos itens 9.1 e 9.2 deste Acórdão;"
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1775-2025-PL",
@@ -5224,7 +5729,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:12",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1777-2025-PL",
@@ -5251,7 +5766,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:12",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1778-2025-PL",
@@ -5278,7 +5799,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:11",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1815-2025-2C",
@@ -5305,7 +5832,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:11",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-1867-2025-PL",
@@ -5332,7 +5869,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:11",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.6. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1899-2025-PL",
@@ -5359,7 +5906,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:10",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.9. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.9. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1917-2025-2C",
@@ -5386,7 +5943,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:10",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1933-2025-2C",
@@ -5413,7 +5976,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:10",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-1962-2025-PL",
@@ -5440,7 +6009,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:09",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.3. determinar à Unidade de Auditoria Especializada em Tecnologia da Informação que monitore a recomendação contida no subitem 9.2;"
+        ],
+        "recomendacoes": [
+          "9.2. recomendar à Ouvidoria-Geral da União da Controladoria-Geral da União, com fundamento no art. 11, da Resolução-TCU 315/2020, que desenvolva metodologia de integração de ouvidorias passível de uso por todos os entes da federação, independentemente de plataforma, e que permita a rápida e eficaz transferência das manifestações entre as ouvidorias competentes, como a partir do uso de Application Programming Interface, conforme o art. 15, II, III, VIII e XI, do Decreto 11.330/2023;",
+          "9.3. determinar à Unidade de Auditoria Especializada em Tecnologia da Informação que monitore a recomendação contida no subitem 9.2;"
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-1971-2025-PL",
@@ -5503,7 +6083,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:08",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2014-2025-1C",
@@ -5530,7 +6116,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:08",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2095-2025-2C",
@@ -5557,7 +6149,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:07",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 18.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2096-2025-2C",
@@ -5584,7 +6189,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:07",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 225.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2099-2025-PL",
@@ -5611,7 +6229,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:07",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2134-2025-PL",
@@ -5638,7 +6262,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:06",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2158-2025-PL",
@@ -5665,7 +6299,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:06",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2171-2025-1C",
@@ -5692,7 +6332,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:06",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2184-2025-PL",
@@ -5719,7 +6365,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:05",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2205-2025-PL",
@@ -5746,7 +6398,34 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:05",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "9.4. com fundamento no art. 4º, I, da Resolução TCU 315/2020, e art. 37, VI, do Anexo I do Decreto 12.102, de 8/7/2024, determinar à Secretaria de Relações de Trabalho, do Ministério da Gestão e da Inovação em Serviços Públicos, que, no prazo de trinta dias solicite aos órgãos de assessoria jurídica competentes que defendam os interesses das organizações integrantes do Sipec junto ao Supremo Tribunal Federal para que, na esteira de precedentes, como decisões tomadas nas ADPFs 33 e 762 e nas RCLs 24967 e 55627, avaliem adotar medidas capazes de obter dessa Corte Constitucional a desconstituição de decisões judiciais que impedem absorver as parcelas descritas nos 7.055 indícios (peça 1.092) de rubricas judiciais indevidas não resolvidos até o final do 10º ciclo da Fiscalização Contínua de Folhas de Pagamento (RACOM TC 006.690/2024-6) por todo e qualquer novo aumento concedido aos interessados;",
+          "9.4.1. encaminhar cópia da peça 1.092 destes autos à Secretaria de Relações de Trabalho, do Ministério da Gestão e da Inovação em Serviços Públicos a fim de viabilizar o cumprimento da presente determinação;",
+          "9.5. com fundamento no art. 4º, I, da Resolução-TCU 315/2020, e art. 37, VI, do Anexo I do Decreto 12.102, de 8/7/2024, determinar à Secretaria de Relações de Trabalho, do Ministério da Gestão e da Inovação em Serviços Públicos, que, no prazo de trinta dias oriente as organizações integrantes do Sipec responsáveis pela apuração dos indícios de pagamentos de rubricas indevidas acompanhados pelo TCU na Fiscalização Contínua de Folhas de Pagamentos a:",
+          "9.5.2. em atenção ao art. 4º, § 8º, da EC 103/2019 e à Tese de Repercussão Geral 163 (RE 593068), não integrar às bases de cálculo das contribuições previdenciárias ou dos proventos dos benefícios concedidos ao abrigo do Regime Próprio de Previdência Social parcelas pagas por determinação judicial quando estas não tiverem respaldo na estrutura remuneratória dos segurados conforme prevista em lei, salvo expressa disposição em contrário dos respectivos títulos judiciais ou ulterior orientação da Secretaria da Receita Federal do Brasil impedindo o ajuste;",
+          "9.5.4. caso, após a oitiva de seu órgão de assessoria jurídica consultiva, conclua pela impossibilidade de a parcela judicial ser absorvida até mesmo por futuros aumentos, solicitar ao respectivo órgão de assessoria jurídica do contencioso medidas judiciais para desconstituir cada decisão judicial que represente obstáculo à regularização das situações que, dentre outras estratégias, podem incluir, com fundamento nos arts. 505, I, 520, § 5º, c/c 535, III e VI, §§ 5º, 7º e 8º do Código de Processo Civil (Lei 13.105/2015) reportar a cada juízo competente que as decisões veiculam obrigações atualmente inexigíveis porque contrariam orientações do Supremo Tribunal Federal em controle concentrado ou difuso de constitucionalidade, bem como determinam o pagamento de parcelas sem previsão na estrutura remuneratória dos interessados, o que não é possível de ser mantido ante a exigência expressa no art. 37, X, da Constituição Federal e, quando for o caso, enfatizar que decisões transitadas em julgado não reclamam o ajuizamento de ações rescisórias quando têm por objeto relações de trato continuado conforme ressalvado no RE 730.462, bem como orientação firmada no Tema de Repercussão Geral 885, RE 955227, o que justifica a revisão do que foi estatuído nas sentenças para que as parcelas passem a ser absorvidas por todo e qualquer novo aumento concedido aos beneficiários; e",
+          "9.5.5.1. encaminhar cópia da peças 1.063, 1.067 e 1.092 destes autos à Secretaria de Relações de Trabalho, do Ministério da Gestão e da Inovação em Serviços Públicos a fim de viabilizar o cumprimento da presente determinação;",
+          "9.6. Com fundamento no art. 4º, I, da Resolução-TCU 315/2020, determinar:",
+          "9.7. com fundamento no art. 4º, inciso I, da Resolução-TCU 315/2020, determinar às seguintes organizações que passem a observar os limites de tolerância das variáveis de acompanhamento relacionadas ao estoque de indícios de irregularidades nas folhas de pagamento antigos e comunicadas no início de cada novo ciclo da Fiscalização Contínua de Folha de Pagamento, em respeito ao art. 37, § 4º, da Constituição Federal de 1988, medida esta cujo cumprimento será verificado pelo TCU no âmbito dos próximos Acompanhamentos:",
+          "9.11.1. integralmente cumpridas as determinações dos itens: 9.1.1.1 e 9.1.1.2. pelo Comando da Aeronáutica do item 9.1.2 pelo Comando do Exército; 9.1.3 pela Diretoria de Serviços de Aposentados e Pensionistas e de Órgãos Extintos; 9.1.4 pela Caixa Econômica Federal, pelo Comando da Marinha, pela Empresa Brasileira de Correios e Telégrafos, pelo Ministério da Agricultura e Pecuária, pelo Tribunal Regional do Trabalho da 15ª Região, pelo Tribunal Regional do Trabalho da 2ª Região, pelo Tribunal Regional do Trabalho da 3ª Região e pelo Tribunal Regional Federal da 4ª Região, pela Universidade Federal do Paraná; 9.1.5 pelo Ministério dos Transportes; 9.1.6 pela Fundação Universidade Federal de Pelotas, pelo Instituto Benjamin Constant, pelo Instituto Federal de Minas Gerais, pelo Instituto Federal do Rio de Janeiro, pelo Tribunal Regional do Trabalho da 5ª Região e pelo Tribunal Regional Federal da 5ª Região; 9.1.7 pelo Colégio Pedro II, pela Empresa Brasileira de Serviços Hospitalares, pelo Instituto Federal Baiano, pelo Instituto Federal de Pernambuco, pelo Ministério da Ciência, Tecnologia e Inovações e pela Universidade Federal do Pará; 9.1.8 pela Universidade Federal Fluminense;",
+          "9.11.2. não cumpridas as determinações: dos itens: 9.1.4 pela Fundação Universidade de Brasília, pelo Instituto Nacional do Seguro Social, pela Universidade Federal da Paraíba e pela Universidade Federal do Piauí; 9.1.6 pela Universidade Federal de Alagoas; 9.1.7 pela Universidade Federal da Bahia, pela Universidade Federal de Juiz de Fora, pela Universidade Federal do Estado do Rio de Janeiro e pela Universidade Federal do Rio Grande; e 9.1.8 pela Universidade Federal do Rio de Janeiro e pelo Ministério da Saúde.",
+          "9.14. determinar à Unidade de Auditoria Especializada em Pessoal (AudPessoal/SecexEstado-TCU) que:",
+          "9.16. juntar cópias do relatório, do voto e do acórdão desta deliberação ao processo RACOM TC 007.802/2022-6, no qual foram realizadas as determinações monitoradas."
+        ],
+        "recomendacoes": [
+          "9.8. Com fundamento no art. 11 e no art. 17, § 2º, da Resolução-TCU 315/2020, recomendar com necessidade de monitoramento:",
+          "9.14.2. monitorar as recomendações do item 9.8 nos próximos ciclos da Fiscalização Contínua de Folhas de Pagamento;",
+          "9.15.2. monitorar as recomendações propostas no item 371 nos próximos ciclos da Fiscalização Contínua de Folhas de Pagamento; e"
+        ],
+        "darCiencia": [
+          "9.9. Com fundamento no art. 9º, I, da Resolução TCU 315/2020, dar ciência:",
+          "9.10. com fundamento no art. 9º, I, da Resolução TCU 315/2020, dar ciência à Universidade Federal do Rio de Janeiro, à Universidade Federal Fluminense, à Universidade Federal do Rio Grande do Norte, à Universidade Federal de São Paulo, à Universidade Federal de Minas Gerais, à Universidade Federal do Paraná, à Universidade a Federal da Paraíba, à Universidade Federal do Ceará, à Universidade Federal da Bahia, à Universidade Federal do Rio Grande Do Sul, à Universidade Federal de Santa Catarina, à Universidade Federal de Pernambuco, à Universidade Federal do Pará, à Fundação Universidade de Brasília, à Universidade Federal de Santa Maria, à Universidade Federal do Triângulo Mineiro, à Universidade Federal do Espírito Santo, à Universidade Federal de Alagoas, à Fundação Universidade Federal de Uberlândia, à Fundação Universidade Federal de Pelotas, à Universidade Federal de Mato Grosso do Sul, à Universidade Federal de Viçosa, ao Colégio Pedro II, à Universidade Federal de Juiz de Fora, à Universidade Federal de Goiás, à Universidade Federal do Estado do Rio de Janeiro, à Fundação Universidade do Maranhão, à Fundação Universidade do Amazonas, à Universidade Federal de Mato Grosso, à Universidade Federal de Campina Grande, à Universidade Federal de São Carlos, à Universidade Federal Rural de Pernambuco, à Universidade Federal do Rio Grande, à Fundação Universidade Federal de Sergipe, à Universidade Tecnológica Federal do Paraná, ao Centro Federal de Educação Tecnológica Minas Gerais, à Fundação Universidade Federal de Ouro Preto, ao Centro Federal Educação Tecnológica Celso S. Fonseca, à Universidade Federal do Acre, à Universidade Federal de Roraima, à Universidade Federal Rural do Rio de Janeiro, à Universidade Federal Rural da Amazônia, à Universidade Federal Rural do Semi-Árido, à Fundação Universidade de São Joao Del Rei, à Universidade Federal de Itajubá, à Universidade Federal de Alfenas, à Universidade Federal de Lavras, à Fundação Universidade Federal Cienc. Saúde de Porto Alegre, à Fundação Universidade Federal do Vale do São Francisco e à Universidade Federal Vales do Jequitinhonha e Mucuri sobre a identificação de pagamentos irregulares da parcela de VBC a servidores do seu quadro funcional e que, considerando a legislação aplicável e a jurisprudência pacificada do TCU, observados o contraditório e ampla defesa, devem ser adotadas providências imediatas para promover sua absorção, alertando que as regularizações dos pagamentos serão acompanhadas no âmbito do próximo ciclo da Fiscalização Contínua de Folhas de Pagamento.",
+          "9.13. cientificar as organizações mencionadas no item 9.9 acerca deste acórdão, ressaltando que o relatório e o voto que fundamentam a presente deliberação estão disponíveis para consulta no endereço eletrônico www.tcu.gov.br/acordaos."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2219-2025-PL",
@@ -5773,7 +6452,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:04",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.3. dar ciência da deliberação ao recorrente e ao Conselho Federal de Odontologia."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2228-2025-2C",
@@ -5800,7 +6487,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:04",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2244-2025-1C",
@@ -5827,7 +6520,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:03",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 98.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2297-2025-2C",
@@ -5854,7 +6560,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:03",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 116.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2305-2025-1C",
@@ -5881,7 +6600,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:03",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.8. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2310-2025-1C",
@@ -5908,7 +6637,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:02",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2326-2025-1C",
@@ -5935,7 +6670,30 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:02",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Antônio Gois Monteiro Mendes",
+            "cpf": "Não informado",
+            "valor": "R$ 566.190,62 (débito) + R$ 100.000,00 (multa) = R$ 666.190,62",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Rejeitar alegações de defesa",
+          "Julgar irregulares as contas",
+          "Condenar ao pagamento de débito",
+          "Aplicar multa",
+          "Autorizar cobrança judicial"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Encaminhar cópia do Acórdão à Procuradoria da República no Estado do Ceará",
+          "Encaminhar cópia do Acórdão ao Ministério do Trabalho e Emprego",
+          "Encaminhar cópia do Acórdão aos responsáveis"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2359-2025-1C",
@@ -5962,7 +6720,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:02",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "encaminhar cópia desta deliberação à Procuradoria da República no Estado de Santa Catarina",
+          "enviar cópia deste acórdão ao Ministério do Trabalho e Emprego e aos responsáveis"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "informar aos interessados que esta deliberação estará disponível para consulta no dia seguinte ao de sua oficialização, no endereço www.tcu.gov.br/acordaos"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2421-2025-PL",
@@ -5989,7 +6758,16 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:01",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Negar o pedido de nova prorrogação",
+          "Orientar a Unidade de Auditoria Especializada em Pessoal a seguir com a etapa de monitoramento do Acórdão 995/2023-TCU-Plenário"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2454-2025-PL",
@@ -6016,7 +6794,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:01",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Abster-se de celebrar termos de fomento com confederações e centrais sindicais para se constituírem unidades de atendimento do Sine",
+          "Reorientar atuação administrativa do projeto piloto Sine-Sociedade Civil"
+        ],
+        "recomendacoes": [
+          "Atentar para riscos envolvidos e definir elementos importantes para governança do Sine"
+        ],
+        "darCiencia": [
+          "Reorientar atuação administrativa do projeto piloto Sine-Sociedade Civil"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2466-2025-PL",
@@ -6043,7 +6834,24 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:00",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer da solicitação de informações",
+          "informar ao Exmo. Deputado Federal Bacelar",
+          "encaminhar decisão ao Exmo. Deputado Federal Bacelar",
+          "considerar parcialmente atendida a Solicitação do Congresso Nacional",
+          "estender atributos para tratamento de SCN",
+          "prorrogar prazo para atendimento integral",
+          "juntar cópia do acórdão, relatório e voto",
+          "retornar autos à Unidade de Auditoria Especializada"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência ao Exmo. Deputado Federal Bacelar sobre o andamento do TC 009.123/2025-3"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2471-2025-2C",
@@ -6070,7 +6878,49 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:00",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Associação Brasileira para Prevenção de Acidentes",
+            "cpf": "",
+            "valor": "R$ 336.054,48",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Marcelo Kós Silveira Campos",
+            "cpf": "",
+            "valor": "R$ 336.054,48",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Associação Brasileira para Prevenção de Acidentes",
+            "cpf": "",
+            "valor": "R$ 80.000,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Marcelo Kós Silveira Campos",
+            "cpf": "",
+            "valor": "R$ 80.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar irregulares as contas",
+          "Condenar ao pagamento de importância",
+          "Aplicar multas individuais",
+          "Autorizar cobrança judicial",
+          "Autorizar pagamento em parcelas",
+          "Alertar sobre inadimplência"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Comunicar decisão aos responsáveis",
+          "Comunicar decisão ao Ministério do Trabalho e Emprego",
+          "Comunicar decisão à Procuradoria da República no Estado de São Paulo"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2533-2025-PL",
@@ -6097,7 +6947,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:00",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer da presente Solicitação do Congresso Nacional",
+          "informar ao Exmo. Sr. Deputado Federal Bacelar",
+          "considerar a presente Solicitação do Congresso Nacional integralmente atendida",
+          "comunicar esta decisão ao solicitante"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2582-2025-2C",
@@ -6124,7 +6985,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:00",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 1.018.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2588-2025-2C",
@@ -6151,7 +7025,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:00",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer do recurso de reconsideração",
+          "negar provimento ao recurso"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "comunicar esta decisão à recorrente e aos demais mencionados"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2597-2025-1C",
@@ -6178,7 +7063,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:59",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência da deliberação aos responsáveis e interessados"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2601-2025-2C",
@@ -6205,7 +7098,23 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:59",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Conhecer do recurso de reconsideração",
+          "Estender os efeitos da decisão para Carmelo Zitto Neto",
+          "Excluir nomes de Francisco Prado de Oliveira Ribeiro e Carmelo Zitto Neto",
+          "Julgar contas regulares com ressalva",
+          "Remeter cópia do acórdão à Procuradoria da República em São Paulo"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência ao Ministério do Trabalho e Emprego",
+          "Dar ciência à Secretaria de Estado do Emprego e Relações do Trabalho do Estado de São Paulo",
+          "Dar ciência aos recorrentes e à Sra. Suzana Machado de Luca de Oliveira Ribeiro"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2604-2025-PL",
@@ -6232,7 +7141,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:59",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer do recurso",
+          "negar provimento ao recurso"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "comunicar o teor da decisão ao recorrente e a várias entidades"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2752-2025-2C",
@@ -6259,7 +7179,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:59",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Arquivar os autos"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Enviar cópia da deliberação ao espólio do responsável",
+          "Enviar cópia da deliberação ao Ministério do Trabalho e Emprego (MTE)"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2752-2025-1C",
@@ -6286,7 +7217,46 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:59",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Carmelo Zitto Neto",
+            "cpf": "XXX.467.488-XX",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Catalisa - Rede de Cooperacao Para Sustentabilidade",
+            "cpf": "05.667.115/0001-58",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Eduardo Coutinho de Paula",
+            "cpf": "XXX.800.618-XX",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Francisco Prado de Oliveira Ribeiro",
+            "cpf": "XXX.692.008-XX",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Secretaria do Emprego e Relaçoes do Trabalho/sp",
+            "cpf": "46.385.100/0001-84",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Apostilar o Acórdão nº 1457/2025-TCU-1ª Câmara para correção de erro material"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2807-2025-2C",
@@ -6313,7 +7283,30 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:58",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "José Raimundo da Costa",
+            "cpf": "Não informado",
+            "valor": "R$ 453.114,37 (67.967,15 + 192.573,61 + 135.333,27 + 57.240,34) + R$ 100.000,00 (multa)",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Considerar revel o Sr. José Raimundo da Costa",
+          "Julgar irregulares as contas do Sr. José Raimundo da Costa",
+          "Aplicar multa ao responsável",
+          "Autorizar cobrança judicial das dívidas",
+          "Autorizar parcelamento das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Informar a deliberação à Procuradoria da República no Estado do Maranhão",
+          "Informar a deliberação ao Ministério do Trabalho e Emprego",
+          "Informar a deliberação ao responsável"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2826-2025-PL",
@@ -6340,7 +7333,154 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:58",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Adriana Phillips Ligiéro",
+            "cpf": "XXX.683.341-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Anete Alves Fernandes Fidelis",
+            "cpf": "XXX.269.501-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Augusto Lopes de Almeida Ribeiro",
+            "cpf": "XXX.427.017-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Aurea Inácio Ribeiro",
+            "cpf": "XXX.082.271-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Carlo Roberto Simi",
+            "cpf": "XXX.130.557-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Danilo Rocha Limoeiro",
+            "cpf": "XXX.376.761-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Ezequiel Sousa do Nascimento",
+            "cpf": "XXX.653.821-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Fatima Rosa Naves",
+            "cpf": "XXX.517.711-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Geraldo Riesenbeck",
+            "cpf": "XXX.072.680-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Jose Geraldo Machado Junior",
+            "cpf": "XXX.227.887-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Leonardo Manoel da Silva",
+            "cpf": "XXX.819.801-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Luciana Tannus da Silva",
+            "cpf": "XXX.035.085-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Manoel Eugenio Guimarães de Oliveira",
+            "cpf": "XXX.477.481-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Marcelo Álvares de Sousa",
+            "cpf": "XXX.637.231-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Maria Emilia Piccinini Veras",
+            "cpf": "XXX.079.311-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Maria Suely Felippe Barrozo Lopes",
+            "cpf": "XXX.853.937-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Maria das Graças Parente Pinto",
+            "cpf": "XXX.946.831-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Márcio Alves Borges",
+            "cpf": "XXX.724.451-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Rodolfo Peres Torelly",
+            "cpf": "XXX.584.671-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Ronaldo Donizete Pereira",
+            "cpf": "XXX.061.111-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Sebastião da Costa Pereira",
+            "cpf": "XXX.861.601-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Tatiana da Costa Ferreira",
+            "cpf": "XXX.436.061-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Valéria Christina Macedo Daruich",
+            "cpf": "XXX.042.731-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Considerar cumprida a determinação constante do subitem 9.4 do Acórdão 732/2021-TCU-Plenário"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2904-2025-1C",
@@ -6367,7 +7507,31 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:58",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Adair Antônio de Freitas Meira",
+            "cpf": "XXX.486.011-XX",
+            "valor": null,
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Fundação Pró Cerrado",
+            "cpf": "86.819.323/0001-27",
+            "valor": null,
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Análise da documentação apresentada pelo Sr. Adair Antônio de Freitas Meira",
+          "Emissão de manifestação conclusiva pelo Ministério do Trabalho e Emprego"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Encaminhar cópia da deliberação e da instrução da AudTCE aos responsáveis"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2918-2025-PL",
@@ -6394,7 +7558,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:58",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer dos embargos de declaração",
+          "negar provimento aos embargos"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "informar o teor da presente decisão ao recorrente e às entidades envolvidas"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2919-2025-PL",
@@ -6421,7 +7596,26 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:58",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "apresentar plano de ação para inclusão da obrigatoriedade do campo CPF no Sistema de Informações sobre Mortalidade (SIM) e na Declaração de Óbito",
+          "monitoramento das recomendações propostas"
+        ],
+        "recomendacoes": [
+          "avaliar e integrar informações de óbitos registradas no Sistema Nacional de Informações de Registro Civil (Sirc) à base de dados do CPF",
+          "desenvolver estratégias para facilitar a obtenção ou regularização do CPF",
+          "avaliar a viabilidade de criar mecanismos de apoio para suporte ao cidadão",
+          "providenciar meios necessários para obtenção do acesso à base de dados do CPF",
+          "avaliar a suficiência dos procedimentos executados relativamente à utilização de bases de dados de referência",
+          "desenvolver e implementar mecanismos de acompanhamento gerencial para monitoramento contínuo da qualidade das informações do Cadastro de Pessoas Físicas (CPF)",
+          "divulgar boas práticas para o melhor cumprimento da Lei 14.534/2023"
+        ],
+        "darCiencia": [
+          "dar ciência ao Ministério da Saúde e outros órgãos sobre o presente acórdão"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-2921-2025-PL",
@@ -6448,7 +7642,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:57",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "apresentar novo plano de trabalho",
+          "realizar oitiva do MTE",
+          "reavaliar riscos pela Unidade de Auditoria Especializada",
+          "encaminhar cópia da decisão"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "encaminhar cópia da decisão ao Ministério do Trabalho e Emprego"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2922-2025-PL",
@@ -6475,7 +7682,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:57",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "sobrestar a apreciação do presente processo",
+          "encaminhar ao Presidente da Comissão de Fiscalização Financeira e Controle da Câmara dos Deputados"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência ao Presidente da Comissão de Fiscalização Financeira e Controle da Câmara dos Deputados e ao autor do Requerimento 251/2025-CFFC"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2956-2025-PL",
@@ -6502,7 +7720,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:57",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "prorrogar excepcionalmente o prazo, por mais trinta dias, a contar do dia útil seguinte à publicação desta decisão, para que a Universidade Federal do Paraná cumpra as determinações objeto do subitem 9.6.2 do Acórdão 2.205/2025-TCU-Plenário"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2960-2025-1C",
@@ -6529,7 +7755,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:57",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer dos embargos de declaração e rejeitá-los"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "informar o embargante acerca desta deliberação"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-2975-2025-PL",
@@ -6556,7 +7792,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:56",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Dar ciência ao Ministério do Trabalho e Emprego sobre a não observância do percentual mínimo de reserva de 5% para pessoas com deficiência",
+          "Dar ciência ao denunciante sobre o teor da presente deliberação",
+          "Levantar o sigilo que recai sobre as peças dos autos, com exceções"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Ao Ministério do Trabalho e Emprego",
+          "Ao denunciante sobre o teor da presente deliberação"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3036-2025-1C",
@@ -6583,7 +7832,32 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:56",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Luiz de França Magalhães Barroso",
+            "cpf": "XXX.146.293-XX",
+            "valor": "",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Raimundo de Alcimar Ney de Souza",
+            "cpf": "XXX.153.352-XX",
+            "valor": "",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "dar ciência do presente acórdão"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "aos responsáveis",
+          "ao Ministério do Trabalho e Emprego",
+          "à Prefeitura Municipal de Vitória do Jari/AP"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3064-2025-1C",
@@ -6610,7 +7884,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:56",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Arquivar os autos"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar conhecimento do acórdão aos responsáveis, ao Ministério do Trabalho e Emprego, ao município de Dois Vizinhos - PR e ao Tribunal de Contas do Estado do Paraná"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3071-2025-1C",
@@ -6637,7 +7921,39 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:56",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Lourdes Maria Staudt Dill",
+            "cpf": "Não informado",
+            "valor": "R$ 158.400,00 + R$ 31.680,00 + R$ 70.000,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Dimas Rodrigues da Silva",
+            "cpf": "Não informado",
+            "valor": "R$ 158.400,00 + R$ 31.680,00 + R$ 70.000,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Cooperativa Mista dos Pequenos Produtores Rurais e Urbanos Vinculados ao Projeto Esperança Ltda.",
+            "cpf": "Não informado",
+            "valor": "R$ 158.400,00 + R$ 31.680,00 + R$ 70.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar irregulares as contas de Lourdes Maria Staudt Dill, Dimas Rodrigues da Silva e da Cooperativa Mista",
+          "Aplicar multa individual no valor de R$ 70.000,00",
+          "Autorizar o pagamento em até 36 parcelas mensais",
+          "Remeter cópia do acórdão à Procuradoria da República no Rio Grande do Sul"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência do acórdão ao Ministério do Trabalho e Emprego e aos responsáveis"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-3214-2025-1C",
@@ -6664,7 +7980,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:56",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Determinar o arquivamento do processo"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência ao órgão/entidade e ao espólio e/ou herdeiros do responsável"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3215-2025-1C",
@@ -6691,7 +8017,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:55",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "dar ciência do acórdão"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "ao responsável, à Prefeitura Municipal do Rio de Janeiro/RJ e ao Ministério do Trabalho e Emprego"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3299-2025-2C",
@@ -6718,7 +8054,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:55",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "dar ciência desta deliberação aos responsáveis e ao Ministério do Trabalho e Emprego (MTE)"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência desta deliberação aos responsáveis e ao Ministério do Trabalho e Emprego (MTE)"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3343-2025-1C",
@@ -6745,7 +8091,26 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:55",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Adair Antônio de Freitas Meira",
+            "cpf": "486.011-XX",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Fundação Pro Cerrado",
+            "cpf": "86.819.323/0001-27",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-3349-2025-1C",
@@ -6772,7 +8137,16 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:55",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "considerar legal o ato de aposentadoria de Neusa Godoy Cesar",
+          "remeter cópia deste acórdão à unidade jurisdicionada"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-3390-2025-2C",
@@ -6799,7 +8173,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:55",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer recurso de reconsideração",
+          "negar provimento"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "comunicar decisão ao recorrente"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-3404-2025-1C",
@@ -6826,7 +8211,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:54",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3405-2025-1C",
@@ -6853,7 +8244,34 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:54",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Município de Araguari/MG",
+            "cpf": "16.829.640/0001-49",
+            "valor": "R$ 15.796,71",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Marcos Coelho de Carvalho",
+            "cpf": "XXX.220.676-XX",
+            "valor": "R$ 634,74",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Espólio de Virginia Alcantara",
+            "cpf": "XXX.138.726-XX",
+            "valor": "R$ 634,74",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência aos responsáveis e ao Ministério do Trabalho e Emprego"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3558-2025-1C",
@@ -6880,7 +8298,34 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:54",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Carlos Alberto Pereira da Cunha",
+            "cpf": "Não informado",
+            "valor": "R$ 735.704,93, R$ 2.260.555,98, R$ 682.263,75 (débitos), R$ 122.545,55 (crédito)",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Antônio Carlos Rodrigues de Melo Júnior",
+            "cpf": "Não informado",
+            "valor": "R$ 1.000.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar irregulares as contas de Carlos Alberto Pereira da Cunha",
+          "Condenar Carlos Alberto Pereira da Cunha ao pagamento de débitos",
+          "Aplicar multa a Antônio Carlos Rodrigues de Melo Júnior",
+          "Autorizar cobrança judicial das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência do Acórdão à Procuradoria da República no Estado do Pará",
+          "Dar ciência da deliberação ao Ministério do Trabalho e aos responsáveis"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-3559-2025-1C",
@@ -6907,7 +8352,27 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:54",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Ação Brasil Para Todos (ABRAT) e José Fabiano Leal",
+            "cpf": "Não informado",
+            "valor": "R$ 249.828,00 e R$ 200.000,00 (multa)",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Declarar a revelia da ABRAT e do Sr. José Fabiano Leal",
+          "Julgar irregulares as contas da ABRAT e do Sr. José Fabiano Leal",
+          "Condenar ao pagamento de débitos e multa",
+          "Autorizar a cobrança judicial das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência deste acórdão à Procuradoria da República no Estado de Minas Gerais e aos demais interessados"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-3596-2025-1C",
@@ -6934,7 +8399,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:54",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "determinar o arquivamento do processo"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência ao responsável e ao tomador de contas"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-3928-2025-1C",
@@ -6961,7 +8436,35 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:53",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Simone Maria de Alcantara Rosa",
+            "cpf": "NÃO INFORMADO",
+            "valor": "R$ 399.812,00 + R$ 180.000,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Solidariedade",
+            "cpf": "NÃO INFORMADO",
+            "valor": "R$ 399.812,00 + R$ 180.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "julgar irregulares as contas da Sra. Simone Maria de Alcantara Rosa e da entidade Solidariedade",
+          "condenar ao pagamento de débito e multa",
+          "autorizar cobrança judicial das dívidas",
+          "autorizar parcelamento da dívida"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência desta deliberação à Procuradoria da República no Estado do Rio de Janeiro",
+          "dar ciência desta deliberação ao Ministério do Trabalho e Emprego",
+          "dar ciência desta deliberação às responsáveis"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-3976-2025-1C",
@@ -6988,7 +8491,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:53",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "Declarar a revelia dos responsáveis",
+          "Reconhecer a ocorrência da prescrição intercorrente"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência aos interessados"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-4001-2025-1C",
@@ -7015,7 +8529,46 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:53",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Instituto EPA-Espaço de Produção ao Desenvolvimento Sustentável",
+            "cpf": "",
+            "valor": "R$ 1.238.325,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Aurenísia Celestino Figueiredo Brandão",
+            "cpf": "",
+            "valor": "R$ 1.238.325,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Instituto EPA-Espaço de Produção ao Desenvolvimento Sustentável",
+            "cpf": "",
+            "valor": "R$ 1.000.000,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Aurenísia Celestino Figueiredo Brandão",
+            "cpf": "",
+            "valor": "R$ 1.000.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Declarar a revelia",
+          "Julgar irregulares as contas",
+          "Aplicar multa",
+          "Autorizar a cobrança judicial"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência à Procuradoria da República",
+          "Dar ciência aos demais interessados"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4372-2025-2C",
@@ -7042,7 +8595,48 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:53",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Francisco Evandro Freitas Costa Mourão",
+            "cpf": "XXX.258.503-XX",
+            "valor": "R$ 53.555,04",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Rafael Mesquita Brasil",
+            "cpf": "XXX.793.876-XX",
+            "valor": "R$ 303.478,56",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Rafael Mesquita Brasil",
+            "cpf": "XXX.793.876-XX",
+            "valor": "R$ 95.000,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Francisco Evandro Freitas Costa Mourão",
+            "cpf": "XXX.258.503-XX",
+            "valor": "R$ 17.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar irregulares as contas dos responsáveis",
+          "Condenar os responsáveis ao pagamento de débitos",
+          "Aplicar multa aos responsáveis",
+          "Autorizar cobrança judicial das dívidas",
+          "Autorizar parcelamento das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Comunicar a decisão aos responsáveis",
+          "Comunicar a decisão ao repassador dos recursos",
+          "Comunicar a decisão à Procuradoria da República no Estado do Maranhão"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4422-2025-1C",
@@ -7069,7 +8663,22 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:53",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Carlos Alberto Pereira da Cunha",
+            "cpf": "118.862-XX",
+            "valor": "não especificado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "apostilamento do Acórdão 3.558/2025-TCU-1ª Câmara"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4472-2025-2C",
@@ -7096,7 +8705,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:52",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4651-2025-1C",
@@ -7123,7 +8738,38 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:52",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Aurenísia Celestino Figueiredo Brandão",
+            "cpf": "Não informado",
+            "valor": "R$ 371.000,00 + R$ 765.905,00 (duas ocorrências)",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Instituto Epa-Espaço de Produção ao Desenvolvimento Sustentável",
+            "cpf": "Não informado",
+            "valor": "R$ 371.000,00 + R$ 765.905,00 (duas ocorrências)",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Considerar revéis os responsáveis",
+          "Julgar irregulares as contas",
+          "Condenar ao pagamento da quantia especificada",
+          "Aplicar multa",
+          "Fixar prazo para comprovarem o recolhimento da dívida",
+          "Autorizar a cobrança judicial das dívidas",
+          "Autorizar o parcelamento das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Encaminhar cópia desta deliberação à Procuradoria da República",
+          "Enviar cópia deste acórdão ao Ministério do Trabalho e Emprego e aos responsáveis",
+          "Informar aos interessados que esta deliberação estará disponível para consulta"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4652-2025-1C",
@@ -7150,7 +8796,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:52",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer do recurso de reconsideração"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência desta deliberação à recorrente e aos demais interessados"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4659-2025-1C",
@@ -7177,7 +8833,29 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:52",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Sr. Marcus Vinícius Belo dos Anjos",
+            "cpf": "Não informado",
+            "valor": "R$ 480.640,77 (373.461,27 + 107.179,50) + R$ 500.000,00 de multa",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar irregulares as contas do Sr. Marcus Vinícius Belo dos Anjos",
+          "Condenar o Sr. Marcus Vinícius Belo dos Anjos ao pagamento de débitos",
+          "Aplicar multa ao Sr. Marcus Vinícius Belo dos Anjos",
+          "Autorizar cobrança judicial das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência deste acórdão à Procuradoria da República no Estado de Pernambuco",
+          "Dar ciência deste acórdão ao Ministério do Trabalho e Emprego",
+          "Dar ciência deste acórdão ao responsável"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4663-2025-2C",
@@ -7204,7 +8882,31 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:52",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Marco Aurélio Bertaiolli",
+            "cpf": "XXX.202.758-XX",
+            "valor": "",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Eliana Aparecida Prado Mangini",
+            "cpf": "XXX.278.568-XX",
+            "valor": "",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Reconhecer a incidência da prescrição para o exercício das pretensões punitiva e de ressarcimento do TCU",
+          "Arquivar os autos"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Enviar cópia desta deliberação aos responsáveis, ao Município de Mogi das Cruzes-SP e ao Ministério do Trabalho e Emprego"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-4668-2025-1C",
@@ -7231,7 +8933,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:51",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "não conhecer recursos"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência ao recorrente, ao Ministério do Trabalho e Emprego e à Procuradoria da República no Rio Grande do Sul"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-4675-2025-1C",
@@ -7258,7 +8970,19 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:51",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "arquivar os autos"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "ao responsável",
+          "ao Ministério do Trabalho e Emprego",
+          "ao Município de Itaboraí - RJ"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-4727-2025-2C",
@@ -7285,7 +9009,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:50",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "reconhecer a ocorrência da prescrição da pretensão punitiva e de ressarcimento",
+          "encaminhar cópia desta deliberação à unidade jurisdicionada e à responsável",
+          "arquivar o processo"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-5070-2025-1C",
@@ -7312,7 +9046,29 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:50",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Adair Antônio de Freitas Meira",
+            "cpf": "XXX.486.011-XX",
+            "valor": "",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Fundação Pro Cerrado",
+            "cpf": "86.819.323/0001-27",
+            "valor": "",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "analisar documentação encaminhada pelos responsáveis",
+          "encaminhar cópia da instrução e documentação ao Ministério do Trabalho e Emprego"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5131-2025-1C",
@@ -7339,7 +9095,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:50",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-5158-2025-1C",
@@ -7366,7 +9128,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:50",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "arquivamento da Tomada de Contas Especial"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "enviar cópia do acórdão ao MTE e responsáveis"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-5239-2025-1C",
@@ -7393,7 +9165,38 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:49",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Instituto de Qualidade de Vida - Iquavi",
+            "cpf": "",
+            "valor": "R$ 1.688.625,00 (253.293,75 + 675.450,00 + 759.881,25) + R$ 300.000,00 (multa)",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Luís Ricardo Pereira da Silva",
+            "cpf": "",
+            "valor": "R$ 1.688.625,00 (253.293,75 + 675.450,00 + 759.881,25) + R$ 300.000,00 (multa)",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Excluir a Sra. Paloma Martins Mendonça do rol de responsáveis",
+          "Considerar revéis o Instituto de Qualidade de Vida - Iquavi e o Sr. Luís Ricardo Pereira da Silva",
+          "Julgar irregulares as contas do Sr. Luís Ricardo Pereira da Silva",
+          "Condenar o Sr. Luís Ricardo Pereira da Silva e o Instituto de Qualidade de Vida - Iquavi ao pagamento de débitos",
+          "Aplicar multa aos responsáveis",
+          "Autorizar a cobrança judicial das dívidas",
+          "Autorizar o parcelamento das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Encaminhar cópia da deliberação à Procuradoria da República no Estado do Rio de Janeiro",
+          "Enviar cópia da deliberação ao Instituto de Qualidade de Vida - Iquavi e ao Sr. Luís Ricardo Pereira da Silva",
+          "Informar aos interessados sobre a disponibilidade da deliberação no site do TCU"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5376-2025-2C",
@@ -7420,7 +9223,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:49",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer dos embargos",
+          "rejeitar os embargos"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "comunicar decisão ao embargante"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5615-2025-2C",
@@ -7447,7 +9261,28 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:49",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Luiz Celso Cutrim Batista",
+            "cpf": "XXX.366.703-XX",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Instituto Isec",
+            "cpf": "05.453.823/0001-96",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "dar ciência desta deliberação aos interessados"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5674-2025-2C",
@@ -7474,7 +9309,35 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:49",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Associação Beneficente IBEC",
+            "cpf": "Não informado",
+            "valor": "R$ 70.000,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "João Adair Ferreira",
+            "cpf": "Não informado",
+            "valor": "R$ 70.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar irregulares as contas dos responsáveis",
+          "Condenar os responsáveis ao pagamento de débitos",
+          "Aplicar multa prevista no art. 57 da Lei 8.443/1992",
+          "Autorizar a cobrança judicial das dívidas",
+          "Autorizar o parcelamento das dívidas"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Enviar cópia do acórdão à Procuradoria da República no Distrito Federal",
+          "Informar à Procuradoria da República no Distrito Federal e aos responsáveis sobre a disponibilidade da deliberação"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5682-2025-2C",
@@ -7501,7 +9364,37 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:49",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Agência de Desenvolvimento Regional (ADRVALE)",
+            "cpf": "Não informado",
+            "valor": "R$ 1.113.900,48 (167.085,00 + 445.560,00 + 501.255,00 - 8.304,48 + 30.000,00)",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Sr. Osmar Boos",
+            "cpf": "Não informado",
+            "valor": "R$ 1.113.900,48 (167.085,00 + 445.560,00 + 501.255,00 - 8.304,48 + 30.000,00)",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Considerar revel a Agência de Desenvolvimento Regional (ADRVALE)",
+          "Rejeitar as alegações de defesa apresentadas pelo Sr. Osmar Boos",
+          "Julgar irregulares as contas dos responsáveis",
+          "Condenar ao pagamento de débitos e multas",
+          "Autorizar a cobrança judicial das dívidas",
+          "Autorizar o parcelamento das dívidas",
+          "Enviar cópia do acórdão à Procuradoria da República no Estado de Santa Catarina"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Informar à Procuradoria da República no Estado de Santa Catarina sobre a deliberação",
+          "Informar à Procuradoria da República no Estado de Santa Catarina sobre o acesso aos autos"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5742-2025-1C",
@@ -7528,7 +9421,38 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:48",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Paulo Roberto Ferrari",
+            "cpf": "XXX.094.568-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Federação dos Empregados em Edifícios e Condomínios do Estado de São Paulo",
+            "cpf": "01.002.082/0001-76",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Francisco Prado de Oliveira Ribeiro",
+            "cpf": "XXX.692.008-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Carmelo Zitto Neto",
+            "cpf": "XXX.467.488-XX",
+            "valor": "Não mencionado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-5797-2025-1C",
@@ -7555,7 +9479,29 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:48",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Ana Lúcia Guimarães Marcelino",
+            "cpf": "XXX.141.542-XX",
+            "valor": "R$ 7.500,00",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Sebastião Waldemir Pinheiro da Silva",
+            "cpf": "XXX.410.922-XX",
+            "valor": "R$ 3.500,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Expedir quitação à Sra. Ana Lúcia Guimarães Marcelino e ao Sr. Sebastião Waldemir Pinheiro da Silva quanto ao débito objeto do item 9.5.2 do Acórdão 9.799/2019",
+          "Notificar o Ministério do Trabalho e Emprego a fim de que promova o desconto da dívida relativa ao item 9.6 do Acórdão 9.799/2019"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5834-2025-2C",
@@ -7582,7 +9528,28 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:48",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Jose Antonio Bertotti Junior",
+            "cpf": "Não informado",
+            "valor": "R$ 855.570,00 (débito) + R$ 855.570,00 (débito) - R$ 45.560,26 (crédito) - R$ 167,45 (crédito) + R$ 200.000,00 (multa)",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar irregulares as contas de Jose Antonio Bertotti Junior",
+          "Condenar Jose Antonio Bertotti Junior ao pagamento de débitos e multa",
+          "Autorizar cobrança judicial das dívidas",
+          "Autorizar parcelamento da dívida"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência do Acórdão ao Ministério do Trabalho e Emprego e aos responsáveis",
+          "Enviar cópia do Acórdão à Procuradoria da República no Estado de Pernambuco"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-5907-2025-1C",
@@ -7609,7 +9576,30 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:48",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Moacir Perozzo",
+            "cpf": "Não informado",
+            "valor": "R$ 412,71 (3 parcelas de R$ 137,57)",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Wilmo Nunes",
+            "cpf": "Não informado",
+            "valor": "Não especificado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Considerar cumpridas as determinações constantes dos itens 9.2 e 9.4 do Acórdão 8.144/2021-1ª Câmara"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Enviar cópia deste Acórdão e da instrução de peça 51 à Superintendência Regional do Trabalho no Estado de Rondônia e aos responsáveis, para ciência"
+        ],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-5983-2025-2C",
@@ -7636,7 +9626,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:47",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 4.000.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6109-2025-1C",
@@ -7663,7 +9666,18 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:47",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "conhecer dos embargos de declaração",
+          "rejeitar os embargos de declaração"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "informar o teor desta deliberação à embargante e aos demais responsáveis"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6115-2025-2C",
@@ -7690,7 +9704,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:47",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6145-2025-2C",
@@ -7717,7 +9737,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:47",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6154-2025-1C",
@@ -7744,7 +9770,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:47",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 25.000,00,",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6158-2025-2C",
@@ -7771,7 +9810,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:46",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6198-2025-2C",
@@ -7798,7 +9843,24 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:46",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Jucilene Antonio Fernandes",
+            "cpf": "Não informado",
+            "valor": "Não informado",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "Julgar regulares com ressalvas as contas dos responsáveis"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Comunicar a deliberação aos responsáveis e interessados"
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6247-2025-2C",
@@ -7825,7 +9887,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:46",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-6342-2025-2C",
@@ -7852,7 +9920,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:46",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6371-2025-1C",
@@ -7879,7 +9953,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:46",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 26.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6403-2025-2C",
@@ -7906,7 +9993,26 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:45",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "São Paulo CNPJ",
+            "cpf": "05.130.441/0001-21",
+            "valor": "",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "São Paulo CNPJ",
+            "cpf": "05.130.441/0001-21",
+            "valor": "R$ 100.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6422-2025-2C",
@@ -7933,7 +10039,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:45",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 160.000,00,",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6519-2025-1C",
@@ -7960,7 +10079,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:44",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 90.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6544-2025-2C",
@@ -7987,7 +10119,22 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:44",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 62.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.5. dar ciência desta deliberação aos responsáveis e ao Procurador-Chefe da Procuradoria da República do Estado de Santa Catarina, para as providências que entender cabíveis."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6697-2025-2C",
@@ -8014,7 +10161,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:44",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6745-2025-1C",
@@ -8041,7 +10194,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:44",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6846-2025-2C",
@@ -8068,7 +10227,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:44",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6851-2025-2C",
@@ -8095,7 +10260,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:43",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6889-2025-1C",
@@ -8122,7 +10293,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:43",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-6890-2025-1C",
@@ -8149,7 +10326,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:43",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7073-2025-1C",
@@ -8176,7 +10363,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:42",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7097-2025-1C",
@@ -8203,7 +10396,15 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:42",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.3. dar ciência deste acórdão aos interessados e à Procuradoria da República no Estado do Rio Grande do Norte, nos termos do art. 16, § 3º da Lei 8.443/1992, para adoção das medidas cabíveis."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7197-2025-1C",
@@ -8230,7 +10431,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:41",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7228-2025-1C",
@@ -8257,7 +10464,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:41",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-7250-2025-1C",
@@ -8284,7 +10497,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:40",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7279-2025-1C",
@@ -8311,7 +10530,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:40",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7321-2025-1C",
@@ -8338,7 +10563,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:40",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7352-2025-1C",
@@ -8365,7 +10596,22 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:39",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 25.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.6. dar ciência desta decisão à Procuradoria da República no Estado de Minas Gerais, ao Ministério do Trabalho e Emprego e ao responsável."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7382-2025-1C",
@@ -8392,7 +10638,20 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:39",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 60.000,00",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7433-2025-1C",
@@ -8419,7 +10678,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:38",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7438-2025-1C",
@@ -8446,7 +10711,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:38",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7445-2025-1C",
@@ -8473,7 +10744,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:37",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7462-2025-1C",
@@ -8500,7 +10777,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:37",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7567-2025-1C",
@@ -8527,7 +10810,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:37",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7584-2025-1C",
@@ -8554,7 +10843,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:36",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7585-2025-1C",
@@ -8581,7 +10876,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:36",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7795-2025-1C",
@@ -8608,7 +10909,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:35",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-7953-2025-1C",
@@ -8635,7 +10942,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:35",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-8131-2025-1C",
@@ -8662,7 +10975,31 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:34",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 12.000,00,",
+            "siafiEncontrados": []
+          },
+          {
+            "nome": "Responsável não identificado",
+            "cpf": "",
+            "valor": "R$ 8.000,00,",
+            "siafiEncontrados": []
+          }
+        ],
+        "determinacoes": [
+          "9.1. acolher parcialmente as alegações de defesa da Associação Brasileira de Desenvolvimento Sustentável da Amazônia - ABRADESA, notadamente, em relação à alegação de prejuízo ao contraditório e ampla defesa em vista de sua tardia citação, ocorrida mais de dez anos após os fatos e sem que tivesse sido notificada anteriormente, de sorte a determinar o arquivamento das contas, sem julgamento de mérito, exclusivamente em relação à referida entidade, por ausência de pressupostos de constituição e de desenvolvimento válido e regular, com fulcro nos arts. 6º, inciso II, da IN TCU 98/2024 c/c o art. 212 do Regimento Interno/TCU;",
+          "9.7. determinar ao Banco do Brasil S/A, com fundamento no art. 250, II, do Regimento Interno/TCU, que, se ainda não o fez, recolha aos cofres do Tesouro Nacional o saldo existente na conta específica de transferência, Agência 783-8, Conta corrente 25254-9, inclusive dos valores aplicados no Fundo de Investimento S. Público Automático ou aplicações financeiras a ela vinculadas, referente a recursos transferidos à conta do Programa de Implementação Projovem Trabalhador - Juventude Cidadã n. 46958.000335/2011-81, registro Siafi 299919, firmado entre o Ministério do Trabalho e Emprego - MTE e o Município de Cametá/PA, comprovando ao Tribunal, no prazo de 30 dias, o recolhimento efetuado;"
+        ],
+        "recomendacoes": [],
+        "darCiencia": [
+          "9.8. dar ciência deste acórdão à Procuradoria da República no Estado do Pará, com fundamento no art. 16, § 3º, da Lei 8.443/1992."
+        ],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-8212-2025-1C",
@@ -8689,7 +11026,13 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:34",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      }
     },
     {
       "KEY": "AC-8504-2025-1C",
@@ -8716,7 +11059,17 @@
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
       "ULTIMA_ATUALIZACAO": "08/07/2026, 23:30:33",
-      "aiAnalysisData": null
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "recomendacoes": [
+          "1.7. Determinações/Recomendações/Orientações: não há."
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": true
+      }
     },
     {
       "KEY": "AC-52-2024-PL",
