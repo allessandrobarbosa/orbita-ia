@@ -2931,16 +2931,17 @@ export default function TcuModule({
 
             // Recipient Statistics & Percentages
             const destinatarioStats = (() => {
-              const statsMap: { [key: string]: { total: number; responded: number; pending: number } } = {};
+              const statsMap: { [key: string]: { total: number; responded: number; pending: number; requireResponseTotal: number } } = {};
               
               totalForSelectedYear.forEach(com => {
                 const dest = com.DESTINATARIO || "Geral / Não Especificado";
                 if (!statsMap[dest]) {
-                  statsMap[dest] = { total: 0, responded: 0, pending: 0 };
+                  statsMap[dest] = { total: 0, responded: 0, pending: 0, requireResponseTotal: 0 };
                 }
                 const carece = com.CARECE_RESPOSTA !== false;
                 statsMap[dest].total++;
                 if (carece) {
+                  statsMap[dest].requireResponseTotal++;
                   if (com.DATA_RESPOSTA && com.DATA_RESPOSTA.trim() !== "") {
                     statsMap[dest].responded++;
                   } else {
@@ -2955,6 +2956,7 @@ export default function TcuModule({
                 return {
                   unidade: dest,
                   total: info.total,
+                  requireResponseTotal: info.requireResponseTotal,
                   responded: info.responded,
                   pending: info.pending,
                   percentage: realPct
@@ -3157,7 +3159,13 @@ export default function TcuModule({
               <>
                 {/* Statistics bento grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
-                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+                  <div 
+                    onClick={() => {
+                      setComRespondidoFilter("TODOS");
+                      setComSubTab("lista");
+                    }}
+                    className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-[#003366]/30 hover:bg-[#003366]/5 transition cursor-pointer"
+                  >
                     <div className="space-y-1">
                       <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Universo de Ofícios</span>
                       <h4 className="text-2xl font-black text-slate-900">{totalComsCount}</h4>
@@ -3168,7 +3176,13 @@ export default function TcuModule({
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+                  <div 
+                    onClick={() => {
+                      setComRespondidoFilter("RESPONDIDO");
+                      setComSubTab("lista");
+                    }}
+                    className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-emerald-300 hover:bg-emerald-50/30 transition cursor-pointer"
+                  >
                     <div className="space-y-1">
                       <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Respondidos</span>
                       <h4 className="text-2xl font-black text-emerald-700">{respondedCount}</h4>
@@ -3179,16 +3193,22 @@ export default function TcuModule({
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+                  <div 
+                    onClick={() => {
+                      setComRespondidoFilter("PENDENTE");
+                      setComSubTab("lista");
+                    }}
+                    className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-amber-300 hover:bg-amber-50/50 transition cursor-pointer group"
+                  >
                     <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Resposta Pendente</span>
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider group-hover:text-amber-700 transition">Resposta Pendente</span>
                       <h4 className="text-2xl font-black text-amber-600 inline-flex items-center gap-1.5">
                         {pendingCount}
                         {pendingCount > 0 && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse inline-block" />}
                       </h4>
-                      <p className="text-[10px] text-slate-500">Aguardando instrução da assessoria</p>
+                      <p className="text-[10px] text-slate-500 group-hover:text-amber-800 transition">Aguardando instrução da assessoria</p>
                     </div>
-                    <div className="p-3 bg-amber-50 text-amber-600 rounded-xl animate-fade-in">
+                    <div className="p-3 bg-amber-50 text-amber-600 rounded-xl animate-fade-in group-hover:bg-amber-100 transition">
                       <Clock className="w-6 h-6" />
                     </div>
                   </div>
@@ -3565,7 +3585,7 @@ export default function TcuModule({
                       <div className="max-h-[600px] overflow-y-auto pr-2 scrollbar-thin">
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-2">
                           {destinatarioStats.map((stat, idx) => {
-                            const respRate = stat.total > 0 ? ((stat.responded / stat.total) * 100).toFixed(0) : "0";
+                            const respRate = stat.requireResponseTotal > 0 ? ((stat.responded / stat.requireResponseTotal) * 100).toFixed(0) : (stat.total > 0 ? "100" : "0");
                             return (
                               <div key={idx} className="bg-white border border-slate-200 p-4.5 rounded-2xl shadow-3xs space-y-3 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center translate-x-3 -translate-y-3">
@@ -3628,6 +3648,7 @@ export default function TcuModule({
                             <tr className="bg-slate-50 text-slate-500 border-b border-slate-200 font-mono text-[9px] uppercase tracking-wider">
                               <th className="p-3 font-bold">Unidade do Ministério do Trabalho (Destinatário)</th>
                               <th className="p-3 font-bold text-center w-[130px]">Ofícios Recebidos</th>
+                              <th className="p-3 font-bold text-center w-[130px]">Demandam Resposta</th>
                               <th className="p-3 font-bold text-center w-[130px]">Respondidos</th>
                               <th className="p-3 font-bold text-center w-[130px]">Pendentes (Em Aberto)</th>
                               <th className="p-3 font-bold text-center w-[200px]">% de Representação no Órgão</th>
@@ -3636,7 +3657,7 @@ export default function TcuModule({
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {destinatarioStats.map((stat, idx) => {
-                              const respPct = stat.total > 0 ? (stat.responded / stat.total) * 100 : 0;
+                              const respPct = stat.requireResponseTotal > 0 ? (stat.responded / stat.requireResponseTotal) * 100 : (stat.total > 0 ? 100 : 0);
                               return (
                                 <tr key={idx} className="hover:bg-slate-55/35 transition duration-100">
                                   <td className="p-3 text-slate-800 font-black flex items-center gap-2 text-[11px]">
@@ -3647,6 +3668,9 @@ export default function TcuModule({
                                   </td>
                                   <td className="p-3 text-center text-slate-900 font-mono font-bold text-sm">
                                     {stat.total}
+                                  </td>
+                                  <td className="p-3 text-center font-mono font-bold text-slate-600">
+                                    {stat.requireResponseTotal}
                                   </td>
                                   <td className="p-3 text-center font-mono font-bold text-emerald-700">
                                     {stat.responded}
@@ -3680,7 +3704,7 @@ export default function TcuModule({
                             })}
                             {destinatarioStats.length === 0 && (
                               <tr>
-                                <td colSpan={6} className="p-12 text-center text-slate-400 italic">
+                                <td colSpan={7} className="p-12 text-center text-slate-400 italic">
                                   Sem dados acumulados para este filtro de período.
                                 </td>
                               </tr>
@@ -3838,6 +3862,43 @@ export default function TcuModule({
                       Esta comunicação carece/exige resposta oficial da assessoria
                     </label>
                   </div>
+
+                  {editComCarece && editComExpedicao && (() => {
+                    const [d, m, y] = editComExpedicao.split("/");
+                    if (d && m && y && d.length === 2 && m.length === 2 && y.length === 4) {
+                      const dtExpedicao = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                      if (!isNaN(dtExpedicao.getTime())) {
+                        let dtReferencia = new Date(); // today
+                        const resolved = editComResposta && editComResposta.trim() !== "";
+                        if (resolved) {
+                          const [rd, rm, ry] = editComResposta.split("/");
+                          if (rd && rm && ry) {
+                            dtReferencia = new Date(parseInt(ry), parseInt(rm) - 1, parseInt(rd));
+                          }
+                        }
+                        
+                        const diffTime = dtReferencia.getTime() - dtExpedicao.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays >= 0) {
+                          return (
+                            <div className={`p-3 mt-1 rounded-xl flex items-center justify-between border ${resolved ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+                              <div className="flex items-center gap-2">
+                                <Clock className={`w-4 h-4 ${resolved ? 'text-emerald-600' : 'text-amber-600'}`} />
+                                <span className={`text-[11px] font-black uppercase ${resolved ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                  {resolved ? "Comunicação Respondida" : "Contagem de Prazo / Tempo Decorrido"}
+                                </span>
+                              </div>
+                              <span className={`text-xs font-mono font-bold ${resolved ? 'text-emerald-800' : 'text-amber-800'}`}>
+                                {resolved ? `Respondido em ${diffDays} dias` : `${diffDays} dias em aberto`}
+                              </span>
+                            </div>
+                          );
+                        }
+                      }
+                    }
+                    return null;
+                  })()}
 
                   <div className="flex flex-wrap gap-2.5 pt-2 border-t border-slate-150/70">
                     <a

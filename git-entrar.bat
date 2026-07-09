@@ -24,7 +24,7 @@ if %errorlevel% neq 0 (
 echo.
 
 echo [1/3] Atualizando repositorio do Orbita...
-cd C:\Projetos\orbita-projeto
+cd /d "%~dp0"
 git add .
 git stash
 git pull origin main --rebase -X theirs

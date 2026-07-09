@@ -7,7 +7,7 @@ echo ==========================================
 echo.
 
 echo [1/3] Salvando e enviando codigo do Orbita...
-cd C:\Projetos\orbita-projeto
+cd /d "%~dp0"
 
 :: Adiciona todas as modificações (incluindo subpastas e untracked submodules)
 git add --all
