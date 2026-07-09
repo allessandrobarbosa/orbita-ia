@@ -5458,16 +5458,25 @@
       "ENTIDADE": " Ministério do Trabalho",
       "RELATOR": "BENJAMIN ZYMLER",
       "UNIDADETECNICA": " Unidade de Auditoria Especializada em Tomada de Contas Especial (AudTCE)",
-      "ASSUNTO": "Embargos de declaração contra acórdão proferido em tomada de contas especial instaurada para apurar prejuízos em contratos de aquisição de \"solução de apoio à tomada de decisão e Business Intelligence (BI) MicroStrategy; incluindo manutenção e suporte técnico por 12 (doze) meses e serviços técnicos especializados em unidade de serviços técnicos (UST) e de treinamento em unidade de treinamento (UT)\".",
-      "SUMARIO": "EMBARGOS DE DECLARAÇÃO EM TOMADA DE CONTAS ESPECIAL. IRREGULARIDADES EM PREGÃO ELETRÔNICO E NOS CONTRATOS DECORRENTES. CONTAS IRREGULARES. DÉBITOS. MULTAS. DECLARAÇÃO DE INIDONEIDADE. INABILITAÇÃO. CONHECIMENTO. AUSÊNCIA DE OMISSÃO, CONTRADIÇÃO OU OBSCURIDADE. REJEIÇÃO. CIÊNCIA.",
-      "ACORDAO": "VISTOS, relatados e discutidos estes autos de embargos de declaração opostos ao Acórdão 1.089/2025-Plenário,\n\nACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão Plenária, ante as razões expostas pelo relator, em:\n\n9.1. nos termos dos arts. 32, inciso II, e 34 da Lei 8.443/1992, conhecer dos presentes recursos;\n\n9.2. quanto ao mérito, negar-lhes provimento; e\n\n9.3. dar ciência aos recorrentes e demais interessados.",
+      "ASSUNTO": "Embaórgãos de declaração contra acórdão proferido em tomada de contas especial instaurada para apurar prejuízos em contratos de aquisição de \"solução de apoio à tomada de decisão e Business Intelligence (BI) MicroStrategy; incluindo manutenção e suporte técnico por 12 (doze) meses e serviços técnicos especializados em unidade de serviços técnicos (UST) e de treinamento em unidade de treinamento (UT)\".",
+      "SUMARIO": "EMBAórgãos DE DECLARAÇÃO EM TOMADA DE CONTAS ESPECIAL. IRREGULARIDADES EM PREGÃO ELETRÔNICO E NOS CONTRATOS DECORRENTES. CONTAS IRREGULARES. DÉBITOS. MULTAS. DECLARAÇÃO DE INIDONEIDADE. INABILITAÇÃO. CONHECIMENTO. AUSÊNCIA DE OMISSÃO, CONTRADIÇÃO OU OBSCURIDADE. REJEIÇÃO. CIÊNCIA.",
+      "ACORDAO": "VISTOS, relatados e discutidos estes autos de embaórgãos de declaração opostos ao Acórdão 1.089/2025-Plenário,\n\nACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão Plenária, ante as razões expostas pelo relator, em:\n\n9.1. nos termos dos arts. 32, inciso II, e 34 da Lei 8.443/1992, conhecer dos presentes recursos;\n\n9.2. quanto ao mérito, negar-lhes provimento; e\n\n9.3. dar ciência aos recorrentes e demais interessados.",
       "DECISAO": "VISTOS, relatados e discutidos estes autos de embargos de declaração opostos ao Acórdão 1.089/2025-Plenário,\n\nACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão Plenária, ante as razões expostas pelo relator, em:\n\n9.1. nos termos dos arts. 32, inciso II, e 34 da Lei 8.443/1992, conhecer dos presentes recursos;\n\n9.2. quanto ao mérito, negar-lhes provimento; e\n\n9.3. dar ciência aos recorrentes e demais interessados.",
       "STATUS_MONITORAMENTO": "Pendente",
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 23:31:09",
-      "aiAnalysisData": null
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 13:41:42",
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [],
+        "recomendacoes": [],
+        "darCiencia": [
+          "Dar ciência aos recorrentes e demais interessados"
+        ],
+        "determinaArquivamento": false
+      },
+      "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
     },
     {
       "KEY": "AC-1973-2025-PL",
