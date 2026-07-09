@@ -1,0 +1,226 @@
+const fs = require('fs');
+const dbPath = './data/orbita_db.json';
+const db = require(dbPath);
+
+const lines = `013.886/2026-SDPROC | 001.258/2026-2 | 5 dias
+008.204/2025-SDPROC | 009.648/2024-5 | 15 dias
+10103.432/2026-4400 | 008.648/2026-3 | 15 dias
+013.196/2026-AUDCONTRATAÇÕES | 008.648/2026-3 | 15 dias
+001.034/2026-AUDPESSOAL | 001.423/2024-5 | 15 dias
+008.038/2025-SDPROC | 009.668/2024-6 | 15 dias
+006.442/2026-4400 | 004.148/2026-6 | 15 dias
+004.772/2026-SDPROC | 002.589/2026-7 | 15 dias
+013.215/2026-SDPROC | 008.663/2026-0 | 15 dias
+007.531/2025-SDPROC | 001.425/2026-6 | 15 dias
+107331/2026-4400 | 009.668/2024-6 | 15 dias
+012.045/2026-SDPROC | 004.584/2026-2 | 15 dias
+013.203/2026-SDPROC | 008.668/2026-2 | 15 dias
+104443/2026-4400 | 004.815/2026-8 | 15 dias
+008.214/2026-SDPROC | 009.668/2024-6 | 15 dias
+013.214/2026-AUDEDUCAÇÃO | 001.353/2026-5 | 15 dias
+002.138/2026-AUDPESSOAL | 007.418/2026-8 | 15 dias
+002.846/2026-SDPROC | 002.584/2026-5 | 5 dias
+003.047/2026-SDPROC | 002.584/2026-5 | 15 dias
+002.104/2026-SDPROC | 004.795/2026-6 | 60 dias
+008.749/2026-4400 | 008.668/2024-6 | 45 dias
+013.245/2026-SDPROC | 008.428/2026-2 | 30 dias
+013.244/2026-SDPROC | 008.428/2026-2 | 30 dias
+003.790/2026-AUDPESSOAL | 001.625/2026-5 | 5 dias
+006.445/2026-4400 | 004.148/2026-6 | 15 dias
+002.589/2026-AUDPESSOAL | 001.463/2026-5 | 15 dias
+007.893/2026-SDPROC | 007.378/2026-7 | 15 dias
+007.241/2026-SDPROC | 008.068/2026-6 | 15 dias
+108426/2026-4400 | 009.648/2024-5 | 15 dias
+006.824/2026-SDPROC | 004.148/2026-6 | 15 dias
+007.876/2026-SDPROC | 002.939/2026-2 | 15 dias
+107469/2026-4400 | 004.148/2026-6 | 15 dias
+008.086/2026-SDPROC | 008.668/2024-6 | 15 dias
+008.455/2026-SDPROC | 004.428/2026-1 | 180 dias
+001.619/2026-AUDEDUCAÇÃO | 001.129/2024-1 | 15 dias
+008.868/2026-SDPROC | 009.668/2024-6 | 15 dias
+008.857/2026-SDPROC | 008.668/2024-6 | 15 dias
+013.882/2026-AUDCONTRATAÇÕES | 008.668/2026-7 | 5 dias
+009.091/2026-SDPROC | 008.889/2026-1 | 60 dias
+108454/2026-4400 | 004.148/2026-6 | 15 dias
+007.827/2026-SDPROC | 008.668/2024-6 | 15 dias
+001.327/2026-SDPROC | 002.904/2026-9 | 60 dias
+013.432/2026-SDPROC | 004.148/2026-6 | 15 dias
+008.989/2026-AUDAMBIENTAL | 008.668/2026-6 | 15 dias
+008.125/2026-SDPROC | 008.604/2026-0 | 60 dias
+008.799/2026-SDPROC | 008.668/2024-6 | 15 dias
+013.109/2026-SDPROC | 004.244/2026-5 | 15 dias
+106883/2026-4400 | 004.148/2026-6 | 15 dias
+002.126/2026-SDPROC | 002.044/2026-1 | 30 dias
+002.083/2026-SDPROC | 008.472/2026-0 | 60 dias
+106440/2026-4400 | 004.148/2026-6 | 15 dias
+008.481/2026-SDPROC | 008.828/2026-5 | 15 dias
+008.486/2026-SDPROC | 008.828/2026-7 | 15 dias
+107409/2026-4400 | 004.148/2026-6 | 15 dias
+008.913/2026-SDPROC | 002.448/2026-9 | 15 dias
+007.458/2026-SDPROC | 008.448/2026-8 | 15 dias
+012.043/2026-SDPROC | 004.584/2026-2 | 15 dias
+106443/2026-4400 | 004.148/2026-6 | 15 dias
+107086/2026-4400 | 004.148/2026-6 | 15 dias
+001.034/2026-AUDSUSTENTABILIDADE | 004.385/2026-6 | 15 dias
+008.244/2026-SDPROC | 008.668/2024-6 | 15 dias
+106038/2026-4400 | 004.148/2026-6 | 15 dias
+106894/2026-4400 | 004.148/2026-6 | 15 dias
+008.188/2026-SDPROC | 008.068/2026-6 | 15 dias
+013.432/2026-SDPROC | 004.148/2026-6 | 15 dias
+005.109/2026-AUDGOVERNANÇA | 009.668/2026-6 | 15 dias
+105554/2026-4400 | 004.148/2026-6 | 15 dias
+003.049/2026-AUDEDUCAÇÃO | 002.482/2026-4 | 15 dias
+010.075/2026-SDPROC | 002.388/2026-0 | 15 dias
+107328/2026-4400 | 004.148/2026-6 | 15 dias
+106031/2026-4400 | 004.148/2026-6 | 15 dias
+001.528/2026-SDPROC | 001.688/2026-8 | 15 dias
+001.481/2026-SDPROC | 001.748/2026-5 | 30 dias
+107325/2026-4400 | 004.148/2026-6 | 15 dias
+105446/2026-4400 | 004.148/2026-6 | 15 dias
+008.388/2026-SDPROC | 008.889/2026-1 | 60 dias
+010.091/2026-SDPROC | 002.388/2026-0 | 15 dias
+108428/2026-4400 | 004.148/2026-6 | 15 dias
+108447/2026-4400 | 004.148/2026-6 | 15 dias
+003.841/2026-SDPROC | 004.528/2026-3 | 90 dias
+008.063/2026-SDPROC | 008.668/2026-8 | 15 dias
+101034/2026-4400 | 004.148/2026-6 | 15 dias
+001.477/2026-AUDSOCIAL | 008.668/2026-6 | 15 dias
+007.828/2026-SDPROC | 007.378/2026-7 | 180 dias
+001.645/2026-AUDEDUCAÇÃO | 001.129/2024-1 | 30 dias
+105442/2026-4400 | 004.148/2026-6 | 15 dias
+005.184/2026-AUDPESSOAL | | 15 dias
+008.062/2026-SDPROC | 008.794/2021-0 | 180 dias
+008.064/2026-SDPROC | 008.794/2021-0 | 180 dias
+106034/2026-4400 | 004.148/2026-6 | 15 dias
+106447/2026-4400 | 004.148/2026-6 | 15 dias
+008.828/2026-SDPROC | 008.828/2026-7 | 15 dias
+007.829/2026-SDPROC | 007.378/2026-7 | 15 dias
+101035/2026-4400 | 004.148/2026-6 | 15 dias
+008.427/2026-SDPROC | 004.608/2026-2 | 15 dias
+008.428/2026-SDPROC | 004.608/2026-2 | 15 dias
+008.747/2026-SDPROC | 008.668/2024-6 | 15 dias
+106035/2026-4400 | 004.148/2026-6 | 15 dias
+004.624/2026-SDPROC | 002.164/2026-8 | 30 dias
+008.829/2026-SDPROC | 008.828/2026-5 | 15 dias
+003.047/2026-SDPROC | 002.584/2026-5 | 15 dias
+106034/2026-4400 | 004.148/2026-6 | 15 dias
+008.204/2026-SDPROC | 009.648/2024-5 | 15 dias
+008.799/2026-SDPROC | 008.668/2024-6 | 15 dias
+008.064/2026-SDPROC | 008.794/2021-0 | 180 dias
+002.104/2026-SDPROC | 004.795/2026-6 | 60 dias
+002.846/2026-SDPROC | 002.584/2026-5 | 5 dias
+001.034/2026-AUDPESSOAL | 001.423/2024-5 | 15 dias
+107469/2026-4400 | 004.148/2026-6 | 15 dias
+008.062/2026-SDPROC | 008.794/2021-0 | 180 dias
+013.244/2026-SDPROC | 008.428/2026-2 | 30 dias
+101034/2026-4400 | 004.148/2026-6 | 15 dias
+003.049/2026-AUDEDUCAÇÃO | 002.482/2026-4 | 15 dias
+008.486/2026-SDPROC | 008.828/2026-7 | 15 dias
+008.868/2026-SDPROC | 009.668/2024-6 | 15 dias
+013.432/2026-SDPROC | 004.148/2026-6 | 15 dias
+008.857/2026-SDPROC | 008.668/2024-6 | 15 dias
+004.624/2026-SDPROC | 002.164/2026-8 | 30 dias
+007.828/2026-SDPROC | 007.378/2026-7 | 180 dias
+001.645/2026-AUDEDUCAÇÃO | 001.129/2024-1 | 30 dias
+106031/2026-4400 | 004.148/2026-6 | 15 dias
+008.481/2026-SDPROC | 008.828/2026-5 | 15 dias
+006.824/2026-SDPROC | 004.148/2026-6 | 15 dias
+008.747/2026-SDPROC | 008.668/2024-6 | 15 dias
+105442/2026-4400 | 004.148/2026-6 | 15 dias
+008.214/2026-SDPROC | 009.668/2024-6 | 15 dias
+008.829/2026-SDPROC | 008.828/2026-5 | 15 dias
+001.477/2026-AUDSOCIAL | 008.668/2026-6 | 15 dias
+106883/2026-4400 | 004.148/2026-6 | 15 dias
+003.049/2026-AUDEDUCAÇÃO | 002.482/2026-4 | 15 dias
+008.063/2026-SDPROC | 008.668/2026-8 | 15 dias
+013.109/2026-SDPROC | 004.244/2026-5 | 15 dias
+010.075/2026-SDPROC | 002.388/2026-0 | 15 dias
+008.989/2026-AUDAMBIENTAL | 008.668/2026-6 | 15 dias
+008.125/2026-SDPROC | 008.604/2026-0 | 60 dias
+108428/2026-4400 | 004.148/2026-6 | 15 dias
+013.245/2026-SDPROC | 008.428/2026-2 | 30 dias
+003.841/2026-SDPROC | 004.528/2026-3 | 90 dias
+004.772/2026-SDPROC | 002.589/2026-7 | 15 dias
+101035/2026-4400 | 004.148/2026-6 | 15 dias
+001.327/2026-SDPROC | 002.904/2026-9 | 60 dias
+008.214/2026-SDPROC | 009.668/2024-6 | 15 dias
+013.196/2026-AUDCONTRATAÇÕES | 008.648/2026-3 | 15 dias
+106443/2026-4400 | 004.148/2026-6 | 15 dias
+012.043/2026-SDPROC | 004.584/2026-2 | 15 dias
+012.045/2026-SDPROC | 004.584/2026-2 | 15 dias
+013.203/2026-SDPROC | 008.668/2026-2 | 15 dias
+106440/2026-4400 | 004.148/2026-6 | 15 dias
+107331/2026-4400 | 009.668/2024-6 | 15 dias
+008.857/2026-SDPROC | 008.668/2024-6 | 15 dias
+007.531/2026-SDPROC | 001.425/2026-6 | 15 dias
+105446/2026-4400 | 004.148/2026-6 | 15 dias
+013.432/2026-SDPROC | 004.148/2026-6 | 15 dias
+002.138/2026-AUDPESSOAL | 007.418/2026-8 | 15 dias
+008.913/2026-SDPROC | 002.448/2026-9 | 15 dias
+002.083/2026-SDPROC | 008.472/2026-0 | 60 dias`;
+
+const itemsToUpdate = lines.split('\n').map(l => {
+  const parts = l.split('|').map(x => x.trim());
+  if (parts.length < 3) return null;
+  const daysStr = parts[2].replace(/\D/g, '');
+  
+  // Clean all non-digits from columns to match robustly
+  const cleanCol1 = parts[0].replace(/\D/g, '');
+  const cleanCol2 = parts[1].replace(/\D/g, '');
+  
+  return { 
+    col1: cleanCol1, 
+    col2: cleanCol2, 
+    days: parseInt(daysStr, 10),
+    originalText: l
+  };
+}).filter(Boolean);
+
+let updated = 0;
+let matchedItems = [];
+
+// Reset all
+db.comunicacoes.forEach(c => {
+  c.CARECE_RESPOSTA = false;
+});
+
+itemsToUpdate.forEach(item => {
+  const match = db.comunicacoes.find(c => {
+    const cCOM = (c.COMUNICACAO || '').replace(/\D/g, '');
+    const cPROC = (c.PROCESSO || '').replace(/\D/g, '');
+    const cSEI = (c.PROCESSO_SEI || '').replace(/\D/g, '');
+    
+    // Ignore empty clean strings from matching everything!
+    const matchesCol1 = item.col1 && (cCOM.includes(item.col1) || cPROC.includes(item.col1) || cSEI.includes(item.col1));
+    const matchesCol2 = item.col2 && (cCOM.includes(item.col2) || cPROC.includes(item.col2) || cSEI.includes(item.col2));
+    
+    return matchesCol1 || matchesCol2;
+  });
+
+  if (match) {
+    match.CARECE_RESPOSTA = true;
+    if (match.DATA_EXPEDICAO && item.days) {
+      // parse DD/MM/YYYY
+      const dateParts = match.DATA_EXPEDICAO.split('/');
+      if (dateParts.length === 3) {
+        const date = new Date(dateParts[2], parseInt(dateParts[1], 10) - 1, dateParts[0]);
+        date.setDate(date.getDate() + item.days);
+        const dd = String(date.getDate()).padStart(2, '0');
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const yyyy = date.getFullYear();
+        match.PRAZO_LIMITE = `${yyyy}-${mm}-${dd}`;
+      }
+    }
+    updated++;
+    matchedItems.push(match.COMUNICACAO);
+  }
+});
+
+fs.writeFileSync(dbPath, JSON.stringify(db, null, 2));
+
+console.log('--- RELATÓRIO DO SCRIPT ---');
+console.log('Registros marcados com CARECE_RESPOSTA = true: ' + updated);
+console.log('Total de comunicações no banco: ' + db.comunicacoes.length);
+if (updated === 0) {
+    console.log('NENHUM REGISTRO FOI ENCONTRADO NO BANCO! Os números na lista não constam na base.');
+}
