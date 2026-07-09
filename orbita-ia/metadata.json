@@ -1,6 +1,0 @@
-{
-  "name": "ORBITA.AECI",
-  "description": "Portal de Gestão de Demandas, Acórdãos TCU/CGU, Rol de Responsáveis, Superintendências e Comissão de Ética para a Assessoria Especial de Controle Interno do Ministério do Trabalho e Emprego.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
