@@ -464,8 +464,6 @@ export default function TcuModule({
   const [favorecidoDocsResult, setFavorecidoDocsResult] = useState<any[] | null>(null);
   const [isSearchingFavorecido, setIsSearchingFavorecido] = useState(false);
   const [isAnalyzingAi, setIsAnalyzingAi] = useState<Record<string, boolean>>({});
-  const [isDeepAiLoading, setIsDeepAiLoading] = useState(false);
-  const [deepAiResult, setDeepAiResult] = useState<any>(null);
   const [searchMode, setSearchMode] = useState<"documento" | "favorecido">("documento");
 
   // Communications module states
@@ -1511,26 +1509,7 @@ export default function TcuModule({
     }
   };
 
-  const handleDeepAiAudit = async (acKey: string) => {
-    setIsDeepAiLoading(true);
-    setDeepAiResult(null);
-    try {
-      const response = await fetch(`/api/acordaos/${acKey}/auditoria-profunda`, {
-        method: "POST"
-      });
-      const result = await response.json();
-      if (result.success) {
-        setDeepAiResult(result.data);
-      } else {
-        alert(result.error || "Falha na auditoria profunda.");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Erro ao comunicar com a IA (Auditoria Profunda).");
-    } finally {
-      setIsDeepAiLoading(false);
-    }
-  };
+
 
   // Helper to extract CPFs/CNPJs from the acórdão full text and interested list
   const getAcordaoIdentifiers = (ac: AcordaoDemand) => {
@@ -4903,19 +4882,7 @@ export default function TcuModule({
                 <span className="text-xs text-slate-700 font-semibold line-clamp-1">{fullTextAcordao.ASSUNTO || "Sem descrição"}</span>
               </div>
               <div className="flex justify-end items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isDeepAiLoading}
-                  onClick={() => handleDeepAiAudit(fullTextAcordao.KEY)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${
-                    isDeepAiLoading
-                      ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
-                      : "bg-[#1351b4]/5 border-[#1351b4]/30 hover:bg-[#1351b4]/10 text-[#1351b4]"
-                  }`}
-                >
-                  <Brain className="w-3.5 h-3.5" />
-                  {isDeepAiLoading ? "Analisando..." : "Auditoria Semântica Profunda"}
-                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -4946,15 +4913,7 @@ export default function TcuModule({
               </div>
             </div>
 
-            {/* Deep AI Results Panel */}
-            {deepAiResult && (
-              <div className="bg-[#1351b4]/5 border-b border-[#1351b4]/20 px-6 py-4 flex-shrink-0 max-h-64 overflow-y-auto">
-                <h4 className="text-[#1351b4] font-bold text-sm mb-2 flex items-center gap-2">
-                  <Brain className="w-4 h-4" /> Resultado da Auditoria Semântica
-                </h4>
-                <p className="text-xs text-slate-800 font-medium mb-3">{deepAiResult.resumo_do_achado || "Resumo não gerado."}</p>
-              </div>
-            )}
+
 
             {/* Modal Content Scroll Area */}
             <div className="p-6 overflow-y-auto bg-slate-950 text-slate-100 flex-1 font-mono text-[11.5px] whitespace-pre-line leading-relaxed scrollbar-thin">

@@ -3991,13 +3991,12 @@ async function startServer() {
     });
   });
 
-async function extractTcuDataWithGemini(acordaoText: string) {
+async function extractTcuDataWithAi(acordaoText: string) {
   const hasGemini = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY" && process.env.GEMINI_API_KEY.trim() !== "";
   const hasGroq = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== "";
 
   if (!hasGemini && !hasGroq) {
-    console.log("[AI] Chaves não configuradas, usando fallback nativo.");
-    return extractTcuDataNativo(acordaoText);
+    throw new Error("Nenhuma chave de IA configurada (Groq ou Gemini) para extrair os dados.");
   }
   
   const promptText = `Você é um analista experiente do TCU. Leia atentamente o inteiro teor do acórdão abaixo e extraia as seguintes informações no formato JSON EXATO estipulado, e nada mais.
@@ -4028,25 +4027,43 @@ Regras:
 Texto do Acórdão:
 ${acordaoText.slice(0, 15000)}`;
 
-  try {
-    let resText = "{}";
+  let resText = "{}";
 
+  async function callGemini() {
+    console.log("[Gemini AI] Processando extração em massa com Gemini...");
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: promptText
+    });
+    return response.text?.trim() || "{}";
+  }
+
+  async function callGroq() {
+    console.log("[Groq AI] Processando extração em massa com Groq Llama 3...");
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: promptText }],
+      model: 'llama-3.3-70b-versatile',
+    });
+    return chatCompletion.choices[0]?.message?.content || "{}";
+  }
+
+  try {
     if (hasGroq) {
-      console.log("[Groq AI] Processando extração em massa com Groq Llama 3...");
-      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [{ role: 'user', content: promptText }],
-        model: 'llama-3.3-70b-versatile',
-      });
-      resText = chatCompletion.choices[0]?.message?.content || "{}";
+      try {
+        resText = await callGroq();
+      } catch (e: any) {
+        console.warn("[Groq AI] Falhou (possível limite de uso). Mensagem:", e.message);
+        if (hasGemini) {
+          console.log("[Fallback] Tentando usar o Gemini...");
+          resText = await callGemini();
+        } else {
+          throw new Error("Groq falhou e Gemini não configurado.");
+        }
+      }
     } else {
-      console.log("[Gemini AI] Processando extração em massa com Gemini...");
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: promptText
-      });
-      resText = response.text?.trim() || "{}";
+      resText = await callGemini();
     }
 
     if (resText.startsWith("```json")) resText = resText.substring(7);
@@ -4058,9 +4075,9 @@ ${acordaoText.slice(0, 15000)}`;
     resText = resText.replace(/<think>[\s\S]*?<\/think>/, '').trim();
 
     return JSON.parse(resText);
-  } catch (e) {
-    console.error("[AI] Checklist extração falhou, fallback para nativo.", e);
-    return extractTcuDataNativo(acordaoText);
+  } catch (e: any) {
+    console.error("[AI] Extração falhou em todas as tentativas.", e);
+    throw new Error("As cotas das IAs disponíveis se esgotaram ou ocorreu um erro interno.");
   }
 }
 
@@ -4080,12 +4097,12 @@ ${acordaoText.slice(0, 15000)}`;
     try {
       let aiResultJson;
 
-      // Extract via Native AI Engine
+      // Extract via AI
       try {
-        aiResultJson = await extractTcuDataWithGemini(acordao.ACORDAO);
-      } catch (err) {
+        aiResultJson = await extractTcuDataWithAi(acordao.ACORDAO);
+      } catch (err: any) {
         console.error("Erro no extrator:", err);
-        return res.status(500).json({ error: "Falha na extração de dados." });
+        return res.status(500).json({ error: err.message });
       }
 
       // Query SIAFI/SIAPE for the extracted entities
@@ -4194,84 +4211,7 @@ ${acordaoText.slice(0, 15000)}`;
     }
   });
 
-  app.post("/api/acordaos/:key/auditoria-profunda", async (req, res) => {
-    const { key } = req.params;
-    const db = loadDatabase();
-    const acordao = db.acordaos.find((x: any) => x.KEY === key);
 
-    if (!acordao || !acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
-      return res.status(400).json({ error: "Acórdão não encontrado ou sem inteiro teor." });
-    }
-
-    if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({ error: "Chave da API do Groq não configurada." });
-    }
-
-    try {
-      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-      const textChunk = acordao.ACORDAO.substring(0, 20000); // 20k chars
-
-      const prompt = `
-# ROLE E OBJETIVO
-Você é o motor de extração semântica e análise de conformidade do sistema ÓRBITA. Sua função primária é atuar como um especialista em Controle Interno, auditoria pública e prestação de contas governamentais. Você deve processar textos não estruturados (Acórdãos do TCU, relatórios de auditoria, processos administrativos) e extrair pontualmente entidades, jargões e valores associados a irregularidades financeiras e processos sancionatórios.
-
-# DICIONÁRIO SEMENTE (BASE DE CONHECIMENTO)
-Você deve utilizar as seguintes categorias e termos como suas âncoras de busca textual e análise de contexto:
-
-1. DANO AO ERÁRIO E TIPIFICAÇÕES:
-Dano ao Erário, Superfaturamento, Sobrepreço, Desfalque, Desvio de finalidade, Desvio de objeto, Malversação de recursos públicos, Locupletamento ilícito, Pagamento indevido, Pagamento antecipado, Inexecução contratual, Omissão no dever de prestar contas, Não comprovação da regular aplicação dos recursos, Ato antieconômico, Enriquecimento ilícito, Fraude à licitação, Conluio, Desperdício de recursos.
-
-2. RITOS DA TOMADA DE CONTAS ESPECIAL (TCE):
-Tomada de Contas Especial, Nexo de causalidade, Nexo causal, Fato gerador, Citação, Audiência, Diligência, Revelia, Matriz de Responsabilização, Responsável solidário, Responsável subsidiário, Contas julgadas irregulares, Contas regulares com ressalva, Contas ilíquidas, Prescrição intercorrente, Prescrição da pretensão punitiva, Arquivamento sem julgamento de mérito, Baixa materialidade, Gestor faltoso, Fase interna da TCE, Fase externa da TCE.
-
-3. EXECUÇÃO FINANCEIRA (SIAFI):
-SIAFI, Unidade Gestora (UG), Nota de Empenho (NE), Liquidação da despesa, Ordem Bancária (OB), Restos a Pagar (RAP), Suprimento de Fundos, Conta Única do Tesouro Nacional, DARF, GRU, Conformidade de Gestão, Conformidade Documental, Termo de Execução Descentralizada (TED), Convênio, Contrato de Repasse, Programa de Trabalho Resumido (PTRES), Natureza de Despesa (ND), Nota de Lançamento (NL).
-
-4. SANÇÕES:
-Imputação de Débito, Atualização monetária, Juros de mora, Multa do art. 57, Multa do art. 58, Inabilitação para função de confiança, Declaração de inidoneidade, Arresto de bens, Indisponibilidade de bens, Desconsideração da personalidade jurídica, Inscrição no CADIN, Inscrição na Dívida Ativa da União.
-
-# DIRETRIZES DE EXTRAÇÃO E EXPANSÃO SEMÂNTICA
-1. EXTRAÇÃO EXATA: Identifique e extraia qualquer termo do texto que corresponda exatamente ao Dicionário Semente. Busque correlacionar esses termos com valores monetários (R$), datas e nomes de responsáveis (Pessoa Física ou Jurídica) próximos a eles no texto.
-2. EXPANSÃO DINÂMICA (THRESHOLD DE SIMILARIDADE): Ao ler o texto, se você identificar uma palavra ou expressão desconhecida, mas que possua altíssima similaridade semântica (confiança superior a 90%) com qualquer termo do Dicionário Semente, você deve:
-   a) Extrair o termo novo.
-   b) Classificá-lo sob a categoria da âncora correspondente.
-   c) Sinalizar a nova expressão com a tag [SUGESTÃO_DE_EXPANSÃO] para validação posterior da equipe de controle interno.
-3. PREVENÇÃO DE DESVIO SEMÂNTICO (SEMANTIC DRIFT): Ignore jargões administrativos genéricos (ex: "erro", "atraso", "documento") que tenham similaridade semântica abaixo de 90% com as âncoras. Mantenha o rigor técnico exigido em auditorias públicas.
-
-# FORMATO DE SAÍDA (OUTPUT)
-Ao processar um bloco de texto, retorne os dados estritamente em formato estruturado JSON, sem blocos markdown (sem \`\`\`json), contendo as chaves:
-{
-  "entidades_encontradas": [],
-  "valores_associados": [],
-  "responsaveis_identificados": [],
-  "termos_para_expansao": [],
-  "resumo_do_achado": "Texto"
-}
-
-Texto do Acórdão:
-${textChunk}`;
-
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [{ role: 'user', content: prompt }],
-        model: 'llama-3.3-70b-versatile',
-      });
-      
-      let rawResponse = chatCompletion.choices[0]?.message?.content || "";
-      let aiResultJson;
-      try {
-        const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : "{}";
-        aiResultJson = JSON.parse(jsonStr);
-      } catch (parseErr) {
-        console.error("Failed to parse Groq response:", rawResponse);
-        return res.status(500).json({ error: "Falha na análise profunda da IA.", details: "A IA retornou um formato inválido." });
-      }
-      return res.json({ success: true, data: aiResultJson });
-    } catch (err: any) {
-      console.error("[Deep AI] Erro:", err);
-      return res.status(500).json({ error: "Falha na análise profunda da IA.", details: err.message });
-    }
-  });
 
 // API 4: Rol de Responsáveis - GET & CRUD
   app.get("/api/rol-responsaveis", (req, res) => {

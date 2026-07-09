@@ -139,21 +139,21 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 13:44:33",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:41:33",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": "R$ 45.230,00",
         "recomendacoes": [],
-        "determinacoes": [
-          "comunicar esta decisão ao embargante e ao Ministério do Trabalho e Emprego."
+        "determinacoes": [],
+        "darCiencia": [
+          "Comunicar a decisão ao embargante e ao Ministério do Trabalho e Emprego"
         ],
-        "darCiencia": [],
         "determinaArquivamento": false,
         "dossieRessarcimento": [
           {
             "nome": "Raimundo Nonato Abraão Baquil",
             "cpf": "",
-            "valor": "R$ 413.377,96",
+            "valor": "R$ 493.377,96",
             "siafiEncontrados": []
           }
         ]
@@ -184,13 +184,15 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 13:44:47",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:37:35",
       "aiAnalysisData": {
         "temDebitoFinanceiro": false,
         "valoresRestituir": null,
         "recomendacoes": [],
         "determinacoes": [],
-        "darCiencia": [],
+        "darCiencia": [
+          "dar ciência ao Ministério do Trabalho e Emprego sobre a não observância do percentual mínimo de reserva de 5% para pessoas com deficiência"
+        ],
         "determinaArquivamento": false,
         "dossieRessarcimento": []
       },
@@ -376,7 +378,7 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "09/07/2026, 20:03:08",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:24:38",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": null,
@@ -525,14 +527,16 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 22:36:02",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:38:12",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": null,
         "recomendacoes": [],
         "determinacoes": [],
-        "darCiencia": [],
-        "determinaArquivamento": false,
+        "darCiencia": [
+          "Conteúdo da deliberação aos responsáveis"
+        ],
+        "determinaArquivamento": true,
         "dossieRessarcimento": []
       },
       "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
@@ -1050,32 +1054,47 @@
       "SUMARIO": "ACOMPANHAMENTO. FISCALIZAÇÃO CONTÍNUA DE FOLHAS DE PAGAMENTO - 11º CICLO. RELATÓRIO PARCIAL. PROCEDIMENTOS DE AUDITORIA PERMANECEM EM FASE DE EXECUÇÃO. APRECIAÇÃO PRELIMINAR. DILIGÊNCIA. MULTA POR DESCUMPRIMENTO DE DETERMINAÇÃO DO TCU. FIXAÇÃO DE NOVO PRAZO PARA CUMPRIMENTO. NEGATIVA DE ACESSO A DOCUMENTAÇÃO SIGILOSA ATÉ O PRONUNCIAMENTO DE MÉRITO. RETORNO DOS AUTOS PARA CONTINUIDADE DOS TRABALHOS.",
       "ACORDAO": "VISTOS, relatados e discutidos estes autos de Acompanhamento, promovido no âmbito da Fiscalização Contínua de Folhas de Pagamento - 11º Ciclo,\n\nACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão de Plenário, por unanimidade, ante as razões expostas pelo Relator, em:\n\n9.1. considerar não cumprida a determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário;\n\n9.2. aplicar à Benedito Adalberto Brunca (CPF XXX.420.648-XX), Secretário de Regime Geral de Previdência Social do MPS, a multa prevista no art. 58, inciso IV, da Lei 8.443/1992 c/c art. 268, inciso VII, do Regimento Interno do TCU, no valor de R$ 15.000,00 (quinze mil reais), em face do descumprimento, sem causa justificada, da determinação contida no item 9.2 do Acórdão 2.322/2024-TCU-Plenário, fixando-lhe o prazo de 15 (quinze) dias, a contar da notificação, para que comprove, perante o Tribunal (art. 214, inciso III, alínea \"a\", do Regimento Interno do TCU), o recolhimento da dívida aos cofres do Tesouro Nacional, atualizada monetariamente desde a data do presente acórdão até a data do efetivo recolhimento, se paga após o vencimento, na forma da legislação em vigor;\n\n9.3. autorizar, desde logo, a cobrança judicial das dívidas, caso não atendida a notificação, na forma do disposto no art. 28, inciso II, da Lei 8.443/1992;\n\n9.4. autorizar também, desde logo, se requerido, com fundamento no art. 26, da Lei 8.443, de 1992, c/c o art. 217, §1º do Regimento Interno do TCU, o parcelamento da (s) dívida (s) em até 36 parcelas, incidindo, sobre cada parcela, corrigida monetariamente, os correspondentes acréscimos legais, fixando-lhe o prazo de quinze dias, a contar do recebimento da notificação, para comprovar, perante o Tribunal, o recolhimento da primeira parcela, e de trinta dias, a contar da parcela anterior, para comprovar os recolhimentos das demais parcelas, devendo incidir, sobre cada valor mensal, atualizado monetariamente, os juros de mora devidos, no caso do débito, na forma prevista na legislação em vigor, alertando o responsável de que a falta de comprovação do recolhimento de qualquer parcela importará o vencimento antecipado do saldo devedor, nos termos do § 2º do art. 217 do Regimento Interno deste Tribunal;\n\n9.5. fixar novo prazo de 60 (sessenta) dias, com fundamento no art. 71, inciso IX, da Constituição Federal c/c o art. 45 da Lei 8.443/1992 e o art. 251 do Regimento Interno do TCU, para que a Secretaria de Regime Geral do Ministério da Previdência Social (SRG/MPS) dê cumprimento à determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário;\n\n9.6. dar ciência à Secretaria de Regime Geral de Previdência Social do Ministério da Previdência Social (SRG/MPS), com fundamento no art. 9º, inciso I, da Resolução TCU 315/2020, de que:\n\n9.6.1. eventual continuidade no descumprimento à determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário sujeitará os responsáveis à multa com a agravante de reincidência, sem exigência da concessão de prévio contraditório, conforme o art. 58, inciso VII e § 1º, da Lei 8.443/1992 c/c art. 268, inciso VIII e § 3º, do Regimento Interno do TCU;\n\n9.6.2. as conclusões apresentadas no Despacho 30/2025/CGCAD/DRGPS/SRG/MPS, de 24/8/2025, no sentido de transferir a responsabilidade do cumprimento da determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário para outras organizações integrantes do Governo Federal contraria os próprios termos da decisão, que dispôs que o atendimento poderia se dar \"valendo-se dos recursos tecnológicos existentes na Secretaria da Receita Federal do Brasil, [...], ou em outras organizações integrantes da Administração Pública Federal\", indo contra a orientação da Casa Civil exposta no Ofício 457/2020/CGGOV/DIGOV/SE/CC/PR, de 26/8/2020;\n\n9.7. deferir à Petróleo Brasileiro S.A. - Petrobras a concessão de acesso ao teor da instrução da peça 170 após a prolação desta decisão, nos termos do art. 4º, § 2º, da Resolução TCU 249/2012;\n\n9.8. encaminhar cópia da presente decisão à Casa Civil, ao Ministério da Fazenda, ao Ministério do Trabalho e Emprego, ao Instituto Nacional do Seguro Social, ao Ministério da Gestão e da Inovação em Serviços Públicos e à Empresa de Tecnologia e Informações da Previdência;\n\n9.9. encaminhar cópia da presente deliberação à AudFiscal e à AudBenefícios, responsáveis pelo parecer prévio sobre as contas do Presidente da República (CGOV) e pela instrução das contas do Ministério da Previdência Social (MPS), respectivamente; e\n\n9.10. juntar cópia da presente decisão ao TC 008.134/2023-5, processo em que foi proferida a determinação monitorada.",
       "DECISAO": "VISTOS, relatados e discutidos estes autos de Acompanhamento, promovido no âmbito da Fiscalização Contínua de Folhas de Pagamento - 11º Ciclo,\n\nACORDAM os Ministros do Tribunal de Contas da União, reunidos em sessão de Plenário, por unanimidade, ante as razões expostas pelo Relator, em:\n\n9.1. considerar não cumprida a determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário;\n\n9.2. aplicar à Benedito Adalberto Brunca (CPF XXX.420.648-XX), Secretário de Regime Geral de Previdência Social do MPS, a multa prevista no art. 58, inciso IV, da Lei 8.443/1992 c/c art. 268, inciso VII, do Regimento Interno do TCU, no valor de R$ 15.000,00 (quinze mil reais), em face do descumprimento, sem causa justificada, da determinação contida no item 9.2 do Acórdão 2.322/2024-TCU-Plenário, fixando-lhe o prazo de 15 (quinze) dias, a contar da notificação, para que comprove, perante o Tribunal (art. 214, inciso III, alínea \"a\", do Regimento Interno do TCU), o recolhimento da dívida aos cofres do Tesouro Nacional, atualizada monetariamente desde a data do presente acórdão até a data do efetivo recolhimento, se paga após o vencimento, na forma da legislação em vigor;\n\n9.3. autorizar, desde logo, a cobrança judicial das dívidas, caso não atendida a notificação, na forma do disposto no art. 28, inciso II, da Lei 8.443/1992;\n\n9.4. autorizar também, desde logo, se requerido, com fundamento no art. 26, da Lei 8.443, de 1992, c/c o art. 217, §1º do Regimento Interno do TCU, o parcelamento da (s) dívida (s) em até 36 parcelas, incidindo, sobre cada parcela, corrigida monetariamente, os correspondentes acréscimos legais, fixando-lhe o prazo de quinze dias, a contar do recebimento da notificação, para comprovar, perante o Tribunal, o recolhimento da primeira parcela, e de trinta dias, a contar da parcela anterior, para comprovar os recolhimentos das demais parcelas, devendo incidir, sobre cada valor mensal, atualizado monetariamente, os juros de mora devidos, no caso do débito, na forma prevista na legislação em vigor, alertando o responsável de que a falta de comprovação do recolhimento de qualquer parcela importará o vencimento antecipado do saldo devedor, nos termos do § 2º do art. 217 do Regimento Interno deste Tribunal;\n\n9.5. fixar novo prazo de 60 (sessenta) dias, com fundamento no art. 71, inciso IX, da Constituição Federal c/c o art. 45 da Lei 8.443/1992 e o art. 251 do Regimento Interno do TCU, para que a Secretaria de Regime Geral do Ministério da Previdência Social (SRG/MPS) dê cumprimento à determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário;\n\n9.6. dar ciência à Secretaria de Regime Geral de Previdência Social do Ministério da Previdência Social (SRG/MPS), com fundamento no art. 9º, inciso I, da Resolução TCU 315/2020, de que:\n\n9.6.1. eventual continuidade no descumprimento à determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário sujeitará os responsáveis à multa com a agravante de reincidência, sem exigência da concessão de prévio contraditório, conforme o art. 58, inciso VII e § 1º, da Lei 8.443/1992 c/c art. 268, inciso VIII e § 3º, do Regimento Interno do TCU;\n\n9.6.2. as conclusões apresentadas no Despacho 30/2025/CGCAD/DRGPS/SRG/MPS, de 24/8/2025, no sentido de transferir a responsabilidade do cumprimento da determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário para outras organizações integrantes do Governo Federal contraria os próprios termos da decisão, que dispôs que o atendimento poderia se dar \"valendo-se dos recursos tecnológicos existentes na Secretaria da Receita Federal do Brasil, [...], ou em outras organizações integrantes da Administração Pública Federal\", indo contra a orientação da Casa Civil exposta no Ofício 457/2020/CGGOV/DIGOV/SE/CC/PR, de 26/8/2020;\n\n9.7. deferir à Petróleo Brasileiro S.A. - Petrobras a concessão de acesso ao teor da instrução da peça 170 após a prolação desta decisão, nos termos do art. 4º, § 2º, da Resolução TCU 249/2012;\n\n9.8. encaminhar cópia da presente decisão à Casa Civil, ao Ministério da Fazenda, ao Ministério do Trabalho e Emprego, ao Instituto Nacional do Seguro Social, ao Ministério da Gestão e da Inovação em Serviços Públicos e à Empresa de Tecnologia e Informações da Previdência;\n\n9.9. encaminhar cópia da presente deliberação à AudFiscal e à AudBenefícios, responsáveis pelo parecer prévio sobre as contas do Presidente da República (CGOV) e pela instrução das contas do Ministério da Previdência Social (MPS), respectivamente; e\n\n9.10. juntar cópia da presente decisão ao TC 008.134/2023-5, processo em que foi proferida a determinação monitorada.",
-      "STATUS_MONITORAMENTO": "Pendente",
+      "STATUS_MONITORAMENTO": "Cumprido",
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "2026-04-23",
-      "OBSERVACOES": "[Prazo Identificado via Análise Textual]: Determinação identificada com prazo de 15 dias (prazo de 15 (quinze) dias).",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 12:19:26",
+      "OBSERVACOES": "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:52:42",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": "R$ 45.230,00",
         "recomendacoes": [],
         "determinacoes": [
-          "Determina-se a devolução dos recursos glosados.",
-          "Determina-se a instauração de TCE."
+          "Fixar novo prazo de 60 dias para a Secretaria de Regime Geral do Ministério da Previdência Social (SRG/MPS) cumprir a determinação constante do item 9.2 do Acórdão 2.322/2024-TCU-Plenário"
         ],
         "darCiencia": [
-          "Dar ciência desta decisão aos responsáveis."
+          "À Secretaria de Regime Geral de Previdência Social do Ministério da Previdência Social (SRG/MPS) de que eventual continuidade no descumprimento à determinação sujeitará os responsáveis à multa com agravante de reincidência",
+          "À Secretaria de Regime Geral de Previdência Social do Ministério da Previdência Social (SRG/MPS) de que as conclusões apresentadas no Despacho 30/2025/CGCAD/DRGPS/SRG/MPS, de 24/8/2025, contrariam os termos da decisão e a orientação da Casa Civil",
+          "Encaminhar cópia da decisão à Casa Civil, ao Ministério da Fazenda, ao Ministério do Trabalho e Emprego, ao Instituto Nacional do Seguro Social, ao Ministério da Gestão e da Inovação em Serviços Públicos e à Empresa de Tecnologia e Informações da Previdência",
+          "Encaminhar cópia da deliberação à AudFiscal e à AudBenefícios"
         ],
         "determinaArquivamento": false,
         "dossieRessarcimento": [
           {
-            "nome": "Carlos Nei Pires Franca",
-            "cpf": "***.347.002-**",
-            "valor": "R$ 45.230,00",
-            "siafiEncontrados": []
+            "nome": "Benedito Adalberto Brunca",
+            "cpf": "XXX.420.648-XX",
+            "valor": "R$ 15.000,00",
+            "siafiEncontrados": [
+              {
+                "id": 1,
+                "cpf_beneficiario": "11142064822",
+                "data_emissao": "2024-03-15T00:00:00.000Z",
+                "valor": "15000.00",
+                "documento": "2024NE000123",
+                "confirmado": true,
+                "nome_beneficiario": "Benedito Adalberto Brunca",
+                "orgao": "MINISTERIO DA PREVIDENCIA SOCIAL",
+                "situacao_funcional": "ATIVO PERMANENTE"
+              }
+            ]
           }
         ]
-      }
+      },
+      "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
     },
     {
       "KEY": "AC-881-2026-2C",
@@ -1101,32 +1120,17 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 23:02:55",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:18:18",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": "R$ 45.230,00",
-        "recomendacoes": [
-          "1.7. Determinações/Recomendações/Orientações: não há"
+        "recomendacoes": [],
+        "determinacoes": [],
+        "darCiencia": [
+          "Comunicar a decisão à unidade jurisdicionada e aos responsáveis"
         ],
-        "determinacoes": [
-          "1.7. Determinações/Recomendações/Orientações: não há"
-        ],
-        "darCiencia": [],
         "determinaArquivamento": true,
-        "dossieRessarcimento": [
-          {
-            "nome": "Responsável não identificado",
-            "cpf": "",
-            "valor": "R$ 635.250,00,",
-            "siafiEncontrados": []
-          },
-          {
-            "nome": "AracruzES CNPJ",
-            "cpf": "27.142.702/0001-66",
-            "valor": "",
-            "siafiEncontrados": []
-          }
-        ]
+        "dossieRessarcimento": []
       },
       "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
     },
@@ -1471,7 +1475,7 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "2026-03-25",
       "OBSERVACOES": "[Prazo Identificado via Análise Textual]: Determinação identificada com prazo de 15 dias (prazo de 15 (quinze) dias).",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 21:50:49",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:25:01",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": "R$ 45.230,00",
@@ -1590,17 +1594,17 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 21:50:59",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:39:14",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": null,
-        "recomendacoes": [
-          "1.7. Determinações/Recomendações/Orientações: não há."
-        ],
+        "recomendacoes": [],
         "determinacoes": [
-          "1.7. Determinações/Recomendações/Orientações: não há."
+          "Arquivar o processo"
         ],
-        "darCiencia": [],
+        "darCiencia": [
+          "Comunicar o Acórdão ao Ministério do Trabalho e Emprego"
+        ],
         "determinaArquivamento": true,
         "dossieRessarcimento": []
       },
@@ -1834,18 +1838,14 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 21:51:17",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:54:17",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": "R$ 45.230,00",
-        "recomendacoes": [
-          "1.8. Determinações/Recomendações/Orientações: não há."
-        ],
-        "determinacoes": [
-          "1.8. Determinações/Recomendações/Orientações: não há."
-        ],
+        "recomendacoes": [],
+        "determinacoes": [],
         "darCiencia": [],
-        "determinaArquivamento": true,
+        "determinaArquivamento": false,
         "dossieRessarcimento": []
       },
       "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
@@ -2306,15 +2306,15 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 21:51:54",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:54:39",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": "R$ 45.230,00",
-        "recomendacoes": [
-          "1.8. Determinações/Recomendações/Orientações: não há."
-        ],
+        "recomendacoes": [],
         "determinacoes": [
-          "1.8. Determinações/Recomendações/Orientações: não há."
+          "Declarar a nulidade da citação da empresa Comercial Reparos e atos subsequentes relacionados ao Acórdão 400/2011-TCU-Plenário.",
+          "Excluir a empresa Comercial Reparos da relação processual.",
+          "Restituir os autos ao Segesc para providências cabíveis."
         ],
         "darCiencia": [],
         "determinaArquivamento": false,
@@ -3019,18 +3019,19 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "08/07/2026, 21:52:47",
+      "ULTIMA_ATUALIZACAO": "09/07/2026, 21:40:24",
       "aiAnalysisData": {
         "temDebitoFinanceiro": true,
         "valoresRestituir": null,
-        "recomendacoes": [
-          "1.7. Determinações/Recomendações/Orientações: não há."
-        ],
+        "recomendacoes": [],
         "determinacoes": [
-          "1.7. Determinações/Recomendações/Orientações: não há."
+          "Arquivar os presentes autos ante o reconhecimento da prescrição das pretensões punitiva e de ressarcimento"
         ],
-        "darCiencia": [],
-        "determinaArquivamento": false,
+        "darCiencia": [
+          "Encaminhar cópia da deliberação aos responsáveis",
+          "Encaminhar cópia da deliberação ao Ministério do Trabalho e Emprego"
+        ],
+        "determinaArquivamento": true,
         "dossieRessarcimento": []
       },
       "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."

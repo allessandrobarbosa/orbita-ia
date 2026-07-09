@@ -41,10 +41,11 @@ export function extractTcuDataNativo(textoAcordao: string) {
   const paragraphs = textoAcordao.split(/\n+/);
   
   let inAcordamSection = false;
+  const collectedDocs: Array<{ nome: string; cpf: string }> = [];
+  const collectedValores: string[] = [];
 
-  for (let i = 0; i < paragraphs.length; i++) {
-    const p = paragraphs[i].trim();
-    if (!p) continue;
+  for (const p of paragraphs) {
+    if (!p.trim()) continue;
     const pLower = p.toLowerCase();
 
     // Marcar quando entramos na seção de deliberação real
@@ -52,86 +53,81 @@ export function extractTcuDataNativo(textoAcordao: string) {
       inAcordamSection = true;
     }
 
-    // --- EXTRAÇÃO DO CHECKLIST ---
-    if (inAcordamSection) {
-      // Determinações
-      if (dictionary.keywordsDeterminacoes.some((kw: string) => pLower.includes(kw.toLowerCase()))) {
-        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("determinar")) {
-          determinacoes.push(p);
-        }
-      }
-      
-      // Recomendações
-      if (dictionary.keywordsRecomendacoes.some((kw: string) => pLower.includes(kw.toLowerCase()))) {
-        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("recomendar")) {
-          recomendacoes.push(p);
-        }
-      }
-      
-      // Dar Ciência
-      if (dictionary.keywordsDarCiencia.some((kw: string) => pLower.includes(kw.toLowerCase()))) {
-        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("dar ciência")) {
-          darCiencia.push(p);
-        }
-      }
-
-      // Arquivamento
+    
+    // --- EXTRAÇÃO DE CHECKLIST ---
+    if (dictionary.keywordsDeterminacoes.some((kw: string) => pLower.includes(kw.toLowerCase()))) {
+      if (!determinacoes.includes(p)) determinacoes.push(p);
+    }
+    if (dictionary.keywordsRecomendacoes.some((kw: string) => pLower.includes(kw.toLowerCase()))) {
+      if (!recomendacoes.includes(p)) recomendacoes.push(p);
+    }
+    if (dictionary.keywordsDarCiencia.some((kw: string) => pLower.includes(kw.toLowerCase()))) {
+      if (!darCiencia.includes(p)) darCiencia.push(p);
+    }
+    if (!determinaArquivamento) {
       if (dictionary.keywordsArquivamento.some((kw: string) => pLower.includes(kw.toLowerCase()))) {
         determinaArquivamento = true;
       }
     }
 
     // --- EXTRAÇÃO DE RESPONSÁVEIS E DÉBITO ---
-    // Checa se o parágrafo menciona condenação/ressarcimento
     const isCondenacao = dictionary.keywordsResponsaveis.some((kw: string) => pLower.includes(kw.toLowerCase()));
     
     if (isCondenacao) {
-      // Extrair valores (ex: R$ 1.500,00)
-      const valorMatch = p.match(/R\$\s*[\d\.,]+/g);
-      const valorStr = valorMatch ? valorMatch[0] : "";
-      
-      // Extrair CPF (ex: 111.222.333-44)
-      const cpfMatch = p.match(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/);
-      // Extrair CNPJ (ex: 11.222.333/0001-44)
-      const cnpjMatch = p.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/);
-      
-      const doc = cpfMatch ? cpfMatch[0] : (cnpjMatch ? cnpjMatch[0] : "");
+      // Coleta todos os valores do parágrafo
+      const valorMatches = p.match(/R\$\s*[\d\.,]+/g) || [];
+      valorMatches.forEach((v: string) => collectedValores.push(v));
 
-      // Tentar pegar o nome (heurística simples: texto em caixa alta antes do CPF ou após a palavra "responsabilidade de")
-      let nome = "Responsável não identificado";
-      if (doc) {
-        // Pega as palavras ao redor do documento (geralmente é o nome)
-        const parts = p.split(doc);
-        if (parts[0]) {
-          const words = parts[0].trim().split(" ");
-          // Pega as últimas 3 a 4 palavras antes do CPF/CNPJ que iniciam com maiúscula
+      const extractDocs = (regex: RegExp) => {
+        let match;
+        while ((match = regex.exec(p)) !== null) {
+          const doc = match[0];
+          let nome = "Responsável não identificado";
+          
+          const textBefore = p.substring(0, match.index);
+          const words = textBefore.trim().split(" ");
           const capWords = [];
           for (let w = words.length - 1; w >= 0; w--) {
             const word = words[w].replace(/[^a-zA-ZáéíóúãõçÁÉÍÓÚÃÕÇ]/g, "");
+            const wordLower = word.toLowerCase();
+            if (wordLower === "cpf" || wordLower === "cnpj") continue;
+            
             if (word && word[0] === word[0].toUpperCase() && word.length > 2) {
               capWords.unshift(word);
             } else if (capWords.length > 0) {
-              break; // Parar se encontrar uma palavra minúscula (ex: "do", "de")
+              break;
             }
           }
           if (capWords.length > 1) {
             nome = capWords.join(" ");
           }
+          collectedDocs.push({ nome, cpf: doc });
         }
-      }
+      };
 
-      if (valorStr || doc) {
-        // Evitar duplicidade básica
-        const exists = responsaveis.find(r => r.cpf === doc && r.valor === valorStr);
-        if (!exists) {
-          responsaveis.push({
-            nome,
-            cpf: doc,
-            valor: valorStr
-          });
-        }
+      extractDocs(/\b(?:[Xx\*]{3}|\d{3})\.(?:[Xx\*]{3}|\d{3})\.(?:[Xx\*]{3}|\d{3})-(?:[Xx\*]{2}|\d{2})\b/g);
+      extractDocs(/\b(?:[Xx\*]{2}|\d{2})\.(?:[Xx\*]{3}|\d{3})\.(?:[Xx\*]{3}|\d{3})\/\d{4}-(?:[Xx\*]{2}|\d{2})\b/g);
+    }
+  }
+
+  // Consolidar responsáveis encontrados com o maior/primeiro valor encontrado
+  if (collectedDocs.length > 0) {
+    const mainValor = collectedValores.length > 0 ? collectedValores[0] : "";
+    for (const d of collectedDocs) {
+      if (!responsaveis.find((r: any) => r.cpf === d.cpf)) {
+        responsaveis.push({
+          nome: d.nome,
+          cpf: d.cpf,
+          valor: mainValor
+        });
       }
     }
+  } else if (collectedValores.length > 0) {
+    responsaveis.push({
+      nome: "Responsável não identificado",
+      cpf: "",
+      valor: collectedValores[0]
+    });
   }
 
   return {
