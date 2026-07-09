@@ -6,6 +6,7 @@ import readline from "readline";
 import { Readable } from "stream";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import session from "express-session";
 import pg from "pg";
@@ -74,6 +75,7 @@ import {
 } from "./src/types";
 import { SEED_COMUNICACOES } from "./src/data/seed_comunicacoes";
 import { SEED_CGU } from "./src/data/seed_cgu";
+import { extractTcuDataNativo } from "./src/services/TcuNativeAgent";
 import { 
   SEED_ETICA_MEMBROS, SEED_ETICA_REUNIOES, SEED_ETICA_ATAS, SEED_ETICA_PROCESSOS 
 } from "./src/data/seed_etica";
@@ -1616,16 +1618,33 @@ function parseCsvStream(
 
 // Helper function to download an online CSV to a temporary file in TCU_DIR
 async function downloadTempCsv(year: number): Promise<string | null> {
-  const tempPath = path.join(TCU_DIR, `temp-acordao-completo-${year}.csv`);
+  const tempPath = path.join(TCU_DIR, `cache-acordao-completo-${year}.csv`);
+  
   if (fs.existsSync(tempPath)) {
-    return tempPath;
+    const currentYear = new Date().getFullYear();
+    if (year < currentYear) {
+      console.log(`[TCU CSV] Found permanent cache for consolidated year ${year}.`);
+      return tempPath;
+    }
+    
+    // For current year, check if older than 7 days
+    const stats = fs.statSync(tempPath);
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    if (now - stats.mtimeMs < sevenDaysMs) {
+      console.log(`[TCU CSV] Found valid 7-day cache for current year ${year}.`);
+      return tempPath;
+    } else {
+      console.log(`[TCU CSV] Cache for current year ${year} expired. Re-downloading...`);
+    }
   }
 
   const onlineUrl = `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/acordao-completo/acordao-completo-${year}.csv`;
   console.log(`[TCU CSV] Downloading ${onlineUrl} to temporary file ${tempPath}...`);
   
+  const inProgressPath = tempPath + ".tmp";
   try {
-    const fileStream = fs.createWriteStream(tempPath);
+    const fileStream = fs.createWriteStream(inProgressPath);
     await new Promise<void>((resolve, reject) => {
       https.get(onlineUrl, (response) => {
         if (response.statusCode !== 200) {
@@ -1638,17 +1657,19 @@ async function downloadTempCsv(year: number): Promise<string | null> {
           resolve();
         });
       }).on("error", (err) => {
-        fs.unlink(tempPath, () => {});
+        fs.unlink(inProgressPath, () => {});
         reject(err);
       });
     });
     
+    // Rename to final name only when download completes successfully
+    fs.renameSync(inProgressPath, tempPath);
     console.log(`[TCU CSV] Download completed for year ${year}.`);
     return tempPath;
   } catch (err: any) {
     console.error(`[TCU CSV] Failed to download temporary CSV for year ${year}:`, err.message);
-    if (fs.existsSync(tempPath)) {
-      try { fs.unlinkSync(tempPath); } catch {}
+    if (fs.existsSync(inProgressPath)) {
+      try { fs.unlinkSync(inProgressPath); } catch {}
     }
     return null;
   }
@@ -3258,6 +3279,10 @@ async function startServer() {
 
           const rawAcordao = rawItem.ACORDAO;
           const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
+          
+          let needsGeneration = !cleanedAcordao || cleanedAcordao.length < 100;
+          let isSimulated = false;
+          let finalAcordaoText = cleanedAcordao;
 
           if (needsGeneration) {
             console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
@@ -3548,22 +3573,7 @@ async function startServer() {
       }
       res.json({ success: true, results, updatedAcordaos: db.acordaos });
     } finally {
-      if (fs.existsSync(TCU_DIR)) {
-        try {
-          const files = fs.readdirSync(TCU_DIR);
-          const tempFiles = files.filter(f => f.startsWith("temp-acordao-completo-") && f.endsWith(".csv"));
-          for (const file of tempFiles) {
-            try {
-              fs.unlinkSync(path.join(TCU_DIR, file));
-              console.log(`[TCU CSV] Deleted temporary file: ${file}`);
-            } catch (e) {
-              console.error(`[TCU CSV] Failed to delete temporary file ${file}:`, e);
-            }
-          }
-        } catch (e) {
-          console.error(`[TCU CSV] Error during directory cleanup:`, e);
-        }
-      }
+      // Cache logic is managed automatically now
     }
   });
 
@@ -3731,7 +3741,8 @@ async function startServer() {
                 RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
                 PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : (deadlineResult.deadline || ""),
                 OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : deadlineResult.description,
-                ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
+                ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR"),
+                aiAnalysisData: null
               };
 
               if (existingIndex >= 0) {
@@ -3978,6 +3989,267 @@ async function startServer() {
       relatedDocs,
       updatedAcordaos: db.acordaos
     });
+  });
+
+async function extractTcuDataWithGemini(acordaoText: string) {
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "MY_GEMINI_API_KEY" || process.env.GEMINI_API_KEY.trim() === "") {
+    console.log("[Gemini AI] Chave não configurada, usando fallback nativo.");
+    return extractTcuDataNativo(acordaoText);
+  }
+  
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: `Você é um analista experiente do TCU. Leia atentamente o inteiro teor do acórdão abaixo e extraia as seguintes informações no formato JSON EXATO estipulado, e nada mais.
+
+O JSON DEVE ter a seguinte estrutura:
+{
+  "responsaveis": [
+    {
+      "nome": "Nome da pessoa física ou jurídica condenada",
+      "cpf": "CPF ou CNPJ extraído do texto, com pontuação",
+      "valor": "Valor do débito/multa (ex: R$ 1.500,00)"
+    }
+  ],
+  "checklist": {
+    "determinacoes": ["Lista de determinações curtas e concisas"],
+    "recomendacoes": ["Lista de recomendações curtas e concisas"],
+    "darCiencia": ["Lista das ciências dadas curtas e concisas"],
+    "determinaArquivamento": true ou false
+  }
+}
+
+Regras:
+1. "responsaveis": Extraia quem foi condenado em débito, a pagar multa ou aplicar ressarcimento, bem como os valores. Se não houver, retorne [].
+2. "checklist": Sintetize e resuma as determinações (itens que iniciam com 'determinar...'), recomendações (itens que iniciam com 'recomendar...') e os itens de 'dar ciência' de forma concisa. Se não houver, retorne [].
+3. "determinaArquivamento": Retorne true apenas se o Acórdão determinar explicitamente o arquivamento dos autos.
+4. Responda APENAS com o JSON, sem nenhum bloco de markdown extra (sem \`\`\`json).
+
+Texto do Acórdão:
+${acordaoText.slice(0, 15000)}`
+    });
+
+    let resText = response.text?.trim() || "{}";
+    if (resText.startsWith("```json")) resText = resText.substring(7);
+    if (resText.startsWith("```")) resText = resText.substring(3);
+    if (resText.endsWith("```")) resText = resText.substring(0, resText.length - 3);
+    resText = resText.trim();
+
+    return JSON.parse(resText);
+  } catch (e) {
+    console.error("[Gemini AI] Checklist extração falhou, fallback para nativo.", e);
+    return extractTcuDataNativo(acordaoText);
+  }
+}
+
+  app.post("/api/acordaos/:key/analisar-ressarcimento", async (req, res) => {
+    const { key } = req.params;
+    const db = loadDatabase();
+    const acordao = db.acordaos.find((x: any) => x.KEY === key);
+
+    if (!acordao) {
+      return res.status(404).json({ error: "Acórdão não encontrado." });
+    }
+
+    if (!acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
+      return res.status(400).json({ error: "Este acórdão não possui o Inteiro Teor para ser analisado." });
+    }
+
+    try {
+      let aiResultJson;
+
+      // Extract via Native AI Engine
+      try {
+        aiResultJson = await extractTcuDataWithGemini(acordao.ACORDAO);
+      } catch (err) {
+        console.error("Erro no extrator:", err);
+        return res.status(500).json({ error: "Falha na extração de dados." });
+      }
+
+      // Query SIAFI/SIAPE for the extracted entities
+      const dossieResponsaveis = [];
+      let client;
+      try {
+        client = await govHubPool.connect();
+      } catch (err) {
+        // Fallback silencioso (ou aviso simples sem stack trace)
+        console.warn("[Aviso] Banco GovHub/SIAFI indisponível. Resultados da conciliação virão vazios.");
+      }
+
+      for (const resp of (aiResultJson.responsaveis || [])) {
+        let cleanCpf = resp.cpf ? resp.cpf.replace(/[^0-9]/g, "") : "";
+        let siafiMatches = [];
+
+        if (client) {
+          try {
+            const searchRes = await client.query(`
+              SELECT 
+                siafi.*, 
+                siape.nome as nome_beneficiario,
+                siape.orgao,
+                siape.situacao_funcional
+              FROM siafi
+              LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf
+              WHERE 
+                siape.nome ILIKE $1 
+                OR (length($2) > 2 AND siafi.cpf_beneficiario LIKE '%' || $2 || '%')
+              LIMIT 5
+            `, [`%${resp.nome}%`, cleanCpf]);
+            siafiMatches = searchRes.rows;
+          } catch (dbErr) {
+            console.error("[SIAFI/GovHub Search] erro no pipeline IA:", dbErr);
+          }
+        }
+
+        dossieResponsaveis.push({
+          ...resp,
+          siafiEncontrados: siafiMatches
+        });
+      }
+      if (client) client.release();
+
+      // Atualizar o acordao e salvar
+      if (!acordao.aiAnalysisData) acordao.aiAnalysisData = {};
+      acordao.aiAnalysisData.dossieRessarcimento = dossieResponsaveis;
+      
+      // Update the checklist based on the new rigorous AI extraction
+      if (aiResultJson.checklist) {
+        acordao.aiAnalysisData.determinacoes = aiResultJson.checklist.determinacoes || [];
+        acordao.aiAnalysisData.recomendacoes = aiResultJson.checklist.recomendacoes || [];
+        acordao.aiAnalysisData.darCiencia = aiResultJson.checklist.darCiencia || [];
+        acordao.aiAnalysisData.determinaArquivamento = !!aiResultJson.checklist.determinaArquivamento;
+      }
+
+      // Salva ou sobrescreve a situação se houver algum ressarcimento consolidado (no SIAFI mock confirmation == true)
+      const hasRessarcimento = dossieResponsaveis.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
+      if (hasRessarcimento) {
+        acordao.STATUS_MONITORAMENTO = "Cumprido";
+        acordao.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
+      }
+      
+      saveDatabase(db);
+
+      return res.json({
+        success: true,
+        dossie: dossieResponsaveis,
+        checklist: aiResultJson.checklist || null
+      });
+
+    } catch (error: any) {
+      console.error("[AI Dossie] Erro:", error);
+      return res.status(500).json({ error: "Falha na análise de inteligência artificial.", details: error.message });
+    }
+  });
+
+  app.post("/api/acordaos/aprender", (req, res) => {
+    const { tipo, palavra } = req.body; // tipo: "determinacoes", "recomendacoes", "responsaveis", etc
+    if (!tipo || !palavra) {
+      return res.status(400).json({ error: "Faltam parâmetros tipo ou palavra." });
+    }
+
+    const DICT_PATH = path.join(DATA_DIR, "orbita_dictionary.json");
+    try {
+      let dict: any = {};
+      if (fs.existsSync(DICT_PATH)) {
+        dict = JSON.parse(fs.readFileSync(DICT_PATH, "utf-8"));
+      }
+
+      const key = `keywords${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+      if (!dict[key]) {
+        dict[key] = [];
+      }
+
+      const kw = palavra.toLowerCase().trim();
+      if (!dict[key].includes(kw)) {
+        dict[key].push(kw);
+        fs.writeFileSync(DICT_PATH, JSON.stringify(dict, null, 2), "utf-8");
+      }
+
+      return res.json({ success: true, message: `Expressão '${kw}' aprendida com sucesso para ${tipo}!` });
+    } catch (err: any) {
+      console.error("Erro ao aprender nova palavra:", err);
+      return res.status(500).json({ error: "Falha ao salvar no dicionário." });
+    }
+  });
+
+  app.post("/api/acordaos/:key/auditoria-profunda", async (req, res) => {
+    const { key } = req.params;
+    const db = loadDatabase();
+    const acordao = db.acordaos.find((x: any) => x.KEY === key);
+
+    if (!acordao || !acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
+      return res.status(400).json({ error: "Acórdão não encontrado ou sem inteiro teor." });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: "Chave da API do Groq não configurada." });
+    }
+
+    try {
+      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+      const textChunk = acordao.ACORDAO.substring(0, 20000); // 20k chars
+
+      const prompt = `
+# ROLE E OBJETIVO
+Você é o motor de extração semântica e análise de conformidade do sistema ÓRBITA. Sua função primária é atuar como um especialista em Controle Interno, auditoria pública e prestação de contas governamentais. Você deve processar textos não estruturados (Acórdãos do TCU, relatórios de auditoria, processos administrativos) e extrair pontualmente entidades, jargões e valores associados a irregularidades financeiras e processos sancionatórios.
+
+# DICIONÁRIO SEMENTE (BASE DE CONHECIMENTO)
+Você deve utilizar as seguintes categorias e termos como suas âncoras de busca textual e análise de contexto:
+
+1. DANO AO ERÁRIO E TIPIFICAÇÕES:
+Dano ao Erário, Superfaturamento, Sobrepreço, Desfalque, Desvio de finalidade, Desvio de objeto, Malversação de recursos públicos, Locupletamento ilícito, Pagamento indevido, Pagamento antecipado, Inexecução contratual, Omissão no dever de prestar contas, Não comprovação da regular aplicação dos recursos, Ato antieconômico, Enriquecimento ilícito, Fraude à licitação, Conluio, Desperdício de recursos.
+
+2. RITOS DA TOMADA DE CONTAS ESPECIAL (TCE):
+Tomada de Contas Especial, Nexo de causalidade, Nexo causal, Fato gerador, Citação, Audiência, Diligência, Revelia, Matriz de Responsabilização, Responsável solidário, Responsável subsidiário, Contas julgadas irregulares, Contas regulares com ressalva, Contas ilíquidas, Prescrição intercorrente, Prescrição da pretensão punitiva, Arquivamento sem julgamento de mérito, Baixa materialidade, Gestor faltoso, Fase interna da TCE, Fase externa da TCE.
+
+3. EXECUÇÃO FINANCEIRA (SIAFI):
+SIAFI, Unidade Gestora (UG), Nota de Empenho (NE), Liquidação da despesa, Ordem Bancária (OB), Restos a Pagar (RAP), Suprimento de Fundos, Conta Única do Tesouro Nacional, DARF, GRU, Conformidade de Gestão, Conformidade Documental, Termo de Execução Descentralizada (TED), Convênio, Contrato de Repasse, Programa de Trabalho Resumido (PTRES), Natureza de Despesa (ND), Nota de Lançamento (NL).
+
+4. SANÇÕES:
+Imputação de Débito, Atualização monetária, Juros de mora, Multa do art. 57, Multa do art. 58, Inabilitação para função de confiança, Declaração de inidoneidade, Arresto de bens, Indisponibilidade de bens, Desconsideração da personalidade jurídica, Inscrição no CADIN, Inscrição na Dívida Ativa da União.
+
+# DIRETRIZES DE EXTRAÇÃO E EXPANSÃO SEMÂNTICA
+1. EXTRAÇÃO EXATA: Identifique e extraia qualquer termo do texto que corresponda exatamente ao Dicionário Semente. Busque correlacionar esses termos com valores monetários (R$), datas e nomes de responsáveis (Pessoa Física ou Jurídica) próximos a eles no texto.
+2. EXPANSÃO DINÂMICA (THRESHOLD DE SIMILARIDADE): Ao ler o texto, se você identificar uma palavra ou expressão desconhecida, mas que possua altíssima similaridade semântica (confiança superior a 90%) com qualquer termo do Dicionário Semente, você deve:
+   a) Extrair o termo novo.
+   b) Classificá-lo sob a categoria da âncora correspondente.
+   c) Sinalizar a nova expressão com a tag [SUGESTÃO_DE_EXPANSÃO] para validação posterior da equipe de controle interno.
+3. PREVENÇÃO DE DESVIO SEMÂNTICO (SEMANTIC DRIFT): Ignore jargões administrativos genéricos (ex: "erro", "atraso", "documento") que tenham similaridade semântica abaixo de 90% com as âncoras. Mantenha o rigor técnico exigido em auditorias públicas.
+
+# FORMATO DE SAÍDA (OUTPUT)
+Ao processar um bloco de texto, retorne os dados estritamente em formato estruturado JSON, sem blocos markdown (sem \`\`\`json), contendo as chaves:
+{
+  "entidades_encontradas": [],
+  "valores_associados": [],
+  "responsaveis_identificados": [],
+  "termos_para_expansao": [],
+  "resumo_do_achado": "Texto"
+}
+
+Texto do Acórdão:
+${textChunk}`;
+
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.3-70b-versatile',
+      });
+      
+      let rawResponse = chatCompletion.choices[0]?.message?.content || "";
+      let aiResultJson;
+      try {
+        const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : "{}";
+        aiResultJson = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        console.error("Failed to parse Groq response:", rawResponse);
+        return res.status(500).json({ error: "Falha na análise profunda da IA.", details: "A IA retornou um formato inválido." });
+      }
+      return res.json({ success: true, data: aiResultJson });
+    } catch (err: any) {
+      console.error("[Deep AI] Erro:", err);
+      return res.status(500).json({ error: "Falha na análise profunda da IA.", details: err.message });
+    }
   });
 
 // API 4: Rol de Responsáveis - GET & CRUD
@@ -4479,6 +4751,44 @@ async function startServer() {
       // Fallback to simulated on connection failure
       const data = generateSimulatedViagens(dataIdaDe, dataIdaAte);
       return res.json({ success: true, isSimulated: true, data, warning: "Falha de conexão com a API da CGU. Exibindo dados simulados." });
+    }
+  });
+
+  // API: Buscar no SIAFI/SIAPE por Nome ou CPF Mascarado
+  app.post("/api/siafi/search", async (req, res) => {
+    const { query } = req.body;
+    if (!query) {
+      return res.status(400).json({ success: false, error: "Parâmetro 'query' é obrigatório." });
+    }
+
+    try {
+      const client = await govHubPool.connect();
+      // Se for um CPF mascarado (ex: ***.123.456-**), extraímos apenas os números centrais para a busca
+      const cleanCpf = query.replace(/[^0-9]/g, "");
+
+      const searchRes = await client.query(`
+        SELECT 
+          siafi.*, 
+          siape.nome as nome_beneficiario,
+          siape.orgao,
+          siape.situacao_funcional
+        FROM siafi
+        LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf
+        WHERE 
+          siape.nome ILIKE $1 
+          OR (length($2) > 2 AND siafi.cpf_beneficiario LIKE '%' || $2 || '%')
+        LIMIT 50
+      `, [`%${query}%`, cleanCpf]);
+
+      client.release();
+      return res.json({ success: true, data: searchRes.rows });
+    } catch (err: any) {
+      console.error("[SIAFI Search] Erro ao buscar dados:", err);
+      return res.status(500).json({ 
+        success: false, 
+        error: "Erro ao acessar banco de dados do GovHub. Verifique se o container PostgreSQL está rodando com os dados do SIAFI/SIAPE.", 
+        details: err.message 
+      });
     }
   });
 

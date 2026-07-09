@@ -3,6 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+// Estrutura de Extração Semântica IA
+export interface AiAnalysisData {
+  temDebitoFinanceiro: boolean;
+  valoresRestituir: string | null;
+  recomendacoes: string[];
+  determinacoes: string[];
+  darCiencia: string[];
+  determinaArquivamento: boolean;
+}
+
 // TCU Acórdão Demand Item (combining Government Data elements and Internal Action items)
 export interface AcordaoDemand {
   // Fields from TCU's official data dictionary (as in image)
@@ -25,6 +35,9 @@ export interface AcordaoDemand {
   SUMARIO?: string;
   ACORDAO?: string; // full text
   DECISAO?: string;
+  RECOMENDACOES?: string;
+  DETERMINACOES?: string;
+  RECOMENDACOES_DETERMINACOES_UNIFICADO?: string;
 
   // Operational internal monitoring fields
   STATUS_MONITORAMENTO: 'Pendente' | 'Em Análise' | 'Cumprido' | 'Atrasado';
@@ -32,6 +45,9 @@ export interface AcordaoDemand {
   PRAZO_LIMITE: string; // YYYY-MM-DD
   OBSERVACOES: string;
   ULTIMA_ATUALIZACAO: string; // YYYY-MM-DD HH:MM
+
+  // AI Extracted Semantic Metadata
+  aiAnalysisData?: AiAnalysisData;
 }
 
 // Rol de Responsáveis (IN 84 do TCU)

@@ -38,7 +38,10 @@ import {
   Building2,
   ArrowLeftRight,
   Archive,
-  RefreshCw
+  Sparkles,
+  Bot,
+  RefreshCw,
+  Brain
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
 
@@ -302,13 +305,52 @@ export default function TcuModule({
 
   // Pure sanitized memory collections to auto-repair previous session corruptions transparently
   const acordaos = React.useMemo(() => {
-    return rawAcordaos.map(ac => ({
-      ...ac,
-      TITULO: sanitizePortugueseText(ac.TITULO),
-      ASSUNTO: sanitizePortugueseText(ac.ASSUNTO),
-      SUMARIO: sanitizePortugueseText(ac.SUMARIO),
-      ACORDAO: sanitizePortugueseText(ac.ACORDAO)
-    }));
+    const errors: { id: string; error: string }[] = [];
+
+    const processed = rawAcordaos
+      .filter(ac => ac && (ac.NUMACORDAO || ac.TITULO || ac.KEY || ac.PROC))
+      .map(ac => {
+      try {
+        const tituloSanitizado = sanitizePortugueseText(ac.TITULO);
+        const assuntoSanitizado = sanitizePortugueseText(ac.ASSUNTO);
+        const sumarioSanitizado = sanitizePortugueseText(ac.SUMARIO);
+        const acordaoSanitizado = sanitizePortugueseText(ac.ACORDAO);
+
+        const recs = sanitizePortugueseText(ac.RECOMENDACOES || "");
+        const dets = sanitizePortugueseText(ac.DETERMINACOES || "");
+
+        let unificado = "";
+        if (recs && dets) {
+          unificado = `**Recomendações:**\n${recs}\n\n**Determinações:**\n${dets}`;
+        } else if (recs) {
+          unificado = `**Recomendações:**\n${recs}`;
+        } else if (dets) {
+          unificado = `**Determinações:**\n${dets}`;
+        } else {
+          unificado = "Nenhuma recomendação ou determinação registrada.";
+        }
+
+        return {
+          ...ac,
+          TITULO: tituloSanitizado,
+          ASSUNTO: assuntoSanitizado,
+          SUMARIO: sumarioSanitizado,
+          ACORDAO: acordaoSanitizado,
+          RECOMENDACOES_DETERMINACOES_UNIFICADO: unificado
+        };
+      } catch (error: any) {
+        console.error(`Erro ao processar Acórdão ${ac.KEY || ac.NUMACORDAO}:`, error);
+        errors.push({ id: ac.KEY || String(ac.NUMACORDAO), error: error.message });
+        
+        return {
+          ...ac,
+          RECOMENDACOES_DETERMINACOES_UNIFICADO: "Erro ao processar recomendações/determinações."
+        };
+      }
+    });
+
+    setTimeout(() => setProcessErrors(errors), 0);
+    return processed;
   }, [rawAcordaos]);
 
   // Format any input value into standard BRL currency format (R$ XX.XXX,XX)
@@ -365,7 +407,10 @@ export default function TcuModule({
   }, [rawComunicacoes]);
   
   // UI states
+  const [processErrors, setProcessErrors] = useState<{ id: string; error: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const [tcuActiveSection, setTcuActiveSection] = useState<"monitoramento" | "comunicacoes" | "tce">("monitoramento");
 
   React.useEffect(() => {
@@ -380,6 +425,8 @@ export default function TcuModule({
   const [anoFilter, setAnoFilter] = useState("TODOS");
   const [prazoFilter, setPrazoFilter] = useState("TODOS");
   const [tipoProcessoFilter, setTipoProcessoFilter] = useState("TODOS");
+  const [ressarcimentoFilter, setRessarcimentoFilter] = useState("TODOS");
+  const [recomendacaoFilter, setRecomendacaoFilter] = useState("TODOS");
   const [selectedAcordao, setSelectedAcordao] = useState<AcordaoDemand | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
@@ -416,6 +463,9 @@ export default function TcuModule({
   const [favorecidoInput, setFavorecidoInput] = useState("");
   const [favorecidoDocsResult, setFavorecidoDocsResult] = useState<any[] | null>(null);
   const [isSearchingFavorecido, setIsSearchingFavorecido] = useState(false);
+  const [isAnalyzingAi, setIsAnalyzingAi] = useState<Record<string, boolean>>({});
+  const [isDeepAiLoading, setIsDeepAiLoading] = useState(false);
+  const [deepAiResult, setDeepAiResult] = useState<any>(null);
   const [searchMode, setSearchMode] = useState<"documento" | "favorecido">("documento");
 
   // Communications module states
@@ -1289,16 +1339,32 @@ export default function TcuModule({
     setIsVerifying(true);
     setVerifyResult(null);
     try {
-      const response = await fetch("/api/acordaos/verificar-ressarcimento", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: ac.KEY, documentoNumero: docNum })
-      });
+      // Integração direta com API Docker local (Porta 8080)
+      let response;
+      try {
+        response = await fetch("http://localhost:8080/api/siafi/consultar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: ac.KEY, cpf_cnpj: docNum })
+        });
+      } catch (dockerErr) {
+        console.warn("API Docker em localhost:8080 não acessível. Tentando fallback local (server.ts).", dockerErr);
+      }
+
+      // Se a resposta for 404/500 ou der erro de rede, usar fallback
+      if (!response || !response.ok) {
+        response = await fetch("/api/acordaos/verificar-ressarcimento", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key: ac.KEY, documentoNumero: docNum })
+        });
+      }
+
       const data = await response.json();
       if (data.success) {
         setVerifyResult(data);
-        const updated = data.updatedAcordaos.find((x: any) => x.KEY === ac.KEY);
-        if (updated) {
+        const updated = data.updatedAcordaos ? data.updatedAcordaos.find((x: any) => x.KEY === ac.KEY) : ac;
+        if (updated && onUpdateAcordao) {
           onUpdateAcordao(updated);
         }
       }
@@ -1332,6 +1398,137 @@ export default function TcuModule({
       console.error(err);
     } finally {
       setIsSearchingFavorecido(false);
+    }
+  };
+
+  const handleBatchProcessAi = async () => {
+    // 1. Encontrar todos os acórdãos que ainda não possuem dossieRessarcimento
+    const pendentes = acordaos.filter(ac => !ac.aiAnalysisData?.dossieRessarcimento);
+    if (pendentes.length === 0) {
+      alert("Todos os Acórdãos já possuem Dossiê IA gerado!");
+      return;
+    }
+
+    const confirmar = window.confirm(`Foram encontrados ${pendentes.length} Acórdãos pendentes de extração em lote.\n\nO processamento ocorrerá de forma instantânea através do nosso Agente Nativo local, sem limites ou bloqueios.\n\nDeseja iniciar?`);
+    if (!confirmar) return;
+
+    setIsBatchProcessing(true);
+    setBatchProgress({ current: 0, total: pendentes.length });
+
+    for (let i = 0; i < pendentes.length; i++) {
+      const ac = pendentes[i];
+      setBatchProgress({ current: i + 1, total: pendentes.length });
+      
+      try {
+        const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          const updatedAc = { ...ac };
+          if (!updatedAc.aiAnalysisData) updatedAc.aiAnalysisData = {} as any;
+          (updatedAc.aiAnalysisData as any).dossieRessarcimento = data.dossie;
+          if (data.checklist) {
+            updatedAc.aiAnalysisData.determinacoes = data.checklist.determinacoes || [];
+            updatedAc.aiAnalysisData.recomendacoes = data.checklist.recomendacoes || [];
+            updatedAc.aiAnalysisData.darCiencia = data.checklist.darCiencia || [];
+            updatedAc.aiAnalysisData.determinaArquivamento = !!data.checklist.determinaArquivamento;
+          }
+          const hasRessarcimento = data.dossie.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
+          if (hasRessarcimento) {
+            updatedAc.STATUS_MONITORAMENTO = "Cumprido";
+            updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
+          }
+          // Removemos onUpdateAcordao do loop para a tela não piscar e engasgar!
+        } else {
+          console.error(`Falha no Acórdão ${ac.KEY}:`, data.error);
+          if (data.error && data.error.includes("429")) {
+            alert(`O Google Gemini bloqueou temporariamente por excesso de requisições (Limite atingido no item ${i + 1}). O processamento foi pausado. Tente novamente em 1 minuto!`);
+            break; // Stop the loop on rate limit!
+          }
+        }
+      } catch (err) {
+        console.error(`Erro ao processar lote no Acórdão ${ac.KEY}:`, err);
+        alert(`Erro de conexão ao processar o item ${i + 1}. O lote foi pausado para evitar perda de dados.`);
+        break; // Stop the loop on network error!
+      }
+
+      // Evitar que o sistema faça logout por inatividade
+      window.dispatchEvent(new Event('mousemove'));
+      
+      // Pequeno respiro pro React atualizar a barra de progresso
+      if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
+    }
+
+    if (onSyncLocalAcordaos) {
+      await onSyncLocalAcordaos();
+    }
+    
+    setIsBatchProcessing(false);
+    alert("✨ Processamento em Lote concluído com sucesso!");
+  };
+
+  const handleAnalyzeDossieAI = async (ac: AcordaoDemand) => {
+    setIsAnalyzingAi(prev => ({ ...prev, [ac.KEY]: true }));
+    try {
+      const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await response.json();
+      if (data.success) {
+        const updatedAc = { ...ac };
+        if (!updatedAc.aiAnalysisData) updatedAc.aiAnalysisData = {} as any;
+        (updatedAc.aiAnalysisData as any).dossieRessarcimento = data.dossie;
+        
+        if (data.checklist) {
+          updatedAc.aiAnalysisData.determinacoes = data.checklist.determinacoes || [];
+          updatedAc.aiAnalysisData.recomendacoes = data.checklist.recomendacoes || [];
+          updatedAc.aiAnalysisData.darCiencia = data.checklist.darCiencia || [];
+          updatedAc.aiAnalysisData.determinaArquivamento = !!data.checklist.determinaArquivamento;
+        }
+        
+        // Se a IA encontrou pagamento, também muda o status (mesma lógica do backend)
+        const hasRessarcimento = data.dossie.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
+        if (hasRessarcimento) {
+          updatedAc.STATUS_MONITORAMENTO = "Cumprido";
+          updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
+        }
+        
+        if (onUpdateAcordao) {
+          await onUpdateAcordao(updatedAc);
+        }
+      } else {
+        alert(data.error || "Falha na análise.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao comunicar com o servidor de Inteligência Artificial.");
+    } finally {
+      setIsAnalyzingAi(prev => ({ ...prev, [ac.KEY]: false }));
+    }
+  };
+
+  const handleDeepAiAudit = async (acKey: string) => {
+    setIsDeepAiLoading(true);
+    setDeepAiResult(null);
+    try {
+      const response = await fetch(`/api/acordaos/${acKey}/auditoria-profunda`, {
+        method: "POST"
+      });
+      const result = await response.json();
+      if (result.success) {
+        setDeepAiResult(result.data);
+      } else {
+        alert(result.error || "Falha na auditoria profunda.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao comunicar com a IA (Auditoria Profunda).");
+    } finally {
+      setIsDeepAiLoading(false);
     }
   };
 
@@ -1399,6 +1596,21 @@ export default function TcuModule({
     new Set(acordaos.map(ac => ac.TIPOPROCESSO).filter(Boolean))
   ).sort() as string[];
 
+  const hasValoresARessarcir = (ac: AcordaoDemand) => {
+    if (ac.aiAnalysisData) return ac.aiAnalysisData.temDebitoFinanceiro;
+    if (parsedTceMappingItems && parsedTceMappingItems.length > 0) {
+      const isMapped = parsedTceMappingItems.some(m => m.ACORDAO_REF && (m.ACORDAO_REF.includes(ac.NUMACORDAO.toString()) || m.ACORDAO_REF.includes(ac.KEY)));
+      if (isMapped) return true;
+    }
+    const textToScan = ((ac.SUMARIO || "") + " " + (ac.ACORDAO || "")).toLowerCase();
+    return /débito|ressarcimento|recolher aos cofres|tesouro nacional|condenar em débito/.test(textToScan);
+  };
+
+  const hasRecomendacoes = (ac: AcordaoDemand) => {
+    if (ac.aiAnalysisData) return ac.aiAnalysisData.recomendacoes.length > 0 || ac.aiAnalysisData.determinacoes.length > 0;
+    return !!ac.RECOMENDACOES_DETERMINACOES_UNIFICADO && ac.RECOMENDACOES_DETERMINACOES_UNIFICADO !== "Nenhuma recomendação ou determinação registrada.";
+  };
+
   // Filter logic
   const filteredAcordaos = acordaos.filter(ac => {
     const term = searchTerm.toLowerCase();
@@ -1416,8 +1628,20 @@ export default function TcuModule({
       prazoFilter === "COM_PRAZO" ? !!ac.PRAZO_LIMITE : !ac.PRAZO_LIMITE
     );
     const matchesTipoProcesso = tipoProcessoFilter === "TODOS" || ac.TIPOPROCESSO === tipoProcessoFilter;
+    
+    const matchesRessarcimento = ressarcimentoFilter === "TODOS" || 
+      (ressarcimentoFilter === "COM_VALORES" ? hasValoresARessarcir(ac) : 
+        (ressarcimentoFilter === "SEM_VALORES" ? !hasValoresARessarcir(ac) :
+          (ressarcimentoFilter === "PENDENTE_REGULARIZACAO" ? 
+            (ac.aiAnalysisData?.dossieRessarcimento?.length > 0 && ac.STATUS_MONITORAMENTO !== "Cumprido") : false
+          )
+        )
+      );
 
-    return matchesSearch && matchesStatus && matchesColegiado && matchesAno && matchesPrazo && matchesTipoProcesso;
+    const matchesRecomendacao = recomendacaoFilter === "TODOS" ||
+      (recomendacaoFilter === "COM_RECOMENDACAO" ? hasRecomendacoes(ac) : !hasRecomendacoes(ac));
+
+    return matchesSearch && matchesStatus && matchesColegiado && matchesAno && matchesPrazo && matchesTipoProcesso && matchesRessarcimento && matchesRecomendacao;
   });
 
   // Pagination calculation
@@ -1595,6 +1819,29 @@ export default function TcuModule({
               </button>
 
               <button 
+                id="btn-batch-process-ai"
+                onClick={handleBatchProcessAi}
+                disabled={isBatchProcessing}
+                className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  isBatchProcessing
+                    ? "bg-[#1351b4]/60 cursor-not-allowed text-white shadow-xs"
+                    : "bg-[#1351b4] text-white hover:bg-[#0f4396] shadow-sm"
+                }`}
+              >
+                {isBatchProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Processando ({batchProgress.current}/{batchProgress.total})...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-4 h-4" />
+                    Executar IA em Massa (Pendentes)
+                  </>
+                )}
+              </button>
+
+              <button 
                 id="btn-export-excel"
                 onClick={handleExportExcel}
                 className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
@@ -1669,6 +1916,25 @@ export default function TcuModule({
 
       {tcuActiveSection === "monitoramento" && (
         <>
+          {processErrors.length > 0 && (
+            <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-md flex items-start shadow-sm">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-red-800 font-bold text-sm">Atenção: Inconsistência no processamento de dados</h3>
+                <p className="text-red-700 text-xs mt-1">
+                  Encontramos erros ao processar as Recomendações e Determinações de {processErrors.length} acórdão(s).
+                </p>
+                <ul className="mt-2 text-xs text-red-600 list-disc list-inside">
+                  {processErrors.slice(0, 5).map(err => (
+                    <li key={err.id}>Acórdão ID/Key: <span className="font-semibold">{err.id}</span> - {err.error}</li>
+                  ))}
+                  {processErrors.length > 5 && (
+                    <li>... e mais {processErrors.length - 5} acórdão(s).</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
 
       {/* TCU Acórdão Importer Section - Premium Bento Box */}
       {showImporter && (
@@ -1942,9 +2208,38 @@ export default function TcuModule({
             </select>
           </div>
 
+          <div className="flex items-center gap-1.5 text-xs text-slate-600">
+            <span className="font-semibold text-slate-550">Ressarcimento:</span>
+            <select
+              id="select-filter-ressarcimento"
+              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
+              value={ressarcimentoFilter}
+              onChange={(e) => { setRessarcimentoFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="TODOS">Todos</option>
+              <option value="COM_VALORES">Com Débito / Valores</option>
+              <option value="SEM_VALORES">Sem Valores</option>
+              <option value="PENDENTE_REGULARIZACAO">Pendente de Regularização (Não achou SIAFI)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs text-slate-600">
+            <span className="font-semibold text-slate-550">Recomendações:</span>
+            <select
+              id="select-filter-recomendacao"
+              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
+              value={recomendacaoFilter}
+              onChange={(e) => { setRecomendacaoFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="TODOS">Todos</option>
+              <option value="COM_RECOMENDACAO">Possui Determinação/Recomendação</option>
+              <option value="SEM_RECOMENDACAO">Sem Ações</option>
+            </select>
+          </div>
+
           <button
             id="btn-reset-filters"
-            onClick={() => { setSearchTerm(""); setStatusFilter("TODOS"); setColegiadoFilter("TODOS"); setAnoFilter("TODOS"); }}
+            onClick={() => { setSearchTerm(""); setStatusFilter("TODOS"); setColegiadoFilter("TODOS"); setAnoFilter("TODOS"); setRessarcimentoFilter("TODOS"); setRecomendacaoFilter("TODOS"); }}
             className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition"
           >
             Limpar Filtros
@@ -1978,7 +2273,7 @@ export default function TcuModule({
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-              {isLoading ? (
+              {isLoading && filteredAcordaos.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-slate-400 font-sans">
                     Sincronizando dados com repositório remoto da AECI...
@@ -2088,17 +2383,17 @@ export default function TcuModule({
 
                               {/* Meta fields breakdown */}
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-white border p-3 rounded-xl shadow-2xs">
-                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5">Tipo Processo</span>
-                                  <span className="text-xs text-slate-800 font-semibold">{ac.TIPOPROCESSO || "Não especificado"}</span>
+                                <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
+                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5 shrink-0">Tipo Processo</span>
+                                  <div className="text-xs text-slate-800 font-semibold max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.TIPOPROCESSO || "Não especificado"}</div>
                                 </div>
-                                <div className="bg-white border p-3 rounded-xl shadow-2xs">
-                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5">Entidade Interessada</span>
-                                  <span className="text-xs text-slate-800 font-semibold">{ac.ENTIDADE || "MTE"}</span>
+                                <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
+                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5 shrink-0">Entidade Interessada</span>
+                                  <div className="text-xs text-slate-800 font-semibold max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.ENTIDADE || "MTE"}</div>
                                 </div>
-                                <div className="bg-white border p-3 rounded-xl shadow-2xs">
-                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5">Acórdãos Relacionados</span>
-                                  <span className="text-xs text-slate-800 font-mono">{ac.ACORDAOSRELACIONADOS || "Nenhum"}</span>
+                                <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
+                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5 shrink-0">Acórdãos Relacionados</span>
+                                  <div className="text-xs text-slate-800 font-mono max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.ACORDAOSRELACIONADOS || "Nenhum"}</div>
                                 </div>
                               </div>
 
@@ -2112,6 +2407,66 @@ export default function TcuModule({
                                 <p className="text-xs text-slate-700 mt-1.5 leading-relaxed font-sans">{ac.SUMARIO || "Não informado."}</p>
                               </div>
 
+                              {/* Recomendações e Determinações (Unificadas / IA) */}
+                              {ac.aiAnalysisData ? (
+                                <div className="bg-gradient-to-br from-[#003366]/5 to-transparent p-4.5 rounded-xl border border-[#003366]/20 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#003366]/5 rounded-full -mr-4 -mt-4 pointer-events-none"></div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <FileCheck className="w-4 h-4 text-[#003366]" />
+                                    <span className="text-[10px] text-[#003366] block uppercase font-extrabold tracking-wider">
+                                      Checklist Extraído por IA (Inteiro Teor)
+                                    </span>
+                                  </div>
+                                  <div className="space-y-4">
+                                    {(ac.aiAnalysisData.determinacoes?.length > 0) && (
+                                      <div>
+                                        <span className="text-[9px] font-bold text-rose-700 uppercase mb-1 block tracking-widest">Determinações</span>
+                                        <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
+                                          {ac.aiAnalysisData.determinacoes.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {(ac.aiAnalysisData.recomendacoes?.length > 0) && (
+                                      <div>
+                                        <span className="text-[9px] font-bold text-orange-700 uppercase mb-1 block tracking-widest">Recomendações</span>
+                                        <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
+                                          {ac.aiAnalysisData.recomendacoes.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {(ac.aiAnalysisData.darCiencia?.length > 0) && (
+                                      <div>
+                                        <span className="text-[9px] font-bold text-blue-700 uppercase mb-1 block tracking-widest">Dar Ciência</span>
+                                        <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
+                                          {ac.aiAnalysisData.darCiencia.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {ac.aiAnalysisData.determinaArquivamento && (
+                                      <div className="inline-flex items-center gap-1 bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold uppercase mt-2">
+                                        ✓ Determina Arquivamento
+                                      </div>
+                                    )}
+                                    {!(ac.aiAnalysisData.determinacoes?.length) && !(ac.aiAnalysisData.recomendacoes?.length) && !(ac.aiAnalysisData.darCiencia?.length) && !ac.aiAnalysisData.determinaArquivamento && (
+                                      <span className="text-xs text-slate-500">Nenhuma ação técnica identificada pela IA neste documento.</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || ac.RECOMENDACOES || ac.DETERMINACOES) && (
+                                <div className="bg-gradient-to-br from-[#003366]/5 to-transparent p-4.5 rounded-xl border border-[#003366]/20 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#003366]/5 rounded-full -mr-4 -mt-4 pointer-events-none"></div>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <FileCheck className="w-4 h-4 text-[#003366]" />
+                                    <span className="text-[10px] text-[#003366] block uppercase font-extrabold tracking-wider">
+                                      Recomendações e Determinações
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-slate-800 leading-relaxed font-sans whitespace-pre-wrap">
+                                    {ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || "Nenhuma recomendação ou determinação registrada."}
+                                  </div>
+                                </div>
+                              )}
+
                               {/* Document content */}
                               <div className="space-y-1">
                                 <div className="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider flex justify-between items-center mb-1">
@@ -2119,7 +2474,10 @@ export default function TcuModule({
                                   <div className="flex items-center gap-2">
                                     <button 
                                       type="button"
-                                      onClick={() => setFullTextAcordao(ac)}
+                                      onClick={() => {
+                                        setDeepAiResult(null);
+                                        setFullTextAcordao(ac);
+                                      }}
                                       className="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer border border-blue-200 font-sans"
                                     >
                                       <ExternalLink className="w-3 h-3" /> Visualizar em Tela Cheia (Popup)
@@ -2133,7 +2491,10 @@ export default function TcuModule({
                                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent h-12 flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button 
                                         type="button"
-                                        onClick={() => setFullTextAcordao(ac)}
+                                        onClick={() => {
+                                          setDeepAiResult(null);
+                                          setFullTextAcordao(ac);
+                                        }}
                                         className="bg-[#1351b4] text-white hover:bg-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md transition flex items-center gap-1 cursor-pointer font-sans"
                                       >
                                         <ExternalLink className="w-3 h-3" /> Expandir para Leitura Completa
@@ -2144,7 +2505,12 @@ export default function TcuModule({
                               </div>
 
                               {/* Verification Panel (SIAFI / Portal da Transparência) */}
-                              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 no-print">
+                              <div className={`p-4 rounded-xl border space-y-3 no-print transition-all duration-300 ${hasValoresARessarcir(ac) ? "bg-orange-50/50 border-orange-200 ring-2 ring-orange-100 shadow-sm" : "bg-slate-50 border-slate-200"}`}>
+                                {hasValoresARessarcir(ac) && (
+                                  <div className="flex items-center gap-1.5 mb-2 bg-orange-100 text-orange-800 w-fit px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                                    <AlertCircle className="w-3.5 h-3.5" /> Possível Débito ao Tesouro Nacional
+                                  </div>
+                                )}
                                 <div className="flex items-center justify-between">
                                   <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center gap-1.5">
                                     <Scale className="w-3.5 h-3.5 text-blue-600" />
@@ -2155,189 +2521,71 @@ export default function TcuModule({
                                   </span>
                                 </div>
                                 
-                                {/* Search Mode Tabs */}
-                                <div className="flex gap-2 border-b border-slate-200 pb-2">
+                                <div className="pt-2">
                                   <button
-                                    type="button"
-                                    onClick={() => { setSearchMode("documento"); setVerifyResult(null); setFavorecidoDocsResult(null); }}
-                                    className={`px-3 py-1 text-xs rounded-lg font-bold transition cursor-pointer ${searchMode === "documento" ? "bg-[#003366] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                                    onClick={() => handleAnalyzeDossieAI(ac)}
+                                    disabled={isAnalyzingAi[ac.KEY]}
+                                    className="w-full sm:w-auto px-4 py-2 bg-[#1351b4] text-white hover:bg-blue-800 disabled:bg-[#1351b4]/50 rounded-lg font-bold text-xs inline-flex items-center justify-center gap-2 transition cursor-pointer font-sans h-[36px] shadow-sm whitespace-nowrap"
                                   >
-                                    Por Documento (Empenho / OB)
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => { setSearchMode("favorecido"); setVerifyResult(null); setFavorecidoDocsResult(null); }}
-                                    className={`px-3 py-1 text-xs rounded-lg font-bold transition cursor-pointer ${searchMode === "favorecido" ? "bg-[#003366] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-                                  >
-                                    Por Favorecido / Sancionado (CPF/CNPJ)
+                                    {isAnalyzingAi[ac.KEY] ? (
+                                      <><RefreshCw className="w-4 h-4 animate-spin" /> Analisando Acórdão...</>
+                                    ) : (
+                                      <><Sparkles className="w-4 h-4" /> Gerar Dossiê Inteligente (IA)</>
+                                    )}
                                   </button>
                                 </div>
-                                
-                                {searchMode === "documento" ? (
-                                  <div className="flex flex-col sm:flex-row gap-3 items-end">
-                                    <div className="flex-1 space-y-1">
-                                      <label className="text-[9px] text-slate-450 uppercase font-extrabold tracking-wider">
-                                        Número do Empenho (NE) ou Ordem Bancária (OB) Relacionada
-                                      </label>
-                                      <input
-                                        type="text"
-                                        className="w-full bg-white border border-slate-250 rounded-lg p-2 text-xs focus:ring-1 focus:ring-[#003366] focus:outline-hidden"
-                                        placeholder="Ex: 2026NE000123 ou 2026OB800456..."
-                                        value={docVerifyInput}
-                                        onChange={(e) => setDocVerifyInput(e.target.value)}
-                                      />
-                                    </div>
-                                    <button
-                                      onClick={() => handleVerifyRessarcimento(ac)}
-                                      disabled={isVerifying || !docVerifyInput.trim()}
-                                      className="px-4 py-2 bg-[#003366] text-white hover:bg-blue-800 disabled:bg-slate-355 rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer font-sans h-[34px]"
-                                    >
-                                      {isVerifying ? (
-                                        <>Consultando...</>
-                                      ) : (
-                                        <>
-                                          <Search className="w-3.5 h-3.5" /> Verificar no SIAFI
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div className="space-y-3">
-                                    {/* Suggestions */}
-                                    {(() => {
-                                      const idents = getAcordaoIdentifiers(ac);
-                                      if (idents.length === 0) return null;
-                                      return (
-                                        <div className="text-[11px] text-slate-500 bg-slate-100/50 p-2.5 rounded-lg border border-slate-200">
-                                          <span className="font-bold text-slate-650 block mb-1">Identificadores localizados no texto do Acórdão:</span>
-                                          <div className="flex flex-wrap gap-1.5 mt-1">
-                                            {idents.map((id, idx) => (
-                                              <span 
-                                                key={idx} 
-                                                onClick={() => {
-                                                  if (!id.includes("*")) {
-                                                    setFavorecidoInput(id);
-                                                  } else {
-                                                    setFavorecidoInput(id.replace(/\*/g, ""));
-                                                  }
-                                                }}
-                                                className="bg-white border border-slate-250 px-2 py-0.5 rounded-md font-mono text-[10px] hover:bg-slate-50 cursor-pointer text-slate-700 hover:text-slate-900 transition font-bold"
-                                                title="Clique para preencher"
-                                              >
-                                                {id}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      );
-                                    })()}
 
-                                    <div className="flex flex-col sm:flex-row gap-3 items-end">
-                                      <div className="flex-1 space-y-1">
-                                        <label className="text-[9px] text-slate-450 uppercase font-extrabold tracking-wider">
-                                          CPF ou CNPJ do Sancionado / Favorecido
-                                        </label>
-                                        <input
-                                          type="text"
-                                          className="w-full bg-white border border-slate-250 rounded-lg p-2 text-xs focus:ring-1 focus:ring-[#003366] focus:outline-hidden"
-                                          placeholder="Ex: 000.000.000-00 ou CNPJ..."
-                                          value={favorecidoInput}
-                                          onChange={(e) => setFavorecidoInput(e.target.value)}
-                                        />
-                                      </div>
-                                      <button
-                                        onClick={() => handleSearchFavorecido(ac)}
-                                        disabled={isSearchingFavorecido || !favorecidoInput.trim()}
-                                        className="px-4 py-2 bg-[#003366] text-white hover:bg-blue-800 disabled:bg-slate-355 rounded-lg font-bold text-xs inline-flex items-center gap-1.5 transition cursor-pointer font-sans h-[34px]"
-                                      >
-                                        {isSearchingFavorecido ? (
-                                          <>Buscando...</>
-                                        ) : (
-                                          <>
-                                            <Search className="w-3.5 h-3.5" /> Buscar Documentos
-                                          </>
-                                        )}
-                                      </button>
+                                {ac.aiAnalysisData?.dossieRessarcimento && (
+                                  <div className="bg-[#1351b4]/5 border border-[#1351b4]/20 p-3 rounded-lg mt-3">
+                                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#1351b4]/20">
+                                      <Bot className="w-4 h-4 text-[#1351b4]" />
+                                      <span className="font-bold text-[#1351b4] text-xs">Dossiê Inteligente de Ressarcimento (IA)</span>
                                     </div>
-
-                                    {/* Mismatch Warning */}
-                                    {favorecidoInput.trim() && (() => {
-                                      const idents = getAcordaoIdentifiers(ac);
-                                      const isValid = isIdentifierInList(favorecidoInput, idents);
-                                      if (idents.length > 0 && !isValid) {
-                                        return (
-                                          <div className="bg-amber-50 border border-amber-250 p-2.5 rounded-lg text-[10px] text-amber-800 flex items-start gap-1.5 font-sans">
-                                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                                            <div>
-                                              <strong>Atenção:</strong> O CPF/CNPJ digitado não consta nos registros de responsáveis/interessados deste acórdão. A busca no SIAFI pode retornar registros não relacionados a este monitoramento.
+                                    
+                                    {ac.aiAnalysisData.dossieRessarcimento.length === 0 ? (
+                                      <div className="text-xs text-slate-600 italic">A inteligência artificial não identificou condenação em débito ou devolução de valores no inteiro teor deste acórdão.</div>
+                                    ) : (
+                                      <div className="space-y-3">
+                                        {ac.aiAnalysisData.dossieRessarcimento.map((resp: any, i: number) => (
+                                          <div key={i} className="bg-white p-2.5 rounded border border-[#1351b4]/20 shadow-sm text-xs">
+                                            <div className="flex justify-between items-start mb-2">
+                                              <div>
+                                                <div className="font-bold text-slate-800">{resp.nome}</div>
+                                                <div className="text-[10px] text-slate-500 font-mono mt-0.5">CPF/CNPJ Identificado: {resp.cpf || "Não extraído"}</div>
+                                              </div>
+                                              <div className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100">
+                                                Débito: {resp.valor}
+                                              </div>
+                                            </div>
+                                            
+                                            <div className="mt-2 pt-2 border-t border-slate-100">
+                                              <span className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Resultado da Busca no SIAFI</span>
+                                              {!resp.siafiEncontrados || resp.siafiEncontrados.length === 0 ? (
+                                                <div className="text-[10px] text-slate-500 flex items-center gap-1"><AlertCircle className="w-3 h-3 text-slate-400"/> Nenhum registro correspondente encontrado no SIAFI com este Nome/CPF.</div>
+                                              ) : (
+                                                <div className="space-y-1.5">
+                                                  {resp.siafiEncontrados.map((s: any, sIdx: number) => (
+                                                    <div key={sIdx} className="flex items-center justify-between bg-slate-50 p-1.5 rounded text-[10px]">
+                                                      <div>
+                                                        <div className="font-mono text-slate-700">{s.cpf_beneficiario || "CPF Omitido"}</div>
+                                                        <div className="text-slate-500">{s.status_descricao || "Status Indisponível"}</div>
+                                                      </div>
+                                                      <div>
+                                                        {s.confirmado ? (
+                                                          <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-1"><Check className="w-3 h-3"/> GRU Confirmada</span>
+                                                        ) : (
+                                                          <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">Pendente / Outro</span>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
                                             </div>
                                           </div>
-                                        );
-                                      }
-                                      return null;
-                                    })()}
-                                  </div>
-                                )}
-
-                                {searchMode === "favorecido" && favorecidoDocsResult && (
-                                  <div className="bg-white border p-3 rounded-lg space-y-2 text-xs">
-                                    <span className="font-bold text-slate-700 block border-b pb-1.5">Empenhos e Pagamentos Localizados para o Sancionado:</span>
-                                    <div className="space-y-1.5 max-h-44 overflow-y-auto scrollbar-thin">
-                                      {favorecidoDocsResult.map((doc: any, dIdx: number) => (
-                                        <div key={dIdx} className="flex justify-between items-center py-2 hover:bg-slate-50/50 rounded px-1 border-b border-slate-100 last:border-b-0">
-                                          <div>
-                                            <span className="font-mono font-bold text-[#003366]">{doc.documento}</span>
-                                            <span className="text-[10px] text-slate-450 block">{doc.fase} • {doc.orgao} • {doc.data}</span>
-                                          </div>
-                                          <div className="flex items-center gap-3">
-                                            <span className="font-bold text-slate-800">R$ {Number(doc.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                setDocVerifyInput(doc.documento);
-                                                handleVerifyRessarcimentoDirect(doc.documento, ac);
-                                              }}
-                                              className="px-2.5 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded font-bold text-[10px] transition cursor-pointer"
-                                            >
-                                              Verificar Relacionados (SIAFI)
-                                            </button>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {verifyResult && (
-                                  <div className="bg-white border p-3 rounded-lg space-y-2 text-xs">
-                                    <div className="flex items-center justify-between border-b pb-1.5">
-                                      <span className="font-bold text-slate-700">Documentos Relacionados Encontrados para {verifyResult.documentoNumero}:</span>
-                                      {verifyResult.isSimulated && (
-                                        <span className="text-[9px] text-amber-600 bg-amber-50 border border-amber-250 px-1.5 py-0.2 rounded font-semibold font-sans">
-                                          Resultado Simulado
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="space-y-1.5">
-                                      {verifyResult.relatedDocs.map((doc: any, dIdx: number) => (
-                                        <div key={dIdx} className="flex justify-between items-center py-1 hover:bg-slate-50/50 rounded px-1">
-                                          <div>
-                                            <span className="font-mono font-bold text-slate-800">{doc.documento}</span>
-                                            <span className="text-[10px] text-slate-405 block">{doc.fase} • {doc.orgao} • Favorecido: {doc.favorecido}</span>
-                                          </div>
-                                          <div className="text-right">
-                                            <span className="font-bold text-slate-800 block">R$ {Number(doc.valor).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                                            <span className="text-[10px] text-slate-405 block">{doc.data}</span>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                    <div className="mt-2 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] text-emerald-800 flex items-center gap-1.5">
-                                      <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                                      <div>
-                                        <strong>Ressarcimento Conciliado!</strong> Guia de Recolhimento da União (GRU) identificada e conciliada com sucesso no SIAFI. O status do acórdão foi atualizado para <strong>Cumprido</strong>.
+                                        ))}
                                       </div>
-                                    </div>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -4399,7 +4647,10 @@ export default function TcuModule({
                                             <div className="flex justify-end pt-2">
                                               <button
                                                 type="button"
-                                                onClick={() => setFullTextAcordao(item.acordao)}
+                                                onClick={() => {
+                                                  setDeepAiResult(null);
+                                                  setFullTextAcordao(item.acordao);
+                                                }}
                                                 className="px-4 py-2 bg-[#1351b4] hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-3xs"
                                               >
                                                 <FileText className="w-4 h-4" />
@@ -4593,6 +4844,19 @@ export default function TcuModule({
               <div className="flex justify-end items-center gap-2">
                 <button
                   type="button"
+                  disabled={isDeepAiLoading}
+                  onClick={() => handleDeepAiAudit(fullTextAcordao.KEY)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+                    isDeepAiLoading
+                      ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed"
+                      : "bg-[#1351b4]/5 border-[#1351b4]/30 hover:bg-[#1351b4]/10 text-[#1351b4]"
+                  }`}
+                >
+                  <Brain className="w-3.5 h-3.5" />
+                  {isDeepAiLoading ? "Analisando..." : "Auditoria Semântica Profunda"}
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     const rawText = fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "O inteiro teor para este acórdão ainda não foi baixado.";
                     navigator.clipboard.writeText(rawText).then(() => {
@@ -4620,6 +4884,16 @@ export default function TcuModule({
                 </button>
               </div>
             </div>
+
+            {/* Deep AI Results Panel */}
+            {deepAiResult && (
+              <div className="bg-[#1351b4]/5 border-b border-[#1351b4]/20 px-6 py-4 flex-shrink-0 max-h-64 overflow-y-auto">
+                <h4 className="text-[#1351b4] font-bold text-sm mb-2 flex items-center gap-2">
+                  <Brain className="w-4 h-4" /> Resultado da Auditoria Semântica
+                </h4>
+                <p className="text-xs text-slate-800 font-medium mb-3">{deepAiResult.resumo_do_achado || "Resumo não gerado."}</p>
+              </div>
+            )}
 
             {/* Modal Content Scroll Area */}
             <div className="p-6 overflow-y-auto bg-slate-950 text-slate-100 flex-1 font-mono text-[11.5px] whitespace-pre-line leading-relaxed scrollbar-thin">
