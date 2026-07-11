@@ -432,7 +432,7 @@ export default function ScdpModule() {
   return (
     <div className="space-y-6 font-sans select-all-normal text-slate-800">
       {/* 1. Sticky Header & Filter Panel */}
-      <div className="sticky top-0 z-20 bg-slate-50/95 backdrop-blur-md pb-4 pt-2 border-b border-slate-200/80 shadow-3xs -mx-6 px-6 no-print space-y-4">
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
         {/* Header Oficial Gov.br */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>

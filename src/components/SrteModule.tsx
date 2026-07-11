@@ -271,21 +271,23 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
   };
 
   // Map and calculate all counts and risk status dynamically for consistency
-  const calculatedSrtes = superintendencias.map(s => {
-    const tcuCount = findRelatedAcordaos(s.uf, s.capital, acordaos).length;
-    const cguCount = getDynamicCguRecommendations(s.uf).length;
-    const comCount = findRelatedComunicacoes(s.uf, s.capital, comunicacoes).length;
-    const tceCount = findRelatedTces(s.uf, s.capital, tces).length;
-    
-    return {
-      ...s,
-      demandasTCU: tcuCount,
-      demandasCGU: cguCount,
-      demandasComunicacoes: comCount,
-      demandasTces: tceCount,
-      statusGeral: calculateRisk(tcuCount, cguCount)
-    };
-  });
+  const calculatedSrtes = React.useMemo(() => {
+    return superintendencias.map(s => {
+      const tcuCount = findRelatedAcordaos(s.uf, s.capital, acordaos).length;
+      const cguCount = getDynamicCguRecommendations(s.uf).length;
+      const comCount = findRelatedComunicacoes(s.uf, s.capital, comunicacoes).length;
+      const tceCount = findRelatedTces(s.uf, s.capital, tces).length;
+      
+      return {
+        ...s,
+        demandasTCU: tcuCount,
+        demandasCGU: cguCount,
+        demandasComunicacoes: comCount,
+        demandasTces: tceCount,
+        statusGeral: calculateRisk(tcuCount, cguCount)
+      };
+    });
+  }, [superintendencias, acordaos, comunicacoes, tces]);
 
   // Filter List
   const filteredSrtes = calculatedSrtes.filter(s => {
@@ -317,7 +319,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
     <div className="space-y-6 font-sans">
       
       {/* HUD HEADER */}
-      <div>
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
         <h2 className="text-xl font-bold text-slate-900 font-display flex items-center gap-2">
           <Building2 className="w-6 h-6 text-[#003366]" />
           Superintendências Regionais (SRTEs)

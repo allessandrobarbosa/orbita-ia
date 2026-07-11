@@ -29,6 +29,7 @@ var import_https = __toESM(require("https"), 1);
 var import_readline = __toESM(require("readline"), 1);
 var import_vite = require("vite");
 var import_genai = require("@google/genai");
+var import_groq_sdk = __toESM(require("groq-sdk"), 1);
 var import_dotenv = __toESM(require("dotenv"), 1);
 var import_express_session = __toESM(require("express-session"), 1);
 var import_pg = __toESM(require("pg"), 1);
@@ -379,6 +380,117 @@ var SEED_CGU = [
     ultimaAtualizacao: "28/05/2026 10:15"
   }
 ];
+
+// src/services/TcuNativeAgent.ts
+var fs = __toESM(require("fs"), 1);
+var path = __toESM(require("path"), 1);
+var import_url = require("url");
+var import_meta = {};
+var __filename = (0, import_url.fileURLToPath)(import_meta.url);
+var __dirname = path.dirname(__filename);
+var DICT_PATH = path.join(__dirname, "..", "..", "data", "orbita_dictionary.json");
+function loadDictionary() {
+  try {
+    if (fs.existsSync(DICT_PATH)) {
+      const data = fs.readFileSync(DICT_PATH, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error("Erro ao carregar o dicion\xE1rio:", err);
+  }
+  return {
+    keywordsResponsaveis: [],
+    keywordsDeterminacoes: [],
+    keywordsRecomendacoes: [],
+    keywordsDarCiencia: [],
+    keywordsArquivamento: []
+  };
+}
+function extractTcuDataNativo(textoAcordao) {
+  const dictionary = loadDictionary();
+  const lowerText = textoAcordao.toLowerCase();
+  const responsaveis = [];
+  const determinacoes = [];
+  const recomendacoes = [];
+  const darCiencia = [];
+  let determinaArquivamento = false;
+  const paragraphs = textoAcordao.split(/\n+/);
+  let inAcordamSection = false;
+  for (let i = 0; i < paragraphs.length; i++) {
+    const p = paragraphs[i].trim();
+    if (!p) continue;
+    const pLower = p.toLowerCase();
+    if (pLower.includes("acordam os ministros") || pLower.includes("acordam os integrantes")) {
+      inAcordamSection = true;
+    }
+    if (inAcordamSection) {
+      if (dictionary.keywordsDeterminacoes.some((kw) => pLower.includes(kw.toLowerCase()))) {
+        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("determinar")) {
+          determinacoes.push(p);
+        }
+      }
+      if (dictionary.keywordsRecomendacoes.some((kw) => pLower.includes(kw.toLowerCase()))) {
+        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("recomendar")) {
+          recomendacoes.push(p);
+        }
+      }
+      if (dictionary.keywordsDarCiencia.some((kw) => pLower.includes(kw.toLowerCase()))) {
+        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("dar ci\xEAncia")) {
+          darCiencia.push(p);
+        }
+      }
+      if (dictionary.keywordsArquivamento.some((kw) => pLower.includes(kw.toLowerCase()))) {
+        determinaArquivamento = true;
+      }
+    }
+    const isCondenacao = dictionary.keywordsResponsaveis.some((kw) => pLower.includes(kw.toLowerCase()));
+    if (isCondenacao) {
+      const valorMatch = p.match(/R\$\s*[\d\.,]+/g);
+      const valorStr = valorMatch ? valorMatch[0] : "";
+      const cpfMatch = p.match(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/);
+      const cnpjMatch = p.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/);
+      const doc = cpfMatch ? cpfMatch[0] : cnpjMatch ? cnpjMatch[0] : "";
+      let nome = "Respons\xE1vel n\xE3o identificado";
+      if (doc) {
+        const parts = p.split(doc);
+        if (parts[0]) {
+          const words = parts[0].trim().split(" ");
+          const capWords = [];
+          for (let w = words.length - 1; w >= 0; w--) {
+            const word = words[w].replace(/[^a-zA-ZáéíóúãõçÁÉÍÓÚÃÕÇ]/g, "");
+            if (word && word[0] === word[0].toUpperCase() && word.length > 2) {
+              capWords.unshift(word);
+            } else if (capWords.length > 0) {
+              break;
+            }
+          }
+          if (capWords.length > 1) {
+            nome = capWords.join(" ");
+          }
+        }
+      }
+      if (valorStr || doc) {
+        const exists = responsaveis.find((r) => r.cpf === doc && r.valor === valorStr);
+        if (!exists) {
+          responsaveis.push({
+            nome,
+            cpf: doc,
+            valor: valorStr
+          });
+        }
+      }
+    }
+  }
+  return {
+    responsaveis,
+    checklist: {
+      determinacoes,
+      recomendacoes,
+      darCiencia,
+      determinaArquivamento
+    }
+  };
+}
 
 // src/data/seed_etica.ts
 var SEED_ETICA_MEMBROS = [
@@ -2074,14 +2186,28 @@ function parseCsvStream(stream, onRecord, searchKeys) {
   });
 }
 async function downloadTempCsv(year) {
-  const tempPath = import_path.default.join(TCU_DIR, `temp-acordao-completo-${year}.csv`);
+  const tempPath = import_path.default.join(TCU_DIR, `cache-acordao-completo-${year}.csv`);
   if (import_fs.default.existsSync(tempPath)) {
-    return tempPath;
+    const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
+    if (year < currentYear) {
+      console.log(`[TCU CSV] Found permanent cache for consolidated year ${year}.`);
+      return tempPath;
+    }
+    const stats = import_fs.default.statSync(tempPath);
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1e3;
+    if (now - stats.mtimeMs < sevenDaysMs) {
+      console.log(`[TCU CSV] Found valid 7-day cache for current year ${year}.`);
+      return tempPath;
+    } else {
+      console.log(`[TCU CSV] Cache for current year ${year} expired. Re-downloading...`);
+    }
   }
   const onlineUrl = `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/acordao-completo/acordao-completo-${year}.csv`;
   console.log(`[TCU CSV] Downloading ${onlineUrl} to temporary file ${tempPath}...`);
+  const inProgressPath = tempPath + ".tmp";
   try {
-    const fileStream = import_fs.default.createWriteStream(tempPath);
+    const fileStream = import_fs.default.createWriteStream(inProgressPath);
     await new Promise((resolve, reject) => {
       import_https.default.get(onlineUrl, (response) => {
         if (response.statusCode !== 200) {
@@ -2094,18 +2220,19 @@ async function downloadTempCsv(year) {
           resolve();
         });
       }).on("error", (err) => {
-        import_fs.default.unlink(tempPath, () => {
+        import_fs.default.unlink(inProgressPath, () => {
         });
         reject(err);
       });
     });
+    import_fs.default.renameSync(inProgressPath, tempPath);
     console.log(`[TCU CSV] Download completed for year ${year}.`);
     return tempPath;
   } catch (err) {
     console.error(`[TCU CSV] Failed to download temporary CSV for year ${year}:`, err.message);
-    if (import_fs.default.existsSync(tempPath)) {
+    if (import_fs.default.existsSync(inProgressPath)) {
       try {
-        import_fs.default.unlinkSync(tempPath);
+        import_fs.default.unlinkSync(inProgressPath);
       } catch {
       }
     }
@@ -3417,6 +3544,9 @@ Sua senha provis\xF3ria \xE9: ${provPass}
           const chosenDecisao = rawItem.DECISAO || defaultDecisoes[numAcordao % 3];
           const rawAcordao = rawItem.ACORDAO;
           const cleanedAcordao = rawAcordao ? stripHtmlToText(rawAcordao) : "";
+          let needsGeneration = !cleanedAcordao || cleanedAcordao.length < 100;
+          let isSimulated = false;
+          let finalAcordaoText = cleanedAcordao;
           if (needsGeneration) {
             console.log(`[CSV Import] Attempting to fetch real text for ${numAcordao}/${anoAcordao}...`);
             const apiDoc = await fetchAcordaoFromTCU(numAcordao, anoAcordao);
@@ -3681,22 +3811,6 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       }
       res.json({ success: true, results, updatedAcordaos: db.acordaos });
     } finally {
-      if (import_fs.default.existsSync(TCU_DIR)) {
-        try {
-          const files = import_fs.default.readdirSync(TCU_DIR);
-          const tempFiles = files.filter((f) => f.startsWith("temp-acordao-completo-") && f.endsWith(".csv"));
-          for (const file of tempFiles) {
-            try {
-              import_fs.default.unlinkSync(import_path.default.join(TCU_DIR, file));
-              console.log(`[TCU CSV] Deleted temporary file: ${file}`);
-            } catch (e) {
-              console.error(`[TCU CSV] Failed to delete temporary file ${file}:`, e);
-            }
-          }
-        } catch (e) {
-          console.error(`[TCU CSV] Error during directory cleanup:`, e);
-        }
-      }
     }
   });
   app.post("/api/acordaos/sync-local", async (req, res) => {
@@ -3831,7 +3945,8 @@ Sua senha provis\xF3ria \xE9: ${provPass}
                 RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divis\xE3o de Monitoramento",
                 PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : deadlineResult.deadline || "",
                 OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : deadlineResult.description,
-                ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
+                ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR"),
+                aiAnalysisData: null
               };
               if (existingIndex >= 0) {
                 db.acordaos[existingIndex] = newAcordao;
@@ -3934,7 +4049,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     console.log(`[TCU Finance Check] Searching documents by Favorecido: ${favClean}`);
     const apiKey = process.env.TRANSPARENCIA_API_KEY || "";
     let docs = [];
-    let isSimulated2 = true;
+    let isSimulated = true;
     if (apiKey && apiKey !== "MY_TRANSPARENCIA_API_KEY") {
       try {
         const url = `https://api.portaldatransparencia.gov.br/api-de-dados/despesas/documentos-por-favorecido?codigoFavorecido=${favClean}`;
@@ -3947,14 +4062,14 @@ Sua senha provis\xF3ria \xE9: ${provPass}
         });
         if (response.ok) {
           docs = await response.json();
-          isSimulated2 = false;
+          isSimulated = false;
         }
       } catch (err) {
         console.error("[TCU Finance Check] Error calling Portal da Transpar\xEAncia API (favorecido):", err);
       }
     }
-    if (isSimulated2 || !docs || docs.length === 0) {
-      isSimulated2 = true;
+    if (isSimulated || !docs || docs.length === 0) {
+      isSimulated = true;
       docs = [
         {
           documento: "2026NE000789",
@@ -3976,7 +4091,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     }
     return res.json({
       success: true,
-      isSimulated: isSimulated2,
+      isSimulated,
       codigoFavorecido: favClean,
       docs
     });
@@ -3990,7 +4105,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     console.log(`[TCU Finance Check] Checking related documents for: ${docClean}`);
     const apiKey = process.env.TRANSPARENCIA_API_KEY || "";
     let relatedDocs = [];
-    let isSimulated2 = true;
+    let isSimulated = true;
     if (apiKey && apiKey !== "MY_TRANSPARENCIA_API_KEY") {
       try {
         const url = `https://api.portaldatransparencia.gov.br/api-de-dados/despesas/documentos-relacionados?codigoDocumento=${docClean}`;
@@ -4003,14 +4118,14 @@ Sua senha provis\xF3ria \xE9: ${provPass}
         });
         if (response.ok) {
           relatedDocs = await response.json();
-          isSimulated2 = false;
+          isSimulated = false;
         }
       } catch (err) {
         console.error("[TCU Finance Check] Error calling Portal da Transpar\xEAncia API:", err);
       }
     }
-    if (isSimulated2 || !relatedDocs || relatedDocs.length === 0) {
-      isSimulated2 = true;
+    if (isSimulated || !relatedDocs || relatedDocs.length === 0) {
+      isSimulated = true;
       relatedDocs = [
         {
           fase: "Empenho",
@@ -4045,11 +4160,243 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     }
     return res.json({
       success: true,
-      isSimulated: isSimulated2,
+      isSimulated,
       documentoNumero: docClean,
       relatedDocs,
       updatedAcordaos: db.acordaos
     });
+  });
+  async function extractTcuDataWithGemini(acordaoText) {
+    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "MY_GEMINI_API_KEY" || process.env.GEMINI_API_KEY.trim() === "") {
+      console.log("[Gemini AI] Chave n\xE3o configurada, usando fallback nativo.");
+      return extractTcuDataNativo(acordaoText);
+    }
+    try {
+      const ai = new import_genai.GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `Voc\xEA \xE9 um auditor s\xEAnior do TCU. Leia atentamente o inteiro teor do ac\xF3rd\xE3o abaixo e extraia as informa\xE7\xF5es no formato JSON EXATO estipulado, e nada mais.
+
+O JSON DEVE ter a seguinte estrutura:
+{
+  "responsaveis": [
+    {
+      "nome": "NOME DO RESPONS\xC1VEL. Obrigat\xF3rio. Nunca deixe em branco se houver condena\xE7\xE3o. Ex: Jo\xE3o Alberto Martins Silva, Indesi Brasil.",
+      "cpf": "CPF ou CNPJ extra\xEDdo do texto, com pontua\xE7\xE3o (se houver)",
+      "valor": "Montante total. DEVE SOMAR todos os valores de d\xE9bito originais (frequentemente listados em tabelas ASCII contendo Data e Valor) E todas as multas aplicadas."
+    }
+  ],
+  "checklist": {
+    "determinacoes": ["Lista de determina\xE7\xF5es curtas e concisas"],
+    "recomendacoes": ["Lista de recomenda\xE7\xF5es curtas e concisas"],
+    "darCiencia": ["Lista das ci\xEAncias dadas curtas e concisas"],
+    "determinaArquivamento": true ou false
+  }
+}
+
+Regras ABSOLUTAS:
+1. O NOME DO RESPONS\xC1VEL sempre aparece ANTES ou DEPOIS dos valores. Exemplo: "julgar irregulares as contas do sr. [NOME DO RESPONS\xC1VEL], condenando-o ao pagamento das quantias abaixo discriminadas:" seguido de uma tabela. O nome DEVE ser extra\xEDdo. NUNCA retorne "Respons\xE1vel n\xE3o identificado" se houver um nome no par\xE1grafo da condena\xE7\xE3o.
+2. VALORES EM TABELA: Preste extrema aten\xE7\xE3o em tabelas delimitadas por barras ( | ). Se houver uma tabela com datas e valores (ex: | 18/12/2025 | | 26.674,00 |), voc\xEA DEVE extrair esse valor (26.674,00) e som\xE1-lo.
+3. MULTAS: Se houver multa aplicada (ex: "aplicar ao sr. [NOME] multa no valor de R$ 3.000,00"), esse valor DEVE ser somado ao valor do d\xE9bito da tabela. O valor final no JSON deve refletir a soma ou listar ambos.
+4. S\xF3 retorne "responsaveis": [] se tiver certeza ABSOLUTA que n\xE3o h\xE1 condena\xE7\xE3o de d\xE9bito nem multa.
+5. Responda APENAS com o JSON v\xE1lido, sem \`\`\`json.
+
+Texto do Ac\xF3rd\xE3o:
+${acordaoText.slice(0, 15e3)}`
+      });
+      let resText = response.text?.trim() || "{}";
+      if (resText.startsWith("```json")) resText = resText.substring(7);
+      if (resText.startsWith("```")) resText = resText.substring(3);
+      if (resText.endsWith("```")) resText = resText.substring(0, resText.length - 3);
+      resText = resText.trim();
+      return JSON.parse(resText);
+    } catch (e) {
+      if (e.status === 429 || e.message && e.message.includes("429")) {
+        console.error("[Gemini AI] Quota exceeded (429).");
+        throw e;
+      }
+      console.error("[Gemini AI] Checklist extra\xE7\xE3o falhou, fallback para nativo.", e);
+      return extractTcuDataNativo(acordaoText);
+    }
+  }
+  app.post("/api/acordaos/:key/analisar-ressarcimento", async (req, res) => {
+    const { key } = req.params;
+    const db = loadDatabase();
+    const acordao = db.acordaos.find((x) => x.KEY === key);
+    if (!acordao) {
+      return res.status(404).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado." });
+    }
+    if (!acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
+      return res.status(400).json({ error: "Este ac\xF3rd\xE3o n\xE3o possui o Inteiro Teor para ser analisado." });
+    }
+    try {
+      let aiResultJson;
+      try {
+        aiResultJson = await extractTcuDataWithGemini(acordao.ACORDAO);
+      } catch (err) {
+        console.error("Erro no extrator:", err);
+        if (err.status === 429 || err.message && err.message.includes("429")) {
+          return res.status(429).json({ error: "429 Too Many Requests" });
+        }
+        return res.status(500).json({ error: "Falha na extra\xE7\xE3o de dados." });
+      }
+      const dossieResponsaveis = [];
+      let client;
+      try {
+        client = await govHubPool.connect();
+      } catch (err) {
+        console.warn("[Aviso] Banco GovHub/SIAFI indispon\xEDvel. Resultados da concilia\xE7\xE3o vir\xE3o vazios.");
+      }
+      for (const resp of aiResultJson.responsaveis || []) {
+        let cleanCpf = resp.cpf ? resp.cpf.replace(/[^0-9]/g, "") : "";
+        let siafiMatches = [];
+        if (client) {
+          try {
+            const searchRes = await client.query(`
+              SELECT 
+                siafi.*, 
+                siape.nome as nome_beneficiario,
+                siape.orgao,
+                siape.situacao_funcional
+              FROM siafi
+              LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf
+              WHERE 
+                siape.nome ILIKE $1 
+                OR (length($2) > 2 AND siafi.cpf_beneficiario LIKE '%' || $2 || '%')
+              LIMIT 5
+            `, [`%${resp.nome}%`, cleanCpf]);
+            siafiMatches = searchRes.rows;
+          } catch (dbErr) {
+            console.error("[SIAFI/GovHub Search] erro no pipeline IA:", dbErr);
+          }
+        }
+        dossieResponsaveis.push({
+          ...resp,
+          siafiEncontrados: siafiMatches
+        });
+      }
+      if (client) client.release();
+      if (!acordao.aiAnalysisData) acordao.aiAnalysisData = {};
+      acordao.aiAnalysisData.dossieRessarcimento = dossieResponsaveis;
+      if (aiResultJson.checklist) {
+        acordao.aiAnalysisData.determinacoes = aiResultJson.checklist.determinacoes || [];
+        acordao.aiAnalysisData.recomendacoes = aiResultJson.checklist.recomendacoes || [];
+        acordao.aiAnalysisData.darCiencia = aiResultJson.checklist.darCiencia || [];
+        acordao.aiAnalysisData.determinaArquivamento = !!aiResultJson.checklist.determinaArquivamento;
+      }
+      const hasRessarcimento = dossieResponsaveis.some((r) => r.siafiEncontrados && r.siafiEncontrados.some((s) => s.confirmado === true));
+      if (hasRessarcimento) {
+        acordao.STATUS_MONITORAMENTO = "Cumprido";
+        acordao.OBSERVACOES = "[Atualiza\xE7\xE3o Autom\xE1tica IA]: Ressarcimento identificado nos dados do SIAFI.";
+      }
+      saveDatabase(db);
+      return res.json({
+        success: true,
+        dossie: dossieResponsaveis,
+        checklist: aiResultJson.checklist || null
+      });
+    } catch (error) {
+      console.error("[AI Dossie] Erro:", error);
+      return res.status(500).json({ error: "Falha na an\xE1lise de intelig\xEAncia artificial.", details: error.message });
+    }
+  });
+  app.post("/api/acordaos/aprender", (req, res) => {
+    const { tipo, palavra } = req.body;
+    if (!tipo || !palavra) {
+      return res.status(400).json({ error: "Faltam par\xE2metros tipo ou palavra." });
+    }
+    const DICT_PATH2 = import_path.default.join(DATA_DIR, "orbita_dictionary.json");
+    try {
+      let dict = {};
+      if (import_fs.default.existsSync(DICT_PATH2)) {
+        dict = JSON.parse(import_fs.default.readFileSync(DICT_PATH2, "utf-8"));
+      }
+      const key = `keywords${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+      if (!dict[key]) {
+        dict[key] = [];
+      }
+      const kw = palavra.toLowerCase().trim();
+      if (!dict[key].includes(kw)) {
+        dict[key].push(kw);
+        import_fs.default.writeFileSync(DICT_PATH2, JSON.stringify(dict, null, 2), "utf-8");
+      }
+      return res.json({ success: true, message: `Express\xE3o '${kw}' aprendida com sucesso para ${tipo}!` });
+    } catch (err) {
+      console.error("Erro ao aprender nova palavra:", err);
+      return res.status(500).json({ error: "Falha ao salvar no dicion\xE1rio." });
+    }
+  });
+  app.post("/api/acordaos/:key/auditoria-profunda", async (req, res) => {
+    const { key } = req.params;
+    const db = loadDatabase();
+    const acordao = db.acordaos.find((x) => x.KEY === key);
+    if (!acordao || !acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
+      return res.status(400).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado ou sem inteiro teor." });
+    }
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({ error: "Chave da API do Groq n\xE3o configurada." });
+    }
+    try {
+      const groq = new import_groq_sdk.default({ apiKey: process.env.GROQ_API_KEY });
+      const textChunk = acordao.ACORDAO.substring(0, 2e4);
+      const prompt = `
+# ROLE E OBJETIVO
+Voc\xEA \xE9 o motor de extra\xE7\xE3o sem\xE2ntica e an\xE1lise de conformidade do sistema \xD3RBITA. Sua fun\xE7\xE3o prim\xE1ria \xE9 atuar como um especialista em Controle Interno, auditoria p\xFAblica e presta\xE7\xE3o de contas governamentais. Voc\xEA deve processar textos n\xE3o estruturados (Ac\xF3rd\xE3os do TCU, relat\xF3rios de auditoria, processos administrativos) e extrair pontualmente entidades, jarg\xF5es e valores associados a irregularidades financeiras e processos sancionat\xF3rios.
+
+# DICION\xC1RIO SEMENTE (BASE DE CONHECIMENTO)
+Voc\xEA deve utilizar as seguintes categorias e termos como suas \xE2ncoras de busca textual e an\xE1lise de contexto:
+
+1. DANO AO ER\xC1RIO E TIPIFICA\xC7\xD5ES:
+Dano ao Er\xE1rio, Superfaturamento, Sobrepre\xE7o, Desfalque, Desvio de finalidade, Desvio de objeto, Malversa\xE7\xE3o de recursos p\xFAblicos, Locupletamento il\xEDcito, Pagamento indevido, Pagamento antecipado, Inexecu\xE7\xE3o contratual, Omiss\xE3o no dever de prestar contas, N\xE3o comprova\xE7\xE3o da regular aplica\xE7\xE3o dos recursos, Ato antiecon\xF4mico, Enriquecimento il\xEDcito, Fraude \xE0 licita\xE7\xE3o, Conluio, Desperd\xEDcio de recursos.
+
+2. RITOS DA TOMADA DE CONTAS ESPECIAL (TCE):
+Tomada de Contas Especial, Nexo de causalidade, Nexo causal, Fato gerador, Cita\xE7\xE3o, Audi\xEAncia, Dilig\xEAncia, Revelia, Matriz de Responsabiliza\xE7\xE3o, Respons\xE1vel solid\xE1rio, Respons\xE1vel subsidi\xE1rio, Contas julgadas irregulares, Contas regulares com ressalva, Contas il\xEDquidas, Prescri\xE7\xE3o intercorrente, Prescri\xE7\xE3o da pretens\xE3o punitiva, Arquivamento sem julgamento de m\xE9rito, Baixa materialidade, Gestor faltoso, Fase interna da TCE, Fase externa da TCE.
+
+3. EXECU\xC7\xC3O FINANCEIRA (SIAFI):
+SIAFI, Unidade Gestora (UG), Nota de Empenho (NE), Liquida\xE7\xE3o da despesa, Ordem Banc\xE1ria (OB), Restos a Pagar (RAP), Suprimento de Fundos, Conta \xDAnica do Tesouro Nacional, DARF, GRU, Conformidade de Gest\xE3o, Conformidade Documental, Termo de Execu\xE7\xE3o Descentralizada (TED), Conv\xEAnio, Contrato de Repasse, Programa de Trabalho Resumido (PTRES), Natureza de Despesa (ND), Nota de Lan\xE7amento (NL).
+
+4. SAN\xC7\xD5ES:
+Imputa\xE7\xE3o de D\xE9bito, Atualiza\xE7\xE3o monet\xE1ria, Juros de mora, Multa do art. 57, Multa do art. 58, Inabilita\xE7\xE3o para fun\xE7\xE3o de confian\xE7a, Declara\xE7\xE3o de inidoneidade, Arresto de bens, Indisponibilidade de bens, Desconsidera\xE7\xE3o da personalidade jur\xEDdica, Inscri\xE7\xE3o no CADIN, Inscri\xE7\xE3o na D\xEDvida Ativa da Uni\xE3o.
+
+# DIRETRIZES DE EXTRA\xC7\xC3O E EXPANS\xC3O SEM\xC2NTICA
+1. EXTRA\xC7\xC3O EXATA: Identifique e extraia qualquer termo do texto que corresponda exatamente ao Dicion\xE1rio Semente. Busque correlacionar esses termos com valores monet\xE1rios (R$), datas e nomes de respons\xE1veis (Pessoa F\xEDsica ou Jur\xEDdica) pr\xF3ximos a eles no texto.
+2. EXPANS\xC3O DIN\xC2MICA (THRESHOLD DE SIMILARIDADE): Ao ler o texto, se voc\xEA identificar uma palavra ou express\xE3o desconhecida, mas que possua alt\xEDssima similaridade sem\xE2ntica (confian\xE7a superior a 90%) com qualquer termo do Dicion\xE1rio Semente, voc\xEA deve:
+   a) Extrair o termo novo.
+   b) Classific\xE1-lo sob a categoria da \xE2ncora correspondente.
+   c) Sinalizar a nova express\xE3o com a tag [SUGEST\xC3O_DE_EXPANS\xC3O] para valida\xE7\xE3o posterior da equipe de controle interno.
+3. PREVEN\xC7\xC3O DE DESVIO SEM\xC2NTICO (SEMANTIC DRIFT): Ignore jarg\xF5es administrativos gen\xE9ricos (ex: "erro", "atraso", "documento") que tenham similaridade sem\xE2ntica abaixo de 90% com as \xE2ncoras. Mantenha o rigor t\xE9cnico exigido em auditorias p\xFAblicas.
+
+# FORMATO DE SA\xCDDA (OUTPUT)
+Ao processar um bloco de texto, retorne os dados estritamente em formato estruturado JSON, sem blocos markdown (sem \`\`\`json), contendo as chaves:
+{
+  "entidades_encontradas": [],
+  "valores_associados": [],
+  "responsaveis_identificados": [],
+  "termos_para_expansao": [],
+  "resumo_do_achado": "Texto"
+}
+
+Texto do Ac\xF3rd\xE3o:
+${textChunk}`;
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [{ role: "user", content: prompt }],
+        model: "llama-3.3-70b-versatile"
+      });
+      let rawResponse = chatCompletion.choices[0]?.message?.content || "";
+      let aiResultJson;
+      try {
+        const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : "{}";
+        aiResultJson = JSON.parse(jsonStr);
+      } catch (parseErr) {
+        console.error("Failed to parse Groq response:", rawResponse);
+        return res.status(500).json({ error: "Falha na an\xE1lise profunda da IA.", details: "A IA retornou um formato inv\xE1lido." });
+      }
+      return res.json({ success: true, data: aiResultJson });
+    } catch (err) {
+      console.error("[Deep AI] Erro:", err);
+      return res.status(500).json({ error: "Falha na an\xE1lise profunda da IA.", details: err.message });
+    }
   });
   app.get("/api/rol-responsaveis", (req, res) => {
     const db = loadDatabase();
@@ -4482,6 +4829,38 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       console.error("[SCDP Route] Error fetching from CGU:", err);
       const data = generateSimulatedViagens(dataIdaDe, dataIdaAte);
       return res.json({ success: true, isSimulated: true, data, warning: "Falha de conex\xE3o com a API da CGU. Exibindo dados simulados." });
+    }
+  });
+  app.post("/api/siafi/search", async (req, res) => {
+    const { query } = req.body;
+    if (!query) {
+      return res.status(400).json({ success: false, error: "Par\xE2metro 'query' \xE9 obrigat\xF3rio." });
+    }
+    try {
+      const client = await govHubPool.connect();
+      const cleanCpf = query.replace(/[^0-9]/g, "");
+      const searchRes = await client.query(`
+        SELECT 
+          siafi.*, 
+          siape.nome as nome_beneficiario,
+          siape.orgao,
+          siape.situacao_funcional
+        FROM siafi
+        LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf
+        WHERE 
+          siape.nome ILIKE $1 
+          OR (length($2) > 2 AND siafi.cpf_beneficiario LIKE '%' || $2 || '%')
+        LIMIT 50
+      `, [`%${query}%`, cleanCpf]);
+      client.release();
+      return res.json({ success: true, data: searchRes.rows });
+    } catch (err) {
+      console.error("[SIAFI Search] Erro ao buscar dados:", err);
+      return res.status(500).json({
+        success: false,
+        error: "Erro ao acessar banco de dados do GovHub. Verifique se o container PostgreSQL est\xE1 rodando com os dados do SIAFI/SIAPE.",
+        details: err.message
+      });
     }
   });
   app.post("/api/scdp/viagens/:id/confirm-gru", (req, res) => {

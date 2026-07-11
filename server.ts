@@ -4005,9 +4005,9 @@ O JSON DEVE ter a seguinte estrutura:
 {
   "responsaveis": [
     {
-      "nome": "Nome da pessoa física ou jurídica condenada",
-      "cpf": "CPF ou CNPJ extraído do texto, com pontuação",
-      "valor": "Valor do débito/multa (ex: R$ 1.500,00)"
+      "nome": "NOME DO RESPONSÁVEL. Obrigatório. Nunca deixe em branco se houver condenação. Ex: João Alberto Martins Silva, Indesi Brasil.",
+      "cpf": "CPF ou CNPJ extraído do texto, com pontuação (se houver)",
+      "valor": "Montante total. DEVE SOMAR todos os valores de débito originais (frequentemente listados em tabelas ASCII contendo Data e Valor) E todas as multas aplicadas."
     }
   ],
   "checklist": {
@@ -4018,11 +4018,12 @@ O JSON DEVE ter a seguinte estrutura:
   }
 }
 
-Regras:
-1. "responsaveis": Extraia quem foi condenado em débito, a pagar multa ou aplicar ressarcimento, bem como os valores. Se não houver, retorne [].
-2. "checklist": Sintetize e resuma as determinações (itens que iniciam com 'determinar...'), recomendações (itens que iniciam com 'recomendar...') e os itens de 'dar ciência' de forma concisa. Se não houver, retorne [].
-3. "determinaArquivamento": Retorne true apenas se o Acórdão determinar explicitamente o arquivamento dos autos.
-4. Responda APENAS com o JSON, sem nenhum bloco de markdown extra (sem \`\`\`json).
+Regras ABSOLUTAS:
+1. O NOME DO RESPONSÁVEL sempre aparece ANTES ou DEPOIS dos valores. Exemplo: "julgar irregulares as contas do sr. [NOME DO RESPONSÁVEL], condenando-o ao pagamento das quantias abaixo discriminadas:" seguido de uma tabela. O nome DEVE ser extraído. NUNCA retorne "Responsável não identificado" se houver um nome no parágrafo da condenação.
+2. VALORES EM TABELA: Preste extrema atenção em tabelas delimitadas por barras ( | ). Se houver uma tabela com datas e valores (ex: | 18/12/2025 | | 26.674,00 |), você DEVE extrair esse valor (26.674,00) e somá-lo.
+3. MULTAS: Se houver multa aplicada (ex: "aplicar ao sr. [NOME] multa no valor de R$ 3.000,00"), esse valor DEVE ser somado ao valor do débito da tabela. O valor final no JSON deve refletir a soma ou listar ambos.
+4. Só retorne "responsaveis": [] se tiver certeza ABSOLUTA que não há condenação de débito nem multa.
+5. Responda APENAS com o JSON válido, sem \`\`\`json.
 
 Texto do Acórdão:
 ${acordaoText.slice(0, 15000)}`;

@@ -1,16 +1,19 @@
-# Estágio de construção (Build Stage)
-FROM node:20-alpine AS builder
+# Estágio de desenvolvimento (Development Stage)
+FROM node:20-alpine AS development
 
 WORKDIR /app
 
 # Copiar arquivos de dependências
 COPY package*.json ./
 
-# Instalar dependências
+# Instalar todas as dependências (incluindo devDependencies)
 RUN npm ci
 
-# Copiar código-fonte
+# Copiar código-fonte (para ter disponível no container se o volume falhar, mas o volume irá sobrescrever)
 COPY . .
+
+# Estágio de construção (Build Stage)
+FROM development AS builder
 
 # Compilar o frontend e backend
 RUN npm run build

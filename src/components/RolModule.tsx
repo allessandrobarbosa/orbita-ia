@@ -514,63 +514,49 @@ export default function RolModule() {
       )}
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex flex-col gap-1 border-b border-dashed border-slate-100 pb-4">
-        <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-          <Shield className="w-6 h-6 text-[#003366]" />
-          Rol de Responsáveis
-        </h2>
-        <p className="text-xs text-slate-500">
-          Art. 7º — Instrução Normativa TCU nº 84/2020 ·{" "}
-          {cargos.length} vínculo{cargos.length !== 1 ? "s" : ""} cadastrado
-          {cargos.length !== 1 ? "s" : ""}
-        </p>
-      </div>
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
+        <div className="flex flex-col gap-1 pb-4">
+          <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
+            <Shield className="w-6 h-6 text-[#003366]" />
+            Rol de Responsáveis
+          </h2>
+          <p className="text-xs text-slate-500">
+            Art. 7º — Instrução Normativa TCU nº 84/2020 ·{" "}
+            {cargos.length} vínculo{cargos.length !== 1 ? "s" : ""} cadastrado
+            {cargos.length !== 1 ? "s" : ""}
+          </p>
+        </div>
 
-      {/* ── Navigation with embedded action buttons ─────────────────────── */}
-      <div className="border border-slate-200 bg-white p-1 rounded-2xl flex flex-col gap-1 shadow-sm">
+      {/* ── Navigation Tabs ─────────────────────── */}
+      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs">
         {navTabs.map((t) => {
           const Icon = t.icon;
           const active = tab === t.id;
           return (
-            <div
+            <button
               key={t.id}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl transition-all ${
+              onClick={() => setTab(t.id)}
+              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${
                 active
                   ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
-                  : "hover:bg-slate-50 text-slate-600"
+                  : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
               }`}
             >
-              <button
-                onClick={() => setTab(t.id)}
-                className="flex items-center gap-2.5 flex-1 text-left"
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${active ? "text-blue-200" : "text-slate-400"}`} />
+              <div className="flex items-center gap-2.5 text-left">
+                <Icon className={`w-5 h-5 shrink-0 ${active ? "text-blue-200" : "text-slate-400"}`} />
                 <div>
-                  <span className={`block text-xs font-black uppercase tracking-wide ${active ? "text-white" : "text-slate-700"}`}>
+                  <span className="block text-xs font-black uppercase tracking-wide leading-none">
                     {t.label}
                   </span>
-                  <span className={`block text-[9px] mt-0.5 ${active ? "text-blue-200" : "text-slate-400"}`}>
+                  <span className="block text-[9px] mt-0.5 opacity-75 font-normal leading-none">
                     {t.desc}
                   </span>
                 </div>
-              </button>
-              {active && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {t.actions.map((a) => (
-                    <button
-                      key={a.label}
-                      onClick={a.onClick}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-[10px] font-bold border border-white/20 transition"
-                    >
-                      <Plus size={10} />
-                      {a.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+              </div>
+            </button>
           );
         })}
+      </div>
       </div>
 
       {loading && (
@@ -592,46 +578,72 @@ export default function RolModule() {
                   <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-2">
                     Linha do Tempo — Ordem Cronológica
                   </h3>
-                  {/* Filters */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="relative flex-1 min-w-[140px] max-w-xs">
-                      <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                      <input
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Buscar dirigente, cargo..."
-                        className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366]/20 focus:border-[#003366]"
-                      />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="relative flex-1 min-w-[140px] max-w-xs">
+                        <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <input
+                          value={search}
+                          onChange={(e) => setSearch(e.target.value)}
+                          placeholder="Buscar dirigente, cargo..."
+                          className="w-full pl-8 pr-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 placeholder-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#003366]/20 focus:border-[#003366]"
+                        />
+                      </div>
+                      <div className="relative">
+                        <select
+                          value={filterAno}
+                          onChange={(e) => setFilterAno(e.target.value)}
+                          className="pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 bg-white focus:outline-none appearance-none"
+                        >
+                          <option value="todos">Todos os anos</option>
+                          {years.map((y) => (
+                            <option key={y} value={String(y)}>{y}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                      <div className="relative">
+                        <select
+                          value={filterUnidade}
+                          onChange={(e) => setFilterUnidade(e.target.value)}
+                          className="pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 bg-white focus:outline-none appearance-none"
+                        >
+                          <option value="todas">Todas as unidades</option>
+                          {unidades.map((u) => (
+                            <option key={u.id} value={u.id}>{u.sigla} — {u.nome}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                      </div>
+                      <span className="text-[11px] text-slate-400 ml-2">
+                        {timelineRows.length} linha{timelineRows.length !== 1 ? "s" : ""}
+                      </span>
                     </div>
-                    <div className="relative">
-                      <select
-                        value={filterAno}
-                        onChange={(e) => setFilterAno(e.target.value)}
-                        className="pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 bg-white focus:outline-none appearance-none"
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setEditA({});
+                          setIsEdit(false);
+                          setModal("afastamento");
+                        }}
+                        className={btnPrimary}
                       >
-                        <option value="todos">Todos os anos</option>
-                        {years.map((y) => (
-                          <option key={y} value={String(y)}>{y}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                    </div>
-                    <div className="relative">
-                      <select
-                        value={filterUnidade}
-                        onChange={(e) => setFilterUnidade(e.target.value)}
-                        className="pl-3 pr-7 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 bg-white focus:outline-none appearance-none"
+                        <PlusCircle size={13} />
+                        Novo Afastamento
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditC({ tipoVinculo: "Substituto", status: "Ativo" });
+                          setIsEdit(false);
+                          setModal("cargo");
+                        }}
+                        className={btnSecondary}
                       >
-                        <option value="todas">Todas as unidades</option>
-                        {unidades.map((u) => (
-                          <option key={u.id} value={u.id}>{u.sigla} — {u.nome}</option>
-                        ))}
-                      </select>
-                      <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Briefcase size={13} />
+                        Novo Vínculo
+                      </button>
                     </div>
-                    <span className="ml-auto text-[11px] text-slate-400">
-                      {timelineRows.length} linha{timelineRows.length !== 1 ? "s" : ""}
-                    </span>
                   </div>
                 </div>
 

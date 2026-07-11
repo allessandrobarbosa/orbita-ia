@@ -1401,7 +1401,15 @@ export default function TcuModule({
 
   const handleBatchProcessAi = async () => {
     // 1. Encontrar todos os acórdãos que ainda não possuem dossieRessarcimento
-    const pendentes = acordaos.filter(ac => !ac.aiAnalysisData?.dossieRessarcimento);
+    // ou que possuem dossiê vazio (tentativa anterior falhou) E tem possível débito no texto
+    const pendentes = acordaos.filter(ac => {
+      const isMissing = !ac.aiAnalysisData?.dossieRessarcimento;
+      const isEmpty = ac.aiAnalysisData?.dossieRessarcimento?.length === 0;
+      const hasDebtText = /\b(condenar.*?em débito|tesouro nacional|recolhimento aos cofres)\b/.test(((ac.SUMARIO || "") + " " + (ac.ACORDAO || "")).toLowerCase());
+      
+      return isMissing || (isEmpty && hasDebtText);
+    });
+    
     if (pendentes.length === 0) {
       alert("Todos os Acórdãos já possuem Dossiê IA gerado!");
       return;
@@ -1417,40 +1425,63 @@ export default function TcuModule({
       const ac = pendentes[i];
       setBatchProgress({ current: i + 1, total: pendentes.length });
       
-      try {
-        const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" }
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-          const updatedAc = { ...ac };
-          if (!updatedAc.aiAnalysisData) updatedAc.aiAnalysisData = {} as any;
-          (updatedAc.aiAnalysisData as any).dossieRessarcimento = data.dossie;
-          if (data.checklist) {
-            updatedAc.aiAnalysisData.determinacoes = data.checklist.determinacoes || [];
-            updatedAc.aiAnalysisData.recomendacoes = data.checklist.recomendacoes || [];
-            updatedAc.aiAnalysisData.darCiencia = data.checklist.darCiencia || [];
-            updatedAc.aiAnalysisData.determinaArquivamento = !!data.checklist.determinaArquivamento;
+      let success = false;
+      let retryCount = 0;
+      
+      while (!success && retryCount < 5) {
+        try {
+          const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+          });
+          
+          if (response.status === 429) {
+            console.warn(`Rate limit hit on item ${i+1}. Waiting 62 seconds before retry...`);
+            await new Promise(r => setTimeout(r, 62000));
+            retryCount++;
+            continue;
           }
-          const hasRessarcimento = data.dossie.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
-          if (hasRessarcimento) {
-            updatedAc.STATUS_MONITORAMENTO = "Cumprido";
-            updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            success = true;
+            const updatedAc = { ...ac };
+            if (!updatedAc.aiAnalysisData) updatedAc.aiAnalysisData = {} as any;
+            (updatedAc.aiAnalysisData as any).dossieRessarcimento = data.dossie;
+            if (data.checklist) {
+              updatedAc.aiAnalysisData.determinacoes = data.checklist.determinacoes || [];
+              updatedAc.aiAnalysisData.recomendacoes = data.checklist.recomendacoes || [];
+              updatedAc.aiAnalysisData.darCiencia = data.checklist.darCiencia || [];
+              updatedAc.aiAnalysisData.determinaArquivamento = !!data.checklist.determinaArquivamento;
+            }
+            const hasRessarcimento = data.dossie.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
+            if (hasRessarcimento) {
+              updatedAc.STATUS_MONITORAMENTO = "Cumprido";
+              updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
+            }
+            
+            // Call API directly to save without triggering full re-render on every loop
+            await fetch("/api/acordaos/update", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(updatedAc)
+            });
+          } else {
+            console.error(`Falha no Acórdão ${ac.KEY}:`, data.error);
+            if (data.error && data.error.includes("429")) {
+              console.warn(`Rate limit hit on item ${i+1}. Waiting 62 seconds before retry...`);
+              await new Promise(r => setTimeout(r, 62000));
+              retryCount++;
+            } else {
+              break; // Stop retry on non-429 error
+            }
           }
-          // Removemos onUpdateAcordao do loop para a tela não piscar e engasgar!
-        } else {
-          console.error(`Falha no Acórdão ${ac.KEY}:`, data.error);
-          if (data.error && data.error.includes("429")) {
-            alert(`O Google Gemini bloqueou temporariamente por excesso de requisições (Limite atingido no item ${i + 1}). O processamento foi pausado. Tente novamente em 1 minuto!`);
-            break; // Stop the loop on rate limit!
-          }
+        } catch (err) {
+          console.error(`Erro ao processar lote no Acórdão ${ac.KEY}:`, err);
+          alert(`Erro de conexão ao processar o item ${i + 1}. O lote foi pausado para evitar perda de dados.`);
+          break; // Stop the retry on network error!
         }
-      } catch (err) {
-        console.error(`Erro ao processar lote no Acórdão ${ac.KEY}:`, err);
-        alert(`Erro de conexão ao processar o item ${i + 1}. O lote foi pausado para evitar perda de dados.`);
-        break; // Stop the loop on network error!
       }
 
       // Evitar que o sistema faça logout por inatividade
@@ -1576,13 +1607,15 @@ export default function TcuModule({
   ).sort() as string[];
 
   const hasValoresARessarcir = (ac: AcordaoDemand) => {
-    if (ac.aiAnalysisData) return ac.aiAnalysisData.temDebitoFinanceiro;
+    if (ac.aiAnalysisData && ac.aiAnalysisData.temDebitoFinanceiro !== undefined) {
+      return ac.aiAnalysisData.temDebitoFinanceiro;
+    }
     if (parsedTceMappingItems && parsedTceMappingItems.length > 0) {
       const isMapped = parsedTceMappingItems.some(m => m.ACORDAO_REF && (m.ACORDAO_REF.includes(ac.NUMACORDAO.toString()) || m.ACORDAO_REF.includes(ac.KEY)));
       if (isMapped) return true;
     }
     const textToScan = ((ac.SUMARIO || "") + " " + (ac.ACORDAO || "")).toLowerCase();
-    return /débito|ressarcimento|recolher aos cofres|tesouro nacional|condenar em débito/.test(textToScan);
+    return /\b(condenar.*?em débito|tesouro nacional|recolhimento aos cofres)\b/.test(textToScan);
   };
 
   const hasRecomendacoes = (ac: AcordaoDemand) => {
@@ -1771,83 +1804,16 @@ export default function TcuModule({
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Module Title Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-            <Landmark className="w-6 h-6 text-[#003366]" />
-            Tribunal de Contas da União — TCU
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 items-center">
-          {tcuActiveSection === "monitoramento" && (
-            <>
-              <button 
-                id="btn-importer-toggle"
-                onClick={() => { setShowImporter(!showImporter); }}
-                className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  showImporter 
-                    ? "bg-slate-800 text-white shadow-xs" 
-                    : "bg-[#003366] text-white hover:bg-slate-900 shadow-sm"
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                {showImporter ? "Ocultar Importador" : "Importar Acórdãos do TCU"}
-              </button>
-
-              <button 
-                id="btn-batch-process-ai"
-                onClick={handleBatchProcessAi}
-                disabled={isBatchProcessing}
-                className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  isBatchProcessing
-                    ? "bg-[#1351b4]/60 cursor-not-allowed text-white shadow-xs"
-                    : "bg-[#1351b4] text-white hover:bg-[#0f4396] shadow-sm"
-                }`}
-              >
-                {isBatchProcessing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Processando ({batchProgress.current}/{batchProgress.total})...
-                  </>
-                ) : (
-                  <>
-                    <Bot className="w-4 h-4" />
-                    Executar IA em Massa (Pendentes)
-                  </>
-                )}
-              </button>
-
-              <button 
-                id="btn-export-excel"
-                onClick={handleExportExcel}
-                className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
-              >
-                <Download className="w-4 h-4" />
-                Exportar Excel
-              </button>
-            </>
-          )}
-
-          {tcuActiveSection === "comunicacoes" && (
-            <button
-              onClick={() => {
-                setShowComImporter(!showComImporter);
-                setParsedComItems(null);
-                setComImportMessage(null);
-              }}
-              className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                showComImporter
-                  ? "bg-slate-800 text-white shadow-xs"
-                  : "bg-[#003366] text-white hover:bg-slate-900 shadow-sm"
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              {showComImporter ? "Ocultar Sincronizador" : "Sincronizar Arquivo (CSV)"}
-            </button>
-          )}
+      {/* Module Title Header - NOW STICKY */}
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
+              <Landmark className="w-6 h-6 text-[#003366]" />
+              Tribunal de Contas da União — TCU
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
+          </div>
         </div>
       </div>
 
@@ -2138,93 +2104,143 @@ export default function TcuModule({
       })()}
 
       {/* Filters HUD - Bento Card layout */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between no-print">
-        
-        {/* Search */}
-        <div className="relative w-full md:w-1/3">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-          <input
-            id="txt-search-acordao"
-            type="text"
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
-            placeholder="Pesquisar por Título, Nº, Processo ou Assunto..."
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-          />
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print mb-4">
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Action Buttons and Search */}
+          <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
+            <div className="flex flex-wrap gap-2 items-center">
+              <button 
+                id="btn-importer-toggle"
+                onClick={() => { setShowImporter(!showImporter); }}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  showImporter 
+                    ? "bg-slate-800 text-white shadow-xs" 
+                    : "bg-[#003366] text-white hover:bg-[#0f4396] shadow-sm"
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {showImporter ? "Ocultar Importador" : "Importar Acórdãos"}
+              </button>
+
+              <button 
+                id="btn-batch-process-ai"
+                onClick={handleBatchProcessAi}
+                disabled={isBatchProcessing}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  isBatchProcessing
+                    ? "bg-[#1351b4]/60 cursor-not-allowed text-white shadow-xs"
+                    : "bg-[#1351b4] text-white hover:bg-[#0f4396] shadow-sm"
+                }`}
+              >
+                {isBatchProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Processando ({batchProgress.current}/{batchProgress.total})...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-4 h-4" />
+                    Gerar Dossiês (Lote)
+                  </>
+                )}
+              </button>
+
+              <button 
+                id="btn-export-excel"
+                onClick={handleExportExcel}
+                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Excel
+              </button>
+            </div>
+
+            <div className="relative w-full xl:w-[300px] shrink-0">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <input
+                id="txt-search-acordao"
+                type="text"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+          </div>
+
+          <hr className="border-slate-100" />
+
+          {/* Bottom Row: Dynamic Filters */}
+          <div className="flex flex-wrap gap-4 items-center w-full bg-slate-50/50 p-2 rounded-xl">
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Situação:</span>
+              <select
+                id="select-filter-status"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todos</option>
+                <option value="Pendente">Pendentes</option>
+                <option value="Em Análise">Em Análise</option>
+                <option value="Cumprido">Cumpridos</option>
+                <option value="Atrasado">Em Atraso</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Colegiado:</span>
+              <select
+                id="select-filter-colegiado"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
+                value={colegiadoFilter}
+                onChange={(e) => { setColegiadoFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todos</option>
+                <option value="Plenário">Plenário</option>
+                <option value="Primeira Câmara">1ª Câmara</option>
+                <option value="Segunda Câmara">2ª Câmara</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Ressarcimento:</span>
+              <select
+                id="select-filter-ressarcimento"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
+                value={ressarcimentoFilter}
+                onChange={(e) => { setRessarcimentoFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todos</option>
+                <option value="COM_VALORES">Com Débito Exigido</option>
+                <option value="SEM_VALORES">Sem Débito Exigido</option>
+                <option value="PENDENTE_REGULARIZACAO">Dossiê de IA Pendente</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Recomendações:</span>
+              <select
+                id="select-filter-recomendacao"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium max-w-[200px] truncate"
+                value={recomendacaoFilter}
+                onChange={(e) => { setRecomendacaoFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todas</option>
+                <option value="COM_RECOMENDACAO">Possui Determinação/Recomendação</option>
+                <option value="SEM_RECOMENDACAO">Sem Ações</option>
+              </select>
+            </div>
+
+            <button
+              id="btn-clear-filters"
+              className="ml-auto text-xs text-[#003366] hover:text-[#001f3f] underline font-bold px-2 py-1 shrink-0"
+              onClick={() => { setSearchTerm(""); setStatusFilter("TODOS"); setColegiadoFilter("TODOS"); setAnoFilter("TODOS"); setRessarcimentoFilter("TODOS"); setRecomendacaoFilter("TODOS"); }}
+            >
+              Limpar Filtros
+            </button>
+          </div>
         </div>
-
-        {/* Dynamic Filters Selection */}
-        <div className="flex flex-wrap gap-3 w-full md:w-auto justify-end">
-          
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold text-slate-550">Situação:</span>
-            <select
-              id="select-filter-status"
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="TODOS">Todos os Status</option>
-              <option value="Pendente">Pendentes</option>
-              <option value="Em Análise">Em Análise</option>
-              <option value="Cumprido">Cumpridos</option>
-              <option value="Atrasado">Em Atraso</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold text-slate-550">Colegiado:</span>
-            <select
-              id="select-filter-colegiado"
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={colegiadoFilter}
-              onChange={(e) => { setColegiadoFilter(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="TODOS">Todos Colegiados</option>
-              <option value="Plenário">Plenário</option>
-              <option value="Primeira Câmara">1ª Câmara</option>
-              <option value="Segunda Câmara">2ª Câmara</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold text-slate-550">Ressarcimento:</span>
-            <select
-              id="select-filter-ressarcimento"
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={ressarcimentoFilter}
-              onChange={(e) => { setRessarcimentoFilter(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="TODOS">Todos</option>
-              <option value="COM_VALORES">Com Débito / Valores</option>
-              <option value="SEM_VALORES">Sem Valores</option>
-              <option value="PENDENTE_REGULARIZACAO">Pendente de Regularização (Não achou SIAFI)</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold text-slate-550">Recomendações:</span>
-            <select
-              id="select-filter-recomendacao"
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={recomendacaoFilter}
-              onChange={(e) => { setRecomendacaoFilter(e.target.value); setCurrentPage(1); }}
-            >
-              <option value="TODOS">Todos</option>
-              <option value="COM_RECOMENDACAO">Possui Determinação/Recomendação</option>
-              <option value="SEM_RECOMENDACAO">Sem Ações</option>
-            </select>
-          </div>
-
-          <button
-            id="btn-reset-filters"
-            onClick={() => { setSearchTerm(""); setStatusFilter("TODOS"); setColegiadoFilter("TODOS"); setAnoFilter("TODOS"); setRessarcimentoFilter("TODOS"); setRecomendacaoFilter("TODOS"); }}
-            className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition"
-          >
-            Limpar Filtros
-          </button>
-        </div>
-
       </div>
 
       {/* Main Datagrid - Bento Rounded Table wrapping */}
@@ -2500,19 +2516,7 @@ export default function TcuModule({
                                   </span>
                                 </div>
                                 
-                                <div className="pt-2">
-                                  <button
-                                    onClick={() => handleAnalyzeDossieAI(ac)}
-                                    disabled={isAnalyzingAi[ac.KEY]}
-                                    className="w-full sm:w-auto px-4 py-2 bg-[#1351b4] text-white hover:bg-blue-800 disabled:bg-[#1351b4]/50 rounded-lg font-bold text-xs inline-flex items-center justify-center gap-2 transition cursor-pointer font-sans h-[36px] shadow-sm whitespace-nowrap"
-                                  >
-                                    {isAnalyzingAi[ac.KEY] ? (
-                                      <><RefreshCw className="w-4 h-4 animate-spin" /> Analisando Acórdão...</>
-                                    ) : (
-                                      <><Sparkles className="w-4 h-4" /> Gerar Dossiê Inteligente (IA)</>
-                                    )}
-                                  </button>
-                                </div>
+
 
                                 {ac.aiAnalysisData?.dossieRessarcimento && (
                                   <div className="bg-[#1351b4]/5 border border-[#1351b4]/20 p-3 rounded-lg mt-3">
@@ -4099,47 +4103,47 @@ export default function TcuModule({
             {/* Statistics bento grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
               <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Universo de TCE</span>
-                  <h4 className="text-2xl font-black text-slate-900">{tcesForSelectedYear.length}</h4>
-                  <p className="text-[10px] text-slate-500">Instâncias no ano ({tceSelectedYear === "TODOS" ? "Histórico Total" : tceSelectedYear})</p>
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">Universo de TCE</span>
+                  <h4 className="text-2xl font-black text-slate-900 truncate">{tcesForSelectedYear.length}</h4>
+                  <p className="text-[10px] text-slate-500 truncate">Instâncias no ano ({tceSelectedYear === "TODOS" ? "Histórico Total" : tceSelectedYear})</p>
                 </div>
-                <div className="p-3 bg-blue-50 text-[#003366] rounded-xl">
+                <div className="p-3 bg-blue-50 text-[#003366] rounded-xl shrink-0 ml-2">
                   <FileText className="w-6 h-6" />
                 </div>
               </div>
 
               <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Débito Atualizado</span>
-                  <h4 className="text-xl font-black text-slate-900 truncate max-w-[170px]" title={formattedSelectedYearDebito}>{formattedSelectedYearDebito}</h4>
-                  <p className="text-[10px] text-slate-500">Montante acumulado no ano</p>
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">Débito Atualizado</span>
+                  <h4 className="text-xl font-black text-slate-900 truncate" title={formattedSelectedYearDebito}>{formattedSelectedYearDebito}</h4>
+                  <p className="text-[10px] text-slate-500 truncate">Montante acumulado no ano</p>
                 </div>
-                <div className="p-3 bg-amber-50 text-amber-700 rounded-xl">
+                <div className="p-3 bg-amber-50 text-amber-700 rounded-xl shrink-0 ml-2">
                   <DollarSign className="w-6 h-6" />
                 </div>
               </div>
 
               <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">TCEs Vinculadas</span>
-                  <h4 className="text-2xl font-black text-emerald-700">{linkedCount}</h4>
-                  <p className="text-[10px] text-emerald-600 font-semibold">Cruzamentos bem sucedidos</p>
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">TCEs Vinculadas</span>
+                  <h4 className="text-2xl font-black text-emerald-700 truncate">{linkedCount}</h4>
+                  <p className="text-[10px] text-emerald-600 font-semibold truncate">Cruzamentos bem sucedidos</p>
                 </div>
-                <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl">
+                <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl shrink-0 ml-2">
                   <Merge className="w-6 h-6" />
                 </div>
               </div>
 
               <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
-                <div className="space-y-1">
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">TCEs Pendentes</span>
-                  <h4 className="text-2xl font-black text-rose-700 inline-flex items-center gap-1.5 animate-pulse font-sans">
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">TCEs Pendentes</span>
+                  <h4 className="text-2xl font-black text-rose-700 inline-flex items-center gap-1.5 animate-pulse font-sans truncate w-full">
                     {pendingTceCount}
                   </h4>
-                  <p className="text-[10px] text-rose-600 font-semibold">Aguardando vínculo</p>
+                  <p className="text-[10px] text-rose-600 font-semibold truncate">Aguardando vínculo</p>
                 </div>
-                <div className="p-3 bg-rose-50 text-rose-700 rounded-xl">
+                <div className="p-3 bg-rose-50 text-rose-700 rounded-xl shrink-0 ml-2">
                   <FileWarning className="w-6 h-6" />
                 </div>
               </div>

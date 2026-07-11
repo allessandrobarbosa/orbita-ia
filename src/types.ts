@@ -192,6 +192,8 @@ export interface TceDemand {
   SITUACAO_PROCESSO: string; // "SITUACAO DO PROCESSO"
   PRIMEIRO_JULGAMENTO: string; // "PRIMEIRO JULGAMENTO"
   ENCERRAMENTO: string; // "ENCERRAMENTO"
+  NUMERO_SIAFI?: string; // "Nº SIAFI"
+  SIAFI_RESSARCIDO?: boolean; // Mock for SIAFI status
   ANO: number; // For filtering, parsed from NUMERO_ANO_TCE
 }
 

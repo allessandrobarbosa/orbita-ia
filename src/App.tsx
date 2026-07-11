@@ -342,8 +342,14 @@ export default function App() {
       }
     };
     checkActiveSession();
-    fetchAllData();
   }, []);
+
+  // Fetch data only after user unlocks the application
+  useEffect(() => {
+    if (!isLocked) {
+      fetchAllData();
+    }
+  }, [isLocked]);
 
   // Session heartbeat to keep session active and detect browser close
   useEffect(() => {
@@ -1569,9 +1575,27 @@ function LockScreen({
     setErrorMsg("");
     if (loginStep === "identifier") {
       if (!identifier.trim()) {
-        setErrorMsg("Por favor, informe seu CPF, Login ou E-mail.");
+        setErrorMsg("Por favor, informe seu CPF.");
         return;
       }
+      // Validação de CPF
+      let cpfStr = identifier.replace(/[^\d]+/g, "");
+      let cpfValido = false;
+      if (cpfStr.length === 11 && !cpfStr.match(/(\d)\1{10}/)) {
+        const cpfDigits = cpfStr.split("").map(el => +el);
+        const rest = (count: number) => (cpfDigits.slice(0, count - 12).reduce((soma, el, index) => (soma + el * (count - index)), 0) * 10) % 11 % 10;
+        if (rest(10) === cpfDigits[9] && rest(11) === cpfDigits[10]) {
+          cpfValido = true;
+        }
+      }
+      
+      if (!cpfValido) {
+        alert("O CPF informado é inválido. Por favor, digite um CPF válido.");
+        setErrorMsg("O CPF informado é inválido.");
+        setIdentifier("");
+        return;
+      }
+
       setLoginStep("password");
     } else {
       if (!localPassword) {
@@ -1632,21 +1656,26 @@ function LockScreen({
               )}
 
               <form onSubmit={handleLocalLogin}>
-                {loginStep === "identifier" ? (
-                  <div className="relative mb-4">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none border-r border-slate-300 pr-3">
-                      <User className="h-4 w-4 text-slate-400" />
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Informe seu CPF, Login ou Email"
-                      value={identifier}
-                      onChange={e => { setIdentifier(e.target.value); setErrorMsg(""); }}
-                      className="pl-12 w-full bg-white border border-slate-300 focus:border-[#1351b4] focus:ring-1 focus:ring-[#1351b4] focus:outline-none rounded-md py-2.5 text-[14px] text-slate-700"
-                    />
+                <div className="relative mb-4">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none border-r border-slate-300 pr-3">
+                    <User className="h-4 w-4 text-slate-400" />
                   </div>
-                ) : (
-                  <div className="relative mb-4">
+                  <input
+                    type="text"
+                    placeholder="Informe seu CPF (Apenas Números)"
+                    value={identifier}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      setIdentifier(val);
+                      setErrorMsg("");
+                    }}
+                    disabled={loginStep === "password"}
+                    className={`pl-12 w-full border ${loginStep === "password" ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-white text-slate-700 border-slate-300 focus:border-[#1351b4] focus:ring-1 focus:ring-[#1351b4]"} focus:outline-none rounded-md py-2.5 text-[14px]`}
+                  />
+                </div>
+                
+                {loginStep === "password" && (
+                  <div className="relative mb-4 animate-in fade-in slide-in-from-top-2">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none border-r border-slate-300 pr-3">
                       <Lock className="h-4 w-4 text-slate-400" />
                     </div>
@@ -1660,10 +1689,11 @@ function LockScreen({
                     />
                   </div>
                 )}
+                
                 <div className="flex gap-2 mb-6">
                   {loginStep === "password" && (
-                    <button type="button" onClick={() => setLoginStep("identifier")} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[14px] py-2.5 px-4 rounded-md transition duration-150 cursor-pointer">
-                      Voltar
+                    <button type="button" onClick={() => { setLoginStep("identifier"); setLocalPassword(""); }} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[14px] py-2.5 px-4 rounded-md transition duration-150 cursor-pointer">
+                      Alterar CPF
                     </button>
                   )}
                   <button type="submit" className="flex-1 bg-[#1351b4] hover:bg-[#0c3c88] text-white font-medium text-[14px] py-2.5 rounded-md transition duration-150 cursor-pointer">

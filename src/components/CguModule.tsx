@@ -1155,61 +1155,19 @@ export default function CguModule({
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Module Title Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print border-b border-slate-100 pb-4 border-dashed">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-[#003366]" />
-            Controladoria-Geral da União — CGU
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">Gestão de Recomendações e Monitoramento de Auditorias</p>
+      {/* Module Title Header - NOW STICKY */}
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
+              <Building2 className="w-6 h-6 text-[#003366]" />
+              Controladoria-Geral da União — CGU
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">Gestão de Recomendações e Monitoramento de Auditorias</p>
+          </div>
         </div>
-
-        <div className="flex flex-wrap gap-2 items-center">
-          {activeSubTab === "demands" ? (
-            <button
-              onClick={() => {
-                setShowImporter(!showImporter);
-                setImportError(null);
-                setImportSuccessMessage(null);
-                setParsedItems(null);
-              }}
-              className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                showImporter
-                  ? "bg-slate-800 text-white shadow-xs"
-                  : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              {showImporter ? "Ocultar Importador" : "Importar Planilha CGU (.xlsx)"}
-            </button>
-          ) : (
-            <>
-              {onSyncCguReports && (
-                <button
-                  onClick={handleSyncReports}
-                  disabled={isSyncingReports}
-                  className={`px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 shadow-sm cursor-pointer`}
-                >
-                  <RefreshCw className={`w-4 h-4 ${isSyncingReports ? "animate-spin" : ""}`} />
-                  {isSyncingReports ? "Sincronizando..." : "Sincronizar Relatórios"}
-                </button>
-              )}
-            </>
-          )}
-
-          <button
-            onClick={activeSubTab === "demands" ? handleExportExcel : handleExportReportsExcel}
-            disabled={activeSubTab === "demands" ? filteredDemands.length === 0 : filteredReports.length === 0}
-            className="px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            Exportar Excel
-          </button>
-        </div>
-      </div>
       {/* CGU Submodules Navigation (TCU Pattern) */}
-      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
+      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs">
         {[
           { id: "demands", label: "Monitoramento de Demandas", desc: "Acompanhamento de Recomendações", icon: Database },
           { id: "published", label: "Relatórios Publicados", desc: "Relatórios Oficiais da CGU", icon: FileText }
@@ -1240,6 +1198,7 @@ export default function CguModule({
             </button>
           );
         })}
+      </div>
       </div>
       {/* Importer Section */}
       {activeSubTab === "demands" && showImporter && (
@@ -1809,93 +1768,127 @@ export default function CguModule({
         })()}
       </div>
 
-      {/* Filter HUD Controls */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print">
-        {/* Search */}
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
-            placeholder="Pesquisar termo ou Id..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+      {/* Filters HUD - Bento Card layout */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print mb-4">
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Action Buttons and Search */}
+          <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
+            <div className="flex flex-wrap gap-2 items-center">
+              <button
+                onClick={() => {
+                  setShowImporter(!showImporter);
+                  setImportError(null);
+                  setImportSuccessMessage(null);
+                  setParsedItems(null);
+                }}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  showImporter
+                    ? "bg-slate-800 text-white shadow-xs"
+                    : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {showImporter ? "Ocultar Importador" : "Importar Planilha CGU (.xlsx)"}
+              </button>
 
-        {/* Select filters */}
-        <div className="flex flex-wrap gap-3 items-center">
-          
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold">Unidade Auditada:</span>
-            <select
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={unidadeFilter}
-              onChange={(e) => setUnidadeFilter(e.target.value)}
-            >
-              <option value="TODOS">Todas Unidades</option>
-              {availableUnits.map(u => (
-                <option key={u} value={u}>{u}</option>
-              ))}
-            </select>
+              <button
+                onClick={handleExportExcel}
+                disabled={filteredDemands.length === 0}
+                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Excel
+              </button>
+            </div>
+
+            <div className="relative w-full xl:w-[300px] shrink-0">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
+                placeholder="Pesquisar termo ou Id..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold">Situação:</span>
-            <select
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="TODOS">Todas Situações</option>
-              {availableSituations.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+          {/* Bottom Row: Dropdown Filters in Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-4 border-t border-slate-100">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Unidade Auditada</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={unidadeFilter}
+                onChange={(e) => setUnidadeFilter(e.target.value)}
+              >
+                <option value="TODOS">Todas Unidades</option>
+                {availableUnits.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold">Estado:</span>
-            <select
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={estadoFilter}
-              onChange={(e) => setEstadoFilter(e.target.value)}
-            >
-              <option value="TODOS">Todos Estados</option>
-              {availableStates.map(st => (
-                <option key={st} value={st}>{st}</option>
-              ))}
-            </select>
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Situação</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="TODOS">Todas Situações</option>
+                {availableSituations.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <span className="font-semibold">Categoria:</span>
-            <select
-              className="bg-slate-50 border border-slate-200 p-1.5 px-2.5 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium"
-              value={categoriaFilter}
-              onChange={(e) => setCategoriaFilter(e.target.value)}
-            >
-              <option value="TODOS">Todas Categorias</option>
-              {availableCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Estado</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={estadoFilter}
+                onChange={(e) => setEstadoFilter(e.target.value)}
+              >
+                <option value="TODOS">Todos Estados</option>
+                {availableStates.map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </div>
 
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setStatusFilter("TODOS");
-              setEstadoFilter("TODOS");
-              setUnidadeFilter("TODOS");
-              setCategoriaFilter("TODOS");
-              setAnoFilter("TODOS");
-              setPrazoFilter("TODOS");
-            }}
-            className="px-3 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-xl transition"
-          >
-            Limpar Filtros
-          </button>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Categoria</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={categoriaFilter}
+                onChange={(e) => setCategoriaFilter(e.target.value)}
+              >
+                <option value="TODOS">Todas Categorias</option>
+                {availableCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end justify-start sm:justify-end">
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("TODOS");
+                  setEstadoFilter("TODOS");
+                  setUnidadeFilter("TODOS");
+                  setCategoriaFilter("TODOS");
+                  setAnoFilter("TODOS");
+                  setPrazoFilter("TODOS");
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all w-full sm:w-auto h-[34px] flex items-center justify-center gap-2 border border-slate-200"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Limpar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2263,8 +2256,32 @@ export default function CguModule({
           </div>
 
           {/* Filter HUD for Published Reports */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print">
-            <div className="relative w-full md:w-80">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between no-print">
+            {/* Action Buttons (Moved from Header) */}
+            <div className="flex flex-wrap gap-2 items-center w-full xl:w-auto">
+              {onSyncCguReports && (
+                <button
+                  onClick={handleSyncReports}
+                  disabled={isSyncingReports}
+                  className={`px-4 py-2.5 bg-[#003366] hover:bg-[#002244] text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 shadow-sm cursor-pointer`}
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncingReports ? "animate-spin" : ""}`} />
+                  {isSyncingReports ? "Sincronizando..." : "Sincronizar Relatórios"}
+                </button>
+              )}
+
+              <button
+                onClick={handleExportReportsExcel}
+                disabled={filteredReports.length === 0}
+                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Excel
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative w-full xl:w-80 shrink-0">
               <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
               <input
                 type="text"

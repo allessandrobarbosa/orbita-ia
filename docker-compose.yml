@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
+      target: development
     container_name: orbita-aeci-app
     ports:
       - "3000:3000"
@@ -17,4 +17,9 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     command: npm run dev
+    networks:
+      - orbita-network
 
+networks:
+  orbita-network:
+    external: true
