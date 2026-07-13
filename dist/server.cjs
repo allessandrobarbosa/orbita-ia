@@ -381,117 +381,6 @@ var SEED_CGU = [
   }
 ];
 
-// src/services/TcuNativeAgent.ts
-var fs = __toESM(require("fs"), 1);
-var path = __toESM(require("path"), 1);
-var import_url = require("url");
-var import_meta = {};
-var __filename = (0, import_url.fileURLToPath)(import_meta.url);
-var __dirname = path.dirname(__filename);
-var DICT_PATH = path.join(__dirname, "..", "..", "data", "orbita_dictionary.json");
-function loadDictionary() {
-  try {
-    if (fs.existsSync(DICT_PATH)) {
-      const data = fs.readFileSync(DICT_PATH, "utf-8");
-      return JSON.parse(data);
-    }
-  } catch (err) {
-    console.error("Erro ao carregar o dicion\xE1rio:", err);
-  }
-  return {
-    keywordsResponsaveis: [],
-    keywordsDeterminacoes: [],
-    keywordsRecomendacoes: [],
-    keywordsDarCiencia: [],
-    keywordsArquivamento: []
-  };
-}
-function extractTcuDataNativo(textoAcordao) {
-  const dictionary = loadDictionary();
-  const lowerText = textoAcordao.toLowerCase();
-  const responsaveis = [];
-  const determinacoes = [];
-  const recomendacoes = [];
-  const darCiencia = [];
-  let determinaArquivamento = false;
-  const paragraphs = textoAcordao.split(/\n+/);
-  let inAcordamSection = false;
-  for (let i = 0; i < paragraphs.length; i++) {
-    const p = paragraphs[i].trim();
-    if (!p) continue;
-    const pLower = p.toLowerCase();
-    if (pLower.includes("acordam os ministros") || pLower.includes("acordam os integrantes")) {
-      inAcordamSection = true;
-    }
-    if (inAcordamSection) {
-      if (dictionary.keywordsDeterminacoes.some((kw) => pLower.includes(kw.toLowerCase()))) {
-        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("determinar")) {
-          determinacoes.push(p);
-        }
-      }
-      if (dictionary.keywordsRecomendacoes.some((kw) => pLower.includes(kw.toLowerCase()))) {
-        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("recomendar")) {
-          recomendacoes.push(p);
-        }
-      }
-      if (dictionary.keywordsDarCiencia.some((kw) => pLower.includes(kw.toLowerCase()))) {
-        if (/^9\.\d+/.test(p) || /^\d+\./.test(p) || pLower.startsWith("dar ci\xEAncia")) {
-          darCiencia.push(p);
-        }
-      }
-      if (dictionary.keywordsArquivamento.some((kw) => pLower.includes(kw.toLowerCase()))) {
-        determinaArquivamento = true;
-      }
-    }
-    const isCondenacao = dictionary.keywordsResponsaveis.some((kw) => pLower.includes(kw.toLowerCase()));
-    if (isCondenacao) {
-      const valorMatch = p.match(/R\$\s*[\d\.,]+/g);
-      const valorStr = valorMatch ? valorMatch[0] : "";
-      const cpfMatch = p.match(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/);
-      const cnpjMatch = p.match(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/);
-      const doc = cpfMatch ? cpfMatch[0] : cnpjMatch ? cnpjMatch[0] : "";
-      let nome = "Respons\xE1vel n\xE3o identificado";
-      if (doc) {
-        const parts = p.split(doc);
-        if (parts[0]) {
-          const words = parts[0].trim().split(" ");
-          const capWords = [];
-          for (let w = words.length - 1; w >= 0; w--) {
-            const word = words[w].replace(/[^a-zA-ZáéíóúãõçÁÉÍÓÚÃÕÇ]/g, "");
-            if (word && word[0] === word[0].toUpperCase() && word.length > 2) {
-              capWords.unshift(word);
-            } else if (capWords.length > 0) {
-              break;
-            }
-          }
-          if (capWords.length > 1) {
-            nome = capWords.join(" ");
-          }
-        }
-      }
-      if (valorStr || doc) {
-        const exists = responsaveis.find((r) => r.cpf === doc && r.valor === valorStr);
-        if (!exists) {
-          responsaveis.push({
-            nome,
-            cpf: doc,
-            valor: valorStr
-          });
-        }
-      }
-    }
-  }
-  return {
-    responsaveis,
-    checklist: {
-      determinacoes,
-      recomendacoes,
-      darCiencia,
-      determinaArquivamento
-    }
-  };
-}
-
 // src/data/seed_etica.ts
 var SEED_ETICA_MEMBROS = [
   {
@@ -682,49 +571,7 @@ var SEED_ETICA_PROCESSOS = [
   }
 ];
 
-// server.ts
-import_dotenv.default.config();
-var govHubPool = new import_pg.default.Pool({
-  connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://airflow:airflow@localhost:5432/postgres",
-  max: 5,
-  idleTimeoutMillis: 1e4,
-  connectionTimeoutMillis: 2e3
-  // Fast timeout so it fails quickly if GovHub docker is not running
-});
-function getSiapeAndEmail(nameStr) {
-  const name = String(nameStr || "").toUpperCase();
-  if (name.includes("SARAH DE MATTOS OLIVEIRA")) {
-    return { siape: "1540928", email: "sarah.oliveira@trabalho.gov.br" };
-  }
-  if (name.includes("CASSIANO HILARIO LUCK GONCALVES")) {
-    return { siape: "2390105", email: "cassiano.goncalves@trabalho.gov.br" };
-  }
-  if (name.includes("JOSE CLAUDIO SILVA BARRETO")) {
-    return { siape: "1827491", email: "jose.barreto@trabalho.gov.br" };
-  }
-  if (name.includes("JOAO ANTUNES SOARES")) {
-    return { siape: "1192834", email: "joao.soares@trabalho.gov.br" };
-  }
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const cleanHash = Math.abs(hash);
-  const siape = String(1e6 + cleanHash % 9e5);
-  const parts = name.toLowerCase().split(" ").filter((p) => p.length > 2);
-  const firstName = parts[0] || "viajante";
-  const lastName = parts[parts.length - 1] || "servidor";
-  return { siape, email: `${firstName}.${lastName}@trabalho.gov.br` };
-}
-var DATA_DIR = import_path.default.join(process.cwd(), "data");
-var DB_PATH = import_path.default.join(DATA_DIR, "orbita_db.json");
-var TCU_DIR = import_path.default.join(DATA_DIR, "tcu");
-if (!import_fs.default.existsSync(DATA_DIR)) {
-  import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!import_fs.default.existsSync(TCU_DIR)) {
-  import_fs.default.mkdirSync(TCU_DIR, { recursive: true });
-}
+// src/data/seed_db.ts
 var SEED_ACORDAOS = [
   {
     KEY: "AC-14068-2023-1C",
@@ -1697,6 +1544,50 @@ var SEED_VIATURAS_MANUTENCOES = [
   { id: "M-2", viaturaId: "V-2", tipo: "Corretiva (Troca Pastilhas de Freio)", data: "2026-03-22", custo: 680, kmManutencao: 65e3 },
   { id: "M-3", viaturaId: "V-3", tipo: "Preventiva (Revis\xE3o 20k)", data: "2025-12-05", custo: 1500, kmManutencao: 20050, proximaRevisaoKm: 25e3 }
 ];
+
+// server.ts
+import_dotenv.default.config();
+var govHubPool = new import_pg.default.Pool({
+  connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://airflow:airflow@localhost:5432/postgres",
+  max: 5,
+  idleTimeoutMillis: 1e4,
+  connectionTimeoutMillis: 2e3
+  // Fast timeout so it fails quickly if GovHub docker is not running
+});
+function getSiapeAndEmail(nameStr) {
+  const name = String(nameStr || "").toUpperCase();
+  if (name.includes("SARAH DE MATTOS OLIVEIRA")) {
+    return { siape: "1540928", email: "sarah.oliveira@trabalho.gov.br" };
+  }
+  if (name.includes("CASSIANO HILARIO LUCK GONCALVES")) {
+    return { siape: "2390105", email: "cassiano.goncalves@trabalho.gov.br" };
+  }
+  if (name.includes("JOSE CLAUDIO SILVA BARRETO")) {
+    return { siape: "1827491", email: "jose.barreto@trabalho.gov.br" };
+  }
+  if (name.includes("JOAO ANTUNES SOARES")) {
+    return { siape: "1192834", email: "joao.soares@trabalho.gov.br" };
+  }
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const cleanHash = Math.abs(hash);
+  const siape = String(1e6 + cleanHash % 9e5);
+  const parts = name.toLowerCase().split(" ").filter((p) => p.length > 2);
+  const firstName = parts[0] || "viajante";
+  const lastName = parts[parts.length - 1] || "servidor";
+  return { siape, email: `${firstName}.${lastName}@trabalho.gov.br` };
+}
+var DATA_DIR = import_path.default.join(process.cwd(), "data");
+var DB_PATH = import_path.default.join(DATA_DIR, "orbita_db.json");
+var TCU_DIR = import_path.default.join(DATA_DIR, "tcu");
+if (!import_fs.default.existsSync(DATA_DIR)) {
+  import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+}
+if (!import_fs.default.existsSync(TCU_DIR)) {
+  import_fs.default.mkdirSync(TCU_DIR, { recursive: true });
+}
 function migrateProcessTypes(data) {
   if (!data || !Array.isArray(data.acordaos)) return false;
   let modified = false;
@@ -4166,16 +4057,13 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       updatedAcordaos: db.acordaos
     });
   });
-  async function extractTcuDataWithGemini(acordaoText) {
-    if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "MY_GEMINI_API_KEY" || process.env.GEMINI_API_KEY.trim() === "") {
-      console.log("[Gemini AI] Chave n\xE3o configurada, usando fallback nativo.");
-      return extractTcuDataNativo(acordaoText);
+  async function extractTcuDataWithAi(acordaoText) {
+    const hasGemini = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY" && process.env.GEMINI_API_KEY.trim() !== "";
+    const hasGroq = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== "";
+    if (!hasGemini && !hasGroq) {
+      throw new Error("Nenhuma chave de IA configurada (Groq ou Gemini) para extrair os dados.");
     }
-    try {
-      const ai = new import_genai.GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `Voc\xEA \xE9 um auditor s\xEAnior do TCU. Leia atentamente o inteiro teor do ac\xF3rd\xE3o abaixo e extraia as informa\xE7\xF5es no formato JSON EXATO estipulado, e nada mais.
+    const promptText = `Voc\xEA \xE9 um analista experiente do TCU. Leia atentamente o inteiro teor do ac\xF3rd\xE3o abaixo e extraia as seguintes informa\xE7\xF5es no formato JSON EXATO estipulado, e nada mais.
 
 O JSON DEVE ter a seguinte estrutura:
 {
@@ -4202,21 +4090,51 @@ Regras ABSOLUTAS:
 5. Responda APENAS com o JSON v\xE1lido, sem \`\`\`json.
 
 Texto do Ac\xF3rd\xE3o:
-${acordaoText.slice(0, 15e3)}`
+${acordaoText.slice(0, 15e3)}`;
+    let resText = "{}";
+    async function callGemini() {
+      console.log("[Gemini AI] Processando extra\xE7\xE3o em massa com Gemini...");
+      const ai = new import_genai.GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: promptText
       });
-      let resText = response.text?.trim() || "{}";
+      return response.text?.trim() || "{}";
+    }
+    async function callGroq() {
+      console.log("[Groq AI] Processando extra\xE7\xE3o em massa com Groq Llama 3...");
+      const groq = new import_groq_sdk.default({ apiKey: process.env.GROQ_API_KEY });
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [{ role: "user", content: promptText }],
+        model: "llama-3.3-70b-versatile"
+      });
+      return chatCompletion.choices[0]?.message?.content || "{}";
+    }
+    try {
+      if (hasGroq) {
+        try {
+          resText = await callGroq();
+        } catch (e) {
+          console.warn("[Groq AI] Falhou (poss\xEDvel limite de uso). Mensagem:", e.message);
+          if (hasGemini) {
+            console.log("[Fallback] Tentando usar o Gemini...");
+            resText = await callGemini();
+          } else {
+            throw new Error("Groq falhou e Gemini n\xE3o configurado.");
+          }
+        }
+      } else {
+        resText = await callGemini();
+      }
       if (resText.startsWith("```json")) resText = resText.substring(7);
       if (resText.startsWith("```")) resText = resText.substring(3);
       if (resText.endsWith("```")) resText = resText.substring(0, resText.length - 3);
       resText = resText.trim();
+      resText = resText.replace(/<think>[\s\S]*?<\/think>/, "").trim();
       return JSON.parse(resText);
     } catch (e) {
-      if (e.status === 429 || e.message && e.message.includes("429")) {
-        console.error("[Gemini AI] Quota exceeded (429).");
-        throw e;
-      }
-      console.error("[Gemini AI] Checklist extra\xE7\xE3o falhou, fallback para nativo.", e);
-      return extractTcuDataNativo(acordaoText);
+      console.error("[AI] Extra\xE7\xE3o falhou em todas as tentativas.", e);
+      throw new Error("As cotas das IAs dispon\xEDveis se esgotaram ou ocorreu um erro interno.");
     }
   }
   app.post("/api/acordaos/:key/analisar-ressarcimento", async (req, res) => {
@@ -4232,13 +4150,10 @@ ${acordaoText.slice(0, 15e3)}`
     try {
       let aiResultJson;
       try {
-        aiResultJson = await extractTcuDataWithGemini(acordao.ACORDAO);
+        aiResultJson = await extractTcuDataWithAi(acordao.ACORDAO);
       } catch (err) {
         console.error("Erro no extrator:", err);
-        if (err.status === 429 || err.message && err.message.includes("429")) {
-          return res.status(429).json({ error: "429 Too Many Requests" });
-        }
-        return res.status(500).json({ error: "Falha na extra\xE7\xE3o de dados." });
+        return res.status(500).json({ error: err.message });
       }
       const dossieResponsaveis = [];
       let client;
@@ -4305,11 +4220,11 @@ ${acordaoText.slice(0, 15e3)}`
     if (!tipo || !palavra) {
       return res.status(400).json({ error: "Faltam par\xE2metros tipo ou palavra." });
     }
-    const DICT_PATH2 = import_path.default.join(DATA_DIR, "orbita_dictionary.json");
+    const DICT_PATH = import_path.default.join(DATA_DIR, "orbita_dictionary.json");
     try {
       let dict = {};
-      if (import_fs.default.existsSync(DICT_PATH2)) {
-        dict = JSON.parse(import_fs.default.readFileSync(DICT_PATH2, "utf-8"));
+      if (import_fs.default.existsSync(DICT_PATH)) {
+        dict = JSON.parse(import_fs.default.readFileSync(DICT_PATH, "utf-8"));
       }
       const key = `keywords${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
       if (!dict[key]) {
@@ -4318,84 +4233,12 @@ ${acordaoText.slice(0, 15e3)}`
       const kw = palavra.toLowerCase().trim();
       if (!dict[key].includes(kw)) {
         dict[key].push(kw);
-        import_fs.default.writeFileSync(DICT_PATH2, JSON.stringify(dict, null, 2), "utf-8");
+        import_fs.default.writeFileSync(DICT_PATH, JSON.stringify(dict, null, 2), "utf-8");
       }
       return res.json({ success: true, message: `Express\xE3o '${kw}' aprendida com sucesso para ${tipo}!` });
     } catch (err) {
       console.error("Erro ao aprender nova palavra:", err);
       return res.status(500).json({ error: "Falha ao salvar no dicion\xE1rio." });
-    }
-  });
-  app.post("/api/acordaos/:key/auditoria-profunda", async (req, res) => {
-    const { key } = req.params;
-    const db = loadDatabase();
-    const acordao = db.acordaos.find((x) => x.KEY === key);
-    if (!acordao || !acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
-      return res.status(400).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado ou sem inteiro teor." });
-    }
-    if (!process.env.GROQ_API_KEY) {
-      return res.status(500).json({ error: "Chave da API do Groq n\xE3o configurada." });
-    }
-    try {
-      const groq = new import_groq_sdk.default({ apiKey: process.env.GROQ_API_KEY });
-      const textChunk = acordao.ACORDAO.substring(0, 2e4);
-      const prompt = `
-# ROLE E OBJETIVO
-Voc\xEA \xE9 o motor de extra\xE7\xE3o sem\xE2ntica e an\xE1lise de conformidade do sistema \xD3RBITA. Sua fun\xE7\xE3o prim\xE1ria \xE9 atuar como um especialista em Controle Interno, auditoria p\xFAblica e presta\xE7\xE3o de contas governamentais. Voc\xEA deve processar textos n\xE3o estruturados (Ac\xF3rd\xE3os do TCU, relat\xF3rios de auditoria, processos administrativos) e extrair pontualmente entidades, jarg\xF5es e valores associados a irregularidades financeiras e processos sancionat\xF3rios.
-
-# DICION\xC1RIO SEMENTE (BASE DE CONHECIMENTO)
-Voc\xEA deve utilizar as seguintes categorias e termos como suas \xE2ncoras de busca textual e an\xE1lise de contexto:
-
-1. DANO AO ER\xC1RIO E TIPIFICA\xC7\xD5ES:
-Dano ao Er\xE1rio, Superfaturamento, Sobrepre\xE7o, Desfalque, Desvio de finalidade, Desvio de objeto, Malversa\xE7\xE3o de recursos p\xFAblicos, Locupletamento il\xEDcito, Pagamento indevido, Pagamento antecipado, Inexecu\xE7\xE3o contratual, Omiss\xE3o no dever de prestar contas, N\xE3o comprova\xE7\xE3o da regular aplica\xE7\xE3o dos recursos, Ato antiecon\xF4mico, Enriquecimento il\xEDcito, Fraude \xE0 licita\xE7\xE3o, Conluio, Desperd\xEDcio de recursos.
-
-2. RITOS DA TOMADA DE CONTAS ESPECIAL (TCE):
-Tomada de Contas Especial, Nexo de causalidade, Nexo causal, Fato gerador, Cita\xE7\xE3o, Audi\xEAncia, Dilig\xEAncia, Revelia, Matriz de Responsabiliza\xE7\xE3o, Respons\xE1vel solid\xE1rio, Respons\xE1vel subsidi\xE1rio, Contas julgadas irregulares, Contas regulares com ressalva, Contas il\xEDquidas, Prescri\xE7\xE3o intercorrente, Prescri\xE7\xE3o da pretens\xE3o punitiva, Arquivamento sem julgamento de m\xE9rito, Baixa materialidade, Gestor faltoso, Fase interna da TCE, Fase externa da TCE.
-
-3. EXECU\xC7\xC3O FINANCEIRA (SIAFI):
-SIAFI, Unidade Gestora (UG), Nota de Empenho (NE), Liquida\xE7\xE3o da despesa, Ordem Banc\xE1ria (OB), Restos a Pagar (RAP), Suprimento de Fundos, Conta \xDAnica do Tesouro Nacional, DARF, GRU, Conformidade de Gest\xE3o, Conformidade Documental, Termo de Execu\xE7\xE3o Descentralizada (TED), Conv\xEAnio, Contrato de Repasse, Programa de Trabalho Resumido (PTRES), Natureza de Despesa (ND), Nota de Lan\xE7amento (NL).
-
-4. SAN\xC7\xD5ES:
-Imputa\xE7\xE3o de D\xE9bito, Atualiza\xE7\xE3o monet\xE1ria, Juros de mora, Multa do art. 57, Multa do art. 58, Inabilita\xE7\xE3o para fun\xE7\xE3o de confian\xE7a, Declara\xE7\xE3o de inidoneidade, Arresto de bens, Indisponibilidade de bens, Desconsidera\xE7\xE3o da personalidade jur\xEDdica, Inscri\xE7\xE3o no CADIN, Inscri\xE7\xE3o na D\xEDvida Ativa da Uni\xE3o.
-
-# DIRETRIZES DE EXTRA\xC7\xC3O E EXPANS\xC3O SEM\xC2NTICA
-1. EXTRA\xC7\xC3O EXATA: Identifique e extraia qualquer termo do texto que corresponda exatamente ao Dicion\xE1rio Semente. Busque correlacionar esses termos com valores monet\xE1rios (R$), datas e nomes de respons\xE1veis (Pessoa F\xEDsica ou Jur\xEDdica) pr\xF3ximos a eles no texto.
-2. EXPANS\xC3O DIN\xC2MICA (THRESHOLD DE SIMILARIDADE): Ao ler o texto, se voc\xEA identificar uma palavra ou express\xE3o desconhecida, mas que possua alt\xEDssima similaridade sem\xE2ntica (confian\xE7a superior a 90%) com qualquer termo do Dicion\xE1rio Semente, voc\xEA deve:
-   a) Extrair o termo novo.
-   b) Classific\xE1-lo sob a categoria da \xE2ncora correspondente.
-   c) Sinalizar a nova express\xE3o com a tag [SUGEST\xC3O_DE_EXPANS\xC3O] para valida\xE7\xE3o posterior da equipe de controle interno.
-3. PREVEN\xC7\xC3O DE DESVIO SEM\xC2NTICO (SEMANTIC DRIFT): Ignore jarg\xF5es administrativos gen\xE9ricos (ex: "erro", "atraso", "documento") que tenham similaridade sem\xE2ntica abaixo de 90% com as \xE2ncoras. Mantenha o rigor t\xE9cnico exigido em auditorias p\xFAblicas.
-
-# FORMATO DE SA\xCDDA (OUTPUT)
-Ao processar um bloco de texto, retorne os dados estritamente em formato estruturado JSON, sem blocos markdown (sem \`\`\`json), contendo as chaves:
-{
-  "entidades_encontradas": [],
-  "valores_associados": [],
-  "responsaveis_identificados": [],
-  "termos_para_expansao": [],
-  "resumo_do_achado": "Texto"
-}
-
-Texto do Ac\xF3rd\xE3o:
-${textChunk}`;
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [{ role: "user", content: prompt }],
-        model: "llama-3.3-70b-versatile"
-      });
-      let rawResponse = chatCompletion.choices[0]?.message?.content || "";
-      let aiResultJson;
-      try {
-        const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? jsonMatch[0] : "{}";
-        aiResultJson = JSON.parse(jsonStr);
-      } catch (parseErr) {
-        console.error("Failed to parse Groq response:", rawResponse);
-        return res.status(500).json({ error: "Falha na an\xE1lise profunda da IA.", details: "A IA retornou um formato inv\xE1lido." });
-      }
-      return res.json({ success: true, data: aiResultJson });
-    } catch (err) {
-      console.error("[Deep AI] Erro:", err);
-      return res.status(500).json({ error: "Falha na an\xE1lise profunda da IA.", details: err.message });
     }
   });
   app.get("/api/rol-responsaveis", (req, res) => {
