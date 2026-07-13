@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import { GoogleGenAI } from '@google/genai';
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const db = JSON.parse(fs.readFileSync('./data/orbita_db.json'));
+const db = JSON.parse(fs.readFileSync('./data/orbita_db.json', 'utf8'));
 const ac = db.acordaos.find((x: any) => x.KEY === 'AC-862-2026-PL');
 
 const promptText = `Você é um analista experiente do TCU. Leia atentamente o inteiro teor do acórdão abaixo e extraia as seguintes informações no formato JSON EXATO estipulado, e nada mais.

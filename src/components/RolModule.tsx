@@ -623,7 +623,7 @@ export default function RolModule() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => {
-                          setEditA({});
+                          setEditE({});
                           setIsEdit(false);
                           setModal("afastamento");
                         }}

@@ -1610,8 +1610,11 @@ export default function TcuModule({
     if (ac.aiAnalysisData && ac.aiAnalysisData.temDebitoFinanceiro !== undefined) {
       return ac.aiAnalysisData.temDebitoFinanceiro;
     }
-    if (parsedTceMappingItems && parsedTceMappingItems.length > 0) {
-      const isMapped = parsedTceMappingItems.some(m => m.ACORDAO_REF && (m.ACORDAO_REF.includes(ac.NUMACORDAO.toString()) || m.ACORDAO_REF.includes(ac.KEY)));
+    if (tceMappings && tceMappings.length > 0) {
+      const isMapped = tceMappings.some(m => m.ACORDAO_REF && (
+        (ac.NUMACORDAO && m.ACORDAO_REF.includes(ac.NUMACORDAO.toString())) || 
+        (ac.KEY && m.ACORDAO_REF.includes(ac.KEY))
+      ));
       if (isMapped) return true;
     }
     const textToScan = ((ac.SUMARIO || "") + " " + (ac.ACORDAO || "")).toLowerCase();
@@ -2291,7 +2294,17 @@ export default function TcuModule({
                     <React.Fragment key={ac.KEY}>
                       
                       {/* Row Item */}
-                      <tr className={`hover:bg-slate-50/50 transition duration-150 ${isExpanded ? "bg-slate-50/70" : ""}`}>
+                      <tr 
+                        className={`hover:bg-slate-50/50 transition duration-150 cursor-pointer ${isExpanded ? "bg-slate-50/70" : ""}`}
+                        onClick={() => {
+                          setExpandedRow(isExpanded ? null : ac.KEY);
+                          setDocVerifyInput("");
+                          setVerifyResult(null);
+                          setFavorecidoInput("");
+                          setFavorecidoDocsResult(null);
+                          setSearchMode("documento");
+                        }}
+                      >
                         
                         {/* Expand toggle icon */}
                         <td className="px-4 py-3.5 no-print">
@@ -2413,7 +2426,7 @@ export default function TcuModule({
                                     </span>
                                   </div>
                                   <div className="space-y-4">
-                                    {(ac.aiAnalysisData.determinacoes?.length > 0) && (
+                                    {(Array.isArray(ac.aiAnalysisData.determinacoes) && ac.aiAnalysisData.determinacoes.length > 0) && (
                                       <div>
                                         <span className="text-[9px] font-bold text-rose-700 uppercase mb-1 block tracking-widest">Determinações</span>
                                         <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
@@ -2421,7 +2434,7 @@ export default function TcuModule({
                                         </ul>
                                       </div>
                                     )}
-                                    {(ac.aiAnalysisData.recomendacoes?.length > 0) && (
+                                    {(Array.isArray(ac.aiAnalysisData.recomendacoes) && ac.aiAnalysisData.recomendacoes.length > 0) && (
                                       <div>
                                         <span className="text-[9px] font-bold text-orange-700 uppercase mb-1 block tracking-widest">Recomendações</span>
                                         <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
@@ -2429,7 +2442,7 @@ export default function TcuModule({
                                         </ul>
                                       </div>
                                     )}
-                                    {(ac.aiAnalysisData.darCiencia?.length > 0) && (
+                                    {(Array.isArray(ac.aiAnalysisData.darCiencia) && ac.aiAnalysisData.darCiencia.length > 0) && (
                                       <div>
                                         <span className="text-[9px] font-bold text-blue-700 uppercase mb-1 block tracking-widest">Dar Ciência</span>
                                         <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
@@ -2442,7 +2455,10 @@ export default function TcuModule({
                                         ✓ Determina Arquivamento
                                       </div>
                                     )}
-                                    {!(ac.aiAnalysisData.determinacoes?.length) && !(ac.aiAnalysisData.recomendacoes?.length) && !(ac.aiAnalysisData.darCiencia?.length) && !ac.aiAnalysisData.determinaArquivamento && (
+                                    {(!Array.isArray(ac.aiAnalysisData.determinacoes) || ac.aiAnalysisData.determinacoes.length === 0) && 
+                                     (!Array.isArray(ac.aiAnalysisData.recomendacoes) || ac.aiAnalysisData.recomendacoes.length === 0) && 
+                                     (!Array.isArray(ac.aiAnalysisData.darCiencia) || ac.aiAnalysisData.darCiencia.length === 0) && 
+                                     !ac.aiAnalysisData.determinaArquivamento && (
                                       <span className="text-xs text-slate-500">Nenhuma ação técnica identificada pela IA neste documento.</span>
                                     )}
                                   </div>
@@ -2469,8 +2485,8 @@ export default function TcuModule({
                                   <div className="flex items-center gap-2">
                                     <button 
                                       type="button"
-                                      onClick={() => {
-                                        setDeepAiResult(null);
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         setFullTextAcordao(ac);
                                       }}
                                       className="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer border border-blue-200 font-sans"
@@ -2486,8 +2502,8 @@ export default function TcuModule({
                                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent h-12 flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button 
                                         type="button"
-                                        onClick={() => {
-                                          setDeepAiResult(null);
+                                        onClick={(e) => {
+                                          e.stopPropagation();
                                           setFullTextAcordao(ac);
                                         }}
                                         className="bg-[#1351b4] text-white hover:bg-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md transition flex items-center gap-1 cursor-pointer font-sans"
@@ -2525,9 +2541,9 @@ export default function TcuModule({
                                       <span className="font-bold text-[#1351b4] text-xs">Dossiê Inteligente de Ressarcimento (IA)</span>
                                     </div>
                                     
-                                    {ac.aiAnalysisData.dossieRessarcimento.length === 0 ? (
+                                    {Array.isArray(ac.aiAnalysisData.dossieRessarcimento) && ac.aiAnalysisData.dossieRessarcimento.length === 0 ? (
                                       <div className="text-xs text-slate-600 italic">A inteligência artificial não identificou condenação em débito ou devolução de valores no inteiro teor deste acórdão.</div>
-                                    ) : (
+                                    ) : Array.isArray(ac.aiAnalysisData.dossieRessarcimento) ? (
                                       <div className="space-y-3">
                                         {ac.aiAnalysisData.dossieRessarcimento.map((resp: any, i: number) => (
                                           <div key={i} className="bg-white p-2.5 rounded border border-[#1351b4]/20 shadow-sm text-xs">
@@ -2543,7 +2559,7 @@ export default function TcuModule({
                                             
                                             <div className="mt-2 pt-2 border-t border-slate-100">
                                               <span className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Resultado da Busca no SIAFI</span>
-                                              {!resp.siafiEncontrados || resp.siafiEncontrados.length === 0 ? (
+                                              {!Array.isArray(resp.siafiEncontrados) || resp.siafiEncontrados.length === 0 ? (
                                                 <div className="text-[10px] text-slate-500 flex items-center gap-1"><AlertCircle className="w-3 h-3 text-slate-400"/> Nenhum registro correspondente encontrado no SIAFI com este Nome/CPF.</div>
                                               ) : (
                                                 <div className="space-y-1.5">
@@ -2568,7 +2584,7 @@ export default function TcuModule({
                                           </div>
                                         ))}
                                       </div>
-                                    )}
+                                    ) : null}
                                   </div>
                                 )}
                               </div>
@@ -3253,6 +3269,14 @@ export default function TcuModule({
                   </div>
 
                   <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowComImporter(!showComImporter)}
+                      className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
+                      title="Importar planilhas CSV de comunicações de qualquer ano"
+                    >
+                      <Upload className="w-4 h-4" />
+                      {showComImporter ? "Ocultar Importador" : "Importar Comunicações"}
+                    </button>
                     <button
                       onClick={handleExportToExcel}
                       disabled={finalFiltered.length === 0}
@@ -4692,7 +4716,6 @@ export default function TcuModule({
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  setDeepAiResult(null);
                                                   setFullTextAcordao(item.acordao);
                                                 }}
                                                 className="px-4 py-2 bg-[#1351b4] hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-3xs"
@@ -4745,7 +4768,7 @@ export default function TcuModule({
       })()}
       {/* Print Sandbox Helper Modal */}
       {showPrintModal && (
-        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-100 no-print animate-fade-in">
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden">
             {/* Modal Header */}
             <div className="bg-slate-50 border-b border-slate-100 p-5 flex items-center justify-between">
@@ -4848,7 +4871,7 @@ export default function TcuModule({
 
       {/* Full Acórdão Text Modal Popup */}
       {fullTextAcordao && (
-        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-100 no-print animate-fade-in text-slate-800">
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in text-slate-800">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh]">
             {/* Modal Header */}
             <div className="bg-[#1351b4] text-white p-5 flex items-center justify-between shrink-0">
