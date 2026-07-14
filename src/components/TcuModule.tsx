@@ -41,7 +41,9 @@ import {
   Sparkles,
   Bot,
   RefreshCw,
-  Brain
+  Brain,
+  Zap,
+  CheckCircle2
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
 
@@ -447,6 +449,8 @@ export default function TcuModule({
   const [copySuccessAlert, setCopySuccessAlert] = useState(false);
   const [fullTextAcordao, setFullTextAcordao] = useState<AcordaoDemand | null>(null);
   const [copySuccessFullText, setCopySuccessFullText] = useState(false);
+  const [showComSyncPrazos, setShowComSyncPrazos] = useState(false);
+  const [comSyncMessage, setComSyncMessage] = useState<string | null>(null);
 
   // Trace / Sync audit logs states
   const [showSyncLogModal, setShowSyncLogModal] = useState(false);
