@@ -5,8 +5,10 @@
 
 // Estrutura de Extração Semântica IA
 export interface AiAnalysisData {
-  temDebitoFinanceiro: boolean;
-  valoresRestituir: string | null;
+  temDebitoFinanceiro?: boolean; // deprecated
+  valoresRestituir?: string | null; // deprecated
+  ha_ressarcimento?: boolean;
+  dossieRessarcimento?: any[];
   recomendacoes: string[];
   determinacoes: string[];
   darCiencia: string[];
@@ -202,7 +204,7 @@ export interface TceDemand {
 // TCE com Acórdão mapping
 export interface TceAcordaoMapping {
   NUMERO_ANO_TCE: string;
-  ACORDAO_REF: string; // reference to the Acórdão (e.g. "1234/2023")
+  ACORDAO_KEY: string; // reference to the Acórdão (e.g. "1234/2023")
 }
 
 // CGU Demand Item

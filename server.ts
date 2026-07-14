@@ -12,6 +12,8 @@ import dotenv from "dotenv";
 import session from "express-session";
 import pg from "pg";
 
+import comunicacoesRoutes from "./src/backend/routes/comunicacoesRoutes.js";
+import { pool } from "./src/backend/db";
 // Load environment variables
 dotenv.config();
 
@@ -1654,78 +1656,7 @@ async function startServer() {
   });
 
   // API 2.5: Comunicações (Ofícios) - GET & CRUD & IMPORT
-  app.get("/api/comunicacoes", (req, res) => {
-    const db = loadDatabase();
-    res.json(db.comunicacoes || []);
-  });
-
-  app.post("/api/comunicacoes/update", (req, res) => {
-    const db = loadDatabase();
-    const updated = req.body as ComunicacaoDemand;
-    if (!db.comunicacoes) db.comunicacoes = [];
-    const index = db.comunicacoes.findIndex((x: any) => x.KEY === updated.KEY);
-
-    if (index >= 0) {
-      db.comunicacoes[index] = {
-        ...db.comunicacoes[index],
-        ...updated,
-        ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
-      };
-      saveDatabase(db);
-      res.json({ success: true, item: db.comunicacoes[index] });
-    } else {
-      res.status(404).json({ error: "Comunicação não encontrada." });
-    }
-  });
-
-  app.delete("/api/comunicacoes/:key", (req, res) => {
-    const db = loadDatabase();
-    const key = req.params.key;
-    db.comunicacoes = (db.comunicacoes || []).filter((x: any) => x.KEY !== key);
-    saveDatabase(db);
-    res.json({ success: true });
-  });
-
-  app.post("/api/comunicacoes/import", (req, res) => {
-    const db = loadDatabase();
-    const { items } = req.body; // array of ComunicacaoDemand
-    if (!items || !Array.isArray(items)) {
-      return res.status(400).json({ error: "Formato de importação inválido." });
-    }
-
-    if (!db.comunicacoes) db.comunicacoes = [];
-
-    let importedCount = 0;
-    let updatedCount = 0;
-
-    for (const item of items) {
-      const idx = db.comunicacoes.findIndex((x: any) => x.KEY === item.KEY || (x.COMUNICACAO === item.COMUNICACAO && x.ANO === item.ANO));
-      if (idx >= 0) {
-        // Merge - preserve local updates if any, but overwrite standard fields
-        db.comunicacoes[idx] = {
-          ...db.comunicacoes[idx],
-          ...item,
-          ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
-        };
-        updatedCount++;
-      } else {
-        db.comunicacoes.unshift({
-          ...item,
-          ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")
-        });
-        importedCount++;
-      }
-    }
-
-    saveDatabase(db);
-    res.json({
-      success: true,
-      importedCount,
-      updatedCount,
-      totalCount: db.comunicacoes.length,
-      items: db.comunicacoes
-    });
-  });
+  app.use("/api", comunicacoesRoutes);
 
   // API 2.7: Tomada de Contas Especial (TCE) - GET, CRUD & IMPORT
   app.get("/api/tces", (req, res) => {
@@ -2272,7 +2203,7 @@ async function startServer() {
           const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do Rêgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
           const chosenRelator = rawItem.RELATOR || relatorOptions[numAcordao % 5];
           const utOptions = ["AudContratações (Unidade de Auditoria de Contratações)", "AudBenefícios (Unidade de Auditoria de Benefícios Sociais)", "AudGovernança (Unidade de Auditoria de Governança de Pessoas)", "AudPatrimônio (Unidade de Auditoria de Infraestrutura e Logística)"];
-          const chosenUT = rawItem.UNIDADETECNICA || utOptions[numAcordao % 4];
+          const chosenUT = utOptions[numAcordao % 4];
 
           const defaultAssuntos = [
             "Aprimoramento dos controles de governança de TI e sistemas de apoio.",
@@ -3002,7 +2933,7 @@ async function startServer() {
     });
   });
 
-async function extractTcuDataWithAi(acordaoText: string) {
+async function extractTcuDataWithAi(acordaoText: string, tceContext: any = null) {
   const hasGemini = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY" && process.env.GEMINI_API_KEY.trim() !== "";
   const hasGroq = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== "";
 
@@ -3010,24 +2941,40 @@ async function extractTcuDataWithAi(acordaoText: string) {
     throw new Error("Nenhuma chave de IA configurada (Groq ou Gemini) para extrair os dados.");
   }
   
-  const promptText = `Você é um analista experiente do TCU. Leia atentamente o inteiro teor do acórdão abaixo e extraia as seguintes informações no formato JSON EXATO estipulado, e nada mais.
+  let contextStr = "";
+  if (tceContext) {
+    contextStr = `
+ATENÇÃO - DADOS DE REFERÊNCIA DA TCE (USE-OS PARA BALIZAR A ANÁLISE SE APLICÁVEL):
+- Número da TCE: ${tceContext.numero_ano_tce || "N/A"}
+- Número SIAFI da TCE: ${tceContext.numero_siafi || "N/A"}
+`;
+  }
 
-O JSON DEVE ter a seguinte estrutura:
+  const promptText = `Você é um analista especialista do TCU.
+Analise o inteiro teor do acórdão abaixo e responda EXCLUSIVAMENTE com base nas informações expressamente contidas no texto.
+NÃO faça inferências, NÃO invente dados e NÃO misture conceitos.
+
+${contextStr}
+
+O retorno DEVE ser EXATAMENTE um objeto JSON estruturado da seguinte forma:
 {
+  "ha_determinacoes": true ou false,
+  "determinacoes": ["Lista de determinações extraídas do texto" ou "Não há"],
+  "ha_recomendacoes": true ou false,
+  "recomendacoes": ["Lista de recomendações extraídas do texto" ou "Não há"],
+  "ha_ressarcimento": true ou false,
   "responsaveis": [
     {
-      "nome": "NOME DO RESPONSÁVEL. Obrigatório. Nunca deixe em branco se houver condenação. Ex: João Alberto Martins Silva, Indesi Brasil.",
-      "cpf": "CPF ou CNPJ extraído do texto, com pontuação (se houver)",
-      "valor": "Montante total. DEVE SOMAR todos os valores de débito originais (frequentemente listados em tabelas ASCII contendo Data e Valor) E todas as multas aplicadas."
+      "nome": "Nome completo",
+      "cpf_cnpj": "CPF ou CNPJ extraído (se houver)",
+      "ressarcimento": "Sim/Não",
+      "valor_debito": "Valor original do ressarcimento/débito principal",
+      "valor_atualizado": "Valor atualizado (se houver)",
+      "trecho_fonte": "Citação EXATA do acórdão que fundamenta esta extração (Evidência)"
     }
-  ],
-  "checklist": {
-    "determinacoes": ["Lista de determinações curtas e concisas"],
-    "recomendacoes": ["Lista de recomendações curtas e concisas"],
-    "darCiencia": ["Lista das ciências dadas curtas e concisas"],
-    "determinaArquivamento": true ou false
-  }
+  ]
 }
+
 
 Regras ABSOLUTAS:
 1. O NOME DO RESPONSÁVEL sempre aparece ANTES ou DEPOIS dos valores. Exemplo: "julgar irregulares as contas do sr. [NOME DO RESPONSÁVEL], condenando-o ao pagamento das quantias abaixo discriminadas:" seguido de uma tabela. O nome DEVE ser extraído. NUNCA retorne "Responsável não identificado" se houver um nome no parágrafo da condenação.
@@ -3095,95 +3042,148 @@ ${acordaoText.slice(0, 15000)}`;
 
   app.post("/api/acordaos/:key/analisar-ressarcimento", async (req, res) => {
     const { key } = req.params;
-    const db = loadDatabase();
-    const acordao = db.acordaos.find((x: any) => x.KEY === key);
-
-    if (!acordao) {
-      return res.status(404).json({ error: "Acórdão não encontrado." });
-    }
-
-    if (!acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
-      return res.status(400).json({ error: "Este acórdão não possui o Inteiro Teor para ser analisado." });
-    }
-
+    
     try {
+      // 1. Fetch Acórdão from PostgreSQL
+      const acResult = await pool.query('SELECT * FROM acordaos WHERE key = $1', [key]);
+      if (acResult.rows.length === 0) {
+        return res.status(404).json({ error: "Acórdão não encontrado no Postgres." });
+      }
+      const acordao = acResult.rows[0];
+  
+      if (!acordao.acordao || acordao.acordao.trim() === "") {
+        return res.status(400).json({ error: "Este acórdão não possui o Inteiro Teor para ser analisado." });
+      }
+  
+      // 2. Cross-reference with TCE mappings
+      let tceContext = null;
+      const tceMapRes = await pool.query(`
+        SELECT m.*, t.numero_siafi 
+        FROM tce_mappings m 
+        LEFT JOIN tces t ON m.numero_ano_tce = t.numero_ano_tce 
+        WHERE m.acordao_key = $1 LIMIT 1
+      `, [key]);
+      
+      if (tceMapRes.rows.length > 0) {
+        tceContext = tceMapRes.rows[0];
+      }
+  
+      // 3. AI Extraction
       let aiResultJson;
-
-      // Extract via AI
       try {
-        aiResultJson = await extractTcuDataWithAi(acordao.ACORDAO);
+        aiResultJson = await extractTcuDataWithAi(acordao.acordao, tceContext);
       } catch (err: any) {
-        console.error("Erro no extrator:", err);
+        console.error("Erro no extrator IA:", err);
         return res.status(500).json({ error: err.message });
       }
-
-      // Query SIAFI/SIAPE for the extracted entities
+  
+      // 4. SIAFI Conciliation Logic
       const dossieResponsaveis = [];
       let client;
       try {
         client = await govHubPool.connect();
       } catch (err) {
-        // Fallback silencioso (ou aviso simples sem stack trace)
         console.warn("[Aviso] Banco GovHub/SIAFI indisponível. Resultados da conciliação virão vazios.");
       }
-
-      for (const resp of (aiResultJson.responsaveis || [])) {
-        let cleanCpf = resp.cpf ? resp.cpf.replace(/[^0-9]/g, "") : "";
+  
+      const responsaveisExtracted = aiResultJson.responsaveis || [];
+      
+      for (const resp of responsaveisExtracted) {
+        let cleanCpf = resp.cpf_cnpj ? resp.cpf_cnpj.replace(/[^0-9]/g, "") : (resp.cpf ? resp.cpf.replace(/[^0-9]/g, "") : "");
         let siafiMatches = [];
-
-        if (client) {
+        let situacao_debito = "Sem informação";
+        let total_pago = 0;
+        // Basic cleanup of currency formats (R$ 50.000,00 -> 50000.00)
+        let rawVal = (resp.valor_debito || resp.valor || "").replace(/[^\d.,]/g, "").replace(/\./g, "").replace(",", ".");
+        let valor_devido = parseFloat(rawVal) || 0;
+  
+        if (client && (cleanCpf.length > 5 || tceContext?.numero_siafi)) {
           try {
-            const searchRes = await client.query(`
-              SELECT 
-                siafi.*, 
-                siape.nome as nome_beneficiario,
-                siape.orgao,
-                siape.situacao_funcional
-              FROM siafi
-              LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf
-              WHERE 
-                siape.nome ILIKE $1 
-                OR (length($2) > 2 AND siafi.cpf_beneficiario LIKE '%' || $2 || '%')
-              LIMIT 5
-            `, [`%${resp.nome}%`, cleanCpf]);
-            siafiMatches = searchRes.rows;
+            let queryStr = `
+              SELECT siafi.*, siape.nome as nome_beneficiario 
+              FROM siafi 
+              LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf 
+              WHERE 1=1
+            `;
+            const params = [];
+            
+            if (cleanCpf) {
+              params.push(`%${cleanCpf}%`);
+              queryStr += ` AND siafi.cpf_beneficiario LIKE $${params.length}`;
+            }
+            
+            if (tceContext?.numero_siafi) {
+              params.push(`%${tceContext.numero_siafi}%`);
+              if (cleanCpf) {
+                 queryStr += ` OR siafi.processo_origem LIKE $${params.length}`;
+              } else {
+                 queryStr += ` AND siafi.processo_origem LIKE $${params.length}`;
+              }
+            }
+  
+            if (params.length > 0) {
+              queryStr += ` LIMIT 5`;
+              const searchRes = await client.query(queryStr, params);
+              siafiMatches = searchRes.rows;
+              
+              if (siafiMatches.length > 0) {
+                total_pago = siafiMatches.filter(s => s.confirmado).reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+                
+                if (total_pago >= valor_devido && valor_devido > 0) {
+                  situacao_debito = "Pago";
+                } else if (total_pago > 0 && total_pago < valor_devido) {
+                  situacao_debito = "Parcialmente pago";
+                } else {
+                  situacao_debito = "Em aberto";
+                }
+              }
+            }
           } catch (dbErr) {
-            console.error("[SIAFI/GovHub Search] erro no pipeline IA:", dbErr);
+            console.error("[SIAFI/GovHub Search] erro SQL:", dbErr);
           }
         }
-
+  
         dossieResponsaveis.push({
           ...resp,
+          situacao_debito,
+          total_pago,
           siafiEncontrados: siafiMatches
         });
       }
+      
       if (client) client.release();
-
-      // Atualizar o acordao e salvar
-      if (!acordao.aiAnalysisData) acordao.aiAnalysisData = {};
-      acordao.aiAnalysisData.dossieRessarcimento = dossieResponsaveis;
+  
+      // 5. Build AI Analysis Data and update Postgres
+      const newAiData = acordao.ai_analysis_data ? (typeof acordao.ai_analysis_data === 'string' ? JSON.parse(acordao.ai_analysis_data) : acordao.ai_analysis_data) : {};
       
-      // Update the checklist based on the new rigorous AI extraction
-      if (aiResultJson.checklist) {
-        acordao.aiAnalysisData.determinacoes = aiResultJson.checklist.determinacoes || [];
-        acordao.aiAnalysisData.recomendacoes = aiResultJson.checklist.recomendacoes || [];
-        acordao.aiAnalysisData.darCiencia = aiResultJson.checklist.darCiencia || [];
-        acordao.aiAnalysisData.determinaArquivamento = !!aiResultJson.checklist.determinaArquivamento;
+      newAiData.dossieRessarcimento = dossieResponsaveis;
+      newAiData.determinacoes = aiResultJson.determinacoes || [];
+      newAiData.recomendacoes = aiResultJson.recomendacoes || [];
+      newAiData.ha_ressarcimento = aiResultJson.ha_ressarcimento;
+  
+      let status_monitoramento = acordao.status_monitoramento;
+      let observacoes = acordao.observacoes || "";
+      const hasPago = dossieResponsaveis.some((r:any) => r.situacao_debito === "Pago");
+      if (hasPago) {
+        status_monitoramento = "Cumprido";
+        observacoes = "[Atualização Automática IA]: Ressarcimento integral identificado nos dados do SIAFI.";
       }
-
-      // Salva ou sobrescreve a situação se houver algum ressarcimento consolidado (no SIAFI mock confirmation == true)
-      const hasRessarcimento = dossieResponsaveis.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
-      if (hasRessarcimento) {
-        acordao.STATUS_MONITORAMENTO = "Cumprido";
-        acordao.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
-      }
-      
-      saveDatabase(db);
-
+  
+      await pool.query(`
+        UPDATE acordaos 
+        SET ai_analysis_data = $1, status_monitoramento = $2, observacoes = $3 
+        WHERE key = $4
+      `, [JSON.stringify(newAiData), status_monitoramento, observacoes, key]);
+  
       return res.json({
         success: true,
         dossie: dossieResponsaveis,
-        checklist: aiResultJson.checklist || null
+        checklist: {
+          determinacoes: aiResultJson.determinacoes || [],
+          recomendacoes: aiResultJson.recomendacoes || [],
+          ha_determinacoes: aiResultJson.ha_determinacoes,
+          ha_recomendacoes: aiResultJson.ha_recomendacoes
+        }
       });
 
     } catch (error: any) {
@@ -3192,36 +3192,6 @@ ${acordaoText.slice(0, 15000)}`;
     }
   });
 
-  app.post("/api/acordaos/aprender", (req, res) => {
-    const { tipo, palavra } = req.body; // tipo: "determinacoes", "recomendacoes", "responsaveis", etc
-    if (!tipo || !palavra) {
-      return res.status(400).json({ error: "Faltam parâmetros tipo ou palavra." });
-    }
-
-    const DICT_PATH = path.join(DATA_DIR, "orbita_dictionary.json");
-    try {
-      let dict: any = {};
-      if (fs.existsSync(DICT_PATH)) {
-        dict = JSON.parse(fs.readFileSync(DICT_PATH, "utf-8"));
-      }
-
-      const key = `keywords${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
-      if (!dict[key]) {
-        dict[key] = [];
-      }
-
-      const kw = palavra.toLowerCase().trim();
-      if (!dict[key].includes(kw)) {
-        dict[key].push(kw);
-        fs.writeFileSync(DICT_PATH, JSON.stringify(dict, null, 2), "utf-8");
-      }
-
-      return res.json({ success: true, message: `Expressão '${kw}' aprendida com sucesso para ${tipo}!` });
-    } catch (err: any) {
-      console.error("Erro ao aprender nova palavra:", err);
-      return res.status(500).json({ error: "Falha ao salvar no dicionário." });
-    }
-  });
 
 
 

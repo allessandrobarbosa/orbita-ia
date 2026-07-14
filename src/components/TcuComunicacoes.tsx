@@ -411,14 +411,12 @@ export default function TcuComunicacoes({
   const [searchTerm, setSearchTerm] = useState("");
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
-  const [tcuActiveSection, setTcuActiveSection] = useState<"monitoramento" | "comunicacoes" | "tce">("monitoramento");
-
   React.useEffect(() => {
     window.scrollTo({ top: 0 });
     setCurrentPage(1);
     setTceCurrentPage(1);
     setComCurrentPage(1);
-  }, [tcuActiveSection]);
+  }, []);
 
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [colegiadoFilter, setColegiadoFilter] = useState("TODOS");
@@ -844,7 +842,7 @@ export default function TcuComunicacoes({
 
         items.push({
           NUMERO_ANO_TCE: tceVal,
-          ACORDAO_REF: acordaoVal
+          ACORDAO_KEY: acordaoVal
         });
       }
     }
@@ -1071,7 +1069,7 @@ export default function TcuComunicacoes({
       const tceDebito = item.tce?.DEBITO_ATUALIZADO || "";
       const tceMotivo = item.tce?.MOTIVO_INSTAURACAO || "";
       const tceTC = item.tce?.TC || "";
-      const mappingRef = item.mapping.ACORDAO_REF;
+      const mappingRef = item.mapping.ACORDAO_KEY;
       const acKey = item.acordao?.KEY || "Não Encontrado na Base";
       const acTitle = item.acordao?.TITULO || "Nenhum acórdão correspondente encontrado para este mapeamento";
       const acColegiado = item.acordao?.COLEGIADO || "";
@@ -1612,9 +1610,9 @@ export default function TcuComunicacoes({
       return ac.aiAnalysisData.temDebitoFinanceiro;
     }
     if (tceMappings && tceMappings.length > 0) {
-      const isMapped = tceMappings.some(m => m.ACORDAO_REF && (
-        (ac.NUMACORDAO && m.ACORDAO_REF.includes(ac.NUMACORDAO.toString())) || 
-        (ac.KEY && m.ACORDAO_REF.includes(ac.KEY))
+      const isMapped = tceMappings.some(m => m.ACORDAO_KEY && (
+        (ac.NUMACORDAO && m.ACORDAO_KEY.includes(ac.NUMACORDAO.toString())) || 
+        (ac.KEY && m.ACORDAO_KEY.includes(ac.KEY))
       ));
       if (isMapped) return true;
     }
@@ -1808,60 +1806,7 @@ export default function TcuComunicacoes({
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Module Title Header - NOW STICKY */}
-      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-              <Landmark className="w-6 h-6 text-[#003366]" />
-              Tribunal de Contas da União — TCU
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
-          </div>
-        </div>
-      </div>
-
-      {/* TCU Submodules Navigation */}
-      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
-        {[
-          { id: "monitoramento", label: "Monitoramento", desc: "Acompanhamento de Acórdãos", icon: Database, isDev: false },
-          { id: "comunicacoes", label: "Comunicações", desc: "Recepção de Ofícios & Notificações", icon: MessageSquare, isDev: false },
-          { id: "tce", label: "Tomada de Contas Especial (TCE)", desc: "Apurar Danos ao Erário", icon: FileWarning, isDev: false },
-        ].map((subSection) => {
-          const SubIcon = subSection.icon;
-          const isActive = tcuActiveSection === subSection.id;
-          return (
-            <button
-              key={subSection.id}
-              onClick={() => {
-                setTcuActiveSection(subSection.id as any);
-                setSelectedAcordao(null);
-                setIsEditing(false);
-              }}
-              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${
-                isActive
-                  ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
-                  : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
-                <div className="text-left">
-                  <span className="block text-xs font-black uppercase tracking-wide leading-none">{subSection.label}</span>
-                  <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{subSection.desc}</span>
-                </div>
-              </div>
-              {subSection.isDev && (
-                <span className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded tracking-wide leading-none ${
-                  isActive ? "bg-amber-400 text-slate-900 animate-pulse" : "bg-slate-100 text-slate-500"
-                }`}>
-                  Breve
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>      
+      
 
         <div className="space-y-6 animate-fade-in">
 
@@ -3037,6 +2982,104 @@ export default function TcuComunicacoes({
           )}
         </div>
       
+      {/* Full Acórdão Text Modal Popup */}
+      {fullTextAcordao && (
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in text-slate-800">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-[#1351b4] text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider leading-none">
+                    Acórdão {fullTextAcordao.NUMACORDAO}/{fullTextAcordao.ANOACORDAO} — {fullTextAcordao.COLEGIADO}
+                  </h3>
+                  <p className="text-[10px] text-blue-200 mt-1">Identificador Único: <span className="font-mono">{fullTextAcordao.KEY}</span> | Sessão de {fullTextAcordao.DATASESSAO}</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => {
+                  setFullTextAcordao(null);
+                  setCopySuccessFullText(false);
+                }}
+                className="text-white/80 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body Info Panel */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0 text-xs">
+              <div>
+                <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider">Processo no TCU</span>
+                <span className="text-xs text-slate-800 font-bold font-mono">{fullTextAcordao.PROC || "Não informado"}</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider">Assunto Principal (MTE)</span>
+                <span className="text-xs text-slate-700 font-semibold line-clamp-1">{fullTextAcordao.ASSUNTO || "Sem descrição"}</span>
+              </div>
+              <div className="flex justify-end items-center gap-2">
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rawText = fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "O inteiro teor para este acórdão ainda não foi baixado.";
+                    navigator.clipboard.writeText(rawText).then(() => {
+                      setCopySuccessFullText(true);
+                      setTimeout(() => setCopySuccessFullText(false), 2500);
+                    });
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+                    copySuccessFullText
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                      : "bg-white border-slate-200 hover:bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {copySuccessFullText ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      Copiar Inteiro Teor
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+
+
+            {/* Modal Content Scroll Area */}
+            <div className="p-6 overflow-y-auto bg-slate-950 text-slate-100 flex-1 font-mono text-[11.5px] whitespace-pre-line leading-relaxed scrollbar-thin">
+              {fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "Este acórdão não possui a íntegra dos autos gravada."}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-between items-center shrink-0">
+              <span className="text-[10px] text-slate-400 font-sans">
+                ÓRBITA-AECI — Assessoria Especial de Controle Interno
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setFullTextAcordao(null);
+                  setCopySuccessFullText(false);
+                }}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Fechar Leitura
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

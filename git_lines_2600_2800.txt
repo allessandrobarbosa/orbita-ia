@@ -1,0 +1,200 @@
+2600:       const lower = f.toLowerCase();
+2601:       return (lower.startsWith("acórdãos") || lower.startsWith("acordaos")) && lower.endsWith(".csv");
+2602:     });
+2603: 
+2604:     if (csvFiles.length === 0) {
+2605:       return res.json({
+2606:         success: false,
+2607:         message: "Nenhum arquivo local 'Acórdãos*.csv' ou 'acordaos-*.csv' encontrado na pasta data/tcu/ do projeto."
+2608:       });
+2609:     }
+2610: 
+2611:     const report = [];
+2612: 
+2613:     let totalImported = 0;
+2614:     let totalUpdated = 0;
+2615:     let totalSkipped = 0;
+2616: 
+2617:     try {
+2618:       for (const file of csvFiles) {
+2619:         const filePath = path.join(TCU_DIR, file);
+2620:         console.log(`[Local Sync] Processing local CSV file: ${filePath}...`);
+2621:         
+2622:         let imported = 0;
+2623:         let updated = 0;
+2624:         let skipped = 0;
+2625: 
+2626:         const yearMatch = file.match(/(?:acórdãos|acordaos)(\d{4})/i);
+2627:         if (!yearMatch) {
+2628:           console.log(`[Local Sync] Could not extract year from file: ${file}. Skipping.`);
+2629:           continue;
+2630:         }
+2631:         const year = Number(yearMatch[1]);
+2632: 
+2633:         try {
+2634:           // 1. Pre-read the local file to build a set of keys we actually want to import/update
+2635:           const localKeys = new Set();
+2636:           const localReadStream = fs.createReadStream(filePath, { encoding: "utf8" });
+2637:           await parseCsvStream(localReadStream, (record) => {
+2638:             const num = record.NUMACORDAO?.trim();
+2639:             const ano = record.ANOACORDAO?.trim();
+2640:             const col = record.COLEGIADO || "Plenário";
+2641:             if (num && ano) {
+2642:               const normCol = normalizeColegiado(col);
+2643:               localKeys.add(`${num}-${ano}-${normCol}`);
+2644:             }
+2645:             return false;
+2646:           });
+2647: 
+2648:           // 2. Download and pre-index online complete CSV, filtering by only the local keys
+2649:           const tempPath = await downloadTempCsv(year);
+2650:           const completeMteMap = new Map();
+2651:           const foundKeys = new Set();
+2652: 
+2653:           if (tempPath && fs.existsSync(tempPath)) {
+2654:             console.log(`[Local Sync] Pre-indexing complete CSV for year ${year}: ${tempPath}...`);
+2655:             const tempStream = fs.createReadStream(tempPath, { encoding: "utf8" });
+2656:             await parseCsvStream(tempStream, (record) => {
+2657:               const num = record.NUMACORDAO?.trim();
+2658:               const ano = record.ANOACORDAO?.trim();
+2659:               const col = record.COLEGIADO || "Plenário";
+2660:               if (num && ano) {
+2661:                 const normCol = normalizeColegiado(col);
+2662:                 const key = `${num}-${ano}-${normCol}`;
+2663:                 foundKeys.add(key);
+2664:                 if (localKeys.has(key)) {
+2665:                   completeMteMap.set(key, record);
+2666:                 }
+2667:               }
+2668:               return false;
+2669:             });
+2670:             console.log(`[Local Sync] Pre-indexing completed. Found ${completeMteMap.size} matching local records in online CSV.`);
+2671:           }
+2672: 
+2673:           // 3. Process the local CSV file and import all entries
+2674:           const fileStream = fs.createReadStream(filePath, { encoding: "utf8" });
+2675:           const processedKeysInCsv = new Set();
+2676:           let duplicatesInFile = 0;
+2677: 
+2678:           await parseCsvStream(fileStream, async (record) => {
+2679:             const numAcordao = Number(record.NUMACORDAO);
+2680:             const anoAcordao = Number(record.ANOACORDAO);
+2681:             const colegiado = record.COLEGIADO || "Plenário";
+2682:             const normalizedCol = normalizeColegiado(colegiado);
+2683:             
+2684:             if (!numAcordao || !anoAcordao) return false;
+2685: 
+2686:             const csvRowKey = `${numAcordao}-${anoAcordao}-${normalizedCol}`;
+2687: 
+2688:             // Check if this row is duplicate inside the CSV itself
+2689:             if (processedKeysInCsv.has(csvRowKey)) {
+2690:               duplicatesInFile++;
+2691:               skipped++;
+2692:               return false;
+2693:             }
+2694:             processedKeysInCsv.add(csvRowKey);
+2695: 
+2696:             const generatedKey = `AC-${numAcordao}-${anoAcordao}-${normalizedCol}`;
+2697:             const lookupKey = `${numAcordao}-${anoAcordao}-${normalizedCol}`;
+2698:             const existingIndex = db.acordaos.findIndex(
+2699:               (x) => x.NUMACORDAO === numAcordao && x.ANOACORDAO === anoAcordao && normalizeColegiado(x.COLEGIADO) === normalizedCol
+2700:             );
+2701: 
+2702:             if (existingIndex >= 0) {
+2703:               const current = db.acordaos[existingIndex];
+2704:               const currentIsSimulated = current.SITUACAO?.includes("SIMULADO") || current.OBSERVACOES?.includes("Gerado automaticamente");
+2705:               const hasFullText = current.ACORDAO && current.ACORDAO.trim().length > 100;
+2706:               
+2707:               if (!currentIsSimulated && hasFullText) {
+2708:                 skipped++;
+2709:                 return false;
+2710:               }
+2711:             }
+2712: 
+2713:             const fullDoc = completeMteMap.get(lookupKey);
+2714: 
+2715:             if (fullDoc) {
+2716:               const cleanProc = fullDoc.PROC ? stripHtmlToText(fullDoc.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+2717:               const cleanTitulo = fullDoc.TITULO ? stripHtmlToText(fullDoc.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
+2718:               const cleanAcordaoText = fullDoc.ACORDAO ? stripHtmlToText(fullDoc.ACORDAO) : "";
+2719:               const cleanSumario = fullDoc.SUMARIO ? stripHtmlToText(fullDoc.SUMARIO) : "";
+2720: 
+2721:               // Use cleanSumario, fallback to ASSUNTO, then a generic message
+2722:               const finalSumario = cleanSumario || fullDoc.ASSUNTO || `Acórdão nº ${numAcordao}/${anoAcordao} importado do portal do TCU.`;
+2723: 
+2724:               // Extract deadline and reason/description via AI or Regex
+2725:               const dataSessao = fullDoc.DATASESSAO || record.DATASESSAO || "";
+2726:               const deadlineResult = await extractDeadlineWithAI(cleanAcordaoText, dataSessao);
+2727: 
+2728:               const newAcordao = {
+2729:                 KEY: generatedKey,
+2730:                 TITULO: cleanTitulo,
+2731:                 NUMACORDAO: numAcordao,
+2732:                 ANOACORDAO: anoAcordao,
+2733:                 NUMATA: fullDoc.NUMATA || `${numAcordao}/${anoAcordao}`,
+2734:                 COLEGIADO: fullDoc.COLEGIADO || record.COLEGIADO || "Plenário",
+2735:                 DATASESSAO: dataSessao,
+2736:                 SITUACAO: fullDoc.SITUACAO || "OFICIALIZADO",
+2737:                 PROC: cleanProc,
+2738:                 ACORDAOSRELACIONADOS: fullDoc.ACORDAOSRELACIONADOS || "Nenhum",
+2739:                 TIPOPROCESSO: fullDoc.TIPOPROCESSO || record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+2740:                 INTERESSADOS: fullDoc.INTERESSADOS || "Ministério do Trabalho e Emprego (AECI-MTE)",
+2741:                 ENTIDADE: fullDoc.ENTIDADE || "MTE - Ministério do Trabalho e Emprego",
+2742:                 RELATOR: fullDoc.RELATOR || record.RELATOR || "",
+2743:                 UNIDADETECNICA: fullDoc.UNIDADETECNICA || record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+2744:                 ASSUNTO: fullDoc.ASSUNTO || "Jurisprudência TCU",
+2745:                 SUMARIO: finalSumario,
+2746:                 ACORDAO: cleanAcordaoText,
+2747:                 DECISAO: fullDoc.DECISAO || cleanAcordaoText,
+2748: 
+2749:                 // Operational defaults
+2750:                 STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+2751:                 RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
+2752:                 PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : (deadlineResult.deadline || ""),
+2753:                 OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : deadlineResult.description,
+2754:                 ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR"),
+2755:                 aiAnalysisData: null
+2756:               };
+2757: 
+2758:               if (existingIndex >= 0) {
+2759:                 db.acordaos[existingIndex] = newAcordao;
+2760:                 updated++;
+2761:               } else {
+2762:                 db.acordaos.unshift(newAcordao);
+2763:                 imported++;
+2764:               }
+2765:             } else {
+2766:               // Fallback metadata only (since it's in our curated local list, we ALWAYS import it)
+2767:               const cleanProc = record.PROC ? stripHtmlToText(record.PROC) : `TC ${numAcordao}/${anoAcordao}`;
+2768:               const cleanTitulo = record.TITULO ? stripHtmlToText(record.TITULO) : `ACÓRDÃO ${numAcordao}/${anoAcordao}`;
+2769:               
+2770:               const dataSessao = record.DATASESSAO || "";
+2771:               // Without full text we have no details for AI, so fallback to regex on basic metadata
+2772:               const deadlineResult = extractDeadlineWithRegex("", dataSessao);
+2773: 
+2774:               const fallbackAcordao = {
+2775:                 KEY: generatedKey,
+2776:                 TITULO: cleanTitulo,
+2777:                 NUMACORDAO: numAcordao,
+2778:                 ANOACORDAO: anoAcordao,
+2779:                 NUMATA: record.NUMATA || `${numAcordao}/${anoAcordao}`,
+2780:                 COLEGIADO: record.COLEGIADO || "Plenário",
+2781:                 DATASESSAO: dataSessao,
+2782:                 SITUACAO: "OFICIALIZADO (SEM INTEIRO TEOR)",
+2783:                 PROC: cleanProc,
+2784:                 ACORDAOSRELACIONADOS: "Nenhum",
+2785:                 TIPOPROCESSO: record.TIPOPROCESSO || "TOMADA DE CONTAS ESPECIAL (TCE)",
+2786:                 INTERESSADOS: "Ministério do Trabalho e Emprego (AECI-MTE)",
+2787:                 ENTIDADE: "MTE - Ministério do Trabalho e Emprego",
+2788:                 RELATOR: record.RELATOR || "",
+2789:                 UNIDADETECNICA: record.UNIDADETECNICA || "Assessoria Especial de Controle Interno",
+2790:                 ASSUNTO: "Jurisprudência TCU",
+2791:                 SUMARIO: record.ASSUNTO || "Importado via Sincronização Local (Metadados apenas).",
+2792:                 ACORDAO: "",
+2793:                 DECISAO: "",
+2794: 
+2795:                 STATUS_MONITORAMENTO: existingIndex >= 0 ? db.acordaos[existingIndex].STATUS_MONITORAMENTO : "Pendente",
+2796:                 RESPONSAVEL_INTERNO: existingIndex >= 0 ? db.acordaos[existingIndex].RESPONSAVEL_INTERNO : "AECI - Divisão de Monitoramento",
+2797:                 PRAZO_LIMITE: existingIndex >= 0 ? db.acordaos[existingIndex].PRAZO_LIMITE : (deadlineResult.deadline || ""),
+2798:                 OBSERVACOES: existingIndex >= 0 ? db.acordaos[existingIndex].OBSERVACOES : deadlineResult.description,
+2799:                 ULTIMA_ATUALIZACAO: new Date().toLocaleString("pt-BR")

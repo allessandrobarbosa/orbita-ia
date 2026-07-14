@@ -411,14 +411,12 @@ export default function TcuTCE({
   const [searchTerm, setSearchTerm] = useState("");
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
-  const [tcuActiveSection, setTcuActiveSection] = useState<"monitoramento" | "comunicacoes" | "tce">("monitoramento");
-
   React.useEffect(() => {
     window.scrollTo({ top: 0 });
     setCurrentPage(1);
     setTceCurrentPage(1);
     setComCurrentPage(1);
-  }, [tcuActiveSection]);
+  }, []);
 
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [colegiadoFilter, setColegiadoFilter] = useState("TODOS");
@@ -844,7 +842,7 @@ export default function TcuTCE({
 
         items.push({
           NUMERO_ANO_TCE: tceVal,
-          ACORDAO_REF: acordaoVal
+          ACORDAO_KEY: acordaoVal
         });
       }
     }
@@ -1071,7 +1069,7 @@ export default function TcuTCE({
       const tceDebito = item.tce?.DEBITO_ATUALIZADO || "";
       const tceMotivo = item.tce?.MOTIVO_INSTAURACAO || "";
       const tceTC = item.tce?.TC || "";
-      const mappingRef = item.mapping.ACORDAO_REF;
+      const mappingRef = item.mapping.ACORDAO_KEY;
       const acKey = item.acordao?.KEY || "Não Encontrado na Base";
       const acTitle = item.acordao?.TITULO || "Nenhum acórdão correspondente encontrado para este mapeamento";
       const acColegiado = item.acordao?.COLEGIADO || "";
@@ -1612,9 +1610,9 @@ export default function TcuTCE({
       return ac.aiAnalysisData.temDebitoFinanceiro;
     }
     if (tceMappings && tceMappings.length > 0) {
-      const isMapped = tceMappings.some(m => m.ACORDAO_REF && (
-        (ac.NUMACORDAO && m.ACORDAO_REF.includes(ac.NUMACORDAO.toString())) || 
-        (ac.KEY && m.ACORDAO_REF.includes(ac.KEY))
+      const isMapped = tceMappings.some(m => m.ACORDAO_KEY && (
+        (ac.NUMACORDAO && m.ACORDAO_KEY.includes(ac.NUMACORDAO.toString())) || 
+        (ac.KEY && m.ACORDAO_KEY.includes(ac.KEY))
       ));
       if (isMapped) return true;
     }
@@ -1808,60 +1806,7 @@ export default function TcuTCE({
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Module Title Header - NOW STICKY */}
-      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
-          <div>
-            <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-              <Landmark className="w-6 h-6 text-[#003366]" />
-              Tribunal de Contas da União — TCU
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
-          </div>
-        </div>
-      </div>
 
-      {/* TCU Submodules Navigation */}
-      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
-        {[
-          { id: "monitoramento", label: "Monitoramento", desc: "Acompanhamento de Acórdãos", icon: Database, isDev: false },
-          { id: "comunicacoes", label: "Comunicações", desc: "Recepção de Ofícios & Notificações", icon: MessageSquare, isDev: false },
-          { id: "tce", label: "Tomada de Contas Especial (TCE)", desc: "Apurar Danos ao Erário", icon: FileWarning, isDev: false },
-        ].map((subSection) => {
-          const SubIcon = subSection.icon;
-          const isActive = tcuActiveSection === subSection.id;
-          return (
-            <button
-              key={subSection.id}
-              onClick={() => {
-                setTcuActiveSection(subSection.id as any);
-                setSelectedAcordao(null);
-                setIsEditing(false);
-              }}
-              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${
-                isActive
-                  ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
-                  : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
-              }`}
-            >
-              <div className="flex items-center gap-2.5">
-                <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
-                <div className="text-left">
-                  <span className="block text-xs font-black uppercase tracking-wide leading-none">{subSection.label}</span>
-                  <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{subSection.desc}</span>
-                </div>
-              </div>
-              {subSection.isDev && (
-                <span className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded tracking-wide leading-none ${
-                  isActive ? "bg-amber-400 text-slate-900 animate-pulse" : "bg-slate-100 text-slate-500"
-                }`}>
-                  Breve
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
 {(() => {
         // Dynamic calculations
         const tceYears = Array.from(new Set([
@@ -1920,7 +1865,7 @@ export default function TcuTCE({
         // Resolve Mappings side-by-side
         const resolvedMappings = tceMappings.map(m => {
           const matchedTce = tces.find(t => t.NUMERO_ANO_TCE?.trim().toLowerCase() === m.NUMERO_ANO_TCE?.trim().toLowerCase());
-          const matchedAc = findMatchedAcordao(m.ACORDAO_REF);
+          const matchedAc = findMatchedAcordao(m.ACORDAO_KEY);
           return {
             mapping: m,
             tce: matchedTce,
@@ -1936,7 +1881,7 @@ export default function TcuTCE({
           
           const tceStr = rm.tce ? `${rm.tce.NUMERO_ANO_TCE} ${rm.tce.PROCESSO_ADMINISTRATIVO} ${rm.tce.MOTIVO_INSTAURACAO}` : "";
           const acStr = rm.acordao ? `${rm.acordao.KEY} ${rm.acordao.TITULO} ${rm.acordao.NUMACORDAO}` : "";
-          const refStr = rm.mapping.ACORDAO_REF;
+          const refStr = rm.mapping.ACORDAO_KEY;
           const fullText = `${tceStr} ${acStr} ${refStr}`.toLowerCase();
           
           const matchesSearch = !tceSearchTerm || fullText.includes(tceSearchTerm.toLowerCase());
@@ -2357,15 +2302,16 @@ export default function TcuTCE({
                         </tr>
                       ) : (
                         filteredTces.map((tce, idx) => {
-                          const isExpanded = tceExpandedId === tce.id;
+                          const tceId = tce.id || tce.NUMERO_ANO_TCE || `tce-${idx}`;
+                          const isExpanded = tceExpandedId === tceId;
                           const hasMapping = tceMappings.some(m => m.NUMERO_ANO_TCE?.toLowerCase() === tce.NUMERO_ANO_TCE?.toLowerCase());
 
                           return (
-                            <React.Fragment key={tce.id}>
+                            <React.Fragment key={tceId}>
                               <tr className={`hover:bg-slate-50/55 transition duration-155 ${isExpanded ? "bg-slate-50/70" : ""}`}>
                                 <td className="px-4 py-3.5 no-print">
                                   <button
-                                    onClick={() => setTceExpandedId(isExpanded ? null : tce.id)}
+                                    onClick={() => setTceExpandedId(isExpanded ? null : tceId)}
                                     className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
                                   >
                                     {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
@@ -2492,7 +2438,8 @@ export default function TcuTCE({
                         </tr>
                       ) : (
                         filteredMappings.map((item, idx) => {
-                          const isExpanded = tceExpandedId === `map-${item.mapping.NUMERO_ANO_TCE}`;
+                          const mappingId = `map-${item.mapping.NUMERO_ANO_TCE || idx}`;
+                          const isExpanded = tceExpandedId === mappingId;
                           const isMatched = !!item.acordao;
 
                           return (
@@ -2500,7 +2447,7 @@ export default function TcuTCE({
                               <tr className={`hover:bg-slate-50/55 transition duration-155 ${isExpanded ? "bg-slate-50/70" : ""}`}>
                                 <td className="px-4 py-3.5 no-print">
                                   <button
-                                    onClick={() => setTceExpandedId(isExpanded ? null : `map-${item.mapping.NUMERO_ANO_TCE}`)}
+                                    onClick={() => setTceExpandedId(isExpanded ? null : mappingId)}
                                     className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
                                   >
                                     {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
@@ -2511,7 +2458,7 @@ export default function TcuTCE({
                                   <span className="font-semibold text-slate-800 block truncate" title={item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}>{item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}</span>
                                   <span className="text-[10px] text-[#003366] font-mono block">{item.tce?.TC || "-"}</span>
                                 </td>
-                                <td className="px-4 py-3.5 font-semibold text-slate-900 italic text-[#1351b4]">{item.mapping.ACORDAO_REF}</td>
+                                <td className="px-4 py-3.5 font-semibold text-slate-900 italic text-[#1351b4]">{item.mapping.ACORDAO_KEY}</td>
                                 <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500">{item.acordao?.KEY || "Indefinida / Não Ingerido"}</td>
                                 <td className="px-4 py-3.5 text-center">
                                   {isMatched ? (
@@ -2586,7 +2533,7 @@ export default function TcuTCE({
                                             DETALHES DO ACÓRDÃO TCU ASSOCIADO
                                           </span>
                                           <span className="text-[10px] font-bold text-[#1351b4] font-mono">
-                                            {item.mapping.ACORDAO_REF}
+                                            {item.mapping.ACORDAO_KEY}
                                           </span>
                                         </div>
 
@@ -2639,19 +2586,19 @@ export default function TcuTCE({
                                         ) : (
                                           <div className="p-5 bg-rose-50/20 border border-rose-100 rounded-xl space-y-3">
                                             <p className="text-[11px] text-slate-650 leading-relaxed">
-                                              Este acórdão (<strong className="text-rose-800">{item.mapping.ACORDAO_REF}</strong>) está mapeado para esta TCE, mas o teor oficial ou seus metadados ainda não foram importados para o Repositório AECI.
+                                              Este acórdão (<strong className="text-rose-800">{item.mapping.ACORDAO_KEY}</strong>) está mapeado para esta TCE, mas o teor oficial ou seus metadados ainda não foram importados para o Repositório AECI.
                                             </p>
                                             <button
                                               type="button"
                                               onClick={() => {
                                                 setTcuActiveSection("monitoramento");
-                                                setSearchTerm(item.mapping.ACORDAO_REF);
+                                                setSearchTerm(item.mapping.ACORDAO_KEY);
                                                 window.scrollTo({ top: 300, behavior: "smooth" });
                                               }}
                                               className="px-3.5 py-1.5 bg-[#003366] hover:bg-slate-900 text-white rounded-xl text-[10.5px] font-bold transition flex items-center gap-1.5 shadow-2xs"
                                             >
                                               <Search className="w-3.5 h-3.5" />
-                                              Buscar e Importar Acórdão {item.mapping.ACORDAO_REF}
+                                              Buscar e Importar Acórdão {item.mapping.ACORDAO_KEY}
                                             </button>
                                           </div>
                                         )}

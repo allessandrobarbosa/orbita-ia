@@ -720,7 +720,7 @@ export const SEED_TCES: any[] = [
 export const SEED_TCE_ACORDAO_MAPPINGS: any[] = [
   {
     NUMERO_ANO_TCE: "TCE 003/2022",
-    ACORDAO_REF: "14068/2023"
+    ACORDAO_KEY: "14068/2023"
   }
 ];
 
@@ -996,4 +996,4 @@ export const SEED_VIATURAS_MANUTENCOES: ViaturaManutencao[] = [
   { id: "M-1", viaturaId: "V-1", tipo: "Preventiva (Revisão 40k)", data: "2025-10-15", custo: 1200.00, kmManutencao: 40100, proximaRevisaoKm: 50000 },
   { id: "M-2", viaturaId: "V-2", tipo: "Corretiva (Troca Pastilhas de Freio)", data: "2026-03-22", custo: 680.00, kmManutencao: 65000 },
   { id: "M-3", viaturaId: "V-3", tipo: "Preventiva (Revisão 20k)", data: "2025-12-05", custo: 1500.00, kmManutencao: 20050, proximaRevisaoKm: 25000 }
-];
+];
