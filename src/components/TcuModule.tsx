@@ -3005,8 +3005,8 @@ export default function TcuModule({
             const currentYearInt = parseInt(comAnoFilter);
             const totalForSelectedYear = allComs.filter(x => comAnoFilter === "TODOS" || x.ANO === currentYearInt);
             const totalComsCount = totalForSelectedYear.length;
-            const respondedCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && !!x.DATA_RESPOSTA && x.DATA_RESPOSTA.trim() !== "").length;
-            const pendingCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && (!x.DATA_RESPOSTA || x.DATA_RESPOSTA.trim() === "")).length;
+            const respondedCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && typeof x.DATA_RESPOSTA === 'string' && x.DATA_RESPOSTA.trim() !== "").length;
+            const pendingCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && (typeof x.DATA_RESPOSTA !== 'string' || x.DATA_RESPOSTA.trim() === "")).length;
             const totalRequiredCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false).length;
             const responseRate = totalRequiredCount > 0 ? ((respondedCount / totalRequiredCount) * 100).toFixed(1) : "100.0";
 
@@ -3019,9 +3019,9 @@ export default function TcuModule({
 
             // Filtered Communications list
             const finalFiltered = totalForSelectedYear.filter(item => {
-              const term = comSearchTerm.toLowerCase();
+              const term = (comSearchTerm || "").toLowerCase();
               const matchesSearch = 
-                item.COMUNICACAO.toLowerCase().includes(term) ||
+                (item.COMUNICACAO || "").toLowerCase().includes(term) ||
                 (item.PROCESSO || "").toLowerCase().includes(term) ||
                 (item.DESTINATARIO && item.DESTINATARIO.toLowerCase().includes(term)) ||
                 (item.CONTATO && item.CONTATO.toLowerCase().includes(term)) ||
