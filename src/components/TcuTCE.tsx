@@ -4,10 +4,6 @@
  */
 
 import React, { useState } from "react";
-import TcuMonitoramento from './TcuMonitoramento';
-import TcuComunicacoes from './TcuComunicacoes';
-import TcuTCE from './TcuTCE';
-
 import { 
   Plus, 
   Search, 
@@ -70,7 +66,7 @@ interface TcuModuleProps {
   isLoading: boolean;
 }
 
-export default function TcuModule({ 
+export default function TcuTCE({ 
   acordaos: rawAcordaos, 
   onUpdateAcordao, 
   onDeleteAcordao, 
@@ -1866,40 +1862,1023 @@ export default function TcuModule({
           );
         })}
       </div>
+{(() => {
+        // Dynamic calculations
+        const tceYears = Array.from(new Set([
+          ...tces.map(t => extractYearFromTceString(t.NUMERO_ANO_TCE)),
+          ...tceMappings.map(m => extractYearFromTceString(m.NUMERO_ANO_TCE))
+        ])).filter(yr => yr >= 1990 && yr <= 2035).sort((a, b) => b - a);
 
-      
-      {tcuActiveSection === "monitoramento" && (
-        <TcuMonitoramento 
-          acordaos={rawAcordaos}
-          onUpdateAcordao={onUpdateAcordao}
-          onDeleteAcordao={onDeleteAcordao}
-          onImportAcordaos={onImportAcordaos}
-          onSyncLocalAcordaos={onSyncLocalAcordaos}
-          onClearOlderAcordaos={onClearOlderAcordaos}
-          onResetDatabase={onResetDatabase}
-          isLoading={isLoading}
-        />
+        const totalOriginalDebito = tces.reduce((sum, item) => {
+          if (!item.DEBITO_ORIGINAL) return sum;
+          const cleaned = item.DEBITO_ORIGINAL.replace(/[^\d\,]/g, "").replace(",", ".");
+          const num = parseFloat(cleaned);
+          return sum + (isNaN(num) ? 0 : num);
+        }, 0);
+        
+        const formattedTotalDebito = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalOriginalDebito);
+
+        const totalTceCount = tces.length;
+        const totalMappedCount = tceMappings.length;
+        
+        // Year-specific statistics helper for TCE
+        const tcesForSelectedYear = tces.filter(t => {
+          const tYear = extractYearFromTceString(t.NUMERO_ANO_TCE);
+          return tceSelectedYear === "TODOS" || tYear.toString() === tceSelectedYear;
+        });
+
+        // Sum updated debits dynamically
+        const sumUpdatedDebito = tcesForSelectedYear.reduce((sum, item) => {
+          if (!item.DEBITO_ATUALIZADO) return sum;
+          const cleaned = item.DEBITO_ATUALIZADO.replace(/[R$\s.]/g, "").replace(",", ".");
+          const num = parseFloat(cleaned);
+          return sum + (isNaN(num) ? 0 : num);
+        }, 0);
+
+        const formattedSelectedYearDebito = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(sumUpdatedDebito);
+
+        // Count linked & pending for chosen year
+        const mappedTcesForYear = tcesForSelectedYear.filter(t => 
+          tceMappings.some(m => m.NUMERO_ANO_TCE?.toLowerCase() === t.NUMERO_ANO_TCE?.toLowerCase())
+        );
+        const linkedCount = mappedTcesForYear.length;
+        const pendingTceCount = tcesForSelectedYear.length - linkedCount;
+        
+        // Filtered General Lists
+        const filteredTces = tces.filter(t => {
+          const tYear = extractYearFromTceString(t.NUMERO_ANO_TCE);
+          const matchesYear = tceSelectedYear === "TODOS" || tYear.toString() === tceSelectedYear;
+          const matchesSearch = !tceSearchTerm || 
+            (t.NUMERO_ANO_TCE || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
+            (t.PROCESSO_ADMINISTRATIVO || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
+            (t.MOTIVO_INSTAURACAO || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
+            (t.SUBMOTIVO_INSTAURACAO || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
+            (t.TC || "").toLowerCase().includes(tceSearchTerm.toLowerCase());
+          return matchesYear && matchesSearch;
+        });
+
+        // Resolve Mappings side-by-side
+        const resolvedMappings = tceMappings.map(m => {
+          const matchedTce = tces.find(t => t.NUMERO_ANO_TCE?.trim().toLowerCase() === m.NUMERO_ANO_TCE?.trim().toLowerCase());
+          const matchedAc = findMatchedAcordao(m.ACORDAO_REF);
+          return {
+            mapping: m,
+            tce: matchedTce,
+            acordao: matchedAc
+          };
+        });
+
+        const filteredMappings = resolvedMappings.filter(rm => {
+          const year = rm.tce 
+            ? extractYearFromTceString(rm.tce.NUMERO_ANO_TCE) 
+            : (rm.acordao?.ANOACORDAO || extractYearFromTceString(rm.mapping.NUMERO_ANO_TCE));
+          const matchesYear = tceSelectedYear === "TODOS" || (year && year.toString() === tceSelectedYear);
+          
+          const tceStr = rm.tce ? `${rm.tce.NUMERO_ANO_TCE} ${rm.tce.PROCESSO_ADMINISTRATIVO} ${rm.tce.MOTIVO_INSTAURACAO}` : "";
+          const acStr = rm.acordao ? `${rm.acordao.KEY} ${rm.acordao.TITULO} ${rm.acordao.NUMACORDAO}` : "";
+          const refStr = rm.mapping.ACORDAO_REF;
+          const fullText = `${tceStr} ${acStr} ${refStr}`.toLowerCase();
+          
+          const matchesSearch = !tceSearchTerm || fullText.includes(tceSearchTerm.toLowerCase());
+          return matchesYear && matchesSearch;
+        });
+
+        // Pagination calculations
+        const totalTcePages = Math.ceil(filteredTces.length / tceItemsPerPage);
+        const paginatedTce = filteredTces.slice((tceCurrentPage - 1) * tceItemsPerPage, tceCurrentPage * tceItemsPerPage);
+
+        const totalMappingPages = Math.ceil(filteredMappings.length / tceItemsPerPage);
+        const paginatedMappings = filteredMappings.slice((tceCurrentPage - 1) * tceItemsPerPage, tceCurrentPage * tceItemsPerPage);
+
+        return (
+          <div className="space-y-6 animate-fade-in no-print">
+
+            {/* TWO ELEGANT PRIMARY NAVIGATION SWITCHERS (Bento Card Style) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                onClick={() => {
+                  setTceActiveSubTab("geral");
+                  setTceCurrentPage(1);
+                  setShowTceImporter(false);
+                }}
+                className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${
+                  tceActiveSubTab === "geral"
+                    ? "bg-gradient-to-br from-[#003366] to-[#0b4d8c] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
+                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
+                }`}
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
+                <div className="flex items-start gap-4">
+                  <div className={`p-3.5 rounded-2xl ${tceActiveSubTab === "geral" ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-700"}`}>
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-extrabold text-[#003366] group-hover:text-amber-500 text-base tracking-tight transition-colors duration-200" style={{ color: tceActiveSubTab === "geral" ? "white" : undefined }}>Instâncias de TCE (Geral)</h3>
+                    <p className={`text-xs ${tceActiveSubTab === "geral" ? "text-slate-100/90" : "text-slate-500"}`}>
+                      Visualização unificada de todas as {totalTceCount} instâncias gerais registradas no banco de dados.
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setTceActiveSubTab("com-acordaos");
+                  setTceCurrentPage(1);
+                  setShowTceImporter(false);
+                }}
+                className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${
+                  tceActiveSubTab === "com-acordaos"
+                    ? "bg-gradient-to-br from-[#1351b4] to-[#1a64df] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
+                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
+                }`}
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
+                <div className="flex items-start gap-4">
+                  <div className={`p-3.5 rounded-2xl ${tceActiveSubTab === "com-acordaos" ? "bg-white/10 text-white" : "bg-emerald-50 text-emerald-700"}`}>
+                    <Merge className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-extrabold text-[#003366] group-hover:text-amber-500 text-base tracking-tight transition-colors duration-200" style={{ color: tceActiveSubTab === "com-acordaos" ? "white" : undefined }}>TCEs com Acórdãos TCU</h3>
+                    <p className={`text-xs ${tceActiveSubTab === "com-acordaos" ? "text-slate-100/90" : "text-slate-500"}`}>
+                      Visualização cruzada e mapeamento de {totalMappedCount} responsabilidades com acórdãos de condenação do TCU.
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Dynamic Year Tabs & KPIs Bento Grid (Standardized UX) */}
+            <div className="flex border-b border-slate-150 no-print overflow-x-auto gap-1 pb-1 pt-2">
+              <button
+                onClick={() => { setTceSelectedYear("TODOS"); setTceCurrentPage(1); }}
+                className={`px-4 py-1.5 -mb-px text-[11px] font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+                  tceSelectedYear === "TODOS"
+                    ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+                    : "text-slate-400 hover:text-slate-700"
+                }`}
+              >
+                Todos os Anos
+              </button>
+              {tceYears.map((yr) => (
+                <button
+                  key={yr}
+                  onClick={() => { setTceSelectedYear(yr.toString()); setTceCurrentPage(1); }}
+                  className={`px-4 py-1.5 -mb-px text-[11px] font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+                    tceSelectedYear === yr.toString()
+                      ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+                      : "text-slate-400 hover:text-slate-700"
+                  }`}
+                >
+                  Ano {yr} {yr === 2026 && <span className="bg-emerald-200 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
+                </button>
+              ))}
+            </div>
+
+            {/* Statistics bento grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+              <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">Universo de TCE</span>
+                  <h4 className="text-2xl font-black text-slate-900 truncate">{tcesForSelectedYear.length}</h4>
+                  <p className="text-[10px] text-slate-500 truncate">Instâncias no ano ({tceSelectedYear === "TODOS" ? "Histórico Total" : tceSelectedYear})</p>
+                </div>
+                <div className="p-3 bg-blue-50 text-[#003366] rounded-xl shrink-0 ml-2">
+                  <FileText className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">Débito Atualizado</span>
+                  <h4 className="text-xl font-black text-slate-900 truncate" title={formattedSelectedYearDebito}>{formattedSelectedYearDebito}</h4>
+                  <p className="text-[10px] text-slate-500 truncate">Montante acumulado no ano</p>
+                </div>
+                <div className="p-3 bg-amber-50 text-amber-700 rounded-xl shrink-0 ml-2">
+                  <DollarSign className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">TCEs Vinculadas</span>
+                  <h4 className="text-2xl font-black text-emerald-700 truncate">{linkedCount}</h4>
+                  <p className="text-[10px] text-emerald-600 font-semibold truncate">Cruzamentos bem sucedidos</p>
+                </div>
+                <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl shrink-0 ml-2">
+                  <Merge className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider truncate block">TCEs Pendentes</span>
+                  <h4 className="text-2xl font-black text-rose-700 inline-flex items-center gap-1.5 animate-pulse font-sans truncate w-full">
+                    {pendingTceCount}
+                  </h4>
+                  <p className="text-[10px] text-rose-600 font-semibold truncate">Aguardando vínculo</p>
+                </div>
+                <div className="p-3 bg-rose-50 text-rose-700 rounded-xl shrink-0 ml-2">
+                  <FileWarning className="w-6 h-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Contextual Importer Panel - Premium Bento Box Style */}
+            {showTceImporter && (
+              <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden no-print space-y-4">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-10 -mt-10 pointer-events-none opacity-40"></div>
+                <div className="relative z-10 flex justify-between items-start">
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-black text-[#003366] uppercase tracking-wide">
+                      {tceActiveSubTab === "geral" 
+                        ? "Sincronização de Instâncias e Carga de TCE Geral" 
+                        : "Sincronização de Mapeamentos e Vínculos de Acórdãos"}
+                    </h3>
+                    <p className="text-xs text-slate-500 leading-relaxed max-w-4xl">
+                      {tceActiveSubTab === "geral" 
+                        ? 'Arraste ou cole o conteúdo do arquivo CSV estruturado das TCEs gerais. O nome do arquivo físico deve iniciar com "tce" (ex: tces_geral.csv).'
+                        : 'Arraste ou cole o arquivo de mapeamento de vínculos. Certifique-se de que o nome inclua as palavras "acordao" ou "mapping" (ex: tce_acordao_link.csv).'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowTceImporter(false);
+                      setTceImportMessage(null);
+                      setParsedTceItems(null);
+                      setParsedTceMappingItems(null);
+                    }}
+                    className="text-slate-400 hover:text-slate-600 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Drag & Drop File Zone */}
+                  <div
+                    onDragOver={(e) => { e.preventDefault(); setIsDragOverTce(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); setIsDragOverTce(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDragOverTce(false);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) readTceFileContent(file);
+                    }}
+                    onClick={() => document.getElementById("tce-file-import-input")?.click()}
+                    className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center transition text-center cursor-pointer ${
+                      isDragOverTce
+                        ? "border-[#003366] bg-blue-50/50"
+                        : "border-slate-200 hover:border-slate-300 bg-slate-50/55"
+                    }`}
+                  >
+                    <input
+                      type="file"
+                      id="tce-file-import-input"
+                      accept=".csv,.txt"
+                      className="hidden"
+                      onChange={handleTceFileChange}
+                    />
+
+                    <div className="p-3 bg-white rounded-full shadow-2xs mb-2 text-slate-500">
+                      <FileUp className="w-6 h-6 text-[#003366]" />
+                    </div>
+
+                    <h4 className="text-xs font-bold text-slate-800">
+                      {isDragOverTce ? "Pode soltar o arquivo!" : "Arraste um arquivo (.csv, .txt) ou clique aqui"}
+                    </h4>
+                    <p className="text-[10px] text-slate-400 mt-1 max-w-[200px]">
+                      Os dados da planilha serão processados localmente
+                    </p>
+                    <span className="mt-2 text-[9px] bg-[#003366] hover:bg-slate-900 text-white font-bold px-3 py-1 rounded-lg shadow-2xs">
+                      {tceActiveSubTab === "geral" ? "Selecionar Planilha Geral" : "Selecionar Planilha Mapeamentos"}
+                    </span>
+                  </div>
+
+                  {/* Textarea Area */}
+                  <div className="flex flex-col">
+                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider mb-1 block">
+                      Área de Texto para Colagem de Planilha
+                    </label>
+                    <textarea
+                      placeholder={tceActiveSubTab === "geral" 
+                        ? "Cole os dados copiados do Excel das TCEs gerais..."
+                        : "Cole os dados copiados do Excel do mapeamento TCE <=> Acórdão..."}
+                      className="w-full flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition"
+                      value={tcePasteContent}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTcePasteContent(val);
+                        if (val.trim()) {
+                          if (val.toLowerCase().includes("acordao") || val.toLowerCase().includes("acórdão") || val.toLowerCase().includes("mapping")) {
+                            const parsed = parseTceAcordaoMappingsCSV(val);
+                            setParsedTceMappingItems(parsed);
+                            setParsedTceItems(null);
+                            setTceImportMessage(`Colagem identificada como planilha de mapeamento de acórdãos: ${parsed.length} itens parciais.`);
+                          } else {
+                            const parsed = parseTcesCSV(val);
+                            setParsedTceItems(parsed);
+                            setParsedTceMappingItems(null);
+                            setTceImportMessage(`Colagem de instâncias gerais de TCE: ${parsed.length} itens parciais detectados.`);
+                          }
+                        }
+                      }}
+                      style={{ minHeight: "140px" }}
+                    />
+                  </div>
+                </div>
+
+                {tceImportMessage && (
+                  <div className="p-3.5 bg-blue-50 border border-blue-100 text-[#003366] rounded-xl text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-[#003366]" />
+                    <span>{tceImportMessage}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 text-xs pt-1">
+                  <button
+                    onClick={() => {
+                      setShowTceImporter(false);
+                      setTceImportMessage(null);
+                      setParsedTceItems(null);
+                      setParsedTceMappingItems(null);
+                    }}
+                    className="px-4 py-2 font-bold text-slate-600 hover:text-slate-800 transition"
+                  >
+                    Mudar de Ideia
+                  </button>
+                  <button
+                    onClick={handleExecuteTceImport}
+                    disabled={isSavingTce || (!parsedTceItems && !parsedTceMappingItems)}
+                    className="px-4 py-2 bg-[#003366] hover:bg-slate-900 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center gap-1.5 transition duration-200"
+                  >
+                    {isSavingTce ? "Validando e Salvando..." : "Confirmar Sincronização no Banco"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Editing Supervisor Position Box */}
+            {editingTceItem && (
+              <div className="bg-amber-50/50 border border-amber-200 p-6 rounded-3xl space-y-4 animate-fade-in">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-xs font-black uppercase text-[#003366] tracking-wider">
+                    Atualizar Posicionamento de Supervisor — {editingTceItem.NUMERO_ANO_TCE}
+                  </h4>
+                  <button onClick={() => setEditingTceItem(null)} className="text-slate-400 hover:text-slate-600">
+                    ✕
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold text-slate-500 block">Texto do Último Posicionamento:</label>
+                  <textarea
+                    rows={3}
+                    className="w-full p-3 text-xs bg-white border border-slate-200 rounded-xl text-slate-800"
+                    value={editTcePosicionamento}
+                    onChange={(e) => setEditTcePosicionamento(e.target.value)}
+                    placeholder="Adicione as últimas informações ou andamento do processo federal..."
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setEditingTceItem(null)}
+                    className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs text-slate-600"
+                  >
+                    Mudar de Ideia
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (onUpdateTce) {
+                        const updated = { ...editingTceItem, ULTIMO_POSICIONAMENTO: editTcePosicionamento };
+                        const ok = await onUpdateTce(updated);
+                        if (ok) {
+                          setEditingTceItem(null);
+                        } else {
+                          alert("Erro ao salvar posicionamento.");
+                        }
+                      }
+                    }}
+                    className="px-4 py-1.5 bg-[#003366] hover:bg-slate-900 text-white rounded-xl text-xs font-bold"
+                  >
+                    Salvar Novo Parecer
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Filter Row and Contextual Importer Button */}
+            <div className="bg-slate-100 p-2.5 rounded-2xl flex flex-col items-stretch md:flex-row md:items-center justify-between gap-3 shadow-3xs">
+              <div className="flex gap-1.5 shrink-0">
+                <button
+                  id="btn-tce-importer-toggle"
+                  onClick={() => {
+                    setShowTceImporter(!showTceImporter);
+                    setTceImportMessage(null);
+                    setParsedTceItems(null);
+                    setParsedTceMappingItems(null);
+                  }}
+                  className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                    showTceImporter
+                      ? "bg-slate-800 text-white shadow-xs"
+                      : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
+                  }`}
+                >
+                  <Plus className="w-4 h-4" />
+                  {showTceImporter 
+                    ? "Ocultar Importador" 
+                    : tceActiveSubTab === "geral" 
+                      ? "Sincronizar Planilha Geral" 
+                      : "Sincronizar Mapeamentos de Acórdãos"}
+                </button>
+              </div>
+
+              {/* Real-time search and filter tools */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 grow max-w-xl self-end">
+                <div className="relative grow">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder="Filtrar por nº, processo, culpado..."
+                    className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800"
+                    value={tceSearchTerm}
+                    onChange={(e) => {
+                      setTceSearchTerm(e.target.value);
+                      setTceCurrentPage(1);
+                    }}
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (tceActiveSubTab === "geral") {
+                      handleExportTcesExcel(filteredTces);
+                    } else {
+                      handleExportTcesAcordaosExcel(filteredMappings);
+                    }
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  XLSX
+                </button>
+              </div>
+            </div>
+
+            {/* ACTIVE TAB CONDITIONAL CONTENT */}
+            {tceActiveSubTab === "geral" ? (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
+                {/* Status indicator rail */}
+                <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 font-mono text-[10px] flex flex-col sm:flex-row sm:items-center justify-between gap-1 no-print">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#003366] animate-pulse"></span>
+                    <span className="font-extrabold text-[#003366] uppercase tracking-wide">Instâncias de TCE (Geral): {filteredTces.length} registros</span>
+                  </div>
+                  <span className="text-slate-400 font-mono text-[9px] uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
+                </div>
+
+                {/* TCE GENERAL LISTING TABLE */}
+                <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
+                  <table className="w-full text-left border-collapse table-auto text-xs min-w-[900px]">
+                    <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
+                      <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
+                        <th className="px-4 py-3 w-8 no-print bg-slate-100"></th>
+                        <th className="px-5 py-3 bg-slate-100">Nº / Ano (TCE)</th>
+                        <th className="px-4 py-3 bg-slate-100">Processo TCU</th>
+                        <th className="px-4 py-3 bg-slate-100">Assunto / Motivo da Instauração</th>
+                        <th className="px-4 py-3 bg-slate-100 text-right">Débito Atualizado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredTces.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="text-center py-12 text-slate-400 font-sans">
+                            Nenhuma tomada de conta especial corresponde aos filtros aplicados. Carregue novos dados via Planilha MTE.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredTces.map((tce, idx) => {
+                          const isExpanded = tceExpandedId === tce.id;
+                          const hasMapping = tceMappings.some(m => m.NUMERO_ANO_TCE?.toLowerCase() === tce.NUMERO_ANO_TCE?.toLowerCase());
+
+                          return (
+                            <React.Fragment key={tce.id}>
+                              <tr className={`hover:bg-slate-50/55 transition duration-155 ${isExpanded ? "bg-slate-50/70" : ""}`}>
+                                <td className="px-4 py-3.5 no-print">
+                                  <button
+                                    onClick={() => setTceExpandedId(isExpanded ? null : tce.id)}
+                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
+                                  >
+                                    {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
+                                  </button>
+                                </td>
+                                <td className="px-5 py-3.5 font-bold text-slate-900">{tce.NUMERO_ANO_TCE}</td>
+                                <td className="px-4 py-3.5 font-mono text-[11px] text-[#003366]">{tce.TC || "-"}</td>
+                                <td className="px-4 py-3.5 max-w-xs truncate" title={tce.MOTIVO_INSTAURACAO}>
+                                  <span className="font-semibold text-slate-900 block truncate">{tce.MOTIVO_INSTAURACAO}</span>
+                                  <span className="text-[10px] text-slate-400 block truncate">{tce.SUBMOTIVO_INSTAURACAO}</span>
+                                </td>
+                                <td className="px-4 py-3.5 text-right font-mono font-bold text-slate-900">{tce.DEBITO_ATUALIZADO || "-"}</td>
+                              </tr>
+
+                              {/* Nested detail layout */}
+                              {isExpanded && (
+                                <tr className="bg-slate-50/55">
+                                  <td colSpan={5} className="p-6 bg-slate-50 border-y border-slate-100 animate-fade-in text-xs">
+                                    <div className="max-h-[500px] overflow-y-auto pr-2 scrollbar-thin space-y-5">
+                                      
+                                      {/* Top 4-column Meta Indicator Cards */}
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1">
+                                          <span className="text-[9px] text-[#003366] font-black uppercase tracking-wider block">ID Registro / Chave</span>
+                                          <span className="text-sm font-bold text-slate-800">{tce.NUMERO_ANO_TCE}</span>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1">
+                                          <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">Fase Processual</span>
+                                          <span className="text-xs font-bold text-slate-700">{tce.ESTADO_PROCESSO || "Não Declarado"}</span>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1">
+                                          <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wider block">Situação Atual</span>
+                                          <span className="text-xs font-bold text-slate-700">{tce.SITUACAO_PROCESSO || "Não Declarada"}</span>
+                                        </div>
+                                        <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1">
+                                          <span className="text-[9px] text-[#1351b4] font-black uppercase tracking-wider block">Processo TCU</span>
+                                          <span className="text-xs font-bold font-mono text-blue-900">{tce.TC || "Não Localizado"}</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Content Breakdown Layout */}
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        
+                                        {/* Process Identifiers */}
+                                        <div className="bg-white p-4.5 rounded-2xl border border-slate-200/60 shadow-3xs space-y-3">
+                                          <h5 className="text-[10px] font-black uppercase text-[#003366] border-b border-slate-100 pb-1.5">Identificadores e Prazos</h5>
+                                          <div className="space-y-1.5 text-[11px] text-slate-600">
+                                            <p><span className="font-bold text-slate-400">Processo MTE (PA):</span> <span className="font-mono text-slate-800">{tce.PROCESSO_ADMINISTRATIVO || "-"}</span></p>
+                                            <p><span className="font-bold text-slate-400">Fato Gerador:</span> <span className="text-slate-800 font-medium">{tce.MOTIVO_INSTAURACAO || "-"}</span></p>
+                                            <p><span className="font-bold text-slate-400">Enquadramento:</span> <span className="text-slate-600 block pl-2 border-l border-slate-100 mt-0.5">{tce.SUBMOTIVO_INSTAURACAO || "-"}</span></p>
+                                          </div>
+                                        </div>
+
+                                        {/* Financial details */}
+                                        <div className="bg-white p-4.5 rounded-2xl border border-slate-200/60 shadow-3xs space-y-3">
+                                          <h5 className="text-[10px] font-black uppercase text-[#003366] border-b border-slate-100 pb-1.5">Mapeamento de Valores</h5>
+                                          <div className="space-y-1.5 text-[11px] text-slate-600 font-mono">
+                                            <p><span className="font-bold font-sans text-slate-400">Débito Original:</span> <span className="text-slate-800 font-semibold">{tce.DEBITO_ORIGINAL || "R$ 0,00"}</span></p>
+                                            <p><span className="font-bold font-sans text-slate-400">Débito Atualizado:</span> <span className="text-emerald-700 font-bold">{tce.DEBITO_ATUALIZADO || "-"}</span></p>
+                                            <p><span className="font-bold font-sans text-slate-400">Data Atualização:</span> <span className="text-slate-600">{tce.DATA_ATUALIZACAO_DEBITO || "-"}</span></p>
+                                            <p><span className="font-bold font-sans text-slate-400">Primeiro Julgamento:</span> <span className="text-slate-600 font-sans">{tce.PRIMEIRO_JULGAMENTO || "-"}</span></p>
+                                            <p><span className="font-bold font-sans text-slate-400">Data Encerramento:</span> <span className="text-slate-600 font-sans">{tce.ENCERRAMENTO || "-"}</span></p>
+                                          </div>
+                                        </div>
+
+                                        {/* Supervisor Technical Manifestation block */}
+                                        <div className="bg-amber-50/15 p-4.5 rounded-2xl border border-amber-200/40 shadow-3xs space-y-2 col-span-1 md:col-span-1 flex flex-col justify-between">
+                                          <div className="space-y-1.5">
+                                            <h5 className="text-[10px] font-black uppercase text-amber-800">Último Posicionamento Técnico AECI</h5>
+                                            <p className="text-[11px] text-slate-700 italic leading-relaxed bg-white p-3 rounded-xl border border-slate-200/60 min-h-[70px]">
+                                              “{tce.ULTIMO_POSICIONAMENTO || "Nenhum parecer técnico ou manifestação cadastrada de forma recente."}”
+                                            </p>
+                                          </div>
+                                          <div className="text-[9px] text-slate-400 mt-2 font-mono flex items-center justify-between border-t border-amber-100/40 pt-2">
+                                            <span>Estado TCU: <strong className="font-sans text-slate-600">{tce.ESTADO_PROCESSO || "Indefinido"}</strong></span>
+                                            <span>Estado Mapeamento: <strong className="font-sans text-emerald-700">{hasMapping ? "Sincronizado" : "Pendente"}</strong></span>
+                                          </div>
+                                        </div>
+
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
+                {/* Status indicator rail */}
+                <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 font-mono text-[10px] flex flex-col sm:flex-row sm:items-center justify-between gap-1 no-print">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#1351b4] animate-pulse"></span>
+                    <span className="font-extrabold text-[#1351b4] uppercase tracking-wide">Mapeamentos TCE {"<=>"} Acórdão: {filteredMappings.length} registros</span>
+                  </div>
+                  <span className="text-slate-400 font-mono text-[9px] uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
+                </div>
+
+                {/* MAPPED WITH ACORDAOS VIEW */}
+                <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
+                  <table className="w-full text-left border-collapse table-auto text-xs min-w-[1100px]">
+                    <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
+                      <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
+                        <th className="px-4 py-3 w-8 no-print bg-slate-100"></th>
+                        <th className="px-5 py-3 bg-slate-100">Nº TCE</th>
+                        <th className="px-4 py-3 bg-slate-100 font-sans">Processo TCU / Motivo</th>
+                        <th className="px-4 py-3 bg-slate-100">Acórdão Mapeado (Referência)</th>
+                        <th className="px-4 py-3 bg-slate-100">Chave Base Recente</th>
+                        <th className="px-4 py-3 bg-slate-100 text-center">Status Cruzamento</th>
+                        <th className="px-4 py-3 bg-slate-100 pr-6">Colegiado / Data Sessão</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredMappings.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="text-center py-12 text-slate-400 font-sans">
+                            Nenhum mapeamento TCE {"<=>"} Acórdão corresponde aos termos digitados. Faça o upload do arquivo de sincronização de acórdãos TCU.
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredMappings.map((item, idx) => {
+                          const isExpanded = tceExpandedId === `map-${item.mapping.NUMERO_ANO_TCE}`;
+                          const isMatched = !!item.acordao;
+
+                          return (
+                            <React.Fragment key={idx}>
+                              <tr className={`hover:bg-slate-50/55 transition duration-155 ${isExpanded ? "bg-slate-50/70" : ""}`}>
+                                <td className="px-4 py-3.5 no-print">
+                                  <button
+                                    onClick={() => setTceExpandedId(isExpanded ? null : `map-${item.mapping.NUMERO_ANO_TCE}`)}
+                                    className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
+                                  >
+                                    {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
+                                  </button>
+                                </td>
+                                <td className="px-5 py-3.5 font-bold text-slate-900">{item.mapping.NUMERO_ANO_TCE}</td>
+                                <td className="px-4 py-3.5 max-w-xs truncate">
+                                  <span className="font-semibold text-slate-800 block truncate" title={item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}>{item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}</span>
+                                  <span className="text-[10px] text-[#003366] font-mono block">{item.tce?.TC || "-"}</span>
+                                </td>
+                                <td className="px-4 py-3.5 font-semibold text-slate-900 italic text-[#1351b4]">{item.mapping.ACORDAO_REF}</td>
+                                <td className="px-4 py-3.5 font-mono text-[11px] text-slate-500">{item.acordao?.KEY || "Indefinida / Não Ingerido"}</td>
+                                <td className="px-4 py-3.5 text-center">
+                                  {isMatched ? (
+                                    <span className="bg-emerald-50 text-emerald-800 text-[9px] font-black uppercase tracking-wider px-2.2 py-0.5 rounded-full border border-emerald-200 inline-block text-center shadow-3xs">
+                                      LOCALIZADO
+                                    </span>
+                                  ) : (
+                                    <span className="bg-rose-50 text-rose-800 text-[9px] font-black uppercase tracking-wider px-2.2 py-0.5 rounded-full border border-rose-200 inline-block text-center" title="Importe este acórdão TCU no Monitoramento para completar os metadados do cruzamento">
+                                      NÃO IMPORTADO
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-3.5 font-mono text-[11px] pr-6">
+                                  {item.acordao ? `${item.acordao.COLEGIADO} • ${item.acordao.DATASESSAO}` : "-"}
+                                </td>
+                              </tr>
+
+                              {/* Mapping Expanded Details */}
+                              {isExpanded && (
+                                <tr className="bg-slate-50/55">
+                                  <td colSpan={7} className="p-6 bg-slate-50 border-y border-slate-100 animate-fade-in text-xs">
+                                    <div className="max-h-[550px] overflow-y-auto pr-2 scrollbar-thin">
+                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                      
+                                      {/* Left Panel: Complete TCE Data */}
+                                      <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-3xs space-y-4">
+                                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                          <span className="bg-[#003366]/10 text-[#003366] text-[10px] font-black uppercase px-2.5 py-1 rounded-md">
+                                            METADADOS COMPLETOS DA TCE
+                                          </span>
+                                          <span className="text-[10px] text-slate-400 hover:text-slate-600 font-mono">
+                                            {item.tce?.TC || "-"}
+                                          </span>
+                                        </div>
+                                        
+                                        {item.tce ? (
+                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px] text-slate-700">
+                                            <div className="space-y-2">
+                                              <p><span className="font-bold text-slate-400">Instância:</span> <span className="font-semibold text-slate-800">{item.tce.NUMERO_ANO_TCE}</span></p>
+                                              <p><span className="font-bold text-slate-400">Processo MTE/PA:</span> <span className="font-mono text-slate-800">{item.tce.PROCESSO_ADMINISTRATIVO || "-"}</span></p>
+                                              <p><span className="font-bold text-slate-400">Processo TCU:</span> <span className="font-mono text-slate-800">{item.tce.TC || "-"}</span></p>
+                                              <p><span className="font-bold text-slate-400">Fato Gerador:</span> <span className="font-semibold text-slate-800">{item.tce.MOTIVO_INSTAURACAO || "-"}</span></p>
+                                              <p><span className="font-bold text-slate-400">Submotivo:</span> <span className="text-slate-600 block pl-2 border-l border-slate-100 mt-0.5">{item.tce.SUBMOTIVO_INSTAURACAO || "-"}</span></p>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                              <p><span className="font-bold text-slate-400">Débito Original:</span> <span className="font-mono text-slate-800 font-semibold">{item.tce.DEBITO_ORIGINAL || "R$ 0,00"}</span></p>
+                                              <p><span className="font-bold text-slate-400">Débito Atualizado:</span> <span className="font-mono text-slate-850 font-bold text-emerald-700">{item.tce.DEBITO_ATUALIZADO || "-"}</span></p>
+                                              <p><span className="font-bold text-slate-400">Data Atualização:</span> <span className="text-slate-700 font-mono">{item.tce.DATA_ATUALIZACAO_DEBITO || "-"}</span></p>
+                                              <p><span className="font-bold text-slate-400">Estado Processual:</span> <span className="font-semibold text-slate-800">{item.tce.ESTADO_PROCESSO || "-"}</span></p>
+                                              <p><span className="font-bold text-slate-400">Situação Atual:</span> <span className="text-slate-600">{item.tce.SITUACAO_PROCESSO || "-"}</span></p>
+                                            </div>
+
+                                            <div className="col-span-1 md:col-span-2 space-y-1 bg-amber-50/20 p-3.5 rounded-xl border border-amber-200/40">
+                                              <span className="text-[10px] font-bold text-amber-800 block uppercase">Último Posicionamento Técnico</span>
+                                              <p className="italic text-slate-750 bg-white p-2.5 rounded-lg border border-slate-200/60 leading-relaxed text-[11px] min-h-[50px]">
+                                                {item.tce.ULTIMO_POSICIONAMENTO || "Nenhum parecer técnico recente cadastrado pelo supervisor."}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="p-5 bg-slate-100/65 rounded-xl text-center text-slate-500 font-mono text-[11px] border border-dashed border-slate-200">
+                                            Metadados gerais da TCE ausentes. Sincronize o arquivo de instâncias gerais de TCE para cruzar as informações completas.
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Right Panel: Complete Acórdão Data */}
+                                      <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-3xs space-y-4">
+                                        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                          <span className="bg-[#1351b4]/10 text-[#1351b4] text-[10px] font-black uppercase px-2.5 py-1 rounded-md">
+                                            DETALHES DO ACÓRDÃO TCU ASSOCIADO
+                                          </span>
+                                          <span className="text-[10px] font-bold text-[#1351b4] font-mono">
+                                            {item.mapping.ACORDAO_REF}
+                                          </span>
+                                        </div>
+
+                                        {item.acordao ? (
+                                          <div className="space-y-3.5 text-[11px] text-slate-700">
+                                            <div className="grid grid-cols-2 gap-3">
+                                              <div>
+                                                <span className="text-[10px] text-slate-400 block uppercase font-bold">Identificador Único</span>
+                                                <span className="font-mono text-slate-800 font-bold">{item.acordao.KEY}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-[10px] text-slate-400 block uppercase font-bold">Número / Colegiado</span>
+                                                <span className="font-semibold text-slate-800">Acórdão {item.acordao.NUMACORDAO}/{item.acordao.ANOACORDAO} — {item.acordao.COLEGIADO}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-[10px] text-slate-400 block uppercase font-bold">Ata & Sessão</span>
+                                                <span className="text-slate-800 font-medium">Ata {item.acordao.NUMATA || "S/N"} • {item.acordao.DATASESSAO || "S/D"}</span>
+                                              </div>
+                                              <div>
+                                                <span className="text-[10px] text-slate-400 block uppercase font-bold">Autoridade Relatora</span>
+                                                <span className="text-slate-800 font-medium">{(item.acordao as any).RELATOR || "Não Especificado"}</span>
+                                              </div>
+                                            </div>
+
+                                            <div className="border-t border-slate-100 pt-2.5 space-y-1">
+                                              <span className="text-[10px] text-slate-400 block uppercase font-bold">Assunto do Acórdão</span>
+                                              <p className="text-slate-800 font-semibold">{item.acordao.ASSUNTO}</p>
+                                            </div>
+
+                                            <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                              <span className="text-[10px] text-slate-400 block uppercase font-bold">Sumário de Julgamento (Jurisprudência)</span>
+                                              <p className="text-slate-600 line-clamp-3 leading-relaxed mt-1 text-[11px]" title={item.acordao.TITULO}>
+                                                {item.acordao.TITULO}
+                                              </p>
+                                            </div>
+
+                                            <div className="flex justify-end pt-2">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setFullTextAcordao(item.acordao);
+                                                }}
+                                                className="px-4 py-2 bg-[#1351b4] hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-3xs"
+                                              >
+                                                <FileText className="w-4 h-4" />
+                                                Visualizar Inteiro Teor do Acórdão
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="p-5 bg-rose-50/20 border border-rose-100 rounded-xl space-y-3">
+                                            <p className="text-[11px] text-slate-650 leading-relaxed">
+                                              Este acórdão (<strong className="text-rose-800">{item.mapping.ACORDAO_REF}</strong>) está mapeado para esta TCE, mas o teor oficial ou seus metadados ainda não foram importados para o Repositório AECI.
+                                            </p>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setTcuActiveSection("monitoramento");
+                                                setSearchTerm(item.mapping.ACORDAO_REF);
+                                                window.scrollTo({ top: 300, behavior: "smooth" });
+                                              }}
+                                              className="px-3.5 py-1.5 bg-[#003366] hover:bg-slate-900 text-white rounded-xl text-[10.5px] font-bold transition flex items-center gap-1.5 shadow-2xs"
+                                            >
+                                              <Search className="w-3.5 h-3.5" />
+                                              Buscar e Importar Acórdão {item.mapping.ACORDAO_REF}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="text-[10px] text-slate-400 text-center py-2 border-t border-slate-100 italic">
+              Apoio Técnico Normativo: Corregedoria do Ministério do Trabalho e Emprego & Assessoria Especial de Controle Interno (AECI-MTE) • Acordo de Cooperação Técnica TCU
+            </div>
+          </div>
+        );
+      })()}
+      {/* Print Sandbox Helper Modal */}
+      {showPrintModal && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-slate-50 border-b border-slate-100 p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                  <Printer className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">
+                    Relatório de Impressão (PDF)
+                  </h3>
+                  <p className="text-[10px] text-slate-500">Emissão de Relatório e Exportação Formal — AECI</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowPrintModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-2">
+                <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
+                  Nota sobre visualização segura em Janelas Protegidas (iFrame)
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed font-sans">
+                  Pelo sistema estar em ambiente de desenvolvimento interativo, o navegador pode restringir a geração direta de PDFs e popups de impressão internos do formulário.
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed font-sans font-semibold">
+                  💡 Para emitir o relatório oficial sem qualquer limitação técnica:
+                </p>
+                <ol className="list-decimal pl-5 text-[11px] text-slate-600 space-y-1 font-sans">
+                  <li>Clique em <strong>"Abrir em nova aba"</strong> (no cabeçalho do portal) para isolar o sistema.</li>
+                  <li>Use o botão <strong>"Tentar Acionar Impressora do Navegador"</strong> abaixo para salvar em PDF.</li>
+                </ol>
+              </div>
+
+              {/* Action Buttons inside Modal */}
+              <div className="space-y-2.5 pt-2">
+                <button
+                  onClick={() => {
+                    try {
+                      window.print();
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
+                  className="w-full py-3 px-4 bg-[#1351b4] hover:bg-[#0f4094] text-white font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
+                >
+                  <Printer className="w-4 h-4" />
+                  Tentar Acionar Impressora do Navegador
+                </button>
+
+                <button
+                  onClick={handleCopyReportText}
+                  className={`w-full py-3 px-4 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 border transition cursor-pointer ${
+                    copySuccessAlert
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                      : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                  }`}
+                >
+                  {copySuccessAlert ? (
+                    <>
+                      <Check className="w-4 h-4 text-emerald-600" />
+                      Copiado com Sucesso! (Área de Transferência)
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-4 h-4 text-slate-500" />
+                      Copiar Relatório Formatado (Para Word/Docs)
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {copySuccessAlert && (
+                <p className="text-[10px] text-center text-emerald-700 font-bold bg-emerald-50/50 py-1.5 rounded-lg animate-pulse">
+                  ✓ Texto formatado com as colunas estruturadas para colar no Bloco de Notas ou Word!
+                </p>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 border-t border-slate-100 px-6 py-3.5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPrintModal(false)}
+                className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-      {tcuActiveSection === "comunicacoes" && (
-        <TcuComunicacoes 
-          comunicacoes={rawComunicacoes}
-          onUpdateComunicacao={onUpdateComunicacao}
-          onDeleteComunicacao={onDeleteComunicacao}
-          onImportComunicacoes={onImportComunicacoes}
-          isLoading={isLoading}
-        />
+
+      {/* Full Acórdão Text Modal Popup */}
+      {fullTextAcordao && (
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in text-slate-800">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-4xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-[#1351b4] text-white p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider leading-none">
+                    Acórdão {fullTextAcordao.NUMACORDAO}/{fullTextAcordao.ANOACORDAO} — {fullTextAcordao.COLEGIADO}
+                  </h3>
+                  <p className="text-[10px] text-blue-200 mt-1">Identificador Único: <span className="font-mono">{fullTextAcordao.KEY}</span> | Sessão de {fullTextAcordao.DATASESSAO}</p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => {
+                  setFullTextAcordao(null);
+                  setCopySuccessFullText(false);
+                }}
+                className="text-white/80 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body Info Panel */}
+            <div className="bg-slate-50 border-b border-slate-200 px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0 text-xs">
+              <div>
+                <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider">Processo no TCU</span>
+                <span className="text-xs text-slate-800 font-bold font-mono">{fullTextAcordao.PROC || "Não informado"}</span>
+              </div>
+              <div>
+                <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider">Assunto Principal (MTE)</span>
+                <span className="text-xs text-slate-700 font-semibold line-clamp-1">{fullTextAcordao.ASSUNTO || "Sem descrição"}</span>
+              </div>
+              <div className="flex justify-end items-center gap-2">
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rawText = fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "O inteiro teor para este acórdão ainda não foi baixado.";
+                    navigator.clipboard.writeText(rawText).then(() => {
+                      setCopySuccessFullText(true);
+                      setTimeout(() => setCopySuccessFullText(false), 2500);
+                    });
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+                    copySuccessFullText
+                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                      : "bg-white border-slate-200 hover:bg-slate-100 text-slate-700"
+                  }`}
+                >
+                  {copySuccessFullText ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      Copiar Inteiro Teor
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+
+
+            {/* Modal Content Scroll Area */}
+            <div className="p-6 overflow-y-auto bg-slate-950 text-slate-100 flex-1 font-mono text-[11.5px] whitespace-pre-line leading-relaxed scrollbar-thin">
+              {fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "Este acórdão não possui a íntegra dos autos gravada."}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex justify-between items-center shrink-0">
+              <span className="text-[10px] text-slate-400 font-sans">
+                ÓRBITA-AECI — Assessoria Especial de Controle Interno
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setFullTextAcordao(null);
+                  setCopySuccessFullText(false);
+                }}
+                className="px-5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Fechar Leitura
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-      {tcuActiveSection === "tce" && (
-        <TcuTCE 
-          tces={rawTces}
-          tceMappings={tceMappings}
-          onUpdateTce={onUpdateTce}
-          onDeleteTce={onDeleteTce}
-          onImportTces={onImportTces}
-          onImportTceMappings={onImportTceMappings}
-          isLoading={isLoading}
-        />
-      )}
-</div>
+
+    
+    </div>
   );
 }

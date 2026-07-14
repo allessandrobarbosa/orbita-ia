@@ -4,10 +4,6 @@
  */
 
 import React, { useState } from "react";
-import TcuMonitoramento from './TcuMonitoramento';
-import TcuComunicacoes from './TcuComunicacoes';
-import TcuTCE from './TcuTCE';
-
 import { 
   Plus, 
   Search, 
@@ -70,7 +66,7 @@ interface TcuModuleProps {
   isLoading: boolean;
 }
 
-export default function TcuModule({ 
+export default function TcuMonitoramento({ 
   acordaos: rawAcordaos, 
   onUpdateAcordao, 
   onDeleteAcordao, 
@@ -1867,39 +1863,912 @@ export default function TcuModule({
         })}
       </div>
 
-      
-      {tcuActiveSection === "monitoramento" && (
-        <TcuMonitoramento 
-          acordaos={rawAcordaos}
-          onUpdateAcordao={onUpdateAcordao}
-          onDeleteAcordao={onDeleteAcordao}
-          onImportAcordaos={onImportAcordaos}
-          onSyncLocalAcordaos={onSyncLocalAcordaos}
-          onClearOlderAcordaos={onClearOlderAcordaos}
-          onResetDatabase={onResetDatabase}
-          isLoading={isLoading}
-        />
+          {processErrors.length > 0 && (
+            <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-md flex items-start shadow-sm">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-red-800 font-bold text-sm">Atenção: Inconsistência no processamento de dados</h3>
+                <p className="text-red-700 text-xs mt-1">
+                  Encontramos erros ao processar as Recomendações e Determinações de {processErrors.length} acórdão(s).
+                </p>
+                <ul className="mt-2 text-xs text-red-600 list-disc list-inside">
+                  {processErrors.slice(0, 5).map(err => (
+                    <li key={err.id}>Acórdão ID/Key: <span className="font-semibold">{err.id}</span> - {err.error}</li>
+                  ))}
+                  {processErrors.length > 5 && (
+                    <li>... e mais {processErrors.length - 5} acórdão(s).</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          )}
+
+      {/* TCU Acórdão Importer Section - Premium Bento Box */}
+      {showImporter && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden no-print">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-10 -mt-10 pointer-events-none opacity-40"></div>
+          <div className="relative z-10 flex justify-between items-start mb-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-[#003366] uppercase tracking-wide">
+                Painel de Importação e Carga do TCU
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed max-w-4xl">
+                O sistema realiza a sincronização automática de acórdãos lendo os arquivos consolidados e atualizando o inteiro teor das decisões.
+              </p>
+            </div>
+            <button onClick={() => setShowImporter(false)} className="text-slate-400 hover:text-slate-600 transition">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-4 relative z-10">
+            {/* Sincronização Local Incremental - Premium Card */}
+            <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-[#003366] uppercase tracking-wider flex items-center gap-1.5">
+                  <RefreshCw className={`w-4 h-4 text-[#003366] ${isSyncingLocal ? "animate-spin" : ""}`} />
+                  Sincronização Automática via Planilhas Locais
+                </h4>
+                <p className="text-[11px] text-slate-500 max-w-[650px] leading-relaxed">
+                  Para maior segurança e controle de dados, salve as planilhas completas obtidas no TCU (ex: <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">Acórdãos2026.csv</code>) dentro da pasta segura <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">data/tcu/</code> do projeto.
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  O sistema fará a leitura local em lote de forma otimizada para atualizar os teores das decisões sem depender da conexão externa do TCU.
+                </p>
+              </div>
+              <button
+                id="btn-sync-local"
+                onClick={handleLocalSync}
+                disabled={isSyncingLocal}
+                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 flex items-center gap-1.5 transition duration-200 cursor-pointer"
+              >
+                {isSyncingLocal ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Sincronizando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    Sincronizar Arquivos Locais
+                  </>
+                )}
+              </button>
+            </div>
+
+            {syncLocalMessage && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold flex items-start gap-2 animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                <div className="space-y-1">
+                  <span>{syncLocalMessage}</span>
+                  {localSyncReport && localSyncReport.length > 0 && (
+                    <div className="mt-2 text-[10px] text-emerald-700 font-mono space-y-1">
+                      {localSyncReport.map((rep: any, idx: number) => (
+                        <div key={idx}>
+                          • {rep.file}: {rep.imported} importados, {rep.updated} atualizados, {rep.skipped} ignorados.
+                          {rep.error && <span className="text-rose-600"> (Erro: {rep.error})</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       )}
-      {tcuActiveSection === "comunicacoes" && (
-        <TcuComunicacoes 
-          comunicacoes={rawComunicacoes}
-          onUpdateComunicacao={onUpdateComunicacao}
-          onDeleteComunicacao={onDeleteComunicacao}
-          onImportComunicacoes={onImportComunicacoes}
-          isLoading={isLoading}
-        />
+
+
+
+      {/* Dynamic Year Tabs & KPIs Bento Grid (Standardized UX) */}
+      {(() => {
+        const acordaosForSelectedYear = acordaos.filter(ac => {
+          return anoFilter === "TODOS" || (ac.ANOACORDAO && ac.ANOACORDAO.toString() === anoFilter);
+        });
+        const totalAcordaosCount = acordaosForSelectedYear.length;
+        const cumpridosCount = acordaosForSelectedYear.filter(ac => ac.STATUS_MONITORAMENTO === "Cumprido").length;
+        const emAnaliseCount = acordaosForSelectedYear.filter(ac => ac.STATUS_MONITORAMENTO === "Em Análise" || ac.STATUS_MONITORAMENTO === "Pendente" || !ac.STATUS_MONITORAMENTO).length;
+        const atrasadosCount = acordaosForSelectedYear.filter(ac => {
+          return ac.STATUS_MONITORAMENTO === "Atrasado" || (ac.STATUS_MONITORAMENTO !== "Cumprido" && ac.PRAZO_LIMITE && new Date(ac.PRAZO_LIMITE).getTime() < Date.now());
+        }).length;
+
+        return (
+          <div className="space-y-4 no-print">
+            {/* Dynamic Year tabs */}
+            <div className="flex border-b border-slate-150 no-print overflow-x-auto gap-1 pb-1">
+              <button
+                onClick={() => { setAnoFilter("TODOS"); setCurrentPage(1); }}
+                className={`px-4 py-1.5 -mb-px text-[11px] font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+                  anoFilter === "TODOS"
+                    ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+                    : "text-slate-400 hover:text-slate-700"
+                }`}
+              >
+                Todos os Anos
+              </button>
+              {availableYears.map((yr) => (
+                <button
+                  key={yr}
+                  onClick={() => { setAnoFilter(yr.toString()); setCurrentPage(1); }}
+                  className={`px-4 py-1.5 -mb-px text-[11px] font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+                    anoFilter === yr.toString()
+                      ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+                      : "text-slate-400 hover:text-slate-700"
+                  }`}
+                >
+                  Ano {yr} {yr === 2026 && <span className="bg-emerald-200 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
+                </button>
+              ))}
+            </div>
+
+            {/* Statistics bento grid - Grouped dynamically by TIPOPROCESSO from data */}
+            {(() => {
+              const normalizeProcessType = (raw: string): string => {
+                const norm = (raw || "").trim().toUpperCase()
+                  .normalize("NFD")
+                  .replace(/[\u0300-\u036f]/g, ""); // strip accents
+                
+                if (norm.includes("MONITORAMENTO E OUTROS")) return "MONITORAMENTO E OUTROS";
+                if (norm.includes("RELATORIO DE ACOMPANHAMENTO")) return "RELATÓRIO DE ACOMPANHAMENTO";
+                if (norm.includes("RELATORIO DE AUDITORIA") || norm.includes("RELATORIO DE AUDIT") || norm.includes("AUDITORIA") || norm === "RA") return "RELATÓRIO DE AUDITORIA";
+                if (norm.includes("ACOMPANHAMENTO") || norm === "ACOMP") return "ACOMPANHAMENTO";
+                if (norm.includes("MONITORAMENTO") || norm === "MONIT" || norm === "MON") return "MONITORAMENTO";
+                if (norm.includes("TOMADA DE CONTAS ESPECIAL") || norm === "TCE" || norm.includes("TOMADA DE CONTAS")) return "TOMADA DE CONTAS ESPECIAL";
+                if (norm.includes("JULGAMENTO DE TCE") || norm.includes("JULGAMENTO DE TC")) return "JULGAMENTO DE TCE";
+                if (norm.includes("REPRESENTACAO") || norm === "REPR" || norm.includes("REPRE")) return "REPRESENTAÇÃO";
+                if (norm.includes("DENUNCIA") || norm === "DEN" || norm.includes("DENUNCIAS")) return "DENÚNCIAS";
+                if (norm.includes("CONGRESSO") || norm === "SCN" || norm.includes("SOLICITACOES")) return "SOLICITAÇÕES DO CONGRESSO NACIONAL";
+                
+                return "E OUTROS";
+              };
+
+              const standardCategories = [
+                { id: "ACOMPANHAMENTO", label: "Acompanhamento", short: "ACOMP", icon: Database, colorClass: "bg-blue-50/70 border-blue-100 text-blue-800", textClass: "text-[#003366] border-l-4 border-blue-500", desc: "Acompanhamentos de gestão" },
+                { id: "MONITORAMENTO", label: "Monitoramento", short: "MONIT", icon: Clock, colorClass: "bg-teal-50/70 border-teal-100 text-teal-800", textClass: "text-teal-950 border-l-4 border-teal-500", desc: "Monitoramento de deliberações" },
+                { id: "RELATÓRIO DE AUDITORIA", label: "Relatório de Auditoria", short: "RA / AUDIT", icon: BarChart3, colorClass: "bg-amber-50/70 border-amber-100 text-amber-800", textClass: "text-amber-950 border-l-4 border-amber-500", desc: "Fiscalizações por Relatório de Auditoria" },
+                { id: "RELATÓRIO DE ACOMPANHAMENTO", label: "Relatório de Acompanhamento", short: "REL-ACOMP", icon: FileCheck, colorClass: "bg-indigo-50/70 border-indigo-100 text-indigo-800", textClass: "text-indigo-950 border-l-4 border-indigo-500", desc: "Relatórios de acompanhamento formal" },
+                { id: "MONITORAMENTO E OUTROS", label: "Monitoramento e Outros", short: "MON-OUT", icon: Activity, colorClass: "bg-cyan-50/70 border-cyan-100 text-cyan-800", textClass: "text-cyan-950 border-l-4 border-cyan-500", desc: "Monitoramentos combinados" },
+                { id: "TOMADA DE CONTAS ESPECIAL", label: "Tomada de Contas Especial", short: "TCE", icon: DollarSign, colorClass: "bg-rose-50/70 border-rose-100 text-rose-800", textClass: "text-rose-950 border-l-4 border-rose-500", desc: "Tomadas de Contas Especiais" },
+                { id: "REPRESENTAÇÃO", label: "Representação", short: "REPR", icon: FileText, colorClass: "bg-sky-50/70 border-sky-100 text-sky-800", textClass: "text-sky-950 border-l-4 border-sky-500", desc: "Representações ao Tribunal" },
+                { id: "JULGAMENTO DE TCE", label: "Julgamento de TCE", short: "JULG-TCE", icon: Scale, colorClass: "bg-violet-50/70 border-violet-100 text-violet-800", textClass: "text-violet-950 border-l-4 border-violet-500", desc: "Julgamento de Tomada de Contas" },
+                { id: "DENÚNCIAS", label: "Denúncias", short: "DEN", icon: AlertCircle, colorClass: "bg-red-50/70 border-red-100 text-red-800", textClass: "text-red-950 border-l-4 border-red-500", desc: "Canais de denúncias recebidas" },
+                { id: "SOLICITAÇÕES DO CONGRESSO NACIONAL", label: "Solicitações do Congresso Nacional", short: "SCN", icon: Landmark, colorClass: "bg-emerald-50/70 border-emerald-100 text-emerald-800", textClass: "text-emerald-950 border-l-4 border-emerald-500", desc: "Demandas do poder legislativo" },
+                { id: "E OUTROS", label: "E Outros", short: "OUTROS", icon: LayoutGrid, colorClass: "bg-slate-50 border-slate-200 text-slate-700", textClass: "text-slate-850 border-l-4 border-slate-350", desc: "Demais classes processuais" }
+              ];
+
+              // Filter counts relative to the selected year filter (acordaosForSelectedYear)
+              const counts: Record<string, number> = {
+                "ACOMPANHAMENTO": 0,
+                "MONITORAMENTO": 0,
+                "RELATÓRIO DE AUDITORIA": 0,
+                "RELATÓRIO DE ACOMPANHAMENTO": 0,
+                "MONITORAMENTO E OUTROS": 0,
+                "TOMADA DE CONTAS ESPECIAL": 0,
+                "REPRESENTAÇÃO": 0,
+                "JULGAMENTO DE TCE": 0,
+                "DENÚNCIAS": 0,
+                "SOLICITAÇÕES DO CONGRESSO NACIONAL": 0,
+                "E OUTROS": 0
+              };
+
+              acordaosForSelectedYear.forEach(ac => {
+                const normalized = normalizeProcessType(ac.TIPOPROCESSO || "");
+                counts[normalized] = (counts[normalized] || 0) + 1;
+              });
+
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Volumetria por Tipo de Processo ({anoFilter})</span>
+                    <span className="text-xs text-slate-500 font-semibold">{acordaosForSelectedYear.length} Acórdãos Filtrados</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 no-print">
+                    {standardCategories.map((cat) => {
+                      const Icon = cat.icon;
+                      const countValue = counts[cat.id] || 0;
+                      return (
+                        <div 
+                          key={cat.id} 
+                          className={`bg-white border rounded-xl p-3 flex flex-col justify-between shadow-3xs hover:shadow-xs transition-all duration-200 cursor-default group relative overflow-hidden ${cat.textClass}`}
+                          title={`${cat.label} - ${cat.desc}`}
+                        >
+                          <div className="flex items-start justify-between gap-1.5 mb-1.5">
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-[10px] font-bold text-slate-500 truncate group-hover:text-slate-800 transition-colors select-raw select-all">
+                                {cat.label}
+                              </span>
+                              <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
+                                {cat.short}
+                              </span>
+                            </div>
+                            <div className={`p-1.5 rounded-lg shrink-0 transition-transform group-hover:scale-105 duration-200 ${cat.colorClass}`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-baseline justify-between mt-auto">
+                            <h4 className="text-xl font-black text-slate-950">
+                              {countValue}
+                            </h4>
+                            <span className="text-[8px] text-slate-400 font-bold">
+                              {acordaosForSelectedYear.length > 0 ? `${((countValue / acordaosForSelectedYear.length) * 100).toFixed(0)}%` : "0%"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      })()}
+
+      {/* Filters HUD - Bento Card layout */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print mb-4">
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Action Buttons and Search */}
+          <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
+            <div className="flex flex-wrap gap-2 items-center">
+              <button 
+                id="btn-importer-toggle"
+                onClick={() => { setShowImporter(!showImporter); }}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  showImporter 
+                    ? "bg-slate-800 text-white shadow-xs" 
+                    : "bg-[#003366] text-white hover:bg-[#0f4396] shadow-sm"
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {showImporter ? "Ocultar Importador" : "Importar Acórdãos"}
+              </button>
+
+              <button 
+                id="btn-batch-process-ai"
+                onClick={handleBatchProcessAi}
+                disabled={isBatchProcessing}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  isBatchProcessing
+                    ? "bg-[#1351b4]/60 cursor-not-allowed text-white shadow-xs"
+                    : "bg-[#1351b4] text-white hover:bg-[#0f4396] shadow-sm"
+                }`}
+              >
+                {isBatchProcessing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Processando ({batchProgress.current}/{batchProgress.total})...
+                  </>
+                ) : (
+                  <>
+                    <Bot className="w-4 h-4" />
+                    Gerar Dossiês (Lote)
+                  </>
+                )}
+              </button>
+
+              <button 
+                id="btn-export-excel"
+                onClick={handleExportExcel}
+                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Excel
+              </button>
+            </div>
+
+            <div className="relative w-full xl:w-[300px] shrink-0">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <input
+                id="txt-search-acordao"
+                type="text"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
+                placeholder="Pesquisar..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              />
+            </div>
+          </div>
+
+          <hr className="border-slate-100" />
+
+          {/* Bottom Row: Dynamic Filters */}
+          <div className="flex flex-wrap gap-4 items-center w-full bg-slate-50/50 p-2 rounded-xl">
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Situação:</span>
+              <select
+                id="select-filter-status"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
+                value={statusFilter}
+                onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todos</option>
+                <option value="Pendente">Pendentes</option>
+                <option value="Em Análise">Em Análise</option>
+                <option value="Cumprido">Cumpridos</option>
+                <option value="Atrasado">Em Atraso</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Colegiado:</span>
+              <select
+                id="select-filter-colegiado"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
+                value={colegiadoFilter}
+                onChange={(e) => { setColegiadoFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todos</option>
+                <option value="Plenário">Plenário</option>
+                <option value="Primeira Câmara">1ª Câmara</option>
+                <option value="Segunda Câmara">2ª Câmara</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Ressarcimento:</span>
+              <select
+                id="select-filter-ressarcimento"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
+                value={ressarcimentoFilter}
+                onChange={(e) => { setRessarcimentoFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todos</option>
+                <option value="COM_VALORES">Com Débito Exigido</option>
+                <option value="SEM_VALORES">Sem Débito Exigido</option>
+                <option value="PENDENTE_REGULARIZACAO">Dossiê de IA Pendente</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-slate-600">
+              <span className="font-semibold text-slate-550 shrink-0">Recomendações:</span>
+              <select
+                id="select-filter-recomendacao"
+                className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium max-w-[200px] truncate"
+                value={recomendacaoFilter}
+                onChange={(e) => { setRecomendacaoFilter(e.target.value); setCurrentPage(1); }}
+              >
+                <option value="TODOS">Todas</option>
+                <option value="COM_RECOMENDACAO">Possui Determinação/Recomendação</option>
+                <option value="SEM_RECOMENDACAO">Sem Ações</option>
+              </select>
+            </div>
+
+            <button
+              id="btn-clear-filters"
+              className="ml-auto text-xs text-[#003366] hover:text-[#001f3f] underline font-bold px-2 py-1 shrink-0"
+              onClick={() => { setSearchTerm(""); setStatusFilter("TODOS"); setColegiadoFilter("TODOS"); setAnoFilter("TODOS"); setRessarcimentoFilter("TODOS"); setRecomendacaoFilter("TODOS"); }}
+            >
+              Limpar Filtros
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Datagrid - Bento Rounded Table wrapping */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
+        
+        {/* Status indicator rail */}
+        <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 font-mono text-[10px] flex flex-col sm:flex-row items-add sm:items-center justify-between gap-1 no-print">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="font-extrabold text-[#003366] uppercase tracking-wide">Monitoramento de Acórdãos: {filteredAcordaos.length} registros</span>
+          </div>
+          <span className="text-slate-400 font-mono text-[9px] uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
+        </div>
+
+        <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
+          <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
+            
+            <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
+              <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
+                <th className="px-4 py-3 w-8 no-print bg-slate-100"></th>
+                <th className="px-5 py-3 bg-slate-100">Título do Acórdão</th>
+                <th className="px-4 py-3 bg-slate-100 font-sans">Processo TCU</th>
+                <th className="px-4 py-3 bg-slate-100">Sessão / Data</th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-slate-100">
+              {isLoading && filteredAcordaos.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-12 text-slate-400 font-sans">
+                    Sincronizando dados com repositório remoto da AECI...
+                  </td>
+                </tr>
+              ) : filteredAcordaos.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="text-center py-12 text-slate-400 font-sans">
+                    Nenhum acórdão localizado com os filtros inseridos.
+                  </td>
+                </tr>
+              ) : (
+                filteredAcordaos.map((ac) => {
+                  const isExpanded = expandedRow === ac.KEY;
+                  const isLate = ac.STATUS_MONITORAMENTO === "Atrasado" || (ac.STATUS_MONITORAMENTO !== "Cumprido" && new Date(ac.PRAZO_LIMITE).getTime() < Date.now());
+                  const hasFullText = !!(ac.ACORDAO || (ac as any).acordao);
+                  const currentFullText = (ac.ACORDAO || (ac as any).acordao || "").trim();
+
+                  return (
+                    <React.Fragment key={ac.KEY}>
+                      
+                      {/* Row Item */}
+                      <tr 
+                        className={`hover:bg-slate-50/50 transition duration-150 cursor-pointer ${isExpanded ? "bg-slate-50/70" : ""}`}
+                        onClick={() => {
+                          setExpandedRow(isExpanded ? null : ac.KEY);
+                          setDocVerifyInput("");
+                          setVerifyResult(null);
+                          setFavorecidoInput("");
+                          setFavorecidoDocsResult(null);
+                          setSearchMode("documento");
+                        }}
+                      >
+                        
+                        {/* Expand toggle icon */}
+                        <td className="px-4 py-3.5 no-print">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedRow(isExpanded ? null : ac.KEY);
+                              setDocVerifyInput("");
+                              setVerifyResult(null);
+                              setFavorecidoInput("");
+                              setFavorecidoDocsResult(null);
+                              setSearchMode("documento");
+                            }}
+                            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
+                          >
+                            {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
+                          </button>
+                        </td>
+
+                        {/* Title & Colegiado details */}
+                        <td className="px-5 py-3.5">
+                          <div>
+                            <span 
+                              className="font-extrabold text-[#003366] cursor-pointer hover:underline text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedRow(isExpanded ? null : ac.KEY);
+                                setDocVerifyInput("");
+                                setVerifyResult(null);
+                                setFavorecidoInput("");
+                                setFavorecidoDocsResult(null);
+                                setSearchMode("documento");
+                              }}
+                            >
+                              {ac.TITULO.split(" - ")[0]}
+                            </span>
+                            <span className="block text-[10px] text-slate-400 font-sans mt-0.5">
+                              Colegiado: {ac.COLEGIADO} | Ata: {ac.NUMATA}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Process ID */}
+                        <td className="px-4 py-3.5">
+                          <code className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded font-mono text-[10px] text-slate-750 font-medium">
+                            {ac.PROC}
+                          </code>
+                        </td>
+
+                        {/* Session Date */}
+                        <td className="px-4 py-3.5 text-slate-600 font-mono text-[11px]">{ac.DATASESSAO}</td>
+
+                      </tr>
+
+                      {/* Detail panel expansion */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={4} className="bg-slate-50/25 px-8 py-6 border-b border-slate-200">
+                            <div className="space-y-4">
+                              
+                              {/* Internal monitoring values annotations */}
+                              <div className="flex flex-wrap gap-4">
+                                <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3 min-w-[245px]">
+                                  <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+                                    <Clock className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                    <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider leading-none mb-1">Prazo de Resposta</span>
+                                    <span className="text-xs text-[#003366] font-mono font-bold block">
+                                      {(() => {
+                                        const dateStr = ac.PRAZO_LIMITE;
+                                        if (!dateStr) return "Sem limite definido";
+                                        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+                                        const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                                        if (match) {
+                                          return `${match[3]}/${match[2]}/${match[1]}`;
+                                        }
+                                        return dateStr;
+                                      })()}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Meta fields breakdown */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
+                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5 shrink-0">Tipo Processo</span>
+                                  <div className="text-xs text-slate-800 font-semibold max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.TIPOPROCESSO || "Não especificado"}</div>
+                                </div>
+                                <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
+                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5 shrink-0">Entidade Interessada</span>
+                                  <div className="text-xs text-slate-800 font-semibold max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.ENTIDADE || "MTE"}</div>
+                                </div>
+                                <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
+                                  <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5 shrink-0">Acórdãos Relacionados</span>
+                                  <div className="text-xs text-slate-800 font-mono max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.ACORDAOSRELACIONADOS || "Nenhum"}</div>
+                                </div>
+                              </div>
+
+                              <div className="bg-white p-4.5 rounded-xl border">
+                                <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider">Tema Principal / Assunto</span>
+                                <p className="text-xs text-[#003366] mt-1 leading-relaxed font-black">{ac.ASSUNTO || "Sem descrição de assunto."}</p>
+                              </div>
+
+                              <div className="bg-white p-4.5 rounded-xl border">
+                                <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider">Resumo / Sumário (Jurisprudência TCU)</span>
+                                <p className="text-xs text-slate-700 mt-1.5 leading-relaxed font-sans">{ac.SUMARIO || "Não informado."}</p>
+                              </div>
+
+                              {/* Recomendações e Determinações (Unificadas / IA) */}
+                              {ac.aiAnalysisData ? (
+                                <div className="bg-gradient-to-br from-[#003366]/5 to-transparent p-4.5 rounded-xl border border-[#003366]/20 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#003366]/5 rounded-full -mr-4 -mt-4 pointer-events-none"></div>
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <FileCheck className="w-4 h-4 text-[#003366]" />
+                                    <span className="text-[10px] text-[#003366] block uppercase font-extrabold tracking-wider">
+                                      Checklist Extraído por IA (Inteiro Teor)
+                                    </span>
+                                  </div>
+                                  <div className="space-y-4">
+                                    {(Array.isArray(ac.aiAnalysisData.determinacoes) && ac.aiAnalysisData.determinacoes.length > 0) && (
+                                      <div>
+                                        <span className="text-[9px] font-bold text-rose-700 uppercase mb-1 block tracking-widest">Determinações</span>
+                                        <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
+                                          {ac.aiAnalysisData.determinacoes.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {(Array.isArray(ac.aiAnalysisData.recomendacoes) && ac.aiAnalysisData.recomendacoes.length > 0) && (
+                                      <div>
+                                        <span className="text-[9px] font-bold text-orange-700 uppercase mb-1 block tracking-widest">Recomendações</span>
+                                        <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
+                                          {ac.aiAnalysisData.recomendacoes.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {(Array.isArray(ac.aiAnalysisData.darCiencia) && ac.aiAnalysisData.darCiencia.length > 0) && (
+                                      <div>
+                                        <span className="text-[9px] font-bold text-blue-700 uppercase mb-1 block tracking-widest">Dar Ciência</span>
+                                        <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
+                                          {ac.aiAnalysisData.darCiencia.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {ac.aiAnalysisData.determinaArquivamento && (
+                                      <div className="inline-flex items-center gap-1 bg-slate-200 text-slate-700 px-2 py-1 rounded text-[10px] font-bold uppercase mt-2">
+                                        ✓ Determina Arquivamento
+                                      </div>
+                                    )}
+                                    {(!Array.isArray(ac.aiAnalysisData.determinacoes) || ac.aiAnalysisData.determinacoes.length === 0) && 
+                                     (!Array.isArray(ac.aiAnalysisData.recomendacoes) || ac.aiAnalysisData.recomendacoes.length === 0) && 
+                                     (!Array.isArray(ac.aiAnalysisData.darCiencia) || ac.aiAnalysisData.darCiencia.length === 0) && 
+                                     !ac.aiAnalysisData.determinaArquivamento && (
+                                      <span className="text-xs text-slate-500">Nenhuma ação técnica identificada pela IA neste documento.</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || ac.RECOMENDACOES || ac.DETERMINACOES) && (
+                                <div className="bg-gradient-to-br from-[#003366]/5 to-transparent p-4.5 rounded-xl border border-[#003366]/20 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#003366]/5 rounded-full -mr-4 -mt-4 pointer-events-none"></div>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <FileCheck className="w-4 h-4 text-[#003366]" />
+                                    <span className="text-[10px] text-[#003366] block uppercase font-extrabold tracking-wider">
+                                      Recomendações e Determinações
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-slate-800 leading-relaxed font-sans whitespace-pre-wrap">
+                                    {ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || "Nenhuma recomendação ou determinação registrada."}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Document content */}
+                              <div className="space-y-1">
+                                <div className="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider flex justify-between items-center mb-1">
+                                  <span>Texto Completo do Acórdão</span>
+                                  <div className="flex items-center gap-2">
+                                    <button 
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setFullTextAcordao(ac);
+                                      }}
+                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer border border-blue-200 font-sans"
+                                    >
+                                      <ExternalLink className="w-3 h-3" /> Visualizar em Tela Cheia (Popup)
+                                    </button>
+                                    <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono">INTEGRA_DOS_AUTOS</span>
+                                  </div>
+                                </div>
+                                <div className="relative group max-h-52 overflow-y-auto bg-slate-900 text-slate-200 p-4 rounded-xl font-mono text-[11px] whitespace-pre-line leading-relaxed scrollbar-thin border border-slate-950/20">
+                                  {currentFullText || "O inteiro teor para este acórdão ainda não foi baixado."}
+                                  {currentFullText && (
+                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent h-12 flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button 
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setFullTextAcordao(ac);
+                                        }}
+                                        className="bg-[#1351b4] text-white hover:bg-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md transition flex items-center gap-1 cursor-pointer font-sans"
+                                      >
+                                        <ExternalLink className="w-3 h-3" /> Expandir para Leitura Completa
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Verification Panel (SIAFI / Portal da Transparência) */}
+                              <div className={`p-4 rounded-xl border space-y-3 no-print transition-all duration-300 ${hasValoresARessarcir(ac) ? "bg-orange-50/50 border-orange-200 ring-2 ring-orange-100 shadow-sm" : "bg-slate-50 border-slate-200"}`}>
+                                {hasValoresARessarcir(ac) && (
+                                  <div className="flex items-center gap-1.5 mb-2 bg-orange-100 text-orange-800 w-fit px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                                    <AlertCircle className="w-3.5 h-3.5" /> Possível Débito ao Tesouro Nacional
+                                  </div>
+                                )}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center gap-1.5">
+                                    <Scale className="w-3.5 h-3.5 text-blue-600" />
+                                    Verificação Financeira de Ressarcimento (SIAFI / Portal da Transparência)
+                                  </span>
+                                  <span className="text-[9px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-650 font-mono font-bold">
+                                    CONCILIAÇÃO AUTOMÁTICA GRU
+                                  </span>
+                                </div>
+                                
+
+
+                                {ac.aiAnalysisData?.dossieRessarcimento && (
+                                  <div className="bg-[#1351b4]/5 border border-[#1351b4]/20 p-3 rounded-lg mt-3">
+                                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#1351b4]/20">
+                                      <Bot className="w-4 h-4 text-[#1351b4]" />
+                                      <span className="font-bold text-[#1351b4] text-xs">Dossiê Inteligente de Ressarcimento (IA)</span>
+                                    </div>
+                                    
+                                    {Array.isArray(ac.aiAnalysisData.dossieRessarcimento) && ac.aiAnalysisData.dossieRessarcimento.length === 0 ? (
+                                      <div className="text-xs text-slate-600 italic">A inteligência artificial não identificou condenação em débito ou devolução de valores no inteiro teor deste acórdão.</div>
+                                    ) : Array.isArray(ac.aiAnalysisData.dossieRessarcimento) ? (
+                                      <div className="space-y-3">
+                                        {ac.aiAnalysisData.dossieRessarcimento.map((resp: any, i: number) => (
+                                          <div key={i} className="bg-white p-2.5 rounded border border-[#1351b4]/20 shadow-sm text-xs">
+                                            <div className="flex justify-between items-start mb-2">
+                                              <div>
+                                                <div className="font-bold text-slate-800">{resp.nome}</div>
+                                                <div className="text-[10px] text-slate-500 font-mono mt-0.5">CPF/CNPJ Identificado: {resp.cpf || "Não extraído"}</div>
+                                              </div>
+                                              <div className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold border border-red-100">
+                                                Débito: {resp.valor}
+                                              </div>
+                                            </div>
+                                            
+                                            <div className="mt-2 pt-2 border-t border-slate-100">
+                                              <span className="text-[10px] font-bold uppercase text-slate-400 mb-1 block">Resultado da Busca no SIAFI</span>
+                                              {!Array.isArray(resp.siafiEncontrados) || resp.siafiEncontrados.length === 0 ? (
+                                                <div className="text-[10px] text-slate-500 flex items-center gap-1"><AlertCircle className="w-3 h-3 text-slate-400"/> Nenhum registro correspondente encontrado no SIAFI com este Nome/CPF.</div>
+                                              ) : (
+                                                <div className="space-y-1.5">
+                                                  {resp.siafiEncontrados.map((s: any, sIdx: number) => (
+                                                    <div key={sIdx} className="flex items-center justify-between bg-slate-50 p-1.5 rounded text-[10px]">
+                                                      <div>
+                                                        <div className="font-mono text-slate-700">{s.cpf_beneficiario || "CPF Omitido"}</div>
+                                                        <div className="text-slate-500">{s.status_descricao || "Status Indisponível"}</div>
+                                                      </div>
+                                                      <div>
+                                                        {s.confirmado ? (
+                                                          <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-1"><Check className="w-3 h-3"/> GRU Confirmada</span>
+                                                        ) : (
+                                                          <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">Pendente / Outro</span>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Operating values annotations */}
+                              <div className="bg-blue-50/40 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row gap-4 items-center justify-between no-print">
+                                <div className="space-y-1">
+                                  <span className="text-[9px] text-slate-550 uppercase font-black tracking-wider">Observações de Acompanhamento (AECI)</span>
+                                  <p className="text-xs text-slate-805 italic font-medium">“{ac.OBSERVACOES || "Sem observações cadastradas para este acórdão."}”</p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <button
+                                    onClick={() => handleOpenEdit(ac)}
+                                    className="px-4 py-2 bg-white border border-blue-250 text-[#003366] hover:bg-blue-50 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer font-sans"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" /> Editar Notas e Prazos
+                                  </button>
+                                </div>
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+
+                    </React.Fragment>
+                  );
+                })
+
+              )}
+            </tbody>
+
+          </table>
+        </div>
+
+        {/* Footer Info Control with continuous scroll metrics */}
+        <div className="bg-slate-50 border-t border-slate-200 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 no-print">
+          <div>
+            Exibindo todos os <strong className="text-slate-800 font-bold">{filteredAcordaos.length}</strong> acórdãos mapeados • <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">Filtros ativados com rolagem vertical infinita (páginas desativadas)</span>
+          </div>
+          
+          <button
+            onClick={() => {
+              const scrollEl = document.querySelector(".custom-com-scroll-container");
+              if (scrollEl) {
+                scrollEl.scrollTo({ top: 0, behavior: "smooth" });
+              } else {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }
+            }}
+            className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-[#003366] font-black rounded-lg transition text-xs shadow-3xs"
+          >
+            Voltar ao Topo ↑
+          </button>
+        </div>
+
+      </div>
+      {isEditing && selectedAcordao && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 shadow-xl font-sans no-print">
+          <div className="bg-white rounded-lg w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div className="gov-header px-5 py-4 text-white flex justify-between items-center">
+              <div>
+                <span className="text-[10px] text-blue-200 uppercase font-mono">{selectedAcordao.KEY}</span>
+                <h3 className="text-sm font-bold font-display">{selectedAcordao.TITULO}</h3>
+              </div>
+              <button onClick={() => setIsEditing(false)} className="text-white hover:text-slate-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 overflow-y-auto">
+              
+              {/* Status */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Status do Monitoramento Interno:</label>
+                <select
+                  id="modal-edit-status"
+                  className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:outline-hidden"
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                >
+                  <option value="Pendente">Pendente</option>
+                  <option value="Em Análise">Em Análise</option>
+                  <option value="Cumprido">Cumprido</option>
+                  <option value="Atrasado">Atrasado (Fora do Prazo)</option>
+                </select>
+              </div>
+
+              {/* Responsavel */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Assessor Responsável (Interno):</label>
+                <input
+                  id="modal-edit-responsavel"
+                  type="text"
+                  className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:outline-hidden"
+                  placeholder="Nome do analista ou assessoria designada"
+                  value={editResponsavel}
+                  onChange={(e) => setEditResponsavel(e.target.value)}
+                />
+              </div>
+
+              {/* Prazo */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Prazo Limite para Atendimento ao TCU:</label>
+                <input
+                  id="modal-edit-prazo"
+                  type="date"
+                  className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-mono text-slate-800 focus:outline-hidden"
+                  value={editPrazo}
+                  onChange={(e) => setEditPrazo(e.target.value)}
+                />
+              </div>
+
+              {/* Observacoes */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Histórico de Observações e Providências:</label>
+                <textarea
+                  id="modal-edit-observacoes"
+                  className="w-full h-24 bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:outline-hidden"
+                  placeholder="Registre as tratativas, link para processos SEI ou impedimentos técnicos para atendimento do acórdão..."
+                  value={editObs}
+                  onChange={(e) => setEditObs(e.target.value)}
+                ></textarea>
+              </div>
+
+            </div>
+
+            <div className="bg-slate-50 px-5 py-3.5 flex justify-end gap-2 border-t text-xs">
+              <button
+                id="btn-modal-cancel"
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-1.5 font-semibold text-slate-600 hover:text-slate-800"
+              >
+                Cancelar
+              </button>
+              <button
+                id="btn-modal-save"
+                onClick={handleSaveEdit}
+                className="px-4 py-1.5 bg-blue-800 hover:bg-blue-900 text-white font-bold rounded shadow-xs transition"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+
+          </div>
+        </div>
       )}
-      {tcuActiveSection === "tce" && (
-        <TcuTCE 
-          tces={rawTces}
-          tceMappings={tceMappings}
-          onUpdateTce={onUpdateTce}
-          onDeleteTce={onDeleteTce}
-          onImportTces={onImportTces}
-          onImportTceMappings={onImportTceMappings}
-          isLoading={isLoading}
-        />
-      )}
-</div>
+
+      {/* PRINT-ONLY EMBEDDED DUST SHEETS */}
+      <div className="hidden print-only">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold uppercase text-slate-900">Ministério do Trabalho e Emprego</h1>
+          <h2 className="text-lg font-bold text-slate-700">AECI - Assessoria Especial de Controle Interno</h2>
+          <h3 className="text-md text-slate-600 mt-2">Relatório de Monitoramento Sistemático de Demandas - TCU</h3>
+          <p className="text-xs text-slate-500 mt-1">Extraído em: {new Date().toLocaleString("pt-BR")} | Usuário: Alessandro Barbosa (AECI)</p>
+        </div>
+
+        <table className="w-full text-xs text-left border border-slate-300 border-collapse">
+          <thead>
+            <tr className="bg-slate-200 border-b border-slate-300 text-slate-800 font-bold">
+              <th className="p-2 border">Título / Código</th>
+              <th className="p-2 border">Processo</th>
+              <th className="p-2 border">Sessão</th>
+              <th className="p-2 border">Responsável</th>
+              <th className="p-2 border">Prazo</th>
+              <th className="p-2 border">Status</th>
+              <th className="p-2 border">Assunto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredAcordaos.map(ac => (
+              <tr key={ac.KEY} className="border-b">
+                <td className="p-2 border font-bold">{ac.TITULO.split(" - ")[0]}</td>
+                <td className="p-2 border font-mono">{ac.PROC}</td>
+                <td className="p-2 border">{ac.DATASESSAO}</td>
+                <td className="p-2 border">{ac.RESPONSAVEL_INTERNO || "AECI"}</td>
+                <td className="p-2 border font-mono font-bold">{new Date(ac.PRAZO_LIMITE + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+                <td className="p-2 border font-bold">{ac.STATUS_MONITORAMENTO}</td>
+                <td className="p-2 border text-slate-600">{ac.ASSUNTO}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
