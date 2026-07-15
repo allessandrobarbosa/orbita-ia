@@ -2669,12 +2669,12 @@ export default function TcuMonitoramento({
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 shadow-xl font-sans no-print">
           <div className="bg-white rounded-lg w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
             
-            <div className="gov-header px-5 py-4 text-white flex justify-between items-center">
+            <div className="gov-header px-5 py-4 flex justify-between items-center">
               <div>
-                <span className="text-[10px] text-blue-200 uppercase font-mono">{selectedAcordao.KEY}</span>
-                <h3 className="text-sm font-bold font-display">{selectedAcordao.TITULO}</h3>
+                <span className="text-[10px] text-blue-800 uppercase font-mono font-bold">{selectedAcordao.KEY}</span>
+                <h3 className="text-sm font-bold font-display text-[#003366]">{selectedAcordao.TITULO}</h3>
               </div>
-              <button onClick={() => setIsEditing(false)} className="text-white hover:text-slate-200">
+              <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-[#003366]">
                 <X className="w-5 h-5" />
               </button>
             </div>

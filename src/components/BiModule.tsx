@@ -182,7 +182,7 @@ export default function BiModule({
   const yearlyMetrics = useMemo(() => {
     const years = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
     return years.map(yr => {
-      const countAcordaos = acordaos.filter(a => extractYear(a.KEY || a.TITULO) === yr || a.ANOACORDAO === yr).length;
+      const countAcordaos = acordaos.filter(a => (a.ANOACORDAO || extractYear(a.KEY || a.TITULO)) === yr).length;
       
       const countComs = comunicacoes.filter(c => {
         const yrRec = extractYear(c.DATA_RECEBIMENTO);
@@ -285,7 +285,7 @@ export default function BiModule({
 
     // Joint 1: TCU Acórdão & connected items
     acordaos.forEach(ac => {
-      const yearAc = extractYear(ac.KEY) || ac.ANOACORDAO;
+      const yearAc = ac.ANOACORDAO || extractYear(ac.KEY || ac.TITULO);
       const keyUpper = (ac.KEY || "").toUpperCase().trim();
       
       const relatedComs = comunicacoes.filter(c => {

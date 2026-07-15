@@ -705,35 +705,18 @@ function isMteRelevant(record: any): boolean {
     record.PROC
   ].filter(Boolean).join(" ").toLowerCase();
 
-  // 1. Excluir explicitamente outros órgãos se não houver menção direta ao MTE/AECI federal
-  const hasDirectFederalMteMention = 
-    textToSearch.includes("mte") || 
-    textToSearch.includes("aeci") || 
-    textToSearch.includes("ministério do trabalho e emprego") ||
-    textToSearch.includes("ministerio do trabalho e emprego");
-
-  if (!hasDirectFederalMteMention) {
-    const isOtherOrgan = 
+  const isOtherOrgan = 
       textToSearch.includes("tribunal regional do trabalho") ||
       textToSearch.includes("trt") ||
       textToSearch.includes("ministério público do trabalho") ||
-      textToSearch.includes("mpt") ||
-      textToSearch.includes("secretaria de estado") ||
-      textToSearch.includes("secretaria estadual") ||
-      textToSearch.includes("secretaria municipal") ||
-      textToSearch.includes("prefeitura") ||
-      textToSearch.includes("governo do estado");
-      
-    if (isOtherOrgan) {
-      return false;
-    }
-  }
+      textToSearch.includes("mpt");
+  
+  if (isOtherOrgan && !textToSearch.includes("ministério do trabalho e emprego")) return false;
 
-  // 2. Termos permitidos específicos do MTE federal e suas regionais
   return (
-    textToSearch.includes("mte") ||
-    textToSearch.includes("aeci") ||
-    textToSearch.includes("srte") ||
+    /\bmte\b/.test(textToSearch) ||
+    /\baeci\b/.test(textToSearch) ||
+    /\bsrte\b/.test(textToSearch) ||
     textToSearch.includes("ministério do trabalho") ||
     textToSearch.includes("ministerio do trabalho") ||
     textToSearch.includes("superintendência regional do trabalho") ||

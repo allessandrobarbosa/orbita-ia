@@ -1,5 +1,5 @@
 {
-  "dymEcffRteE1egOIENRjoclC7KlNZIoA": {
+  "gO241niCQMJZsfiGr5Ql0EZK92VcaYkD": {
     "cookie": {
       "originalMaxAge": null,
       "expires": null,
@@ -7,19 +7,9 @@
       "httpOnly": true,
       "path": "/"
     },
-    "user": {
-      "id": "alessandro",
-      "name": "Alessandro Barbosa",
-      "role": "Analista de Controle Interno Especial",
-      "email": "alessandro@trabalho.gov.br",
-      "register": "Matrícula: 1792381",
-      "clearance": "ADMIN",
-      "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
-      "badgeText": "AECI - ADMIN"
-    },
-    "lastHeartbeat": 1784120351083
+    "lastHeartbeat": 1784136209891
   },
-  "7QMufpfynp4Zo_fnJjLgfLnZtLDGfLug": {
+  "4_UQc5jElNbiQRzYxwnL6a85imRRLGcU": {
     "cookie": {
       "originalMaxAge": null,
       "expires": null,
@@ -37,26 +27,6 @@
       "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
       "badgeText": "AECI - ADMIN"
     },
-    "lastHeartbeat": 1784120538788
-  },
-  "Ikd7YCQxMgMncor4A5b5hI3Vq-Z_TeQX": {
-    "cookie": {
-      "originalMaxAge": null,
-      "expires": null,
-      "secure": false,
-      "httpOnly": true,
-      "path": "/"
-    },
-    "user": {
-      "id": "alessandro",
-      "name": "Alessandro Barbosa",
-      "role": "Analista de Controle Interno Especial",
-      "email": "alessandro@trabalho.gov.br",
-      "register": "Matrícula: 1792381",
-      "clearance": "ADMIN",
-      "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
-      "badgeText": "AECI - ADMIN"
-    },
-    "lastHeartbeat": 1784122676235
+    "lastHeartbeat": 1784140780570
   }
 }

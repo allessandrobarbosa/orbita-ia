@@ -5,15 +5,16 @@
 
 import React, { useState } from "react";
 import { Building2, Search, Phone, Mail, MapPin, AlertCircle, Edit, Save, ExternalLink, FileText, X } from "lucide-react";
-import { SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand } from "../types";
+import { SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand, CguDemand } from "../types";
 import SRTEDetailView from "./SRTEDetailView";
 
 interface SrteModuleProps {
   superintendencias: SuperintendenciaRegional[];
-  onUpdateSrte: (uf: string, data: any) => Promise<boolean>;
+  onUpdateSrte: (uf: string, data: Partial<SuperintendenciaRegional>) => Promise<boolean>;
   acordaos: AcordaoDemand[];
   comunicacoes: ComunicacaoDemand[];
   tces: TceDemand[];
+  cguDemands?: CguDemand[];
 }
 
 // Region mapping helper
@@ -65,12 +66,12 @@ const getMteCodeByUf = (uf: string): string => {
 };
 
 // Scanner for matching acórdãos for each state
-const findRelatedAcordaos = (uf: string, capital: string, list: AcordaoDemand[]) => {
+const findRelatedAcordaos = (uf: string, capital: string, list: (AcordaoDemand & { _normalizedText?: string })[]) => {
   const ufLower = uf.toLowerCase();
   const capitalLower = capital.toLowerCase();
   
   return list.filter(ac => {
-    const textToSearch = `${ac.TITULO || ""} ${ac.INTERESSADOS || ""} ${ac.ASSUNTO || ""} ${ac.SUMARIO || ""} ${ac.ACORDAO || ""} ${ac.DECISAO || ""}`.toLowerCase();
+    const textToSearch = ac._normalizedText || "";
     
     // Look for patterns like "srte-sp", "srte/sp", "srt-sp", "srt/sp"
     const hasUfPattern = textToSearch.includes(`srte-${ufLower}`) || 
@@ -78,9 +79,10 @@ const findRelatedAcordaos = (uf: string, capital: string, list: AcordaoDemand[])
                          textToSearch.includes(`srt-${ufLower}`) ||
                          textToSearch.includes(`srt/${ufLower}`);
                          
-    // Match "superintendencia" and capital city or state bounds
-    const hasSuperintendencia = textToSearch.includes("superintendência") || 
-                                textToSearch.includes("superintendencia") || 
+    // Match exact MTE phrases instead of disjoint words to prevent false positives with other agencies
+    const hasSuperintendencia = textToSearch.includes("superintendencia regional do trabalho") || 
+                                textToSearch.includes("superintendencia do trabalho") || 
+                                textToSearch.includes("gerencia regional do trabalho") ||
                                 textToSearch.includes("srte");
                                 
     const mentionsLocation = textToSearch.includes(capitalLower) || 
@@ -93,31 +95,27 @@ const findRelatedAcordaos = (uf: string, capital: string, list: AcordaoDemand[])
 };
 
 // Scanner para associar Comunicações (Ofícios) às SRTEs
-const findRelatedComunicacoes = (uf: string, capital: string, list: ComunicacaoDemand[]) => {
+const findRelatedComunicacoes = (uf: string, capital: string, list: (ComunicacaoDemand & { _normalizedText?: string })[]) => {
   const ufLower = uf.toLowerCase();
   const capitalLower = capital.toLowerCase();
-  const stateNameLower = getUfStateName(uf).toLowerCase();
+  const stateNameLower = getUfStateName(uf).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   
   return list.filter(com => {
-    const textToSearch = `${com.DESTINATARIO || ""} ${com.CONTATO || ""} ${com.COMUNICACAO || ""}`.toLowerCase();
-    
-    // Normalização básica de acentos
-    const normalizedText = textToSearch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const normalizedState = stateNameLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const normalizedText = com._normalizedText || "";
 
     const hasUfPattern = normalizedText.includes(`srte-${ufLower}`) || 
                          normalizedText.includes(`srte/${ufLower}`) ||
                          normalizedText.includes(`srt-${ufLower}`) ||
                          normalizedText.includes(`srt/${ufLower}`);
                          
-    const mentionsSuper = normalizedText.includes("superintendencia") || 
-                          normalizedText.includes("regional") ||
-                          normalizedText.includes("srte") ||
-                          normalizedText.includes("trabalho no estado");
+    const mentionsSuper = normalizedText.includes("superintendencia regional do trabalho") || 
+                          normalizedText.includes("superintendencia do trabalho") ||
+                          normalizedText.includes("gerencia regional do trabalho") ||
+                          normalizedText.includes("srte");
                           
     const mentionsLocation = normalizedText.includes(normalizedCapital) || 
-                              normalizedText.includes(normalizedState) ||
+                              normalizedText.includes(stateNameLower) ||
                               normalizedText.includes(`no estado d${ufLower === 'mg' || ufLower === 'go' ? 'e' : 'o'} ${ufLower}`);
                               
     return hasUfPattern || (mentionsSuper && mentionsLocation);
@@ -125,19 +123,15 @@ const findRelatedComunicacoes = (uf: string, capital: string, list: ComunicacaoD
 };
 
 // Scanner para associar TCEs às SRTEs
-const findRelatedTces = (uf: string, capital: string, list: TceDemand[]) => {
+const findRelatedTces = (uf: string, capital: string, list: (TceDemand & { _normalizedText?: string })[]) => {
   const ufLower = uf.toLowerCase();
   const capitalLower = capital.toLowerCase();
-  const stateNameLower = getUfStateName(uf).toLowerCase();
+  const stateNameLower = getUfStateName(uf).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const mteCode = getMteCodeByUf(uf);
   
   return list.filter(tce => {
-    const textToSearch = `${tce.NUMERO_ANO_TCE || ""} ${tce.PROCESSO_ADMINISTRATIVO || ""} ${tce.MOTIVO_INSTAURACAO || ""} ${tce.SUBMOTIVO_INSTAURACAO || ""} ${tce.ULTIMO_POSICIONAMENTO || ""}`.toLowerCase();
-    
-    // Normalização de acentos
-    const normalizedText = textToSearch.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const normalizedState = stateNameLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const normalizedText = tce._normalizedText || "";
 
     const hasUfPattern = normalizedText.includes(`srte-${ufLower}`) || 
                          normalizedText.includes(`srte/${ufLower}`) ||
@@ -146,67 +140,76 @@ const findRelatedTces = (uf: string, capital: string, list: TceDemand[]) => {
                          normalizedText.includes(` ${ufLower} `) ||
                          normalizedText.includes(`/${ufLower}`);
 
-    // Mapeamento pelo código numérico do processo administrativo de convênio MTE (ex: 46010...)
     const matchesMteCode = tce.PROCESSO_ADMINISTRATIVO && tce.PROCESSO_ADMINISTRATIVO.replace(/\D/g, "").startsWith(mteCode);
                          
-    const mentionsSuper = normalizedText.includes("superintendencia") || 
-                          normalizedText.includes("regional") ||
-                          normalizedText.includes("trabalho") ||
+    const mentionsSuper = normalizedText.includes("superintendencia regional do trabalho") || 
+                          normalizedText.includes("superintendencia do trabalho") ||
+                          normalizedText.includes("gerencia regional do trabalho") ||
                           normalizedText.includes("srte");
                           
     const mentionsLocation = normalizedText.includes(normalizedCapital) || 
-                              normalizedText.includes(normalizedState);
+                              normalizedText.includes(stateNameLower);
                               
     return hasUfPattern || matchesMteCode || (mentionsSuper && mentionsLocation);
   });
 };
 
-export interface CguRecommendation {
-  KEY: string;
-  TITULO: string;
-  RELATORIO: string;
-  DESCRICAO: string;
-  STATUS: string;
-  PRAZO: string;
-}
-
-// Gerador dinâmico de Recomendações da CGU com base nas métricas oficiais
-const getDynamicCguRecommendations = (uf: string): CguRecommendation[] => {
-  const cguCounts: Record<string, number> = {
-    AC: 3, AL: 2, AP: 1, AM: 5, BA: 8, CE: 4, DF: 12, ES: 2, GO: 3, MA: 6,
-    MT: 4, MS: 2, MG: 9, PA: 7, PB: 3, PR: 5, PE: 6, PI: 2, RN: 2, RS: 6,
-    RJ: 10, RO: 3, RR: 2, SC: 3, SP: 14, SE: 1, TO: 2
-  };
+// Scanner para associar Demandas CGU às SRTEs
+const findRelatedCguDemands = (uf: string, capital: string, list: (CguDemand & { _normalizedText?: string })[]) => {
+  const ufLower = uf.toLowerCase();
+  const capitalLower = capital.toLowerCase();
+  const stateNameLower = getUfStateName(uf).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   
-  const count = cguCounts[uf] || 2;
-  const items: CguRecommendation[] = [];
-  const templates = [
-    { desc: "Aprimoramento no fluxo de controle e fiscalização de convênios locais.", status: "Em Análise", prazo: "2026-09-30" },
-    { desc: "Rastreabilidade de passagens e prestação de contas de diárias no âmbito regional.", status: "Pendente", prazo: "2026-10-15" },
-    { desc: "Readequação de controles de ponto e frequência de servidores da superintendência.", status: "Cumprido", prazo: "2025-12-10" },
-    { desc: "Auditoria nos pagamentos retroativos de abonos salariais no estado.", status: "Pendente", prazo: "2026-11-20" },
-    { desc: "Melhorias de acessibilidade física e segurança contra incêndio no prédio sede.", status: "Em Análise", prazo: "2026-08-05" },
-    { desc: "Implementação do plano local de integridade e conduta ética regional.", status: "Cumprido", prazo: "2026-02-18" },
-    { desc: "Otimização e redução de custos operacionais com contratos de terceirização.", status: "Pendente", prazo: "2026-12-01" },
-  ];
+  return list.filter(cgu => {
+    const normalizedText = cgu._normalizedText || "";
 
-  for (let i = 0; i < count; i++) {
-    const template = templates[i % templates.length];
-    const year = 2024 + (i % 3);
-    const num = 100 + i * 17;
-    items.push({
-      KEY: `CGU-REC-${uf}-${num}-${year}`,
-      TITULO: `Recomendação CGU nº ${num}/${year} - Audit/CGU`,
-      RELATORIO: `Relatório de Avaliação CGU ${num + 10}/${year}`,
-      DESCRICAO: `${template.desc} (Unidade: SRTE-${uf})`,
-      STATUS: template.status,
-      PRAZO: template.prazo
-    });
-  }
-  return items;
+    const hasUfPattern = normalizedText.includes(`srte-${ufLower}`) || 
+                         normalizedText.includes(`srte/${ufLower}`) ||
+                         normalizedText.includes(`srt-${ufLower}`) ||
+                         normalizedText.includes(`srt/${ufLower}`) ||
+                         normalizedText.includes(` ${ufLower} `) ||
+                         normalizedText.includes(`/${ufLower}`);
+                         
+    const mentionsSuper = normalizedText.includes("superintendencia regional do trabalho") || 
+                          normalizedText.includes("superintendencia do trabalho") ||
+                          normalizedText.includes("gerencia regional do trabalho") ||
+                          normalizedText.includes("srte");
+                          
+    const mentionsLocation = normalizedText.includes(normalizedCapital) || 
+                              normalizedText.includes(stateNameLower);
+                              
+    return hasUfPattern || (mentionsSuper && mentionsLocation);
+  });
 };
 
-export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, comunicacoes, tces }: SrteModuleProps) {
+export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, comunicacoes, tces, cguDemands = [] }: SrteModuleProps) {
+  
+  // Pre-normalize text for all items ONCE to avoid O(N*M) heavy string operations during render
+  const normalizedAcordaos = React.useMemo(() => acordaos.map(ac => ({
+    ...ac,
+    _normalizedText: `${ac.TITULO || ""} ${ac.INTERESSADOS || ""} ${ac.ASSUNTO || ""} ${ac.SUMARIO || ""} ${ac.ACORDAO || ""} ${ac.DECISAO || ""}`
+      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  })), [acordaos]);
+
+  const normalizedComunicacoes = React.useMemo(() => comunicacoes.map(com => ({
+    ...com,
+    _normalizedText: `${com.DESTINATARIO || ""} ${com.CONTATO || ""} ${com.COMUNICACAO || ""}`
+      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  })), [comunicacoes]);
+
+  const normalizedTces = React.useMemo(() => tces.map(tce => ({
+    ...tce,
+    _normalizedText: `${tce.NUMERO_ANO_TCE || ""} ${tce.PROCESSO_ADMINISTRATIVO || ""} ${tce.MOTIVO_INSTAURACAO || ""} ${tce.SUBMOTIVO_INSTAURACAO || ""} ${tce.ULTIMO_POSICIONAMENTO || ""}`
+      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  })), [tces]);
+  
+  const normalizedCguDemands = React.useMemo(() => cguDemands.map(cgu => ({
+    ...cgu,
+    _normalizedText: `${cgu.tituloTarefa || ""} ${cgu.unidadeAuditada || ""} ${cgu.textoMonitoramento || ""} ${cgu.providencia || ""}`
+      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  })), [cguDemands]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [activeRegion, setActiveRegion] = useState("TODOS");
@@ -244,8 +247,8 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
     const original = superintendencias.find(x => x.uf === editingUf);
 
     // Auto-calculate counts based on actual database lists
-    const tcuCount = findRelatedAcordaos(editingUf, original?.capital || "", acordaos).length;
-    const cguCount = getDynamicCguRecommendations(editingUf).length;
+    const tcuCount = findRelatedAcordaos(editingUf, original?.capital || "", normalizedAcordaos).length;
+    const cguCount = findRelatedCguDemands(editingUf, original?.capital || "", normalizedCguDemands).length;
     const computedStatus = calculateRisk(tcuCount, cguCount);
 
     const updateBody = {
@@ -273,10 +276,10 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
   // Map and calculate all counts and risk status dynamically for consistency
   const calculatedSrtes = React.useMemo(() => {
     return superintendencias.map(s => {
-      const tcuCount = findRelatedAcordaos(s.uf, s.capital, acordaos).length;
-      const cguCount = getDynamicCguRecommendations(s.uf).length;
-      const comCount = findRelatedComunicacoes(s.uf, s.capital, comunicacoes).length;
-      const tceCount = findRelatedTces(s.uf, s.capital, tces).length;
+      const tcuCount = findRelatedAcordaos(s.uf, s.capital, normalizedAcordaos).length;
+      const cguCount = findRelatedCguDemands(s.uf, s.capital, normalizedCguDemands).length;
+      const comCount = findRelatedComunicacoes(s.uf, s.capital, normalizedComunicacoes).length;
+      const tceCount = findRelatedTces(s.uf, s.capital, normalizedTces).length;
       
       return {
         ...s,
@@ -287,7 +290,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
         statusGeral: calculateRisk(tcuCount, cguCount)
       };
     });
-  }, [superintendencias, acordaos, comunicacoes, tces]);
+  }, [superintendencias, normalizedAcordaos, normalizedComunicacoes, normalizedTces, normalizedCguDemands]);
 
   // Filter List
   const filteredSrtes = calculatedSrtes.filter(s => {
@@ -651,7 +654,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
         
         if (type === "tcu") {
           title = `Processos TCU Vinculados — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = findRelatedAcordaos(sr.uf, sr.capital, acordaos);
+          const matched = findRelatedAcordaos(sr.uf, sr.capital, normalizedAcordaos);
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhum processo do TCU localizado para esta unidade regional.</p>
           ) : (
@@ -690,7 +693,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
           );
         } else if (type === "cgu") {
           title = `Recomendações CGU Ativas — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = getDynamicCguRecommendations(sr.uf);
+          const matched = findRelatedCguDemands(sr.uf, sr.capital, normalizedCguDemands);
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma recomendação da CGU ativa para esta unidade regional.</p>
           ) : (
@@ -699,25 +702,34 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
                     <th className="p-3 w-1/4">Recomendação</th>
-                    <th className="p-3 w-1/4">Relatório Ref</th>
-                    <th className="p-3 w-2/5">Descrição da Deliberação</th>
+                    <th className="p-3 w-1/4">Unidade / Categoria</th>
+                    <th className="p-3 w-2/5">Descrição do Monitoramento</th>
                     <th className="p-3">Prazo Limite</th>
                     <th className="p-3 text-right">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {matched.map(rec => (
-                    <tr key={rec.KEY} className="hover:bg-slate-50/50">
-                      <td className="p-3 font-semibold text-slate-900">{rec.TITULO}</td>
-                      <td className="p-3 text-slate-600 font-mono text-[11px]">{rec.RELATORIO}</td>
-                      <td className="p-3 text-slate-500 leading-relaxed" title={rec.DESCRICAO}>{rec.DESCRICAO}</td>
-                      <td className="p-3 font-mono text-slate-600">{rec.PRAZO}</td>
+                    <tr key={rec.idTarefa} className="hover:bg-slate-50/50">
+                      <td className="p-3 font-semibold text-slate-900">
+                        <div className="text-[10px] text-slate-500 mb-0.5">ID: {rec.idTarefa}</div>
+                        {rec.tituloTarefa}
+                      </td>
+                      <td className="p-3 text-slate-600 font-mono text-[11px]">
+                        <div>{rec.unidadeAuditada}</div>
+                        <div className="text-[9px] text-slate-400 mt-1">{rec.categoria}</div>
+                      </td>
+                      <td className="p-3 text-slate-500 leading-relaxed max-w-[300px] truncate" title={rec.textoMonitoramento}>
+                        {rec.textoMonitoramento}
+                      </td>
+                      <td className="p-3 font-mono text-slate-600">{rec.dataLimite || "N/A"}</td>
                       <td className="p-3 text-right">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
-                          rec.STATUS === "Cumprido" ? "bg-emerald-100 text-emerald-800" :
-                          rec.STATUS === "Em Análise" ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-800"
+                          rec.situacao.toLowerCase().includes("cumprido") ? "bg-emerald-100 text-emerald-800" :
+                          rec.situacao.toLowerCase().includes("em análise") ? "bg-blue-100 text-blue-800" :
+                          rec.situacao.toLowerCase().includes("atrasado") ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
                         }`}>
-                          {rec.STATUS}
+                          {rec.situacao}
                         </span>
                       </td>
                     </tr>
@@ -728,7 +740,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
           );
         } else if (type === "comunicacoes") {
           title = `Comunicações Oficiais (Ofícios) — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = findRelatedComunicacoes(sr.uf, sr.capital, comunicacoes);
+          const matched = findRelatedComunicacoes(sr.uf, sr.capital, normalizedComunicacoes);
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma comunicação ou ofício localizado para esta unidade regional.</p>
           ) : (
@@ -772,7 +784,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
           );
         } else if (type === "tces") {
           title = `Tomadas de Contas Especiais (TCEs) — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = findRelatedTces(sr.uf, sr.capital, tces);
+          const matched = findRelatedTces(sr.uf, sr.capital, normalizedTces);
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma TCE regionalizada localizada para esta unidade.</p>
           ) : (

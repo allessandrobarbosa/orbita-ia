@@ -127,10 +127,10 @@ import CguModule from "./components/CguModule";
 import ScdpModule from "./components/ScdpModule";
 // import logoImg from "./assets/images/orbita_logo.png";
 
-import { 
-  AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional, 
+import {
+  AcordaoDemand, RolResponsavel, ComissaoEticaDemand, SuperintendenciaRegional,
   ComunicacaoDemand, TceDemand, TceAcordaoMapping, CguDemand, CguPublishedReport,
-  EticaMembro, EticaReuniao, EticaAta, EticaProcesso 
+  EticaMembro, EticaReuniao, EticaAta, EticaProcesso
 } from "./types";
 
 export default function App() {
@@ -214,7 +214,7 @@ export default function App() {
   const hasModulePermission = (tabId: string): boolean => {
     if (currentUser.clearance === "ADMIN") return true;
     if (tabId === "dashboard") return true; // Todos veem o Início
-    
+
     const idToMod: Record<string, string> = {
       tcu: "TCU",
       cgu: "CGU",
@@ -246,7 +246,7 @@ export default function App() {
   // Checks privileges against active user context on actions
   const checkPermission = (module: "TCU" | "ROL" | "ETHICS" | "SRTE" | "CGU"): boolean => {
     if (currentUser.clearance === "ADMIN") return true;
-    
+
     if (currentUser.allowedModules) {
       if (currentUser.allowedModules.includes(module)) return true;
     } else {
@@ -323,7 +323,7 @@ export default function App() {
         if (sessionStorage.getItem("sessionActive") !== "true") {
           try {
             await fetch("/api/auth/logout", { method: "POST" });
-          } catch (e) {}
+          } catch (e) { }
           sessionStorage.setItem("sessionActive", "true");
         }
 
@@ -356,7 +356,7 @@ export default function App() {
     if (isLocked) return;
 
     const sendHeartbeat = () => {
-      fetch("/api/auth/heartbeat", { method: "POST" }).catch(() => {});
+      fetch("/api/auth/heartbeat", { method: "POST" }).catch(() => { });
     };
 
     // Send initially
@@ -378,7 +378,7 @@ export default function App() {
       console.log("[Orbita Security] Logging out due to 10 minutes of inactivity.");
       try {
         await fetch("/api/auth/logout", { method: "POST" });
-      } catch (e) {}
+      } catch (e) { }
       sessionStorage.removeItem("sessionActive");
       setIsLocked(true);
       setAuthSuccessToast("Sessão finalizada por inatividade (10 minutos).");
@@ -391,7 +391,7 @@ export default function App() {
 
     // Set up listeners for active user interactions
     const activityEvents = ["mousemove", "mousedown", "keypress", "scroll", "touchstart"];
-    
+
     activityEvents.forEach((event) => {
       window.addEventListener(event, resetInactivityTimer);
     });
@@ -1109,13 +1109,13 @@ export default function App() {
       {/* 1. Header Federal Government Layout */}
       <header className="gov-header border-b-2 shadow-xs no-print shrink-0 font-sans sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-5 py-3.5 flex flex-col md:flex-row items-center gap-6">
-          
+
           {/* 1. Left Side: Flat Geometric Logo (GOV.BR Style) */}
           <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-center md:justify-start">
-            <svg 
-              className="w-10 h-10 text-[#003366] shrink-0" 
-              viewBox="0 0 100 100" 
-              fill="none" 
+            <svg
+              className="w-10 h-10 text-[#003366] shrink-0"
+              viewBox="0 0 100 100"
+              fill="none"
               xmlns="http://www.w3.org/2000/svg"
             >
               {/* Three Orbit Rings */}
@@ -1151,8 +1151,8 @@ export default function App() {
               { id: "etica", label: "ÉTICA", icon: ShieldAlert, title: "Comissão de Ética Coletiva" },
               { id: "rol", label: "ROL", icon: Users, title: "Gestão do Rol de Responsáveis" },
               { id: "srte", label: "STRES", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
-              { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
               { id: "scdp", label: "SCDP", icon: Plane, title: "Diárias e Passagens (SCDP)" },
+              { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
             ].filter(link => hasModulePermission(link.id)).map((moduleLink) => {
               const ModuleIcon = moduleLink.icon;
               const isSelected = activeTab === moduleLink.id;
@@ -1162,11 +1162,10 @@ export default function App() {
                   onClick={() => {
                     setActiveTab(moduleLink.id);
                   }}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${
-                    isSelected
+                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all border cursor-pointer ${isSelected
                       ? "nav-btn-active shadow-sm"
                       : "nav-btn-inactive hover:bg-slate-100"
-                  }`}
+                    }`}
                   title={moduleLink.title}
                 >
                   <ModuleIcon className={`w-3.5 h-3.5 ${isSelected ? "text-white" : "text-[#003366]"}`} />
@@ -1237,7 +1236,7 @@ export default function App() {
                       }}
                       className="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-[10px] flex items-center gap-1.5 transition cursor-pointer border border-amber-300"
                     >
-                      <Database className="w-3.5 h-3.5" /> Administração do Banco de Dados
+                      <Database className="w-3.5 h-3.5" /> Administração e Usuários
                     </button>
                   )}
 
@@ -1246,7 +1245,7 @@ export default function App() {
                     onClick={async () => {
                       try {
                         await fetch("/api/auth/logout", { method: "POST" });
-                      } catch (e) {}
+                      } catch (e) { }
                       sessionStorage.removeItem("sessionActive");
                       setIsLocked(true);
                       setShowUserDropdown(false);
@@ -1261,15 +1260,20 @@ export default function App() {
                     onClick={async () => {
                       try {
                         await fetch("/api/auth/logout", { method: "POST" });
-                      } catch (e) {}
-                      sessionStorage.removeItem("sessionActive");
+                      } catch (e) { }
+                      sessionStorage.clear();
+                      localStorage.removeItem("orbita_user_profiles");
+
                       setIsLocked(true);
                       setShowUserDropdown(false);
-                      setAuthSuccessToast("Sessão finalizada. Faça o login autenticado para retornar.");
+                      setAuthSuccessToast("Desconectado do banco e cache limpo com sucesso!");
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 1000);
                     }}
                     className="w-full py-2.5 px-3 bg-rose-50 hover:bg-rose-100/80 text-rose-700 font-extrabold rounded-xl text-[10px] flex items-center gap-1.5 transition cursor-pointer border border-rose-250/25 animate-pulse"
                   >
-                    <LogOut className="w-3.5 h-3.5" /> Sair / Mudar de Conta
+                    <LogOut className="w-3.5 h-3.5" /> Sair e Limpar Cache
                   </button>
                 </div>
               </div>
@@ -1386,6 +1390,7 @@ export default function App() {
                   acordaos={acordaos}
                   comunicacoes={comunicacoes}
                   tces={tces}
+                  cguDemands={cguDemands}
                 />
               )}
 
@@ -1530,7 +1535,7 @@ function LockScreen({
 }) {
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(null);
   const [showSimulatedProfiles, setShowSimulatedProfiles] = useState<boolean>(false);
-  
+
   // New auth flow state
   const [loginStep, setLoginStep] = useState<"identifier" | "password">("identifier");
   const [identifier, setIdentifier] = useState<string>("");
@@ -1539,7 +1544,7 @@ function LockScreen({
   const [isRecoveringPassword, setIsRecoveringPassword] = useState<boolean>(false);
   const [showForcePasswordChange, setShowForcePasswordChange] = useState<boolean>(false);
   const [pendingUser, setPendingUser] = useState<UserProfile | null>(null);
-  
+
   const [pinCode, setPinCode] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string>("");
 
@@ -1588,7 +1593,7 @@ function LockScreen({
           cpfValido = true;
         }
       }
-      
+
       if (!cpfValido) {
         alert("O CPF informado é inválido. Por favor, digite um CPF válido.");
         setErrorMsg("O CPF informado é inválido.");
@@ -1648,7 +1653,7 @@ function LockScreen({
           !showSimulatedProfiles ? (
             <div className="w-full text-left">
               <label className="text-[14px] font-medium text-slate-700 block mb-2">Entrar com</label>
-              
+
               {errorMsg && (
                 <div className="mb-4 bg-rose-50 border border-rose-200 p-2.5 rounded-md text-rose-700 text-xs text-center font-semibold">
                   {errorMsg}
@@ -1673,7 +1678,7 @@ function LockScreen({
                     className={`pl-12 w-full border ${loginStep === "password" ? "bg-slate-100 text-slate-500 border-slate-200" : "bg-white text-slate-700 border-slate-300 focus:border-[#1351b4] focus:ring-1 focus:ring-[#1351b4]"} focus:outline-none rounded-md py-2.5 text-[14px]`}
                   />
                 </div>
-                
+
                 {loginStep === "password" && (
                   <div className="relative mb-4 animate-in fade-in slide-in-from-top-2">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none border-r border-slate-300 pr-3">
@@ -1689,7 +1694,7 @@ function LockScreen({
                     />
                   </div>
                 )}
-                
+
                 <div className="flex gap-2 mb-6">
                   {loginStep === "password" && (
                     <button type="button" onClick={() => { setLoginStep("identifier"); setLocalPassword(""); }} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-[14px] py-2.5 px-4 rounded-md transition duration-150 cursor-pointer">
@@ -1769,31 +1774,31 @@ function LockScreen({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-52 overflow-y-auto pr-1">
                 {profiles.map((profile) => (
                   <button
-                  key={profile.id}
-                  onClick={() => {
-                    setErrorMsg("");
-                    setPinCode("");
-                    if (profile.clearance === "PUBLIC") {
-                      onUnlock(profile);
-                    } else {
-                      setSelectedProfile(profile);
-                    }
-                  }}
-                  className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#1351b4]/40 hover:bg-slate-100 transition text-left flex items-start gap-2.5 cursor-pointer group"
-                >
-                  <div className={`w-8.5 h-8.5 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 border uppercase text-white bg-[#1351b4] border-blue-400`}>
-                    {profile.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
-                  </div>
-                  <div className="overflow-hidden min-w-0">
-                    <span className="block text-xs font-black text-slate-800 group-hover:text-[#1351b4] transition truncate">{profile.name}</span>
-                    <span className="block text-[9.5px] text-slate-500 truncate leading-none mt-0.5">{profile.role}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
+                    key={profile.id}
+                    onClick={() => {
+                      setErrorMsg("");
+                      setPinCode("");
+                      if (profile.clearance === "PUBLIC") {
+                        onUnlock(profile);
+                      } else {
+                        setSelectedProfile(profile);
+                      }
+                    }}
+                    className="p-3 rounded-xl bg-slate-50 border border-slate-200 hover:border-[#1351b4]/40 hover:bg-slate-100 transition text-left flex items-start gap-2.5 cursor-pointer group"
+                  >
+                    <div className={`w-8.5 h-8.5 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 border uppercase text-white bg-[#1351b4] border-blue-400`}>
+                      {profile.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
+                    </div>
+                    <div className="overflow-hidden min-w-0">
+                      <span className="block text-xs font-black text-slate-800 group-hover:text-[#1351b4] transition truncate">{profile.name}</span>
+                      <span className="block text-[9.5px] text-slate-500 truncate leading-none mt-0.5">{profile.role}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
 
-            {/* Removed legacy registration trigger */}
-          </div>
+              {/* Removed legacy registration trigger */}
+            </div>
           )
         ) : (
           /* Profile PIN Form */
@@ -1878,12 +1883,12 @@ function LockScreen({
         <ForgotPasswordModal onClose={() => setIsRecoveringPassword(false)} />
       )}
       {showForcePasswordChange && pendingUser && (
-        <ForcePasswordChangeModal 
-          user={pendingUser} 
+        <ForcePasswordChangeModal
+          user={pendingUser}
           onSuccess={(user) => {
             setShowForcePasswordChange(false);
             onUnlock(user);
-          }} 
+          }}
         />
       )}
 
@@ -2095,7 +2100,7 @@ export function ForcePasswordChangeModal({ user, onSuccess }: { user: UserProfil
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("loading");
-    
+
     if (newPassword !== confirmPassword) {
       setStatus("error");
       setMessage("As novas senhas não coincidem.");
@@ -2174,7 +2179,7 @@ export function AdminPanelModal({
   currentUser: UserProfile;
 }) {
   const [activeTab, setActiveTab] = useState<"database" | "users">("users");
-  
+
   // Database states
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -2230,7 +2235,7 @@ export function AdminPanelModal({
         badgeText: tempModules.length > 0 ? tempModules.join(" | ") : "BÁSICO",
         allowedModules: tempModules
       };
-      
+
       const endpoint = isPending
         ? `/api/admin/users/${managingPermissionsFor.id}/approve`
         : `/api/admin/users/${managingPermissionsFor.id}`;
@@ -2334,13 +2339,13 @@ export function AdminPanelModal({
         {/* Admin context metadata box & Tabs */}
         <div className="bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-6">
-            <button 
+            <button
               onClick={() => { setActiveTab("users"); setAdminStatusMsg(""); }}
               className={`py-4 text-xs font-bold border-b-2 transition ${activeTab === "users" ? "border-[#1351b4] text-[#1351b4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
             >
               Gestão de Usuários
             </button>
-            <button 
+            <button
               onClick={() => { setActiveTab("database"); setAdminStatusMsg(""); }}
               className={`py-4 text-xs font-bold border-b-2 transition ${activeTab === "database" ? "border-[#1351b4] text-[#1351b4]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
             >
@@ -2403,18 +2408,17 @@ export function AdminPanelModal({
                           <td className="py-3 px-4 text-xs font-mono text-slate-600">{u.cpf || "-"}</td>
                           <td className="py-3 px-4 text-xs text-slate-600">{u.unidade || "-"}</td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${
-                              u.status === "PENDING" ? "bg-amber-100 text-amber-800" :
-                              u.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" :
-                              "bg-rose-100 text-rose-800"
-                            }`}>
+                            <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${u.status === "PENDING" ? "bg-amber-100 text-amber-800" :
+                                u.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" :
+                                  "bg-rose-100 text-rose-800"
+                              }`}>
                               {u.status === "PENDING" ? "Pendente" : u.status === "ACTIVE" ? "Ativo" : "Inativo"}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex gap-2 justify-end">
                               {u.status === "PENDING" && (
-                                <button 
+                                <button
                                   onClick={() => handleOpenPermissions(u)}
                                   disabled={isAdminExecuting}
                                   className="text-[10px] font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
@@ -2424,14 +2428,14 @@ export function AdminPanelModal({
                               )}
                               {u.status === "ACTIVE" && u.id !== currentUser.id && (
                                 <>
-                                  <button 
+                                  <button
                                     onClick={() => handleOpenPermissions(u)}
                                     disabled={isAdminExecuting}
                                     className="text-[10px] font-bold bg-blue-100 text-[#1351b4] hover:bg-blue-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
                                   >
                                     Acessos
                                   </button>
-                                  <button 
+                                  <button
                                     onClick={() => handleInactivateUser(u.id)}
                                     disabled={isAdminExecuting}
                                     className="text-[10px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
@@ -2441,7 +2445,7 @@ export function AdminPanelModal({
                                 </>
                               )}
                               {u.status === "INACTIVE" && (
-                                <button 
+                                <button
                                   onClick={() => handleOpenPermissions(u)}
                                   disabled={isAdminExecuting}
                                   className="text-[10px] font-bold bg-slate-200 text-slate-700 hover:bg-slate-300 px-3 py-1.5 rounded-lg transition cursor-pointer"

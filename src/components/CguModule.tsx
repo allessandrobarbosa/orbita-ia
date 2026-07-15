@@ -99,6 +99,13 @@ export default function CguModule({
   const [importError, setImportError] = useState<string | null>(null);
   const [importSuccessMessage, setImportSuccessMessage] = useState<string | null>(null);
   const [parsedItems, setParsedItems] = useState<CguDemand[] | null>(null);
+
+  // Mapping mode states
+  const [isMappingMode, setIsMappingMode] = useState(false);
+  const [availableHeaders, setAvailableHeaders] = useState<string[]>([]);
+  const [activeJsonRowsForMapping, setActiveJsonRowsForMapping] = useState<any[][]>([]);
+  const [headerRowIndexForMapping, setHeaderRowIndexForMapping] = useState(0);
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Table expansion (by reportName)
@@ -302,18 +309,6 @@ export default function CguModule({
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array", cellDates: true });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-
-        if (jsonRows.length < 2) {
-          setImportError("O arquivo Excel parece estar vazio ou não possui cabeçalhos na primeira linha.");
-          setIsReadingFile(false);
-          return;
-        }
-
-        const headers = jsonRows[0].map(h => String(h).trim());
-
         const normalizeHeader = (name: string): string => {
           return name.toLowerCase()
             .normalize("NFD")
@@ -321,103 +316,90 @@ export default function CguModule({
             .replace(/[^a-z0-9]/g, "");
         };
 
-        const normalizedHeaders = headers.map(normalizeHeader);
+        let headerRowIndex = 0;
+        let headers: string[] = [];
+        let normalizedHeaders: string[] = [];
+        let activeJsonRows: any[][] = [];
 
-        const findHeaderIndex = (keywords: string[]): number => {
-          for (const kw of keywords) {
-            const normKw = normalizeHeader(kw);
-            for (let idx = 0; idx < normalizedHeaders.length; idx++) {
-              if (normalizedHeaders[idx].includes(normKw)) {
-                return idx;
-              }
+        // Scan ALL sheets since CGU exports often have a "Capa" on the first sheet
+        let foundHeaders = false;
+        for (const sheetName of workbook.SheetNames) {
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+          
+          if (!jsonRows || jsonRows.length < 2) continue;
+
+          for (let r = 0; r < Math.min(15, jsonRows.length); r++) {
+            const rowHeaders = (jsonRows[r] || []).map(h => String(h).trim());
+            const normHeaders = rowHeaders.map(normalizeHeader);
+            
+            const hasId = normHeaders.some(h => ["idtarefa", "id", "tarefa", "codigo", "numero", "identificador"].includes(h) || h === "id da tarefa");
+            const hasTitulo = normHeaders.some(h => ["titulotarefa", "titulo", "descricao", "assunto"].includes(h) || h === "titulo da tarefa");
+            
+            if (hasId && hasTitulo) {
+              headerRowIndex = r;
+              headers = rowHeaders;
+              normalizedHeaders = normHeaders;
+              activeJsonRows = jsonRows;
+              foundHeaders = true;
+              break;
             }
           }
-          return -1;
+          if (foundHeaders) break;
+        }
+
+        // If after scanning all sheets we still didn't find clear headers, fallback to Sheet 1 Row 1
+        if (!foundHeaders) {
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          activeJsonRows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as any[][];
+          headers = (activeJsonRows[0] || []).map(h => String(h).trim());
+          normalizedHeaders = headers.map(normalizeHeader);
+        }
+
+        setAvailableHeaders(headers);
+        setActiveJsonRowsForMapping(activeJsonRows);
+        setHeaderRowIndexForMapping(headerRowIndex);
+        
+        const guessMapping: Record<string, string> = {};
+        
+        const tryMatch = (sysCol: string, keywords: string[]) => {
+            for (const kw of keywords) {
+              const normKw = normalizeHeader(kw);
+              for (let idx = 0; idx < normalizedHeaders.length; idx++) {
+                if (normalizedHeaders[idx].includes(normKw)) {
+                  guessMapping[sysCol] = String(idx);
+                  return;
+                }
+              }
+            }
         };
 
-        // Locate header indexes robustly
-        const idxIdTarefa = findHeaderIndex(["id da tarefa", "idtarefa", "id", "tarefa"]);
-        const idxSituacao = findHeaderIndex(["situacao", "status"]);
-        const idxEstado = findHeaderIndex(["estado", "state"]);
-        const idxTitulo = findHeaderIndex(["titulo da tarefa", "titulotarefa", "titulo"]);
-        const idxDataInicio = findHeaderIndex(["data de inicio", "datainicio", "inicio"]);
-        const idxDataFim = findHeaderIndex(["data de fim", "datafim", "fim"]);
-        const idxDataLimite = findHeaderIndex(["data limite", "datalimite", "limite"]);
-        const idxUnidadeAuditada = findHeaderIndex(["unidade auditada", "unidadeauditada"]);
-        const idxUnidadesAuditoria = findHeaderIndex(["unidades de auditoria", "unidadesauditoria", "auditoria"]);
-        const idxTextoMonitoramento = findHeaderIndex(["texto do monitoramento", "textomonitoramento", "monitoramento"]);
-        const idxProvidencia = findHeaderIndex(["providencia", "providencias"]);
-        const idxTipoUltimaManifestacao = findHeaderIndex(["tipo da ultima manifestacao", "tipodaultimamanifestacao", "tipo ultima manifestacao"]);
-        const idxTextoUltimaManifestacao = findHeaderIndex(["texto da ultima manifestacao", "textodaultimamanifestacao", "texto ultima manifestacao"]);
-        const idxDataUltimaManifestacao = findHeaderIndex(["data da ultima manifestacao", "datadaultimamanifestacao", "data ultima manifestacao"]);
-        const idxTipoUltimoPosicionamento = findHeaderIndex(["tipo do ultimo posicionamento", "tipodoultimoposicionamento", "tipo ultimo posicionamento"]);
-        const idxTextoUltimoPosicionamento = findHeaderIndex(["texto do ultimo posicionamento", "textodoultimoposicionamento", "texto ultimo posicionamento"]);
-        const idxDataUltimoPosicionamento = findHeaderIndex(["data do ultimo posicionamento", "datadoultimoposicionamento", "data ultimo posicionamento"]);
-        const idxCategoria = findHeaderIndex(["categoria"]);
-        const idxDataLimiteInicial = findHeaderIndex(["data limite inicial", "datalimiteinicial"]);
+        tryMatch("idTarefa", ["id da tarefa", "idtarefa", "id", "tarefa", "codigo", "numero", "identificador", "recomendacao"]);
+        tryMatch("situacao", ["situacao", "status"]);
+        tryMatch("estado", ["estado", "state"]);
+        tryMatch("tituloTarefa", ["titulo da tarefa", "titulotarefa", "titulo", "descricao", "assunto", "tema", "objeto"]);
+        tryMatch("dataInicio", ["data de inicio", "datainicio", "inicio"]);
+        tryMatch("dataFim", ["data de fim", "datafim", "fim"]);
+        tryMatch("dataLimite", ["data limite", "datalimite", "limite"]);
+        tryMatch("unidadeAuditada", ["unidade auditada", "unidadeauditada"]);
+        tryMatch("unidadesAuditoria", ["unidades de auditoria", "unidadesauditoria", "auditoria"]);
+        tryMatch("textoMonitoramento", ["texto do monitoramento", "textomonitoramento", "monitoramento"]);
+        tryMatch("providencia", ["providencia", "providencias"]);
+        tryMatch("tipoUltimaManifestacao", ["tipo da ultima manifestacao", "tipodaultimamanifestacao", "tipo ultima manifestacao"]);
+        tryMatch("textoUltimaManifestacao", ["texto da ultima manifestacao", "textodaultimamanifestacao", "texto ultima manifestacao"]);
+        tryMatch("dataUltimaManifestacao", ["data da ultima manifestacao", "datadaultimamanifestacao", "data ultima manifestacao"]);
+        tryMatch("tipoUltimoPosicionamento", ["tipo do ultimo posicionamento", "tipodoultimoposicionamento", "tipo ultimo posicionamento"]);
+        tryMatch("textoUltimoPosicionamento", ["texto do ultimo posicionamento", "textodoultimoposicionamento", "texto ultimo posicionamento"]);
+        tryMatch("dataUltimoPosicionamento", ["data do ultimo posicionamento", "datadoultimoposicionamento", "data ultimo posicionamento"]);
+        tryMatch("categoria", ["categoria"]);
+        tryMatch("dataLimiteInicial", ["data limite inicial", "datalimiteinicial"]);
 
-        if (idxIdTarefa === -1 || idxTitulo === -1) {
-          setImportError("Não foi possível identificar colunas críticas na primeira linha (Id da Tarefa, Título da Tarefa). Verifique a estrutura.");
-          setIsReadingFile(false);
-          return;
-        }
-
-        const parsedItems: CguDemand[] = [];
-
-        for (let i = 1; i < jsonRows.length; i++) {
-          const row = jsonRows[i];
-          if (!row || row.length === 0) continue;
-
-          const getVal = (colIdx: number): string => {
-            if (colIdx === -1 || colIdx >= row.length) return "";
-            return row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : "";
-          };
-
-          const getValDate = (colIdx: number): string => {
-            if (colIdx === -1 || colIdx >= row.length) return "";
-            return formatExcelDate(row[colIdx]);
-          };
-
-          const idTarefa = getVal(idxIdTarefa);
-          if (!idTarefa) continue; // skip rows with empty IDs
-
-          const dataInicioStr = getValDate(idxDataInicio);
-          const parsedYear = extractYear(dataInicioStr);
-
-          parsedItems.push({
-            idTarefa,
-            situacao: getVal(idxSituacao) || "Pendente",
-            estado: getVal(idxEstado) || "Aberto",
-            tituloTarefa: getVal(idxTitulo),
-            dataInicio: dataInicioStr,
-            dataFim: getValDate(idxDataFim),
-            dataLimite: getValDate(idxDataLimite),
-            unidadeAuditada: getVal(idxUnidadeAuditada),
-            unidadesAuditoria: getVal(idxUnidadesAuditoria),
-            textoMonitoramento: getVal(idxTextoMonitoramento),
-            providencia: getVal(idxProvidencia),
-            tipoUltimaManifestacao: getVal(idxTipoUltimaManifestacao),
-            textoUltimaManifestacao: getVal(idxTextoUltimaManifestacao),
-            dataUltimaManifestacao: getValDate(idxDataUltimaManifestacao),
-            tipoUltimoPosicionamento: getVal(idxTipoUltimoPosicionamento),
-            textoUltimoPosicionamento: getVal(idxTextoUltimoPosicionamento),
-            dataUltimoPosicionamento: getValDate(idxDataUltimoPosicionamento),
-            categoria: getVal(idxCategoria) || "OUTROS",
-            dataLimiteInicial: getValDate(idxDataLimiteInicial),
-            ano: parsedYear
-          });
-        }
-
-        if (parsedItems.length === 0) {
-          setImportError("Nenhum registro estrutural válido foi encontrado no arquivo.");
-        } else {
-          setParsedItems(parsedItems);
-          setImportSuccessMessage(`${parsedItems.length} demandas CGU extraídas. Por favor, revise a pré-visualização técnica abaixo e clique em Salvar.`);
-        }
+        setColumnMapping(guessMapping);
+        setIsMappingMode(true);
+        setIsReadingFile(false);
       } catch (err) {
         console.error("Erro na leitura de Excel:", err);
         setImportError("Ocorreu uma falha no processador de arquivos Excel (.xlsx).");
-      } finally {
         setIsReadingFile(false);
       }
     };
@@ -426,6 +408,83 @@ export default function CguModule({
       setIsReadingFile(false);
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const finalizeImport = () => {
+      setIsReadingFile(true);
+      setTimeout(() => {
+        try {
+          const idxIdTarefa = columnMapping["idTarefa"] ? parseInt(columnMapping["idTarefa"]) : -1;
+          const idxTitulo = columnMapping["tituloTarefa"] ? parseInt(columnMapping["tituloTarefa"]) : -1;
+
+          if (idxIdTarefa === -1 || idxTitulo === -1) {
+            setImportError("Você precisa mapear obrigatoriamente o Id da Tarefa e o Título da Tarefa.");
+            setIsReadingFile(false);
+            return;
+          }
+
+          const parsedItems: CguDemand[] = [];
+
+          for (let i = headerRowIndexForMapping + 1; i < activeJsonRowsForMapping.length; i++) {
+            const row = activeJsonRowsForMapping[i];
+            if (!row || row.length === 0) continue;
+
+            const getVal = (sysCol: string): string => {
+              const colIdx = columnMapping[sysCol] !== undefined ? parseInt(columnMapping[sysCol]) : -1;
+              if (colIdx === -1 || colIdx >= row.length) return "";
+              return row[colIdx] !== undefined && row[colIdx] !== null ? String(row[colIdx]).trim() : "";
+            };
+
+            const getValDate = (sysCol: string): string => {
+              const colIdx = columnMapping[sysCol] !== undefined ? parseInt(columnMapping[sysCol]) : -1;
+              if (colIdx === -1 || colIdx >= row.length) return "";
+              return formatExcelDate(row[colIdx]);
+            };
+
+            const idTarefa = getVal("idTarefa");
+            if (!idTarefa) continue; // skip rows with empty IDs
+
+            const dataInicioStr = getValDate("dataInicio");
+            const parsedYear = extractYear(dataInicioStr);
+
+            parsedItems.push({
+              idTarefa,
+              situacao: getVal("situacao") || "Pendente",
+              estado: getVal("estado") || "Aberto",
+              tituloTarefa: getVal("tituloTarefa"),
+              dataInicio: dataInicioStr,
+              dataFim: getValDate("dataFim"),
+              dataLimite: getValDate("dataLimite"),
+              unidadeAuditada: getVal("unidadeAuditada"),
+              unidadesAuditoria: getVal("unidadesAuditoria"),
+              textoMonitoramento: getVal("textoMonitoramento"),
+              providencia: getVal("providencia"),
+              tipoUltimaManifestacao: getVal("tipoUltimaManifestacao"),
+              textoUltimaManifestacao: getVal("textoUltimaManifestacao"),
+              dataUltimaManifestacao: getValDate("dataUltimaManifestacao"),
+              tipoUltimoPosicionamento: getVal("tipoUltimoPosicionamento"),
+              textoUltimoPosicionamento: getVal("textoUltimoPosicionamento"),
+              dataUltimoPosicionamento: getValDate("dataUltimoPosicionamento"),
+              categoria: getVal("categoria") || "OUTROS",
+              dataLimiteInicial: getValDate("dataLimiteInicial"),
+              ano: parsedYear
+            });
+          }
+
+          if (parsedItems.length === 0) {
+            setImportError("Nenhum registro válido encontrado com esse mapeamento.");
+          } else {
+            setParsedItems(parsedItems);
+            setIsMappingMode(false);
+            setImportSuccessMessage(`\${parsedItems.length} demandas extraídas com sucesso. Confirme os dados abaixo e clique em Salvar.`);
+          }
+        } catch (err) {
+            console.error("Erro no processamento:", err);
+            setImportError("Erro ao processar as colunas.");
+        } finally {
+            setIsReadingFile(false);
+        }
+      }, 50);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -1200,6 +1259,132 @@ export default function CguModule({
         })}
       </div>
       </div>
+      {/* Filters HUD - Bento Card layout */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print mb-4">
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Action Buttons and Search */}
+          <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
+            <div className="flex flex-wrap gap-2 items-center">
+              <button
+                onClick={() => {
+                  setShowImporter(!showImporter);
+                  setImportError(null);
+                  setImportSuccessMessage(null);
+                  setParsedItems(null);
+                  setIsMappingMode(false);
+                }}
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                  showImporter
+                    ? "bg-slate-800 text-white shadow-xs"
+                    : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                {showImporter ? "Ocultar Importador" : "Importar Planilha CGU (.xlsx)"}
+              </button>
+
+              <button
+                onClick={handleExportExcel}
+                disabled={filteredDemands.length === 0}
+                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                Exportar Excel
+              </button>
+            </div>
+
+            <div className="relative w-full xl:w-[300px] shrink-0">
+              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
+                placeholder="Pesquisar termo ou Id..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Bottom Row: Dropdown Filters in Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-4 border-t border-slate-100">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Unidade Auditada</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={unidadeFilter}
+                onChange={(e) => setUnidadeFilter(e.target.value)}
+              >
+                <option value="TODOS">Todas Unidades</option>
+                {availableUnits.map(u => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Situação</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="TODOS">Todas Situações</option>
+                {availableSituations.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Estado</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={estadoFilter}
+                onChange={(e) => setEstadoFilter(e.target.value)}
+              >
+                <option value="TODOS">Todos Estados</option>
+                {availableStates.map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Categoria</span>
+              <select
+                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
+                value={categoriaFilter}
+                onChange={(e) => setCategoriaFilter(e.target.value)}
+              >
+                <option value="TODOS">Todas Categorias</option>
+                {availableCategories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end justify-start sm:justify-end">
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("TODOS");
+                  setEstadoFilter("TODOS");
+                  setUnidadeFilter("TODOS");
+                  setCategoriaFilter("TODOS");
+                  setAnoFilter("TODOS");
+                  setPrazoFilter("TODOS");
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all w-full sm:w-auto h-[34px] flex items-center justify-center gap-2 border border-slate-200"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Limpar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
       {/* Importer Section */}
       {activeSubTab === "demands" && showImporter && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden no-print animate-fade-in">
@@ -1220,7 +1405,9 @@ export default function CguModule({
           </div>
 
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {!isMappingMode ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Drag Zone */}
               <div
                 onDragOver={handleDragOver}
@@ -1342,6 +1529,70 @@ export default function CguModule({
                 )}
               </div>
             )}
+              </>
+            ) : (
+            <div className="bg-white border border-slate-200 rounded-xl p-5 mt-4 shadow-sm animate-fade-in">
+              <h4 className="text-[#003366] font-bold mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
+                <RefreshCw className="w-4 h-4" /> 
+                Mapeamento de Colunas Inteligente
+              </h4>
+              <p className="text-xs text-slate-500 mb-6 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                Identificamos as colunas abaixo no seu arquivo Excel. Verifique se o nosso "De-Para" automático está correto. Se uma coluna estiver errada, basta clicar na lista suspensa e escolher a coluna certa do seu arquivo.
+              </p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 max-h-[400px] overflow-y-auto custom-com-scroll-container pr-4">
+                {[
+                  { key: "idTarefa", label: "Id da Tarefa (Obrigatório)*" },
+                  { key: "tituloTarefa", label: "Título da Tarefa (Obrigatório)*" },
+                  { key: "situacao", label: "Situação / Status" },
+                  { key: "estado", label: "Estado" },
+                  { key: "dataInicio", label: "Data de Início" },
+                  { key: "dataFim", label: "Data de Fim" },
+                  { key: "dataLimite", label: "Data Limite" },
+                  { key: "unidadeAuditada", label: "Unidade Auditada" },
+                  { key: "unidadesAuditoria", label: "Unidades de Auditoria" },
+                  { key: "textoMonitoramento", label: "Texto do Monitoramento" },
+                  { key: "providencia", label: "Providência" },
+                  { key: "categoria", label: "Categoria" }
+                ].map(f => (
+                  <div key={f.key} className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">{f.label}</label>
+                    <select 
+                      value={columnMapping[f.key] || ""}
+                      onChange={(e) => setColumnMapping(prev => ({ ...prev, [f.key]: e.target.value }))}
+                      className="bg-slate-50 border border-slate-200 text-[11px] rounded-lg px-3 py-2 text-slate-800 font-medium focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition"
+                    >
+                      <option value="">-- Não importar este campo --</option>
+                      {availableHeaders.map((header, idx) => (
+                        <option key={idx} value={idx}>{header || `Coluna sem nome (${idx})`}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-8 flex justify-end gap-3 border-t border-slate-100 pt-5">
+                <button 
+                  onClick={() => {
+                    setIsMappingMode(false);
+                    setAvailableHeaders([]);
+                    setIsReadingFile(false);
+                    setImportError(null);
+                  }}
+                  className="px-5 py-2.5 text-slate-500 font-bold text-xs hover:bg-slate-50 border border-transparent hover:border-slate-200 rounded-lg transition"
+                >
+                  Cancelar Importação
+                </button>
+                <button 
+                  onClick={finalizeImport}
+                  className="px-6 py-2.5 bg-[#003366] text-white font-bold text-xs rounded-lg shadow-sm hover:bg-[#002244] transition flex items-center gap-2"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Confirmar Mapeamento e Extrair
+                </button>
+              </div>
+            </div>
+          )}
           </div>
         </div>
       )}
@@ -1766,130 +2017,6 @@ export default function CguModule({
             </div>
           );
         })()}
-      </div>
-
-      {/* Filters HUD - Bento Card layout */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print mb-4">
-        <div className="flex flex-col gap-4">
-          {/* Top Row: Action Buttons and Search */}
-          <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
-            <div className="flex flex-wrap gap-2 items-center">
-              <button
-                onClick={() => {
-                  setShowImporter(!showImporter);
-                  setImportError(null);
-                  setImportSuccessMessage(null);
-                  setParsedItems(null);
-                }}
-                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  showImporter
-                    ? "bg-slate-800 text-white shadow-xs"
-                    : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
-                }`}
-              >
-                <Plus className="w-4 h-4" />
-                {showImporter ? "Ocultar Importador" : "Importar Planilha CGU (.xlsx)"}
-              </button>
-
-              <button
-                onClick={handleExportExcel}
-                disabled={filteredDemands.length === 0}
-                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-4 h-4" />
-                Exportar Excel
-              </button>
-            </div>
-
-            <div className="relative w-full xl:w-[300px] shrink-0">
-              <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
-                placeholder="Pesquisar termo ou Id..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Bottom Row: Dropdown Filters in Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 pt-4 border-t border-slate-100">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Unidade Auditada</span>
-              <select
-                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
-                value={unidadeFilter}
-                onChange={(e) => setUnidadeFilter(e.target.value)}
-              >
-                <option value="TODOS">Todas Unidades</option>
-                {availableUnits.map(u => (
-                  <option key={u} value={u}>{u}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Situação</span>
-              <select
-                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="TODOS">Todas Situações</option>
-                {availableSituations.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Estado</span>
-              <select
-                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
-                value={estadoFilter}
-                onChange={(e) => setEstadoFilter(e.target.value)}
-              >
-                <option value="TODOS">Todos Estados</option>
-                {availableStates.map(st => (
-                  <option key={st} value={st}>{st}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Categoria</span>
-              <select
-                className="bg-slate-50 border border-slate-200 p-2 rounded-xl text-xs text-slate-800 focus:outline-hidden font-medium focus:ring-2 focus:ring-[#003366]/20 transition-all w-full"
-                value={categoriaFilter}
-                onChange={(e) => setCategoriaFilter(e.target.value)}
-              >
-                <option value="TODOS">Todas Categorias</option>
-                {availableCategories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-end justify-start sm:justify-end">
-              <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setStatusFilter("TODOS");
-                  setEstadoFilter("TODOS");
-                  setUnidadeFilter("TODOS");
-                  setCategoriaFilter("TODOS");
-                  setAnoFilter("TODOS");
-                  setPrazoFilter("TODOS");
-                }}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all w-full sm:w-auto h-[34px] flex items-center justify-center gap-2 border border-slate-200"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Limpar
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Main Datagrid - Grouped by Report */}

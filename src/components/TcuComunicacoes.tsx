@@ -2763,8 +2763,9 @@ export default function TcuComunicacoes({
           {/* Edit / Resposta Modal for Communication */}
           {editingComItem && (
             <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in no-print">
-              <div className="bg-white border border-slate-200 rounded-3xl shadow-xl max-w-lg w-full p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="bg-white border border-slate-200 rounded-3xl shadow-xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden">
+                {/* Header */}
+                <div className="flex justify-between items-center border-b border-slate-100 p-6 pb-4 shrink-0">
                   <div>
                     <h3 className="text-sm font-black text-[#003366] uppercase tracking-wider">Responder / Editar Comunicação</h3>
                     <p className="text-xs text-slate-400 font-bold">{editingComItem.COMUNICACAO} • Ano {editingComItem.ANO}</p>
@@ -2774,196 +2775,200 @@ export default function TcuComunicacoes({
                   </button>
                 </div>
 
-                <div className="space-y-3.5 text-xs text-slate-700">
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Scrollable Body */}
+                <div className="p-6 pt-4 pb-4 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+                  <div className="space-y-3.5 text-xs text-slate-700">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Unidade Emitente</label>
+                        <input
+                          type="text"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                          value={editComUnidade}
+                          onChange={(e) => setEditComUnidade(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Processo Associado</label>
+                        <input
+                          type="text"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                          value={editComProcesso}
+                          onChange={(e) => setEditComProcesso(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Unidade Emitente</label>
+                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Destinatário</label>
                       <input
                         type="text"
                         className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                        value={editComUnidade}
-                        onChange={(e) => setEditComUnidade(e.target.value)}
+                        value={editComDestinatario}
+                        onChange={(e) => setEditComDestinatario(e.target.value)}
                       />
                     </div>
+
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Processo Associado</label>
+                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Contato de Referência</label>
                       <input
                         type="text"
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                        value={editComProcesso}
-                        onChange={(e) => setEditComProcesso(e.target.value)}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+                        value={editComContato}
+                        onChange={(e) => setEditComContato(e.target.value)}
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Destinatário</label>
-                    <input
-                      type="text"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                      value={editComDestinatario}
-                      onChange={(e) => setEditComDestinatario(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Contato de Referência</label>
-                    <input
-                      type="text"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                      value={editComContato}
-                      onChange={(e) => setEditComContato(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Unidade Executora</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: SECI"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-                      value={editComUnidadeExecutora}
-                      onChange={(e) => setEditComUnidadeExecutora(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Nº Processo SEI</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: 19973.100234/2026-99"
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono"
-                      value={editComProcessoSei}
-                      onChange={(e) => setEditComProcessoSei(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Destinação da Comunicação</label>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditComDestinacao("RESPOSTA")}
-                        className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                          editComDestinacao === "RESPOSTA"
-                            ? "bg-[#003366] text-white border-[#003366] shadow-2xs"
-                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
-                        }`}
-                      >
-                        <ArrowLeftRight className="w-3.5 h-3.5" />
-                        Resposta
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditComDestinacao("ARQUIVAMENTO")}
-                        className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                          editComDestinacao === "ARQUIVAMENTO"
-                            ? "bg-slate-700 text-white border-slate-700 shadow-2xs"
-                            : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
-                        }`}
-                      >
-                        <Archive className="w-3.5 h-3.5" />
-                        Arquivamento
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Data de Expedição</label>
+                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Unidade Executora</label>
                       <input
                         type="text"
-                        placeholder="DD/MM/AAAA"
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center"
-                        value={editComExpedicao}
-                        onChange={(e) => setEditComExpedicao(e.target.value)}
+                        placeholder="Ex: SECI"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white"
+                        value={editComUnidadeExecutora}
+                        onChange={(e) => setEditComUnidadeExecutora(e.target.value)}
                       />
                     </div>
+
                     <div className="space-y-1">
-                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Data da Resposta</label>
+                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Nº Processo SEI</label>
                       <input
                         type="text"
-                        placeholder="DD/MM/AAAA ou em branco se pendente"
-                        className="w-full p-2.5 border border-slate-200 rounded-xl text-center font-bold bg-[#003366]/5 focus:bg-white text-slate-900 border-[#003366]/30"
-                        value={editComResposta}
-                        onChange={(e) => setEditComResposta(e.target.value)}
+                        placeholder="Ex: 19973.100234/2026-99"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white"
+                        value={editComProcessoSei}
+                        onChange={(e) => setEditComProcessoSei(e.target.value)}
                       />
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 pt-1.5">
-                    <input
-                      type="checkbox"
-                      id="edit-com-carece"
-                      checked={editComCarece}
-                      onChange={(e) => setEditComCarece(e.target.checked)}
-                      className="w-4 h-4 text-[#003366] border-slate-350 rounded-sm focus:ring-[#003366] cursor-pointer"
-                    />
-                    <label htmlFor="edit-com-carece" className="text-[11px] font-bold text-slate-700 cursor-pointer select-none">
-                      Esta comunicação carece/exige resposta oficial da assessoria
-                    </label>
-                  </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Destinação da Comunicação</label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditComDestinacao("RESPOSTA")}
+                          className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            editComDestinacao === "RESPOSTA"
+                              ? "bg-[#003366] text-white border-[#003366] shadow-2xs"
+                              : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
+                          }`}
+                        >
+                          <ArrowLeftRight className="w-3.5 h-3.5" />
+                          Resposta
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditComDestinacao("ARQUIVAMENTO")}
+                          className={`flex-1 py-2 px-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            editComDestinacao === "ARQUIVAMENTO"
+                              ? "bg-slate-700 text-white border-slate-700 shadow-2xs"
+                              : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
+                          }`}
+                        >
+                          <Archive className="w-3.5 h-3.5" />
+                          Arquivamento
+                        </button>
+                      </div>
+                    </div>
 
-                  {editComCarece && editComExpedicao && (() => {
-                    const [d, m, y] = editComExpedicao.split("/");
-                    if (d && m && y && d.length === 2 && m.length === 2 && y.length === 4) {
-                      const dtExpedicao = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-                      if (!isNaN(dtExpedicao.getTime())) {
-                        let dtReferencia = new Date(); // today
-                        const resolved = editComResposta && editComResposta.trim() !== "";
-                        if (resolved) {
-                          const [rd, rm, ry] = editComResposta.split("/");
-                          if (rd && rm && ry) {
-                            dtReferencia = new Date(parseInt(ry), parseInt(rm) - 1, parseInt(rd));
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Data de Expedição</label>
+                        <input
+                          type="text"
+                          placeholder="DD/MM/AAAA"
+                          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center"
+                          value={editComExpedicao}
+                          onChange={(e) => setEditComExpedicao(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">Data da Resposta</label>
+                        <input
+                          type="text"
+                          placeholder="DD/MM/AAAA ou em branco se pendente"
+                          className="w-full p-2.5 border border-slate-200 rounded-xl text-center font-bold bg-[#003366]/5 focus:bg-white text-slate-900 border-[#003366]/30"
+                          value={editComResposta}
+                          onChange={(e) => setEditComResposta(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1.5">
+                      <input
+                        type="checkbox"
+                        id="edit-com-carece"
+                        checked={editComCarece}
+                        onChange={(e) => setEditComCarece(e.target.checked)}
+                        className="w-4 h-4 text-[#003366] border-slate-350 rounded-sm focus:ring-[#003366] cursor-pointer"
+                      />
+                      <label htmlFor="edit-com-carece" className="text-[11px] font-bold text-slate-700 cursor-pointer select-none">
+                        Esta comunicação carece/exige resposta oficial da assessoria
+                      </label>
+                    </div>
+
+                    {editComCarece && editComExpedicao && (() => {
+                      const [d, m, y] = editComExpedicao.split("/");
+                      if (d && m && y && d.length === 2 && m.length === 2 && y.length === 4) {
+                        const dtExpedicao = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                        if (!isNaN(dtExpedicao.getTime())) {
+                          let dtReferencia = new Date(); // today
+                          const resolved = editComResposta && editComResposta.trim() !== "";
+                          if (resolved) {
+                            const [rd, rm, ry] = editComResposta.split("/");
+                            if (rd && rm && ry) {
+                              dtReferencia = new Date(parseInt(ry), parseInt(rm) - 1, parseInt(rd));
+                            }
                           }
-                        }
-                        
-                        const diffTime = dtReferencia.getTime() - dtExpedicao.getTime();
-                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (diffDays >= 0) {
-                          return (
-                            <div className={`p-3 mt-1 rounded-xl flex items-center justify-between border ${resolved ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
-                              <div className="flex items-center gap-2">
-                                <Clock className={`w-4 h-4 ${resolved ? 'text-emerald-600' : 'text-amber-600'}`} />
-                                <span className={`text-[11px] font-black uppercase ${resolved ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                  {resolved ? "Comunicação Respondida" : "Contagem de Prazo / Tempo Decorrido"}
+                          
+                          const diffTime = dtReferencia.getTime() - dtExpedicao.getTime();
+                          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                          
+                          if (diffDays >= 0) {
+                            return (
+                              <div className={`p-3 mt-1 rounded-xl flex items-center justify-between border ${resolved ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+                                <div className="flex items-center gap-2">
+                                  <Clock className={`w-4 h-4 ${resolved ? 'text-emerald-600' : 'text-amber-600'}`} />
+                                  <span className={`text-[11px] font-black uppercase ${resolved ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                    {resolved ? "Comunicação Respondida" : "Contagem de Prazo / Tempo Decorrido"}
+                                  </span>
+                                </div>
+                                <span className={`text-xs font-mono font-bold ${resolved ? 'text-emerald-800' : 'text-amber-800'}`}>
+                                  {resolved ? `Respondido em ${diffDays} dias` : `${diffDays} dias em aberto`}
                                 </span>
                               </div>
-                              <span className={`text-xs font-mono font-bold ${resolved ? 'text-emerald-800' : 'text-amber-800'}`}>
-                                {resolved ? `Respondido em ${diffDays} dias` : `${diffDays} dias em aberto`}
-                              </span>
-                            </div>
-                          );
+                            );
+                          }
                         }
                       }
-                    }
-                    return null;
-                  })()}
+                      return null;
+                    })()}
 
-                  <div className="flex flex-wrap gap-2.5 pt-2 border-t border-slate-150/70">
-                    <a
-                      href="https://processoeletronico.trabalho.gov.br"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Acessar SEI
-                    </a>
-                    <a
-                      href="https://conecta-tcu.apps.tcu.gov.br/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Conecta TCU
-                    </a>
+                    <div className="flex flex-wrap gap-2.5 pt-2 border-t border-slate-150/70">
+                      <a
+                        href="https://processoeletronico.trabalho.gov.br"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Acessar SEI
+                      </a>
+                      <a
+                        href="https://conecta-tcu.apps.tcu.gov.br/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Conecta TCU
+                      </a>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                {/* Footer */}
+                <div className="flex justify-end gap-2 border-t border-slate-100 p-6 pt-4 shrink-0">
                   <button
                     onClick={() => setEditingComItem(null)}
                     className="px-4 py-2 text-slate-500 hover:text-slate-800 transition text-xs font-bold"
