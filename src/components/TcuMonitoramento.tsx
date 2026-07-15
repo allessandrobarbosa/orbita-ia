@@ -307,7 +307,7 @@ export default function TcuMonitoramento({
   const acordaos = React.useMemo(() => {
     const errors: { id: string; error: string }[] = [];
 
-    const processed = rawAcordaos
+    const processed = (rawAcordaos || [])
       .filter(ac => ac && (ac.NUMACORDAO || ac.TITULO || ac.KEY || ac.PROC))
       .map(ac => {
       try {
