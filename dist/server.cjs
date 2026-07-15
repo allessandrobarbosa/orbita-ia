@@ -22,554 +22,26 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 
 // server.ts
-var import_express = __toESM(require("express"), 1);
-var import_path = __toESM(require("path"), 1);
-var import_fs = __toESM(require("fs"), 1);
+var import_express2 = __toESM(require("express"), 1);
+var import_path2 = __toESM(require("path"), 1);
+var import_fs2 = __toESM(require("fs"), 1);
 var import_https = __toESM(require("https"), 1);
 var import_readline = __toESM(require("readline"), 1);
 var import_vite = require("vite");
 var import_genai = require("@google/genai");
 var import_groq_sdk = __toESM(require("groq-sdk"), 1);
-var import_dotenv = __toESM(require("dotenv"), 1);
+var import_dotenv2 = __toESM(require("dotenv"), 1);
 var import_express_session = __toESM(require("express-session"), 1);
+var import_pg2 = __toESM(require("pg"), 1);
+
+// src/backend/routes/comunicacoesRoutes.ts
+var import_express = require("express");
+
+// src/backend/db.ts
+var import_fs = __toESM(require("fs"), 1);
+var import_path = __toESM(require("path"), 1);
 var import_pg = __toESM(require("pg"), 1);
-
-// src/data/seed_comunicacoes.ts
-var SEED_COMUNICACOES = [
-  // 2022
-  {
-    KEY: "COM-066981-2022",
-    COMUNICACAO: "Of\xEDcio 066.981/2022",
-    DESTINATARIO: "MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA (EXTINTO)",
-    CONTATO: "CHEFE DA ASSESSORIA ESPECIAL DE CONTROLE INTERNO DO MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "014.682/2016-8",
-    DATA_EXPEDICAO: "30/12/2022",
-    DATA_RESPOSTA: "",
-    ANO: 2022
-  },
-  {
-    KEY: "COM-064453-2022",
-    COMUNICACAO: "Of\xEDcio 064.453/2022",
-    DESTINATARIO: "SECRETARIA EXECUTIVA - MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA (EXTINTO)",
-    CONTATO: "LUCIO RODRIGUES CAPELLETTO",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "014.113/2022-8",
-    DATA_EXPEDICAO: "14/12/2022",
-    DATA_RESPOSTA: "12/01/2023",
-    ANO: 2022
-  },
-  {
-    KEY: "COM-061387-2022",
-    COMUNICACAO: "Of\xEDcio 061.387/2022",
-    DESTINATARIO: "FUNDO DE AMPARO AO TRABALHADOR",
-    CONTATO: "PRESIDENTE DO CONSELHO DELIBERATIVO DO FUNDO DE AMPARO AO TRABALHADOR",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "019.589/2017-4",
-    DATA_EXPEDICAO: "13/12/2022",
-    DATA_RESPOSTA: "24/09/2024",
-    ANO: 2022
-  },
-  {
-    KEY: "COM-062794-2022",
-    COMUNICACAO: "Of\xEDcio 062.794/2022",
-    DESTINATARIO: "SECRETARIA EXECUTIVA - MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA (EXTINTO)",
-    CONTATO: "LUCIO RODRIGUES CAPELLETTO",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "044.597/2021-5",
-    DATA_EXPEDICAO: "07/12/2022",
-    DATA_RESPOSTA: "22/12/2022",
-    ANO: 2022
-  },
-  // 2023
-  {
-    KEY: "COM-062412-2023",
-    COMUNICACAO: "Of\xEDcio 062.412/2023",
-    DESTINATARIO: "Identidade preservada",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "019.347/2023-5",
-    DATA_EXPEDICAO: "27/12/2023",
-    DATA_RESPOSTA: "",
-    ANO: 2023
-  },
-  {
-    KEY: "COM-055352-2023",
-    COMUNICACAO: "Of\xEDcio 055.352/2023",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "016.714/2021-0",
-    DATA_EXPEDICAO: "07/11/2023",
-    DATA_RESPOSTA: "26/02/2024",
-    ANO: 2023
-  },
-  {
-    KEY: "COM-050199-2023",
-    COMUNICACAO: "Of\xEDcio 050.199/2023",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "022.240/2023-3",
-    DATA_EXPEDICAO: "06/10/2023",
-    DATA_RESPOSTA: "06/02/2024",
-    ANO: 2023
-  },
-  {
-    KEY: "COM-049666-2023",
-    COMUNICACAO: "Of\xEDcio 049.666/2023",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "011.388/2002-0",
-    DATA_EXPEDICAO: "02/10/2023",
-    DATA_RESPOSTA: "17/10/2023",
-    ANO: 2023
-  },
-  // 2024
-  {
-    KEY: "COM-056314-2024",
-    COMUNICACAO: "Of\xEDcio 056.314/2024",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "018.032/2024-9",
-    DATA_EXPEDICAO: "27/12/2024",
-    DATA_RESPOSTA: "",
-    ANO: 2024
-  },
-  {
-    KEY: "COM-057488-2024",
-    COMUNICACAO: "Of\xEDcio 057.488/2024",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "011.333/2022-7",
-    DATA_EXPEDICAO: "19/12/2024",
-    DATA_RESPOSTA: "29/01/2025",
-    ANO: 2024
-  },
-  {
-    KEY: "COM-057231-2024",
-    COMUNICACAO: "Of\xEDcio 057.231/2024",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "008.443/2024-6",
-    DATA_EXPEDICAO: "17/12/2024",
-    DATA_RESPOSTA: "30/01/2025",
-    ANO: 2024
-  },
-  {
-    KEY: "COM-051784-2024",
-    COMUNICACAO: "Of\xEDcio 051.784/2024",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "005.807/2024-7",
-    DATA_EXPEDICAO: "21/11/2024",
-    DATA_RESPOSTA: "04/12/2024",
-    ANO: 2024
-  },
-  // 2025
-  {
-    KEY: "COM-054644-2025",
-    COMUNICACAO: "Of\xEDcio 054.644/2025",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "005.604/2024-9",
-    DATA_EXPEDICAO: "29/12/2025",
-    DATA_RESPOSTA: "",
-    ANO: 2025
-  },
-  {
-    KEY: "COM-054263-2025",
-    COMUNICACAO: "Of\xEDcio 054.263/2025",
-    DESTINATARIO: "Identidade preservada",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "008.583/2025-0",
-    DATA_EXPEDICAO: "22/12/2025",
-    DATA_RESPOSTA: "27/02/2026",
-    ANO: 2025
-  },
-  {
-    KEY: "COM-040629-2025",
-    COMUNICACAO: "Of\xEDcio 040.629/2025",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "005.226/2023-6",
-    DATA_EXPEDICAO: "30/09/2025",
-    DATA_RESPOSTA: "10/11/2025",
-    ANO: 2025
-  },
-  {
-    KEY: "COM-045852-2025",
-    COMUNICACAO: "Of\xEDcio 045.852/2025",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "028.516/2024-9",
-    DATA_EXPEDICAO: "31/10/2025",
-    DATA_RESPOSTA: "17/11/2025",
-    ANO: 2025
-  },
-  {
-    KEY: "COM-000082-2025",
-    COMUNICACAO: "Of\xEDcio 000.082/2025",
-    DESTINATARIO: "ASSESSORIA ESPECIAL DE CONTROLE INTERNO DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "ASSESSORIA DE CONTROLE INTERNO",
-    UNIDADE_EMITENTE: "AUDCONTRATA\xC7\xD5ES",
-    PROCESSO: "008.885/2025-7",
-    DATA_EXPEDICAO: "08/08/2025",
-    DATA_RESPOSTA: "19/08/2025",
-    ANO: 2025
-  },
-  // 2026 (Ano corrente ativo)
-  {
-    KEY: "COM-019712-2026",
-    COMUNICACAO: "Of\xEDcio 019.712/2026",
-    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "018.375/2025-1",
-    DATA_EXPEDICAO: "28/05/2026",
-    DATA_RESPOSTA: "",
-    ANO: 2026
-  },
-  {
-    KEY: "COM-000156-2026",
-    COMUNICACAO: "Of\xEDcio 000.156/2026",
-    DESTINATARIO: "ASSESSORIA ESPECIAL DE CONTROLE INTERNO DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
-    CONTATO: "ASSESSORIA CONTROLE INTERNO",
-    UNIDADE_EMITENTE: "AUDCONTRATA\xC7\xD5ES",
-    PROCESSO: "006.649/2026-2",
-    DATA_EXPEDICAO: "13/05/2026",
-    DATA_RESPOSTA: "25/05/2026",
-    ANO: 2026
-  },
-  {
-    KEY: "COM-009215-2026",
-    COMUNICACAO: "Of\xEDcio 009.215/2026",
-    DESTINATARIO: "SUPERINTEND\xCANCIA REGIONAL DO TRABALHO NO ESTADO DE ROND\xD4NIA",
-    CONTATO: "SUPERINTENDENTE REGIONAL",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "045.307/2021-0",
-    DATA_EXPEDICAO: "26/03/2026",
-    DATA_RESPOSTA: "13/04/2026",
-    ANO: 2026
-  },
-  {
-    KEY: "COM-008296-2026",
-    COMUNICACAO: "Of\xEDcio 008.296/2026",
-    DESTINATARIO: "SUPERINTEND\xCANCIA REGIONAL DO TRABALHO NO ESTADO DO PIAU\xCD",
-    CONTATO: "SUPERINTENDENTE",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "013.049/2025-9",
-    DATA_EXPEDICAO: "17/03/2026",
-    DATA_RESPOSTA: "07/04/2026",
-    ANO: 2026
-  },
-  {
-    KEY: "COM-007048-2026",
-    COMUNICACAO: "Of\xEDcio 007.048/2026",
-    DESTINATARIO: "Identidade preservada",
-    CONTATO: "FRANCISCO MACENA DA SILVA",
-    UNIDADE_EMITENTE: "SEPROC",
-    PROCESSO: "024.354/2025-2",
-    DATA_EXPEDICAO: "10/03/2026",
-    DATA_RESPOSTA: "25/03/2026",
-    ANO: 2026
-  }
-];
-
-// src/data/seed_cgu.ts
-var SEED_CGU = [
-  {
-    idTarefa: "CGU-2025-0001",
-    situacao: "Pendente",
-    estado: "Aberto",
-    tituloTarefa: "Auditoria de Folha de Pagamento - Cargo comissionado acumula\xE7\xE3o",
-    dataInicio: "15/03/2025",
-    dataFim: "",
-    dataLimite: "30/08/2025",
-    unidadeAuditada: "Coordena\xE7\xE3o-Geral de Gest\xE3o de Pessoas - CGGP",
-    unidadesAuditoria: "CGU-Regional/DF - Divis\xE3o de Pessoal",
-    textoMonitoramento: "Acompanhamento das recomenda\xE7\xF5es do Relat\xF3rio de Auditoria Anual n\xBA 1234/2024. Trata de ind\xEDcios de acumula\xE7\xE3o il\xEDcita de cargos p\xFAblicos.",
-    providencia: "Levantamento de casos suspeitos, oitiva dos servidores e instaura\xE7\xE3o de processos disciplinares se configurada m\xE1-f\xE9.",
-    tipoUltimaManifestacao: "Of\xEDcio CGU",
-    textoUltimaManifestacao: "Recomenda\xE7\xE3o formal de regulariza\xE7\xE3o ou restitui\xE7\xE3o de valores em 5 casos identificados de acumula\xE7\xE3o indevida.",
-    dataUltimaManifestacao: "10/05/2025",
-    tipoUltimoPosicionamento: "Nota T\xE9cnica AECI",
-    textoUltimoPosicionamento: "Documenta\xE7\xE3o e fichas financeiras enviadas para an\xE1lise detalhada da Corregedoria do MTE.",
-    dataUltimoPosicionamento: "20/05/2025",
-    categoria: "AUDITORIA DE PESSOAL",
-    dataLimiteInicial: "15/06/2025",
-    ano: 2025,
-    ultimaAtualizacao: "20/05/2025 14:00"
-  },
-  {
-    idTarefa: "CGU-2026-0002",
-    situacao: "Em An\xE1lise",
-    estado: "Aberto",
-    tituloTarefa: "Fiscaliza\xE7\xE3o de Contratos de TI - Armazenamento em Nuvem Governamental",
-    dataInicio: "10/01/2026",
-    dataFim: "",
-    dataLimite: "15/07/2026",
-    unidadeAuditada: "Coordena\xE7\xE3o-Geral de Tecnologia da Informa\xE7\xE3o - CGTI",
-    unidadesAuditoria: "Secretaria de Fiscaliza\xE7\xE3o de TI da CGU - Bras\xEDlia",
-    textoMonitoramento: "Revis\xE3o dos pre\xE7os unit\xE1rios de armazenamento e licen\xE7as de software no Contrato Administrativo n\xBA 45/2024.",
-    providencia: "Negocia\xE7\xE3o de termos aditivos junto \xE0 empresa contratada para alinhamento dos valores de mercado com a tabela referencial da CGU.",
-    tipoUltimaManifestacao: "Relat\xF3rio de Fiscaliza\xE7\xE3o",
-    textoUltimaManifestacao: "Indica\xE7\xE3o de sobrepre\xE7o estimado de 12% nos servi\xE7os de infraestrutura de nuvem h\xEDbrida.",
-    dataUltimaManifestacao: "12/03/2026",
-    tipoUltimoPosicionamento: "Nota T\xE9cnica AECI",
-    textoUltimoPosicionamento: "Apresentadas justificativas t\xE9cnicas de mercado para a contrata\xE7\xE3o e os pre\xE7os praticados frente \xE0s especifica\xE7\xF5es exigidas.",
-    dataUltimoPosicionamento: "05/04/2026",
-    categoria: "FISCALIZA\xC7\xC3O DE CONTRATOS",
-    dataLimiteInicial: "30/04/2026",
-    ano: 2026,
-    ultimaAtualizacao: "05/04/2026 11:30"
-  },
-  {
-    idTarefa: "CGU-2024-0003",
-    situacao: "Cumprido",
-    estado: "Fechado",
-    tituloTarefa: "Recomenda\xE7\xE3o Operacional - Transpar\xEAncia Ativa no Portal MTE",
-    dataInicio: "22/08/2024",
-    dataFim: "15/12/2024",
-    dataLimite: "31/12/2024",
-    unidadeAuditada: "Assessoria Especial de Comunica\xE7\xE3o Social",
-    unidadesAuditoria: "Ouvidoria-Geral da Uni\xE3o - OGU/CGU",
-    textoMonitoramento: "Monitoramento do \xEDndice de atendimento \xE0 Lei de Acesso \xE0 Informa\xE7\xE3o (LAI) e divulga\xE7\xE3o de dados abertos.",
-    providencia: "Cria\xE7\xE3o de novos pain\xE9is din\xE2micos e publica\xE7\xE3o sistem\xE1tica de dados de di\xE1rias e passagens no portal institucional.",
-    tipoUltimaManifestacao: "Nota de Avalia\xE7\xE3o CGU",
-    textoUltimaManifestacao: "Atestada a conformidade de 100% dos itens de transpar\xEAncia ativa avaliados no painel da LAI.",
-    dataUltimaManifestacao: "10/12/2024",
-    tipoUltimoPosicionamento: "Relat\xF3rio de Atendimento MTE",
-    textoUltimoPosicionamento: "Enviado o relat\xF3rio final de atendimento com os links de acesso aos pain\xE9is de transpar\xEAncia publicados.",
-    dataUltimoPosicionamento: "15/12/2024",
-    categoria: "TRANSPAR\xCANCIA E LAI",
-    dataLimiteInicial: "15/12/2024",
-    ano: 2024,
-    ultimaAtualizacao: "15/12/2024 16:45"
-  },
-  {
-    idTarefa: "CGU-2026-0004",
-    situacao: "Atrasado",
-    estado: "Aberto",
-    tituloTarefa: "Plano de Integridade MTE - Implementa\xE7\xE3o do Canal de Den\xFAncias",
-    dataInicio: "05/02/2026",
-    dataFim: "",
-    dataLimite: "01/06/2026",
-    unidadeAuditada: "Corregedoria-Geral do MTE",
-    unidadesAuditoria: "Diretoria de Integridade e Preven\xE7\xE3o da Corrup\xE7\xE3o - CGU",
-    textoMonitoramento: "Monitoramento do cronograma de estrutura\xE7\xE3o do canal interno de den\xFAncias integrado ao Fala.BR.",
-    providencia: "Ajuste na parametriza\xE7\xE3o dos fluxos de triagem e publica\xE7\xE3o das portarias de designa\xE7\xE3o de servidores exclusivos.",
-    tipoUltimaManifestacao: "Alerta de Prazo CGU",
-    textoUltimaManifestacao: "Notifica\xE7\xE3o sobre a proximidade do prazo final de implanta\xE7\xE3o da fase II do Fala.BR no \xF3rg\xE3o.",
-    dataUltimaManifestacao: "15/05/2026",
-    tipoUltimoPosicionamento: "Of\xEDcio de Justificativa AECI",
-    textoUltimoPosicionamento: "Solicita\xE7\xE3o formal de prorroga\xE7\xE3o do prazo devido a atrasos t\xE9cnicos na integra\xE7\xE3o dos sistemas com o SERPRO.",
-    dataUltimoPosicionamento: "28/05/2026",
-    categoria: "INTEGRIDADE E COMPLIANCE",
-    dataLimiteInicial: "01/06/2026",
-    ano: 2026,
-    ultimaAtualizacao: "28/05/2026 10:15"
-  }
-];
-
-// src/data/seed_etica.ts
-var SEED_ETICA_MEMBROS = [
-  {
-    id: "MEM-001",
-    nome: "Alessandro Barbosa Louren\xE7o",
-    cpf: "111.222.333-44",
-    atribuicao: "Presidente",
-    encargo: "Titular",
-    dispositivoLegal: "Portaria MTE n\xBA 104/2024",
-    dataPublicacao: "2024-05-15",
-    dataInicioMandato: "2024-05-15",
-    dataFimMandato: "2027-05-15",
-    mandato: "3 anos",
-    matricula: "AECI-8409-G",
-    telefone: "(61) 98765-4321",
-    email: "alessandro.lourenco@trabalho.gov.br",
-    ativo: true,
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "MEM-002",
-    nome: "Maria Eunice Ramos",
-    cpf: "222.333.444-55",
-    atribuicao: "Membro",
-    encargo: "Titular",
-    dispositivoLegal: "Portaria MTE n\xBA 104/2024",
-    dataPublicacao: "2024-05-15",
-    dataInicioMandato: "2024-05-15",
-    dataFimMandato: "2026-05-15",
-    // Mandato expirado há 1 mês
-    mandato: "2 anos",
-    matricula: "AECI-3301-A",
-    telefone: "(61) 98888-1111",
-    email: "maria.ramos@trabalho.gov.br",
-    ativo: true,
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "MEM-003",
-    nome: "Carlos Henrique Santos",
-    cpf: "333.444.555-66",
-    atribuicao: "Membro",
-    encargo: "Suplente",
-    dispositivoLegal: "Portaria MTE n\xBA 205/2025",
-    dataPublicacao: "2025-02-10",
-    dataInicioMandato: "2025-02-10",
-    dataFimMandato: "2027-02-10",
-    mandato: "2 anos",
-    matricula: "AECI-1029-F",
-    telefone: "(61) 99111-2222",
-    email: "carlos.henrique@trabalho.gov.br",
-    ativo: true,
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "MEM-004",
-    nome: "Ana L\xFAcia Rezende",
-    cpf: "444.555.666-77",
-    atribuicao: "Secret\xE1ria-Executiva",
-    encargo: "Titular",
-    dispositivoLegal: "Portaria MTE n\xBA 412/2025",
-    dataPublicacao: "2025-08-01",
-    dataInicioMandato: "2025-08-01",
-    dataFimMandato: "2027-01-28",
-    // 1 ano e 180 dias a partir de 01/08/2025
-    mandato: "1 ano e 180 dias",
-    matricula: "AECI-7744-X",
-    telefone: "(61) 99333-4444",
-    email: "ana.rezende@trabalho.gov.br",
-    ativo: true,
-    ultimaAtualizacao: "26/06/2026 10:00"
-  }
-];
-var SEED_ETICA_REUNIOES = [
-  {
-    id: "REU-001",
-    tipo: "Ordin\xE1ria",
-    dataHora: "2026-07-10T14:30",
-    pauta: "Julgamento de processos SECI pendentes, homologa\xE7\xE3o de consultas e planejamento das campanhas de integridade no \xE2mbito das Superintend\xEAncias Regionais do Trabalho.",
-    convidados: [
-      {
-        nome: "Alessandro Barbosa Louren\xE7o",
-        encargo: "Presidente",
-        email: "alessandro.lourenco@trabalho.gov.br",
-        telefone: "(61) 98765-4321"
-      },
-      {
-        nome: "Maria Eunice Ramos",
-        encargo: "Membro",
-        email: "maria.ramos@trabalho.gov.br",
-        telefone: "(61) 98888-1111"
-      },
-      {
-        nome: "Ana L\xFAcia Rezende",
-        encargo: "Secret\xE1ria-Executiva",
-        email: "ana.rezende@trabalho.gov.br",
-        telefone: "(61) 99333-4444"
-      },
-      {
-        nome: "Dr. Roberto de Almeida (Convidado Externo)",
-        encargo: "Palestrante / Assessor",
-        email: "roberto.almeida@cgu.gov.br",
-        telefone: "(61) 99999-5555"
-      }
-    ],
-    confirmacoes: {
-      "alessandro.lourenco@trabalho.gov.br": "Confirmado",
-      "maria.ramos@trabalho.gov.br": "Confirmado",
-      "ana.rezende@trabalho.gov.br": "Confirmado",
-      "roberto.almeida@cgu.gov.br": "Pendente"
-    },
-    notificadoAgendamento: true,
-    notificadoLembrete: false,
-    ultimaAtualizacao: "26/06/2026 10:00"
-  }
-];
-var SEED_ETICA_ATAS = [
-  {
-    id: "REU-001",
-    reuniaoId: "REU-001",
-    relatos: "Aos dez dias do m\xEAs de julho de 2026, reuniu-se ordinariamente a Comiss\xE3o de \xC9tica do Minist\xE9rio do Trabalho e Emprego. O Presidente iniciou os trabalhos dando as boas-vindas a todos e submetendo a pauta sobre preven\xE7\xE3o a conflitos de interesse ao escrut\xEDnio da mesa. Discutiu-se a necessidade de intensificar campanhas de conscientiza\xE7\xE3o nas SRTEs.",
-    decisoes: "Deliberou-se, por unanimidade, pela aprova\xE7\xE3o do voto da relatora Maria Eunice Ramos no \xE2mbito do processo SECI 19973.102345/2026-88. Determinou-se o agendamento de palestra com a CGU para o m\xEAs subsequente.",
-    dataGeracao: "2026-07-10",
-    ultimaAtualizacao: "26/06/2026 10:00"
-  }
-];
-var SEED_ETICA_PROCESSOS = [
-  {
-    id: "PRC-001",
-    tipo: "SECI",
-    processoSei: "19973.102345/2026-88",
-    dataInicio: "2026-06-20",
-    // 6 dias atrás (SLA ok)
-    resumo: "Consulta sobre exerc\xEDcio de doc\xEAncia concomitante em institui\xE7\xE3o de ensino privada de \xE2mbito regional.",
-    responsavel: "Maria Eunice Ramos",
-    situacao: "Deferido",
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "PRC-002",
-    tipo: "SECI",
-    processoSei: "19973.102456/2026-99",
-    dataInicio: "2026-06-25",
-    // 1 dia atrás (SLA ok)
-    resumo: "Pedido de autoriza\xE7\xE3o para exercer atividade privada de consultoria estrat\xE9gica em an\xE1lise de mercado de trabalho.",
-    responsavel: "Alessandro Barbosa Louren\xE7o",
-    situacao: "Em An\xE1lise",
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "PRC-003",
-    tipo: "SECI",
-    processoSei: "19973.100999/2026-22",
-    dataInicio: "2026-06-01",
-    // 25 dias atrás (SLA Estourado!)
-    resumo: "Consulta sobre libera\xE7\xE3o para ministrar palestra remunerada contratada por concession\xE1ria de servi\xE7o p\xFAblico federal.",
-    responsavel: "Carlos Henrique Santos",
-    situacao: "Em An\xE1lise",
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "PRC-004",
-    tipo: "Consulta",
-    processoSei: "19973.200111/2026-15",
-    dataInicio: "2026-04-10",
-    dataFim: "2026-04-20",
-    solicitante: "Superintend\xEAncia Regional do Trabalho de S\xE3o Paulo (SRTb-SP)",
-    assunto: "Consulta sobre recebimento de brindes corporativos e materiais promocionais em feiras institucionais por auditores fiscais.",
-    situacao: "Respondida",
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "PRC-005",
-    tipo: "\xC9tico",
-    processoSei: "19973.300555/2026-01",
-    dataInicio: "2026-05-02",
-    situacao: "Em Andamento",
-    ultimaAtualizacao: "26/06/2026 10:00"
-  },
-  {
-    id: "PRC-006",
-    tipo: "\xC9tico",
-    processoSei: "19973.300122/2025-99",
-    dataInicio: "2025-11-12",
-    dataFim: "2025-12-18",
-    situacao: "Arquivado",
-    ultimaAtualizacao: "26/06/2026 10:00"
-  }
-];
+var import_dotenv = __toESM(require("dotenv"), 1);
 
 // src/data/seed_db.ts
 var SEED_ACORDAOS = [
@@ -1280,7 +752,7 @@ var SEED_TCES = [
 var SEED_TCE_ACORDAO_MAPPINGS = [
   {
     NUMERO_ANO_TCE: "TCE 003/2022",
-    ACORDAO_REF: "14068/2023"
+    ACORDAO_KEY: "14068/2023"
   }
 ];
 var SEED_PROFILES = [
@@ -1545,9 +1017,734 @@ var SEED_VIATURAS_MANUTENCOES = [
   { id: "M-3", viaturaId: "V-3", tipo: "Preventiva (Revis\xE3o 20k)", data: "2025-12-05", custo: 1500, kmManutencao: 20050, proximaRevisaoKm: 25e3 }
 ];
 
-// server.ts
+// src/data/seed_comunicacoes.ts
+var SEED_COMUNICACOES = [
+  // 2022
+  {
+    KEY: "COM-066981-2022",
+    COMUNICACAO: "Of\xEDcio 066.981/2022",
+    DESTINATARIO: "MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA (EXTINTO)",
+    CONTATO: "CHEFE DA ASSESSORIA ESPECIAL DE CONTROLE INTERNO DO MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "014.682/2016-8",
+    DATA_EXPEDICAO: "30/12/2022",
+    DATA_RESPOSTA: "",
+    ANO: 2022
+  },
+  {
+    KEY: "COM-064453-2022",
+    COMUNICACAO: "Of\xEDcio 064.453/2022",
+    DESTINATARIO: "SECRETARIA EXECUTIVA - MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA (EXTINTO)",
+    CONTATO: "LUCIO RODRIGUES CAPELLETTO",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "014.113/2022-8",
+    DATA_EXPEDICAO: "14/12/2022",
+    DATA_RESPOSTA: "12/01/2023",
+    ANO: 2022
+  },
+  {
+    KEY: "COM-061387-2022",
+    COMUNICACAO: "Of\xEDcio 061.387/2022",
+    DESTINATARIO: "FUNDO DE AMPARO AO TRABALHADOR",
+    CONTATO: "PRESIDENTE DO CONSELHO DELIBERATIVO DO FUNDO DE AMPARO AO TRABALHADOR",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "019.589/2017-4",
+    DATA_EXPEDICAO: "13/12/2022",
+    DATA_RESPOSTA: "24/09/2024",
+    ANO: 2022
+  },
+  {
+    KEY: "COM-062794-2022",
+    COMUNICACAO: "Of\xEDcio 062.794/2022",
+    DESTINATARIO: "SECRETARIA EXECUTIVA - MINIST\xC9RIO DO TRABALHO E PREVID\xCANCIA (EXTINTO)",
+    CONTATO: "LUCIO RODRIGUES CAPELLETTO",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "044.597/2021-5",
+    DATA_EXPEDICAO: "07/12/2022",
+    DATA_RESPOSTA: "22/12/2022",
+    ANO: 2022
+  },
+  // 2023
+  {
+    KEY: "COM-062412-2023",
+    COMUNICACAO: "Of\xEDcio 062.412/2023",
+    DESTINATARIO: "Identidade preservada",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "019.347/2023-5",
+    DATA_EXPEDICAO: "27/12/2023",
+    DATA_RESPOSTA: "",
+    ANO: 2023
+  },
+  {
+    KEY: "COM-055352-2023",
+    COMUNICACAO: "Of\xEDcio 055.352/2023",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "016.714/2021-0",
+    DATA_EXPEDICAO: "07/11/2023",
+    DATA_RESPOSTA: "26/02/2024",
+    ANO: 2023
+  },
+  {
+    KEY: "COM-050199-2023",
+    COMUNICACAO: "Of\xEDcio 050.199/2023",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "022.240/2023-3",
+    DATA_EXPEDICAO: "06/10/2023",
+    DATA_RESPOSTA: "06/02/2024",
+    ANO: 2023
+  },
+  {
+    KEY: "COM-049666-2023",
+    COMUNICACAO: "Of\xEDcio 049.666/2023",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "011.388/2002-0",
+    DATA_EXPEDICAO: "02/10/2023",
+    DATA_RESPOSTA: "17/10/2023",
+    ANO: 2023
+  },
+  // 2024
+  {
+    KEY: "COM-056314-2024",
+    COMUNICACAO: "Of\xEDcio 056.314/2024",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "018.032/2024-9",
+    DATA_EXPEDICAO: "27/12/2024",
+    DATA_RESPOSTA: "",
+    ANO: 2024
+  },
+  {
+    KEY: "COM-057488-2024",
+    COMUNICACAO: "Of\xEDcio 057.488/2024",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "011.333/2022-7",
+    DATA_EXPEDICAO: "19/12/2024",
+    DATA_RESPOSTA: "29/01/2025",
+    ANO: 2024
+  },
+  {
+    KEY: "COM-057231-2024",
+    COMUNICACAO: "Of\xEDcio 057.231/2024",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "008.443/2024-6",
+    DATA_EXPEDICAO: "17/12/2024",
+    DATA_RESPOSTA: "30/01/2025",
+    ANO: 2024
+  },
+  {
+    KEY: "COM-051784-2024",
+    COMUNICACAO: "Of\xEDcio 051.784/2024",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "005.807/2024-7",
+    DATA_EXPEDICAO: "21/11/2024",
+    DATA_RESPOSTA: "04/12/2024",
+    ANO: 2024
+  },
+  // 2025
+  {
+    KEY: "COM-054644-2025",
+    COMUNICACAO: "Of\xEDcio 054.644/2025",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "005.604/2024-9",
+    DATA_EXPEDICAO: "29/12/2025",
+    DATA_RESPOSTA: "",
+    ANO: 2025
+  },
+  {
+    KEY: "COM-054263-2025",
+    COMUNICACAO: "Of\xEDcio 054.263/2025",
+    DESTINATARIO: "Identidade preservada",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "008.583/2025-0",
+    DATA_EXPEDICAO: "22/12/2025",
+    DATA_RESPOSTA: "27/02/2026",
+    ANO: 2025
+  },
+  {
+    KEY: "COM-040629-2025",
+    COMUNICACAO: "Of\xEDcio 040.629/2025",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "005.226/2023-6",
+    DATA_EXPEDICAO: "30/09/2025",
+    DATA_RESPOSTA: "10/11/2025",
+    ANO: 2025
+  },
+  {
+    KEY: "COM-045852-2025",
+    COMUNICACAO: "Of\xEDcio 045.852/2025",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "028.516/2024-9",
+    DATA_EXPEDICAO: "31/10/2025",
+    DATA_RESPOSTA: "17/11/2025",
+    ANO: 2025
+  },
+  {
+    KEY: "COM-000082-2025",
+    COMUNICACAO: "Of\xEDcio 000.082/2025",
+    DESTINATARIO: "ASSESSORIA ESPECIAL DE CONTROLE INTERNO DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "ASSESSORIA DE CONTROLE INTERNO",
+    UNIDADE_EMITENTE: "AUDCONTRATA\xC7\xD5ES",
+    PROCESSO: "008.885/2025-7",
+    DATA_EXPEDICAO: "08/08/2025",
+    DATA_RESPOSTA: "19/08/2025",
+    ANO: 2025
+  },
+  // 2026 (Ano corrente ativo)
+  {
+    KEY: "COM-019712-2026",
+    COMUNICACAO: "Of\xEDcio 019.712/2026",
+    DESTINATARIO: "SECRETARIA-EXECUTIVA DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "018.375/2025-1",
+    DATA_EXPEDICAO: "28/05/2026",
+    DATA_RESPOSTA: "",
+    ANO: 2026
+  },
+  {
+    KEY: "COM-000156-2026",
+    COMUNICACAO: "Of\xEDcio 000.156/2026",
+    DESTINATARIO: "ASSESSORIA ESPECIAL DE CONTROLE INTERNO DO MINIST\xC9RIO DO TRABALHO E EMPREGO",
+    CONTATO: "ASSESSORIA CONTROLE INTERNO",
+    UNIDADE_EMITENTE: "AUDCONTRATA\xC7\xD5ES",
+    PROCESSO: "006.649/2026-2",
+    DATA_EXPEDICAO: "13/05/2026",
+    DATA_RESPOSTA: "25/05/2026",
+    ANO: 2026
+  },
+  {
+    KEY: "COM-009215-2026",
+    COMUNICACAO: "Of\xEDcio 009.215/2026",
+    DESTINATARIO: "SUPERINTEND\xCANCIA REGIONAL DO TRABALHO NO ESTADO DE ROND\xD4NIA",
+    CONTATO: "SUPERINTENDENTE REGIONAL",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "045.307/2021-0",
+    DATA_EXPEDICAO: "26/03/2026",
+    DATA_RESPOSTA: "13/04/2026",
+    ANO: 2026
+  },
+  {
+    KEY: "COM-008296-2026",
+    COMUNICACAO: "Of\xEDcio 008.296/2026",
+    DESTINATARIO: "SUPERINTEND\xCANCIA REGIONAL DO TRABALHO NO ESTADO DO PIAU\xCD",
+    CONTATO: "SUPERINTENDENTE",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "013.049/2025-9",
+    DATA_EXPEDICAO: "17/03/2026",
+    DATA_RESPOSTA: "07/04/2026",
+    ANO: 2026
+  },
+  {
+    KEY: "COM-007048-2026",
+    COMUNICACAO: "Of\xEDcio 007.048/2026",
+    DESTINATARIO: "Identidade preservada",
+    CONTATO: "FRANCISCO MACENA DA SILVA",
+    UNIDADE_EMITENTE: "SEPROC",
+    PROCESSO: "024.354/2025-2",
+    DATA_EXPEDICAO: "10/03/2026",
+    DATA_RESPOSTA: "25/03/2026",
+    ANO: 2026
+  }
+];
+
+// src/data/seed_cgu.ts
+var SEED_CGU = [
+  {
+    idTarefa: "CGU-2025-0001",
+    situacao: "Pendente",
+    estado: "Aberto",
+    tituloTarefa: "Auditoria de Folha de Pagamento - Cargo comissionado acumula\xE7\xE3o",
+    dataInicio: "15/03/2025",
+    dataFim: "",
+    dataLimite: "30/08/2025",
+    unidadeAuditada: "Coordena\xE7\xE3o-Geral de Gest\xE3o de Pessoas - CGGP",
+    unidadesAuditoria: "CGU-Regional/DF - Divis\xE3o de Pessoal",
+    textoMonitoramento: "Acompanhamento das recomenda\xE7\xF5es do Relat\xF3rio de Auditoria Anual n\xBA 1234/2024. Trata de ind\xEDcios de acumula\xE7\xE3o il\xEDcita de cargos p\xFAblicos.",
+    providencia: "Levantamento de casos suspeitos, oitiva dos servidores e instaura\xE7\xE3o de processos disciplinares se configurada m\xE1-f\xE9.",
+    tipoUltimaManifestacao: "Of\xEDcio CGU",
+    textoUltimaManifestacao: "Recomenda\xE7\xE3o formal de regulariza\xE7\xE3o ou restitui\xE7\xE3o de valores em 5 casos identificados de acumula\xE7\xE3o indevida.",
+    dataUltimaManifestacao: "10/05/2025",
+    tipoUltimoPosicionamento: "Nota T\xE9cnica AECI",
+    textoUltimoPosicionamento: "Documenta\xE7\xE3o e fichas financeiras enviadas para an\xE1lise detalhada da Corregedoria do MTE.",
+    dataUltimoPosicionamento: "20/05/2025",
+    categoria: "AUDITORIA DE PESSOAL",
+    dataLimiteInicial: "15/06/2025",
+    ano: 2025,
+    ultimaAtualizacao: "20/05/2025 14:00"
+  },
+  {
+    idTarefa: "CGU-2026-0002",
+    situacao: "Em An\xE1lise",
+    estado: "Aberto",
+    tituloTarefa: "Fiscaliza\xE7\xE3o de Contratos de TI - Armazenamento em Nuvem Governamental",
+    dataInicio: "10/01/2026",
+    dataFim: "",
+    dataLimite: "15/07/2026",
+    unidadeAuditada: "Coordena\xE7\xE3o-Geral de Tecnologia da Informa\xE7\xE3o - CGTI",
+    unidadesAuditoria: "Secretaria de Fiscaliza\xE7\xE3o de TI da CGU - Bras\xEDlia",
+    textoMonitoramento: "Revis\xE3o dos pre\xE7os unit\xE1rios de armazenamento e licen\xE7as de software no Contrato Administrativo n\xBA 45/2024.",
+    providencia: "Negocia\xE7\xE3o de termos aditivos junto \xE0 empresa contratada para alinhamento dos valores de mercado com a tabela referencial da CGU.",
+    tipoUltimaManifestacao: "Relat\xF3rio de Fiscaliza\xE7\xE3o",
+    textoUltimaManifestacao: "Indica\xE7\xE3o de sobrepre\xE7o estimado de 12% nos servi\xE7os de infraestrutura de nuvem h\xEDbrida.",
+    dataUltimaManifestacao: "12/03/2026",
+    tipoUltimoPosicionamento: "Nota T\xE9cnica AECI",
+    textoUltimoPosicionamento: "Apresentadas justificativas t\xE9cnicas de mercado para a contrata\xE7\xE3o e os pre\xE7os praticados frente \xE0s especifica\xE7\xF5es exigidas.",
+    dataUltimoPosicionamento: "05/04/2026",
+    categoria: "FISCALIZA\xC7\xC3O DE CONTRATOS",
+    dataLimiteInicial: "30/04/2026",
+    ano: 2026,
+    ultimaAtualizacao: "05/04/2026 11:30"
+  },
+  {
+    idTarefa: "CGU-2024-0003",
+    situacao: "Cumprido",
+    estado: "Fechado",
+    tituloTarefa: "Recomenda\xE7\xE3o Operacional - Transpar\xEAncia Ativa no Portal MTE",
+    dataInicio: "22/08/2024",
+    dataFim: "15/12/2024",
+    dataLimite: "31/12/2024",
+    unidadeAuditada: "Assessoria Especial de Comunica\xE7\xE3o Social",
+    unidadesAuditoria: "Ouvidoria-Geral da Uni\xE3o - OGU/CGU",
+    textoMonitoramento: "Monitoramento do \xEDndice de atendimento \xE0 Lei de Acesso \xE0 Informa\xE7\xE3o (LAI) e divulga\xE7\xE3o de dados abertos.",
+    providencia: "Cria\xE7\xE3o de novos pain\xE9is din\xE2micos e publica\xE7\xE3o sistem\xE1tica de dados de di\xE1rias e passagens no portal institucional.",
+    tipoUltimaManifestacao: "Nota de Avalia\xE7\xE3o CGU",
+    textoUltimaManifestacao: "Atestada a conformidade de 100% dos itens de transpar\xEAncia ativa avaliados no painel da LAI.",
+    dataUltimaManifestacao: "10/12/2024",
+    tipoUltimoPosicionamento: "Relat\xF3rio de Atendimento MTE",
+    textoUltimoPosicionamento: "Enviado o relat\xF3rio final de atendimento com os links de acesso aos pain\xE9is de transpar\xEAncia publicados.",
+    dataUltimoPosicionamento: "15/12/2024",
+    categoria: "TRANSPAR\xCANCIA E LAI",
+    dataLimiteInicial: "15/12/2024",
+    ano: 2024,
+    ultimaAtualizacao: "15/12/2024 16:45"
+  },
+  {
+    idTarefa: "CGU-2026-0004",
+    situacao: "Atrasado",
+    estado: "Aberto",
+    tituloTarefa: "Plano de Integridade MTE - Implementa\xE7\xE3o do Canal de Den\xFAncias",
+    dataInicio: "05/02/2026",
+    dataFim: "",
+    dataLimite: "01/06/2026",
+    unidadeAuditada: "Corregedoria-Geral do MTE",
+    unidadesAuditoria: "Diretoria de Integridade e Preven\xE7\xE3o da Corrup\xE7\xE3o - CGU",
+    textoMonitoramento: "Monitoramento do cronograma de estrutura\xE7\xE3o do canal interno de den\xFAncias integrado ao Fala.BR.",
+    providencia: "Ajuste na parametriza\xE7\xE3o dos fluxos de triagem e publica\xE7\xE3o das portarias de designa\xE7\xE3o de servidores exclusivos.",
+    tipoUltimaManifestacao: "Alerta de Prazo CGU",
+    textoUltimaManifestacao: "Notifica\xE7\xE3o sobre a proximidade do prazo final de implanta\xE7\xE3o da fase II do Fala.BR no \xF3rg\xE3o.",
+    dataUltimaManifestacao: "15/05/2026",
+    tipoUltimoPosicionamento: "Of\xEDcio de Justificativa AECI",
+    textoUltimoPosicionamento: "Solicita\xE7\xE3o formal de prorroga\xE7\xE3o do prazo devido a atrasos t\xE9cnicos na integra\xE7\xE3o dos sistemas com o SERPRO.",
+    dataUltimoPosicionamento: "28/05/2026",
+    categoria: "INTEGRIDADE E COMPLIANCE",
+    dataLimiteInicial: "01/06/2026",
+    ano: 2026,
+    ultimaAtualizacao: "28/05/2026 10:15"
+  }
+];
+
+// src/data/seed_etica.ts
+var SEED_ETICA_MEMBROS = [
+  {
+    id: "MEM-001",
+    nome: "Alessandro Barbosa Louren\xE7o",
+    cpf: "111.222.333-44",
+    atribuicao: "Presidente",
+    encargo: "Titular",
+    dispositivoLegal: "Portaria MTE n\xBA 104/2024",
+    dataPublicacao: "2024-05-15",
+    dataInicioMandato: "2024-05-15",
+    dataFimMandato: "2027-05-15",
+    mandato: "3 anos",
+    matricula: "AECI-8409-G",
+    telefone: "(61) 98765-4321",
+    email: "alessandro.lourenco@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "MEM-002",
+    nome: "Maria Eunice Ramos",
+    cpf: "222.333.444-55",
+    atribuicao: "Membro",
+    encargo: "Titular",
+    dispositivoLegal: "Portaria MTE n\xBA 104/2024",
+    dataPublicacao: "2024-05-15",
+    dataInicioMandato: "2024-05-15",
+    dataFimMandato: "2026-05-15",
+    // Mandato expirado há 1 mês
+    mandato: "2 anos",
+    matricula: "AECI-3301-A",
+    telefone: "(61) 98888-1111",
+    email: "maria.ramos@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "MEM-003",
+    nome: "Carlos Henrique Santos",
+    cpf: "333.444.555-66",
+    atribuicao: "Membro",
+    encargo: "Suplente",
+    dispositivoLegal: "Portaria MTE n\xBA 205/2025",
+    dataPublicacao: "2025-02-10",
+    dataInicioMandato: "2025-02-10",
+    dataFimMandato: "2027-02-10",
+    mandato: "2 anos",
+    matricula: "AECI-1029-F",
+    telefone: "(61) 99111-2222",
+    email: "carlos.henrique@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "MEM-004",
+    nome: "Ana L\xFAcia Rezende",
+    cpf: "444.555.666-77",
+    atribuicao: "Secret\xE1ria-Executiva",
+    encargo: "Titular",
+    dispositivoLegal: "Portaria MTE n\xBA 412/2025",
+    dataPublicacao: "2025-08-01",
+    dataInicioMandato: "2025-08-01",
+    dataFimMandato: "2027-01-28",
+    // 1 ano e 180 dias a partir de 01/08/2025
+    mandato: "1 ano e 180 dias",
+    matricula: "AECI-7744-X",
+    telefone: "(61) 99333-4444",
+    email: "ana.rezende@trabalho.gov.br",
+    ativo: true,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  }
+];
+var SEED_ETICA_REUNIOES = [
+  {
+    id: "REU-001",
+    tipo: "Ordin\xE1ria",
+    dataHora: "2026-07-10T14:30",
+    pauta: "Julgamento de processos SECI pendentes, homologa\xE7\xE3o de consultas e planejamento das campanhas de integridade no \xE2mbito das Superintend\xEAncias Regionais do Trabalho.",
+    convidados: [
+      {
+        nome: "Alessandro Barbosa Louren\xE7o",
+        encargo: "Presidente",
+        email: "alessandro.lourenco@trabalho.gov.br",
+        telefone: "(61) 98765-4321"
+      },
+      {
+        nome: "Maria Eunice Ramos",
+        encargo: "Membro",
+        email: "maria.ramos@trabalho.gov.br",
+        telefone: "(61) 98888-1111"
+      },
+      {
+        nome: "Ana L\xFAcia Rezende",
+        encargo: "Secret\xE1ria-Executiva",
+        email: "ana.rezende@trabalho.gov.br",
+        telefone: "(61) 99333-4444"
+      },
+      {
+        nome: "Dr. Roberto de Almeida (Convidado Externo)",
+        encargo: "Palestrante / Assessor",
+        email: "roberto.almeida@cgu.gov.br",
+        telefone: "(61) 99999-5555"
+      }
+    ],
+    confirmacoes: {
+      "alessandro.lourenco@trabalho.gov.br": "Confirmado",
+      "maria.ramos@trabalho.gov.br": "Confirmado",
+      "ana.rezende@trabalho.gov.br": "Confirmado",
+      "roberto.almeida@cgu.gov.br": "Pendente"
+    },
+    notificadoAgendamento: true,
+    notificadoLembrete: false,
+    ultimaAtualizacao: "26/06/2026 10:00"
+  }
+];
+var SEED_ETICA_ATAS = [
+  {
+    id: "REU-001",
+    reuniaoId: "REU-001",
+    relatos: "Aos dez dias do m\xEAs de julho de 2026, reuniu-se ordinariamente a Comiss\xE3o de \xC9tica do Minist\xE9rio do Trabalho e Emprego. O Presidente iniciou os trabalhos dando as boas-vindas a todos e submetendo a pauta sobre preven\xE7\xE3o a conflitos de interesse ao escrut\xEDnio da mesa. Discutiu-se a necessidade de intensificar campanhas de conscientiza\xE7\xE3o nas SRTEs.",
+    decisoes: "Deliberou-se, por unanimidade, pela aprova\xE7\xE3o do voto da relatora Maria Eunice Ramos no \xE2mbito do processo SECI 19973.102345/2026-88. Determinou-se o agendamento de palestra com a CGU para o m\xEAs subsequente.",
+    dataGeracao: "2026-07-10",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  }
+];
+var SEED_ETICA_PROCESSOS = [
+  {
+    id: "PRC-001",
+    tipo: "SECI",
+    processoSei: "19973.102345/2026-88",
+    dataInicio: "2026-06-20",
+    // 6 dias atrás (SLA ok)
+    resumo: "Consulta sobre exerc\xEDcio de doc\xEAncia concomitante em institui\xE7\xE3o de ensino privada de \xE2mbito regional.",
+    responsavel: "Maria Eunice Ramos",
+    situacao: "Deferido",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-002",
+    tipo: "SECI",
+    processoSei: "19973.102456/2026-99",
+    dataInicio: "2026-06-25",
+    // 1 dia atrás (SLA ok)
+    resumo: "Pedido de autoriza\xE7\xE3o para exercer atividade privada de consultoria estrat\xE9gica em an\xE1lise de mercado de trabalho.",
+    responsavel: "Alessandro Barbosa Louren\xE7o",
+    situacao: "Em An\xE1lise",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-003",
+    tipo: "SECI",
+    processoSei: "19973.100999/2026-22",
+    dataInicio: "2026-06-01",
+    // 25 dias atrás (SLA Estourado!)
+    resumo: "Consulta sobre libera\xE7\xE3o para ministrar palestra remunerada contratada por concession\xE1ria de servi\xE7o p\xFAblico federal.",
+    responsavel: "Carlos Henrique Santos",
+    situacao: "Em An\xE1lise",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-004",
+    tipo: "Consulta",
+    processoSei: "19973.200111/2026-15",
+    dataInicio: "2026-04-10",
+    dataFim: "2026-04-20",
+    solicitante: "Superintend\xEAncia Regional do Trabalho de S\xE3o Paulo (SRTb-SP)",
+    assunto: "Consulta sobre recebimento de brindes corporativos e materiais promocionais em feiras institucionais por auditores fiscais.",
+    situacao: "Respondida",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-005",
+    tipo: "\xC9tico",
+    processoSei: "19973.300555/2026-01",
+    dataInicio: "2026-05-02",
+    situacao: "Em Andamento",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  },
+  {
+    id: "PRC-006",
+    tipo: "\xC9tico",
+    processoSei: "19973.300122/2025-99",
+    dataInicio: "2025-11-12",
+    dataFim: "2025-12-18",
+    situacao: "Arquivado",
+    ultimaAtualizacao: "26/06/2026 10:00"
+  }
+];
+
+// src/backend/db.ts
 import_dotenv.default.config();
-var govHubPool = new import_pg.default.Pool({
+var pool = new import_pg.default.Pool({
+  connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://postgres:postgres@localhost:5432/postgres",
+  max: 10,
+  idleTimeoutMillis: 3e4,
+  connectionTimeoutMillis: 2e3
+});
+var DATA_DIR = import_path.default.join(process.cwd(), "data");
+var DB_PATH = import_path.default.join(DATA_DIR, "orbita_db.json");
+var TCU_DIR = import_path.default.join(DATA_DIR, "tcu");
+if (!import_fs.default.existsSync(DATA_DIR)) {
+  import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+}
+if (!import_fs.default.existsSync(TCU_DIR)) {
+  import_fs.default.mkdirSync(TCU_DIR, { recursive: true });
+}
+
+// src/backend/routes/comunicacoesRoutes.ts
+var router = (0, import_express.Router)();
+router.get("/comunicacoes", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM comunicacoes");
+    const mapped = result.rows.map((row) => ({
+      KEY: row.key,
+      COMUNICACAO: row.comunicacao,
+      DESTINATARIO: row.destinatario,
+      CONTATO: row.contato,
+      UNIDADE_EMITENTE: row.unidade_emitente,
+      PROCESSO: row.processo,
+      DATA_EXPEDICAO: row.data_expedicao,
+      DATA_RESPOSTA: row.data_resposta,
+      ANO: row.ano,
+      CARECE_RESPOSTA: row.carece_resposta,
+      PRAZO_DIAS: row.prazo_dias,
+      RESPOSTA_ENVIADA_INTERNAMENTE: row.resposta_enviada_internamente,
+      UNIDADE_EXECUTORA: row.unidade_executora,
+      PROCESSO_SEI: row.processo_sei,
+      DESTINACAO: row.destinacao,
+      ULTIMA_ATUALIZACAO: row.ultima_atualizacao
+    }));
+    res.json(mapped);
+  } catch (err) {
+    console.error("Error fetching comunicacoes:", err);
+    res.status(500).json({ error: "Failed to fetch comunicacoes." });
+  }
+});
+router.post("/comunicacoes/update", async (req, res) => {
+  try {
+    const updated = req.body;
+    updated.ULTIMA_ATUALIZACAO = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+    const checkResult = await pool.query("SELECT key FROM comunicacoes WHERE key = $1", [updated.KEY]);
+    if (checkResult.rows.length > 0) {
+      await pool.query(`
+        UPDATE comunicacoes SET
+          comunicacao = $2, destinatario = $3, contato = $4, unidade_emitente = $5,
+          processo = $6, data_expedicao = $7, data_resposta = $8, ano = $9,
+          carece_resposta = $10, prazo_dias = $11, resposta_enviada_internamente = $12,
+          unidade_executora = $13, processo_sei = $14, destinacao = $15, ultima_atualizacao = $16
+        WHERE key = $1
+      `, [
+        updated.KEY,
+        updated.COMUNICACAO,
+        updated.DESTINATARIO,
+        updated.CONTATO,
+        updated.UNIDADE_EMITENTE,
+        updated.PROCESSO,
+        updated.DATA_EXPEDICAO,
+        updated.DATA_RESPOSTA,
+        updated.ANO,
+        updated.CARECE_RESPOSTA,
+        updated.PRAZO_DIAS,
+        updated.RESPOSTA_ENVIADA_INTERNAMENTE,
+        updated.UNIDADE_EXECUTORA,
+        updated.PROCESSO_SEI,
+        updated.DESTINACAO,
+        updated.ULTIMA_ATUALIZACAO
+      ]);
+      res.json({ success: true, item: updated });
+    } else {
+      res.status(404).json({ error: "Comunica\xE7\xE3o n\xE3o encontrada." });
+    }
+  } catch (err) {
+    console.error("Error updating comunicacao:", err);
+    res.status(500).json({ error: "Failed to update comunicacao." });
+  }
+});
+router.delete("/comunicacoes/:key", async (req, res) => {
+  try {
+    const { key } = req.params;
+    await pool.query("DELETE FROM comunicacoes WHERE key = $1", [key]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting comunicacao:", err);
+    res.status(500).json({ error: "Failed to delete comunicacao." });
+  }
+});
+router.post("/comunicacoes/import", async (req, res) => {
+  try {
+    const { items } = req.body;
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: "Formato inv\xE1lido." });
+    }
+    let importedCount = 0;
+    let updatedCount = 0;
+    const updatedAt = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+    for (const item of items) {
+      if (!item.KEY) {
+        item.KEY = `${item.COMUNICACAO}-${item.ANO}`;
+      }
+      const checkResult = await pool.query(
+        "SELECT key FROM comunicacoes WHERE key = $1 OR (comunicacao = $2 AND ano = $3)",
+        [item.KEY, item.COMUNICACAO, item.ANO]
+      );
+      if (checkResult.rows.length > 0) {
+        const targetKey = checkResult.rows[0].key;
+        await pool.query(`
+          UPDATE comunicacoes SET
+            comunicacao = $2, destinatario = $3, contato = $4, unidade_emitente = $5,
+            processo = $6, data_expedicao = $7, data_resposta = $8, ano = $9,
+            carece_resposta = $10, prazo_dias = $11, resposta_enviada_internamente = $12,
+            unidade_executora = $13, processo_sei = $14, destinacao = $15, ultima_atualizacao = $16
+          WHERE key = $1
+        `, [
+          targetKey,
+          item.COMUNICACAO,
+          item.DESTINATARIO,
+          item.CONTATO,
+          item.UNIDADE_EMITENTE,
+          item.PROCESSO,
+          item.DATA_EXPEDICAO,
+          item.DATA_RESPOSTA,
+          item.ANO,
+          item.CARECE_RESPOSTA,
+          item.PRAZO_DIAS,
+          item.RESPOSTA_ENVIADA_INTERNAMENTE,
+          item.UNIDADE_EXECUTORA,
+          item.PROCESSO_SEI,
+          item.DESTINACAO,
+          updatedAt
+        ]);
+        updatedCount++;
+      } else {
+        await pool.query(`
+          INSERT INTO comunicacoes (
+            key, comunicacao, destinatario, contato, unidade_emitente,
+            processo, data_expedicao, data_resposta, ano, carece_resposta,
+            prazo_dias, resposta_enviada_internamente, unidade_executora,
+            processo_sei, destinacao, ultima_atualizacao
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+          )
+        `, [
+          item.KEY,
+          item.COMUNICACAO,
+          item.DESTINATARIO,
+          item.CONTATO,
+          item.UNIDADE_EMITENTE,
+          item.PROCESSO,
+          item.DATA_EXPEDICAO,
+          item.DATA_RESPOSTA,
+          item.ANO,
+          item.CARECE_RESPOSTA,
+          item.PRAZO_DIAS,
+          item.RESPOSTA_ENVIADA_INTERNAMENTE,
+          item.UNIDADE_EXECUTORA,
+          item.PROCESSO_SEI,
+          item.DESTINACAO,
+          updatedAt
+        ]);
+        importedCount++;
+      }
+    }
+    const totalResult = await pool.query("SELECT COUNT(*) FROM comunicacoes");
+    res.json({
+      success: true,
+      importedCount,
+      updatedCount,
+      totalCount: parseInt(totalResult.rows[0].count),
+      items: []
+    });
+  } catch (err) {
+    console.error("Error importing comunicacoes:", err);
+    res.status(500).json({ error: "Failed to import comunicacoes." });
+  }
+});
+var comunicacoesRoutes_default = router;
+
+// server.ts
+import_dotenv2.default.config();
+var govHubPool = new import_pg2.default.Pool({
   connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://airflow:airflow@localhost:5432/postgres",
   max: 5,
   idleTimeoutMillis: 1e4,
@@ -1579,14 +1776,14 @@ function getSiapeAndEmail(nameStr) {
   const lastName = parts[parts.length - 1] || "servidor";
   return { siape, email: `${firstName}.${lastName}@trabalho.gov.br` };
 }
-var DATA_DIR = import_path.default.join(process.cwd(), "data");
-var DB_PATH = import_path.default.join(DATA_DIR, "orbita_db.json");
-var TCU_DIR = import_path.default.join(DATA_DIR, "tcu");
-if (!import_fs.default.existsSync(DATA_DIR)) {
-  import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+var DATA_DIR2 = import_path2.default.join(process.cwd(), "data");
+var DB_PATH2 = import_path2.default.join(DATA_DIR2, "orbita_db.json");
+var TCU_DIR2 = import_path2.default.join(DATA_DIR2, "tcu");
+if (!import_fs2.default.existsSync(DATA_DIR2)) {
+  import_fs2.default.mkdirSync(DATA_DIR2, { recursive: true });
 }
-if (!import_fs.default.existsSync(TCU_DIR)) {
-  import_fs.default.mkdirSync(TCU_DIR, { recursive: true });
+if (!import_fs2.default.existsSync(TCU_DIR2)) {
+  import_fs2.default.mkdirSync(TCU_DIR2, { recursive: true });
 }
 function migrateProcessTypes(data) {
   if (!data || !Array.isArray(data.acordaos)) return false;
@@ -1632,7 +1829,7 @@ function migrateProcessTypes(data) {
   return modified;
 }
 function loadDatabase() {
-  if (!import_fs.default.existsSync(DB_PATH)) {
+  if (!import_fs2.default.existsSync(DB_PATH2)) {
     const defaultData = {
       acordaos: SEED_ACORDAOS,
       comunicacoes: SEED_COMUNICACOES,
@@ -1659,11 +1856,11 @@ function loadDatabase() {
       dirigentesEventos: SEED_DIRIGENTES_EVENTOS
     };
     migrateProcessTypes(defaultData);
-    import_fs.default.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), "utf-8");
+    import_fs2.default.writeFileSync(DB_PATH2, JSON.stringify(defaultData, null, 2), "utf-8");
     return defaultData;
   }
   try {
-    const raw = import_fs.default.readFileSync(DB_PATH, "utf-8").replace(/^\uFEFF/, "");
+    const raw = import_fs2.default.readFileSync(DB_PATH2, "utf-8").replace(/^\uFEFF/, "");
     const data = JSON.parse(raw);
     let dataModified = false;
     if (!data.superintendencias || !Array.isArray(data.superintendencias) || data.superintendencias.length === 0) {
@@ -1780,7 +1977,7 @@ function loadDatabase() {
       });
     }
     if (dataModified) {
-      import_fs.default.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
+      import_fs2.default.writeFileSync(DB_PATH2, JSON.stringify(data, null, 2), "utf-8");
     }
     return data;
   } catch (err) {
@@ -1807,7 +2004,7 @@ function loadDatabase() {
 }
 function saveDatabase(data) {
   try {
-    import_fs.default.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
+    import_fs2.default.writeFileSync(DB_PATH2, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
     console.error("Failed to save database file:", err);
   }
@@ -2077,14 +2274,14 @@ function parseCsvStream(stream, onRecord, searchKeys) {
   });
 }
 async function downloadTempCsv(year) {
-  const tempPath = import_path.default.join(TCU_DIR, `cache-acordao-completo-${year}.csv`);
-  if (import_fs.default.existsSync(tempPath)) {
+  const tempPath = import_path2.default.join(TCU_DIR2, `cache-acordao-completo-${year}.csv`);
+  if (import_fs2.default.existsSync(tempPath)) {
     const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
     if (year < currentYear) {
       console.log(`[TCU CSV] Found permanent cache for consolidated year ${year}.`);
       return tempPath;
     }
-    const stats = import_fs.default.statSync(tempPath);
+    const stats = import_fs2.default.statSync(tempPath);
     const now = Date.now();
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1e3;
     if (now - stats.mtimeMs < sevenDaysMs) {
@@ -2098,7 +2295,7 @@ async function downloadTempCsv(year) {
   console.log(`[TCU CSV] Downloading ${onlineUrl} to temporary file ${tempPath}...`);
   const inProgressPath = tempPath + ".tmp";
   try {
-    const fileStream = import_fs.default.createWriteStream(inProgressPath);
+    const fileStream = import_fs2.default.createWriteStream(inProgressPath);
     await new Promise((resolve, reject) => {
       import_https.default.get(onlineUrl, (response) => {
         if (response.statusCode !== 200) {
@@ -2111,19 +2308,19 @@ async function downloadTempCsv(year) {
           resolve();
         });
       }).on("error", (err) => {
-        import_fs.default.unlink(inProgressPath, () => {
+        import_fs2.default.unlink(inProgressPath, () => {
         });
         reject(err);
       });
     });
-    import_fs.default.renameSync(inProgressPath, tempPath);
+    import_fs2.default.renameSync(inProgressPath, tempPath);
     console.log(`[TCU CSV] Download completed for year ${year}.`);
     return tempPath;
   } catch (err) {
     console.error(`[TCU CSV] Failed to download temporary CSV for year ${year}:`, err.message);
-    if (import_fs.default.existsSync(inProgressPath)) {
+    if (import_fs2.default.existsSync(inProgressPath)) {
       try {
-        import_fs.default.unlinkSync(inProgressPath);
+        import_fs2.default.unlinkSync(inProgressPath);
       } catch {
       }
     }
@@ -2257,25 +2454,25 @@ async function fetchAcordaoFromCSV(numAcordao, anoAcordao) {
   ];
   let localFilePath = null;
   for (const name of localFileNameOptions) {
-    const p = import_path.default.join(TCU_DIR, name);
-    if (import_fs.default.existsSync(p)) {
+    const p = import_path2.default.join(TCU_DIR2, name);
+    if (import_fs2.default.existsSync(p)) {
       localFilePath = p;
       break;
     }
   }
-  if (!localFilePath && import_fs.default.existsSync(TCU_DIR)) {
-    const files = import_fs.default.readdirSync(TCU_DIR);
+  if (!localFilePath && import_fs2.default.existsSync(TCU_DIR2)) {
+    const files = import_fs2.default.readdirSync(TCU_DIR2);
     const lowerOptions = localFileNameOptions.map((o) => o.toLowerCase());
     const matched = files.find((f) => lowerOptions.includes(f.toLowerCase()));
     if (matched) {
-      localFilePath = import_path.default.join(TCU_DIR, matched);
+      localFilePath = import_path2.default.join(TCU_DIR2, matched);
     }
   }
   let localRecord = null;
   if (localFilePath) {
     console.log(`[TCU CSV] Searching locally in ${localFilePath} for ${numAcordao}/${anoAcordao}...`);
     try {
-      const fileStream = import_fs.default.createReadStream(localFilePath, { encoding: "utf8" });
+      const fileStream = import_fs2.default.createReadStream(localFilePath, { encoding: "utf8" });
       await parseCsvStream(fileStream, (record) => {
         if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
           if (isMteRelevant(record)) {
@@ -2300,7 +2497,7 @@ async function fetchAcordaoFromCSV(numAcordao, anoAcordao) {
   if (tempPath) {
     console.log(`[TCU CSV] Searching in complete CSV ${tempPath} for ${numAcordao}/${anoAcordao}...`);
     try {
-      const fileStream = import_fs.default.createReadStream(tempPath, { encoding: "utf8" });
+      const fileStream = import_fs2.default.createReadStream(tempPath, { encoding: "utf8" });
       let fullRecord = null;
       await parseCsvStream(fileStream, (record) => {
         if (record.NUMACORDAO?.trim() === targetNum && record.ANOACORDAO?.trim() === targetAno) {
@@ -2394,16 +2591,16 @@ async function fetchAcordaoFromTCU(numAcordao, anoAcordao) {
     return null;
   }
 }
-var SESSIONS_PATH = import_path.default.join(DATA_DIR, "sessions.json");
+var SESSIONS_PATH = import_path2.default.join(DATA_DIR2, "sessions.json");
 var FileSessionStore = class extends import_express_session.default.Store {
   constructor() {
     super();
-    import_fs.default.writeFileSync(SESSIONS_PATH, JSON.stringify({}), "utf-8");
+    import_fs2.default.writeFileSync(SESSIONS_PATH, JSON.stringify({}), "utf-8");
   }
   getSessions() {
     try {
-      if (import_fs.default.existsSync(SESSIONS_PATH)) {
-        const content = import_fs.default.readFileSync(SESSIONS_PATH, "utf-8");
+      if (import_fs2.default.existsSync(SESSIONS_PATH)) {
+        const content = import_fs2.default.readFileSync(SESSIONS_PATH, "utf-8");
         return JSON.parse(content || "{}");
       }
     } catch (e) {
@@ -2413,7 +2610,7 @@ var FileSessionStore = class extends import_express_session.default.Store {
   }
   saveSessions(sessions) {
     try {
-      import_fs.default.writeFileSync(SESSIONS_PATH, JSON.stringify(sessions, null, 2), "utf-8");
+      import_fs2.default.writeFileSync(SESSIONS_PATH, JSON.stringify(sessions, null, 2), "utf-8");
     } catch (e) {
       console.error("Error writing sessions file:", e);
     }
@@ -2467,7 +2664,7 @@ var FileSessionStore = class extends import_express_session.default.Store {
   }
 };
 async function startServer() {
-  const app = (0, import_express.default)();
+  const app = (0, import_express2.default)();
   app.use((0, import_express_session.default)({
     store: new FileSessionStore(),
     secret: process.env.SESSION_SECRET || "orbita-secret-key-123456789",
@@ -2504,8 +2701,8 @@ async function startServer() {
     }
     next();
   });
-  app.use(import_express.default.json({ limit: "50mb" }));
-  app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
+  app.use(import_express2.default.json({ limit: "50mb" }));
+  app.use(import_express2.default.urlencoded({ limit: "50mb", extended: true }));
   app.get("/api/auth/session", (req, res) => {
     if (req.session && req.session.user) {
       const data = loadDatabase();
@@ -2911,69 +3108,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     saveDatabase(db);
     res.json({ success: true });
   });
-  app.get("/api/comunicacoes", (req, res) => {
-    const db = loadDatabase();
-    res.json(db.comunicacoes || []);
-  });
-  app.post("/api/comunicacoes/update", (req, res) => {
-    const db = loadDatabase();
-    const updated = req.body;
-    if (!db.comunicacoes) db.comunicacoes = [];
-    const index = db.comunicacoes.findIndex((x) => x.KEY === updated.KEY);
-    if (index >= 0) {
-      db.comunicacoes[index] = {
-        ...db.comunicacoes[index],
-        ...updated,
-        ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
-      };
-      saveDatabase(db);
-      res.json({ success: true, item: db.comunicacoes[index] });
-    } else {
-      res.status(404).json({ error: "Comunica\xE7\xE3o n\xE3o encontrada." });
-    }
-  });
-  app.delete("/api/comunicacoes/:key", (req, res) => {
-    const db = loadDatabase();
-    const key = req.params.key;
-    db.comunicacoes = (db.comunicacoes || []).filter((x) => x.KEY !== key);
-    saveDatabase(db);
-    res.json({ success: true });
-  });
-  app.post("/api/comunicacoes/import", (req, res) => {
-    const db = loadDatabase();
-    const { items } = req.body;
-    if (!items || !Array.isArray(items)) {
-      return res.status(400).json({ error: "Formato de importa\xE7\xE3o inv\xE1lido." });
-    }
-    if (!db.comunicacoes) db.comunicacoes = [];
-    let importedCount = 0;
-    let updatedCount = 0;
-    for (const item of items) {
-      const idx = db.comunicacoes.findIndex((x) => x.KEY === item.KEY || x.COMUNICACAO === item.COMUNICACAO && x.ANO === item.ANO);
-      if (idx >= 0) {
-        db.comunicacoes[idx] = {
-          ...db.comunicacoes[idx],
-          ...item,
-          ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
-        };
-        updatedCount++;
-      } else {
-        db.comunicacoes.unshift({
-          ...item,
-          ULTIMA_ATUALIZACAO: (/* @__PURE__ */ new Date()).toLocaleString("pt-BR")
-        });
-        importedCount++;
-      }
-    }
-    saveDatabase(db);
-    res.json({
-      success: true,
-      importedCount,
-      updatedCount,
-      totalCount: db.comunicacoes.length,
-      items: db.comunicacoes
-    });
-  });
+  app.use("/api", comunicacoesRoutes_default);
   app.get("/api/tces", (req, res) => {
     const db = loadDatabase();
     res.json(db.tces || []);
@@ -3420,7 +3555,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
           const relatorOptions = ["Ministro Benjamin Zymler", "Ministro Vital do R\xEAgo", "Ministro Jorge Oliveira", "Ministro Jhonatan de Jesus", "Ministro Walton Alencar Rodrigues"];
           const chosenRelator = rawItem.RELATOR || relatorOptions[numAcordao % 5];
           const utOptions = ["AudContrata\xE7\xF5es (Unidade de Auditoria de Contrata\xE7\xF5es)", "AudBenef\xEDcios (Unidade de Auditoria de Benef\xEDcios Sociais)", "AudGovernan\xE7a (Unidade de Auditoria de Governan\xE7a de Pessoas)", "AudPatrim\xF4nio (Unidade de Auditoria de Infraestrutura e Log\xEDstica)"];
-          const chosenUT = rawItem.UNIDADETECNICA || utOptions[numAcordao % 4];
+          const chosenUT = utOptions[numAcordao % 4];
           const defaultAssuntos = [
             "Aprimoramento dos controles de governan\xE7a de TI e sistemas de apoio.",
             "Presta\xE7\xE3o de contas simplificada dos conv\xEAnios regionais pactuados.",
@@ -3706,10 +3841,10 @@ Sua senha provis\xF3ria \xE9: ${provPass}
   });
   app.post("/api/acordaos/sync-local", async (req, res) => {
     const db = loadDatabase();
-    if (!import_fs.default.existsSync(TCU_DIR)) {
+    if (!import_fs2.default.existsSync(TCU_DIR2)) {
       return res.status(400).json({ success: false, message: "Diret\xF3rio de arquivos do TCU n\xE3o encontrado." });
     }
-    const files = import_fs.default.readdirSync(TCU_DIR);
+    const files = import_fs2.default.readdirSync(TCU_DIR2);
     const csvFiles = files.filter((f) => {
       const lower = f.toLowerCase();
       return (lower.startsWith("ac\xF3rd\xE3os") || lower.startsWith("acordaos")) && lower.endsWith(".csv");
@@ -3726,7 +3861,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     let totalSkipped = 0;
     try {
       for (const file of csvFiles) {
-        const filePath = import_path.default.join(TCU_DIR, file);
+        const filePath = import_path2.default.join(TCU_DIR2, file);
         console.log(`[Local Sync] Processing local CSV file: ${filePath}...`);
         let imported = 0;
         let updated = 0;
@@ -3739,7 +3874,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
         const year = Number(yearMatch[1]);
         try {
           const localKeys = /* @__PURE__ */ new Set();
-          const localReadStream = import_fs.default.createReadStream(filePath, { encoding: "utf8" });
+          const localReadStream = import_fs2.default.createReadStream(filePath, { encoding: "utf8" });
           await parseCsvStream(localReadStream, (record) => {
             const num = record.NUMACORDAO?.trim();
             const ano = record.ANOACORDAO?.trim();
@@ -3753,9 +3888,9 @@ Sua senha provis\xF3ria \xE9: ${provPass}
           const tempPath = await downloadTempCsv(year);
           const completeMteMap = /* @__PURE__ */ new Map();
           const foundKeys = /* @__PURE__ */ new Set();
-          if (tempPath && import_fs.default.existsSync(tempPath)) {
+          if (tempPath && import_fs2.default.existsSync(tempPath)) {
             console.log(`[Local Sync] Pre-indexing complete CSV for year ${year}: ${tempPath}...`);
-            const tempStream = import_fs.default.createReadStream(tempPath, { encoding: "utf8" });
+            const tempStream = import_fs2.default.createReadStream(tempPath, { encoding: "utf8" });
             await parseCsvStream(tempStream, (record) => {
               const num = record.NUMACORDAO?.trim();
               const ano = record.ANOACORDAO?.trim();
@@ -3772,7 +3907,7 @@ Sua senha provis\xF3ria \xE9: ${provPass}
             });
             console.log(`[Local Sync] Pre-indexing completed. Found ${completeMteMap.size} matching local records in online CSV.`);
           }
-          const fileStream = import_fs.default.createReadStream(filePath, { encoding: "utf8" });
+          const fileStream = import_fs2.default.createReadStream(filePath, { encoding: "utf8" });
           const processedKeysInCsv = /* @__PURE__ */ new Set();
           let duplicatesInFile = 0;
           await parseCsvStream(fileStream, async (record) => {
@@ -3897,10 +4032,10 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       }
     } finally {
       try {
-        const files2 = import_fs.default.readdirSync(TCU_DIR);
+        const files2 = import_fs2.default.readdirSync(TCU_DIR2);
         for (const file of files2) {
           if (file.startsWith("temp-acordao-completo-") && file.endsWith(".csv")) {
-            import_fs.default.unlinkSync(import_path.default.join(TCU_DIR, file));
+            import_fs2.default.unlinkSync(import_path2.default.join(TCU_DIR2, file));
             console.log(`[Local Sync] Deleted temporary file: ${file}`);
           }
         }
@@ -4057,30 +4192,45 @@ Sua senha provis\xF3ria \xE9: ${provPass}
       updatedAcordaos: db.acordaos
     });
   });
-  async function extractTcuDataWithAi(acordaoText) {
+  async function extractTcuDataWithAi(acordaoText, tceContext = null) {
     const hasGemini = process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY" && process.env.GEMINI_API_KEY.trim() !== "";
     const hasGroq = process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim() !== "";
     if (!hasGemini && !hasGroq) {
       throw new Error("Nenhuma chave de IA configurada (Groq ou Gemini) para extrair os dados.");
     }
-    const promptText = `Voc\xEA \xE9 um analista experiente do TCU. Leia atentamente o inteiro teor do ac\xF3rd\xE3o abaixo e extraia as seguintes informa\xE7\xF5es no formato JSON EXATO estipulado, e nada mais.
+    let contextStr = "";
+    if (tceContext) {
+      contextStr = `
+ATEN\xC7\xC3O - DADOS DE REFER\xCANCIA DA TCE (USE-OS PARA BALIZAR A AN\xC1LISE SE APLIC\xC1VEL):
+- N\xFAmero da TCE: ${tceContext.numero_ano_tce || "N/A"}
+- N\xFAmero SIAFI da TCE: ${tceContext.numero_siafi || "N/A"}
+`;
+    }
+    const promptText = `Voc\xEA \xE9 um analista especialista do TCU.
+Analise o inteiro teor do ac\xF3rd\xE3o abaixo e responda EXCLUSIVAMENTE com base nas informa\xE7\xF5es expressamente contidas no texto.
+N\xC3O fa\xE7a infer\xEAncias, N\xC3O invente dados e N\xC3O misture conceitos.
 
-O JSON DEVE ter a seguinte estrutura:
+${contextStr}
+
+O retorno DEVE ser EXATAMENTE um objeto JSON estruturado da seguinte forma:
 {
+  "ha_determinacoes": true ou false,
+  "determinacoes": ["Lista de determina\xE7\xF5es extra\xEDdas do texto" ou "N\xE3o h\xE1"],
+  "ha_recomendacoes": true ou false,
+  "recomendacoes": ["Lista de recomenda\xE7\xF5es extra\xEDdas do texto" ou "N\xE3o h\xE1"],
+  "ha_ressarcimento": true ou false,
   "responsaveis": [
     {
-      "nome": "NOME DO RESPONS\xC1VEL. Obrigat\xF3rio. Nunca deixe em branco se houver condena\xE7\xE3o. Ex: Jo\xE3o Alberto Martins Silva, Indesi Brasil.",
-      "cpf": "CPF ou CNPJ extra\xEDdo do texto, com pontua\xE7\xE3o (se houver)",
-      "valor": "Montante total. DEVE SOMAR todos os valores de d\xE9bito originais (frequentemente listados em tabelas ASCII contendo Data e Valor) E todas as multas aplicadas."
+      "nome": "Nome completo",
+      "cpf_cnpj": "CPF ou CNPJ extra\xEDdo (se houver)",
+      "ressarcimento": "Sim/N\xE3o",
+      "valor_debito": "Valor original do ressarcimento/d\xE9bito principal",
+      "valor_atualizado": "Valor atualizado (se houver)",
+      "trecho_fonte": "Cita\xE7\xE3o EXATA do ac\xF3rd\xE3o que fundamenta esta extra\xE7\xE3o (Evid\xEAncia)"
     }
-  ],
-  "checklist": {
-    "determinacoes": ["Lista de determina\xE7\xF5es curtas e concisas"],
-    "recomendacoes": ["Lista de recomenda\xE7\xF5es curtas e concisas"],
-    "darCiencia": ["Lista das ci\xEAncias dadas curtas e concisas"],
-    "determinaArquivamento": true ou false
-  }
+  ]
 }
+
 
 Regras ABSOLUTAS:
 1. O NOME DO RESPONS\xC1VEL sempre aparece ANTES ou DEPOIS dos valores. Exemplo: "julgar irregulares as contas do sr. [NOME DO RESPONS\xC1VEL], condenando-o ao pagamento das quantias abaixo discriminadas:" seguido de uma tabela. O nome DEVE ser extra\xEDdo. NUNCA retorne "Respons\xE1vel n\xE3o identificado" se houver um nome no par\xE1grafo da condena\xE7\xE3o.
@@ -4139,20 +4289,30 @@ ${acordaoText.slice(0, 15e3)}`;
   }
   app.post("/api/acordaos/:key/analisar-ressarcimento", async (req, res) => {
     const { key } = req.params;
-    const db = loadDatabase();
-    const acordao = db.acordaos.find((x) => x.KEY === key);
-    if (!acordao) {
-      return res.status(404).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado." });
-    }
-    if (!acordao.ACORDAO || acordao.ACORDAO.trim() === "") {
-      return res.status(400).json({ error: "Este ac\xF3rd\xE3o n\xE3o possui o Inteiro Teor para ser analisado." });
-    }
     try {
+      const acResult = await pool.query("SELECT * FROM acordaos WHERE key = $1", [key]);
+      if (acResult.rows.length === 0) {
+        return res.status(404).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado no Postgres." });
+      }
+      const acordao = acResult.rows[0];
+      if (!acordao.acordao || acordao.acordao.trim() === "") {
+        return res.status(400).json({ error: "Este ac\xF3rd\xE3o n\xE3o possui o Inteiro Teor para ser analisado." });
+      }
+      let tceContext = null;
+      const tceMapRes = await pool.query(`
+        SELECT m.*, t.numero_siafi 
+        FROM tce_mappings m 
+        LEFT JOIN tces t ON m.numero_ano_tce = t.numero_ano_tce 
+        WHERE m.acordao_key = $1 LIMIT 1
+      `, [key]);
+      if (tceMapRes.rows.length > 0) {
+        tceContext = tceMapRes.rows[0];
+      }
       let aiResultJson;
       try {
-        aiResultJson = await extractTcuDataWithAi(acordao.ACORDAO);
+        aiResultJson = await extractTcuDataWithAi(acordao.acordao, tceContext);
       } catch (err) {
-        console.error("Erro no extrator:", err);
+        console.error("Erro no extrator IA:", err);
         return res.status(500).json({ error: err.message });
       }
       const dossieResponsaveis = [];
@@ -4162,83 +4322,92 @@ ${acordaoText.slice(0, 15e3)}`;
       } catch (err) {
         console.warn("[Aviso] Banco GovHub/SIAFI indispon\xEDvel. Resultados da concilia\xE7\xE3o vir\xE3o vazios.");
       }
-      for (const resp of aiResultJson.responsaveis || []) {
-        let cleanCpf = resp.cpf ? resp.cpf.replace(/[^0-9]/g, "") : "";
+      const responsaveisExtracted = aiResultJson.responsaveis || [];
+      for (const resp of responsaveisExtracted) {
+        let cleanCpf = resp.cpf_cnpj ? resp.cpf_cnpj.replace(/[^0-9]/g, "") : resp.cpf ? resp.cpf.replace(/[^0-9]/g, "") : "";
         let siafiMatches = [];
-        if (client) {
+        let situacao_debito = "Sem informa\xE7\xE3o";
+        let total_pago = 0;
+        let rawVal = (resp.valor_debito || resp.valor || "").replace(/[^\d.,]/g, "").replace(/\./g, "").replace(",", ".");
+        let valor_devido = parseFloat(rawVal) || 0;
+        if (client && (cleanCpf.length > 5 || tceContext?.numero_siafi)) {
           try {
-            const searchRes = await client.query(`
-              SELECT 
-                siafi.*, 
-                siape.nome as nome_beneficiario,
-                siape.orgao,
-                siape.situacao_funcional
-              FROM siafi
-              LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf
-              WHERE 
-                siape.nome ILIKE $1 
-                OR (length($2) > 2 AND siafi.cpf_beneficiario LIKE '%' || $2 || '%')
-              LIMIT 5
-            `, [`%${resp.nome}%`, cleanCpf]);
-            siafiMatches = searchRes.rows;
+            let queryStr = `
+              SELECT siafi.*, siape.nome as nome_beneficiario 
+              FROM siafi 
+              LEFT JOIN siape ON siafi.cpf_beneficiario = siape.cpf 
+              WHERE 1=1
+            `;
+            const params = [];
+            if (cleanCpf) {
+              params.push(`%${cleanCpf}%`);
+              queryStr += ` AND siafi.cpf_beneficiario LIKE $${params.length}`;
+            }
+            if (tceContext?.numero_siafi) {
+              params.push(`%${tceContext.numero_siafi}%`);
+              if (cleanCpf) {
+                queryStr += ` OR siafi.processo_origem LIKE $${params.length}`;
+              } else {
+                queryStr += ` AND siafi.processo_origem LIKE $${params.length}`;
+              }
+            }
+            if (params.length > 0) {
+              queryStr += ` LIMIT 5`;
+              const searchRes = await client.query(queryStr, params);
+              siafiMatches = searchRes.rows;
+              if (siafiMatches.length > 0) {
+                total_pago = siafiMatches.filter((s) => s.confirmado).reduce((acc, curr) => acc + (parseFloat(curr.valor) || 0), 0);
+                if (total_pago >= valor_devido && valor_devido > 0) {
+                  situacao_debito = "Pago";
+                } else if (total_pago > 0 && total_pago < valor_devido) {
+                  situacao_debito = "Parcialmente pago";
+                } else {
+                  situacao_debito = "Em aberto";
+                }
+              }
+            }
           } catch (dbErr) {
-            console.error("[SIAFI/GovHub Search] erro no pipeline IA:", dbErr);
+            console.error("[SIAFI/GovHub Search] erro SQL:", dbErr);
           }
         }
         dossieResponsaveis.push({
           ...resp,
+          situacao_debito,
+          total_pago,
           siafiEncontrados: siafiMatches
         });
       }
       if (client) client.release();
-      if (!acordao.aiAnalysisData) acordao.aiAnalysisData = {};
-      acordao.aiAnalysisData.dossieRessarcimento = dossieResponsaveis;
-      if (aiResultJson.checklist) {
-        acordao.aiAnalysisData.determinacoes = aiResultJson.checklist.determinacoes || [];
-        acordao.aiAnalysisData.recomendacoes = aiResultJson.checklist.recomendacoes || [];
-        acordao.aiAnalysisData.darCiencia = aiResultJson.checklist.darCiencia || [];
-        acordao.aiAnalysisData.determinaArquivamento = !!aiResultJson.checklist.determinaArquivamento;
+      const newAiData = acordao.ai_analysis_data ? typeof acordao.ai_analysis_data === "string" ? JSON.parse(acordao.ai_analysis_data) : acordao.ai_analysis_data : {};
+      newAiData.dossieRessarcimento = dossieResponsaveis;
+      newAiData.determinacoes = aiResultJson.determinacoes || [];
+      newAiData.recomendacoes = aiResultJson.recomendacoes || [];
+      newAiData.ha_ressarcimento = aiResultJson.ha_ressarcimento;
+      let status_monitoramento = acordao.status_monitoramento;
+      let observacoes = acordao.observacoes || "";
+      const hasPago = dossieResponsaveis.some((r) => r.situacao_debito === "Pago");
+      if (hasPago) {
+        status_monitoramento = "Cumprido";
+        observacoes = "[Atualiza\xE7\xE3o Autom\xE1tica IA]: Ressarcimento integral identificado nos dados do SIAFI.";
       }
-      const hasRessarcimento = dossieResponsaveis.some((r) => r.siafiEncontrados && r.siafiEncontrados.some((s) => s.confirmado === true));
-      if (hasRessarcimento) {
-        acordao.STATUS_MONITORAMENTO = "Cumprido";
-        acordao.OBSERVACOES = "[Atualiza\xE7\xE3o Autom\xE1tica IA]: Ressarcimento identificado nos dados do SIAFI.";
-      }
-      saveDatabase(db);
+      await pool.query(`
+        UPDATE acordaos 
+        SET ai_analysis_data = $1, status_monitoramento = $2, observacoes = $3 
+        WHERE key = $4
+      `, [JSON.stringify(newAiData), status_monitoramento, observacoes, key]);
       return res.json({
         success: true,
         dossie: dossieResponsaveis,
-        checklist: aiResultJson.checklist || null
+        checklist: {
+          determinacoes: aiResultJson.determinacoes || [],
+          recomendacoes: aiResultJson.recomendacoes || [],
+          ha_determinacoes: aiResultJson.ha_determinacoes,
+          ha_recomendacoes: aiResultJson.ha_recomendacoes
+        }
       });
     } catch (error) {
       console.error("[AI Dossie] Erro:", error);
       return res.status(500).json({ error: "Falha na an\xE1lise de intelig\xEAncia artificial.", details: error.message });
-    }
-  });
-  app.post("/api/acordaos/aprender", (req, res) => {
-    const { tipo, palavra } = req.body;
-    if (!tipo || !palavra) {
-      return res.status(400).json({ error: "Faltam par\xE2metros tipo ou palavra." });
-    }
-    const DICT_PATH = import_path.default.join(DATA_DIR, "orbita_dictionary.json");
-    try {
-      let dict = {};
-      if (import_fs.default.existsSync(DICT_PATH)) {
-        dict = JSON.parse(import_fs.default.readFileSync(DICT_PATH, "utf-8"));
-      }
-      const key = `keywords${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
-      if (!dict[key]) {
-        dict[key] = [];
-      }
-      const kw = palavra.toLowerCase().trim();
-      if (!dict[key].includes(kw)) {
-        dict[key].push(kw);
-        import_fs.default.writeFileSync(DICT_PATH, JSON.stringify(dict, null, 2), "utf-8");
-      }
-      return res.json({ success: true, message: `Express\xE3o '${kw}' aprendida com sucesso para ${tipo}!` });
-    } catch (err) {
-      console.error("Erro ao aprender nova palavra:", err);
-      return res.status(500).json({ error: "Falha ao salvar no dicion\xE1rio." });
     }
   });
   app.get("/api/rol-responsaveis", (req, res) => {
@@ -5356,10 +5525,10 @@ ${acordaoText.slice(0, 15e3)}`;
     app.use(vite.middlewares);
   } else {
     console.log("Starting server in PRODUCTION mode with compiled assets...");
-    const distPath = import_path.default.join(process.cwd(), "dist");
-    app.use(import_express.default.static(distPath));
+    const distPath = import_path2.default.join(process.cwd(), "dist");
+    app.use(import_express2.default.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(import_path.default.join(distPath, "index.html"));
+      res.sendFile(import_path2.default.join(distPath, "index.html"));
     });
   }
   const PORT = 3e3;

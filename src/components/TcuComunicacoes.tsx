@@ -303,6 +303,9 @@ export default function TcuComunicacoes({
     return 0; // Return 0 for invalid year, which will be filtered out
   };
 
+  // UI states
+  const [processErrors, setProcessErrors] = useState<{ id: string; error: string }[]>([]);
+
   // Pure sanitized memory collections to auto-repair previous session corruptions transparently
   const acordaos = React.useMemo(() => {
     const errors: { id: string; error: string }[] = [];
@@ -387,7 +390,7 @@ export default function TcuComunicacoes({
   };
 
   const tces = React.useMemo(() => {
-    return rawTces.map(t => ({
+    return (Array.isArray(rawTces) ? rawTces : []).map(t => ({
       ...t,
       MOTIVO_INSTAURACAO: sanitizePortugueseText(t.MOTIVO_INSTAURACAO),
       SUBMOTIVO_INSTAURACAO: sanitizePortugueseText(t.SUBMOTIVO_INSTAURACAO),
@@ -398,7 +401,7 @@ export default function TcuComunicacoes({
   }, [rawTces]);
 
   const comunicacoes = React.useMemo(() => {
-    return rawComunicacoes.map(c => ({
+    return (Array.isArray(rawComunicacoes) ? rawComunicacoes : []).map(c => ({
       ...c,
       DESTINATARIO: sanitizePortugueseText(c.DESTINATARIO),
       CONTATO: sanitizePortugueseText(c.CONTATO),
@@ -406,17 +409,9 @@ export default function TcuComunicacoes({
     }));
   }, [rawComunicacoes]);
   
-  // UI states
-  const [processErrors, setProcessErrors] = useState<{ id: string; error: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
-  React.useEffect(() => {
-    window.scrollTo({ top: 0 });
-    setCurrentPage(1);
-    setTceCurrentPage(1);
-    setComCurrentPage(1);
-  }, []);
 
   const [statusFilter, setStatusFilter] = useState("TODOS");
   const [colegiadoFilter, setColegiadoFilter] = useState("TODOS");
@@ -511,6 +506,12 @@ export default function TcuComunicacoes({
   const [editingTceItem, setEditingTceItem] = useState<TceDemand | null>(null);
   const [editTcePosicionamento, setEditTcePosicionamento] = useState("");
 
+  React.useEffect(() => {
+    window.scrollTo({ top: 0 });
+    setCurrentPage(1);
+    setTceCurrentPage(1);
+    setComCurrentPage(1);
+  }, []);
 
 
   // Robust and auto-detecting file decoding function that works with Windows-1252/ISO-8859-1 (standard for Brazilian gov exports) and UTF-8

@@ -1,5 +1,5 @@
 {
-  "yRTCiEQuIte_AjxIRa2cavE5mcy720N2": {
+  "dymEcffRteE1egOIENRjoclC7KlNZIoA": {
     "cookie": {
       "originalMaxAge": null,
       "expires": null,
@@ -17,6 +17,66 @@
       "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
       "badgeText": "AECI - ADMIN"
     },
-    "lastHeartbeat": 1784119710578
+    "lastHeartbeat": 1784120351083
+  },
+  "7QMufpfynp4Zo_fnJjLgfLnZtLDGfLug": {
+    "cookie": {
+      "originalMaxAge": null,
+      "expires": null,
+      "secure": false,
+      "httpOnly": true,
+      "path": "/"
+    },
+    "user": {
+      "id": "alessandro",
+      "name": "Alessandro Barbosa",
+      "role": "Analista de Controle Interno Especial",
+      "email": "alessandro@trabalho.gov.br",
+      "register": "Matrícula: 1792381",
+      "clearance": "ADMIN",
+      "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
+      "badgeText": "AECI - ADMIN"
+    },
+    "lastHeartbeat": 1784120538788
+  },
+  "AGSzMWUCz7Ja-3-hSJVxYuurl3kbZbcq": {
+    "cookie": {
+      "originalMaxAge": null,
+      "expires": null,
+      "secure": false,
+      "httpOnly": true,
+      "path": "/"
+    },
+    "user": {
+      "id": "alessandro",
+      "name": "Alessandro Barbosa",
+      "role": "Analista de Controle Interno Especial",
+      "email": "alessandro@trabalho.gov.br",
+      "register": "Matrícula: 1792381",
+      "clearance": "ADMIN",
+      "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
+      "badgeText": "AECI - ADMIN"
+    },
+    "lastHeartbeat": 1784121335476
+  },
+  "SSE3kTtg9UAReCsjOQojpsHIM-D0gCiB": {
+    "cookie": {
+      "originalMaxAge": null,
+      "expires": null,
+      "secure": false,
+      "httpOnly": true,
+      "path": "/"
+    },
+    "user": {
+      "id": "alessandro",
+      "name": "Alessandro Barbosa",
+      "role": "Analista de Controle Interno Especial",
+      "email": "alessandro@trabalho.gov.br",
+      "register": "Matrícula: 1792381",
+      "clearance": "ADMIN",
+      "avatarColor": "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
+      "badgeText": "AECI - ADMIN"
+    },
+    "lastHeartbeat": 1784121302625
   }
 }
