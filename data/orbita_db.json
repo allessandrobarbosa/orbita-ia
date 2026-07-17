@@ -132,8 +132,20 @@
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "15/07/2026, 14:23:22",
-      "aiAnalysisData": null
+      "ULTIMA_ATUALIZACAO": "16/07/2026, 09:03:50",
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": [
+          "reconhecer a ocorrência da prescrição das pretensões punitiva e ressarcitória",
+          "arquivar o presente processo"
+        ],
+        "recomendacoes": [
+          "comunicar esta deliberação aos responsáveis, ao Município de Rio Pardo-RS e ao Ministério do Trabalho e Emprego"
+        ],
+        "darCiencia": [],
+        "determinaArquivamento": false
+      },
+      "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
     },
     {
       "KEY": "AC-204-2025-2C",
@@ -664,16 +676,23 @@
       "ENTIDADE": " Ministério do Trabalho e Emprego.",
       "RELATOR": "AROLDO CEDRAZ",
       "UNIDADETECNICA": " Unidade de Auditoria Especializada em Tomada de Contas Especial (AudTCE).",
-      "ASSUNTO": "TOMADA DE CONTAS ESPECIAL. TCE instaurada pelo(a) Ministério do Trabalho e Emprego em razão de Não comprovação da regular aplicação dos recursos repassados pela União, Convênio 538087, firmado com o/a MINISTERIO DO TRABALHO E EMPREGO, Siafi/Siconv 538087, função null, que teve como objeto Execução do projeto Projovem Trabalhador - Juventude Cidadã, integrante do Programa Nacional de Inclusão de Jovens, no município de Recife - PE, de forma a qualificar social-profissionalmente 10.800 jovens do município. (nº da TCE no sistema: 2090/2023).",
-      "SUMARIO": "TOMADA DE CONTAS ESPECIAL. TCE instaurada pelo(a) Ministério do Trabalho e Emprego em razão de Não comprovação da regular aplicação dos recursos repassados pela União, Convênio 538087, firmado com o/a MINISTERIO DO TRABALHO E EMPREGO, Siafi/Siconv 538087, função null, que teve como objeto Execução do projeto Projovem Trabalhador - Juventude Cidadã, integrante do Programa Nacional de Inclusão de Jovens, no município de Recife - PE, de forma a qualificar social-profissionalmente 10.800 jovens do município. (nº da TCE no sistema: 2090/2023).",
-      "ACORDAO": "ACÓRDÃO Nº 694/2025 - TCU - Plenário\n\nConsiderando a edição da Resolução-TCU 344, de 11 de outubro de 2022, que regulamenta, no âmbito do Tribunal de Contas da União, a prescrição para o exercício das pretensões punitiva e de ressarcimento;\n\nConsiderando que, no caso concreto, conforme exame efetuado pela Unidade de Auditoria Especializada em Tomada de Contas Especial - AudTCE, com a anuência do Ministério Público junto ao TCU, verificou-se a ocorrência da prescrição sancionatória e ressarcitória a cargo do TCU.\n\nOs Ministros do Tribunal de Contas da União, quanto ao processo a seguir relacionado, ACORDAM, por unanimidade, com fundamento nos artigos 143, inciso V, alínea \"a\", e 169, inciso VI do Regimento Interno do TCU, e artigos 2º, 11 e 12, parágrafo único, da Resolução - TCU 344/2022, em determinar o arquivamento dos autos, em face da prescrição das pretensões punitiva e de ressarcimento, e dar ciência desta deliberação aos responsáveis, de acordo com os pareceres uniformes emitidos.\n\n1. Processo TC-019.823/2024-0 (TOMADA DE CONTAS ESPECIAL)\n\n1.1. Responsáveis: Joao Paulo Lima e Silva (XXX.931.374-XX); Maria Luiza Martins Alessio (XXX.706.494-XX).\n\n1.2. Órgão/Entidade: Ministério do Trabalho e Emprego.\n\n1.3. Relator: Ministro Aroldo Cedraz.\n\n1.4. Representante do Ministério Público: Procurador Marinus Eduardo De Vries Marsico.\n\n1.5. Unidade Técnica: Unidade de Auditoria Especializada em Tomada de Contas Especial (AudTCE).\n\n1.6. Representação legal: não há.\n\n1.7. Determinações/Recomendações/Orientações: não há.",
+      "ASSUNTO": "TOMADA DE CONTAS ESPECIAL. TCE instaurada pelo(a) Ministério do Trabalho e Emprego em razão de Não comprovação da regular aplicação dos recursos repassados pela União, Convênio 538087, firmado com o/a ministério DO TRABALHO E EMPREGO, Siafi/Siconv 538087, função null, que teve como objeto Execução do projeto Projovem Trabalhador - Juventude Cidadã, integrante do Programa Nacional de Inclusão de Jovens, no município de Recife - PE, de forma a qualificar social-profissionalmente 10.800 jovens do município. (nº da TCE no sistema: 2090/2023).",
+      "SUMARIO": "TOMADA DE CONTAS ESPECIAL. TCE instaurada pelo(a) Ministério do Trabalho e Emprego em razão de Não comprovação da regular aplicação dos recursos repassados pela União, Convênio 538087, firmado com o/a ministério DO TRABALHO E EMPREGO, Siafi/Siconv 538087, função null, que teve como objeto Execução do projeto Projovem Trabalhador - Juventude Cidadã, integrante do Programa Nacional de Inclusão de Jovens, no município de Recife - PE, de forma a qualificar social-profissionalmente 10.800 jovens do município. (nº da TCE no sistema: 2090/2023).",
+      "ACORDAO": "ACÓRDÃO Nº 694/2025 - TCU - Plenário\n\nConsiderando a edição da Resolução-TCU 344, de 11 de outubro de 2022, que regulamenta, no âmbito do Tribunal de Contas da União, a prescrição para o exercício das pretensões punitiva e de ressarcimento;\n\nConsiderando que, no caso concreto, conforme exame efetuado pela Unidade de Auditoria Especializada em Tomada de Contas Especial - AudTCE, com a anuência do Ministério Público junto ao TCU, verificou-se a ocorrência da prescrição sancionatória e ressarcitória a caórgão do TCU.\n\nOs Ministros do Tribunal de Contas da União, quanto ao processo a seguir relacionado, ACORDAM, por unanimidade, com fundamento nos artigos 143, inciso V, alínea \"a\", e 169, inciso VI do Regimento Interno do TCU, e artigos 2º, 11 e 12, parágrafo único, da Resolução - TCU 344/2022, em determinar o arquivamento dos autos, em face da prescrição das pretensões punitiva e de ressarcimento, e dar ciência desta deliberação aos responsáveis, de acordo com os pareceres uniformes emitidos.\n\n1. Processo TC-019.823/2024-0 (TOMADA DE CONTAS ESPECIAL)\n\n1.1. Responsáveis: Joao Paulo Lima e Silva (XXX.931.374-XX); Maria Luiza Martins Alessio (XXX.706.494-XX).\n\n1.2. Órgão/Entidade: Ministério do Trabalho e Emprego.\n\n1.3. Relator: Ministro Aroldo Cedraz.\n\n1.4. Representante do Ministério Público: Procurador Marinus Eduardo De Vries Marsico.\n\n1.5. Unidade Técnica: Unidade de Auditoria Especializada em Tomada de Contas Especial (AudTCE).\n\n1.6. Representação legal: não há.\n\n1.7. Determinações/Recomendações/Orientações: não há.",
       "DECISAO": "ACÓRDÃO Nº 694/2025 - TCU - Plenário\n\nConsiderando a edição da Resolução-TCU 344, de 11 de outubro de 2022, que regulamenta, no âmbito do Tribunal de Contas da União, a prescrição para o exercício das pretensões punitiva e de ressarcimento;\n\nConsiderando que, no caso concreto, conforme exame efetuado pela Unidade de Auditoria Especializada em Tomada de Contas Especial - AudTCE, com a anuência do Ministério Público junto ao TCU, verificou-se a ocorrência da prescrição sancionatória e ressarcitória a cargo do TCU.\n\nOs Ministros do Tribunal de Contas da União, quanto ao processo a seguir relacionado, ACORDAM, por unanimidade, com fundamento nos artigos 143, inciso V, alínea \"a\", e 169, inciso VI do Regimento Interno do TCU, e artigos 2º, 11 e 12, parágrafo único, da Resolução - TCU 344/2022, em determinar o arquivamento dos autos, em face da prescrição das pretensões punitiva e de ressarcimento, e dar ciência desta deliberação aos responsáveis, de acordo com os pareceres uniformes emitidos.\n\n1. Processo TC-019.823/2024-0 (TOMADA DE CONTAS ESPECIAL)\n\n1.1. Responsáveis: Joao Paulo Lima e Silva (XXX.931.374-XX); Maria Luiza Martins Alessio (XXX.706.494-XX).\n\n1.2. Órgão/Entidade: Ministério do Trabalho e Emprego.\n\n1.3. Relator: Ministro Aroldo Cedraz.\n\n1.4. Representante do Ministério Público: Procurador Marinus Eduardo De Vries Marsico.\n\n1.5. Unidade Técnica: Unidade de Auditoria Especializada em Tomada de Contas Especial (AudTCE).\n\n1.6. Representação legal: não há.\n\n1.7. Determinações/Recomendações/Orientações: não há.",
       "STATUS_MONITORAMENTO": "Pendente",
       "RESPONSAVEL_INTERNO": "AECI - Divisão de Monitoramento",
       "PRAZO_LIMITE": "",
       "OBSERVACOES": "Importado via Sincronização Local do TCU. Nenhum prazo de ação obrigatório foi estipulado no inteiro teor.",
-      "ULTIMA_ATUALIZACAO": "15/07/2026, 14:23:18",
-      "aiAnalysisData": null
+      "ULTIMA_ATUALIZACAO": "16/07/2026, 09:08:40",
+      "aiAnalysisData": {
+        "dossieRessarcimento": [],
+        "determinacoes": "Não há",
+        "recomendacoes": "Não há",
+        "darCiencia": [],
+        "determinaArquivamento": false
+      },
+      "RECOMENDACOES_DETERMINACOES_UNIFICADO": "Nenhuma recomendação ou determinação registrada."
     },
     {
       "KEY": "AC-739-2025-PL",

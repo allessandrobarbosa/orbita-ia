@@ -352,14 +352,28 @@ export default function RolModule() {
   const saveDirigente = async () => {
     setBusy(true);
     try {
-      await apiFetch(
+      // 1. Salva ou atualiza a Pessoa (Dirigente)
+      const resDirigente = await apiFetch(
         isEdit ? "PUT" : "POST",
         isEdit ? `/api/dirigentes/${editD.id}` : "/api/dirigentes",
         editD
       );
+      const savedDirigente = await resDirigente.json();
+
+      // 2. Se for um NOVO dirigente, e o usuário preencheu a unidade do cargo inicial, salva o vínculo
+      if (!isEdit && editC.unidadeId && editC.cargo) {
+        const payloadCargo = {
+          ...editC,
+          dirigenteId: savedDirigente.id, // Amarra com a pessoa recém-criada
+          tipoVinculo: editC.tipoVinculo || "Titular",
+          status: "Ativo"
+        };
+        await apiFetch("POST", "/api/dirigentes/cargos", payloadCargo);
+      }
+
       await fetchAll();
       closeModal();
-      showToast(isEdit ? "Dirigente atualizado!" : "Dirigente cadastrado!");
+      showToast(isEdit ? "Dirigente atualizado!" : "Dirigente e Vínculo cadastrados com sucesso!");
     } catch {
       showToast("Erro ao salvar.", false);
     } finally {
@@ -1157,49 +1171,132 @@ export default function RolModule() {
 
       {modal === "dirigente" && (
         <Modal
-          title={isEdit ? "Editar Dirigente" : "Novo Dirigente"}
+          title={isEdit ? "Editar Dirigente" : "Cadastrar Dirigente e Vínculo"}
           onClose={closeModal}
+          wide={!isEdit}
         >
-          <Field label="Nome completo (maiúsculas)">
-            <input
-              className={inp}
-              placeholder="NOME COMPLETO"
-              value={editD.nome || ""}
-              onChange={(e) =>
-                setEditD((p) => ({ ...p, nome: e.target.value.toUpperCase() }))
-              }
-            />
-          </Field>
-          <Field label="CPF">
-            <input
-              className={inp}
-              placeholder="000.000.000-00"
-              value={editD.cpf || ""}
-              onChange={(e) => setEditD((p) => ({ ...p, cpf: e.target.value }))}
-            />
-          </Field>
-          <Field label="E-mail institucional">
-            <input
-              className={inp}
-              placeholder="nome@trabalho.gov.br"
-              type="email"
-              value={editD.email || ""}
-              onChange={(e) => setEditD((p) => ({ ...p, email: e.target.value }))}
-            />
-          </Field>
-          <Field label="Status">
-            <select
-              className={inp}
-              value={editD.status || "Ativo"}
-              onChange={(e) =>
-                setEditD((p) => ({ ...p, status: e.target.value as any }))
-              }
-            >
-              <option value="Ativo">Ativo</option>
-              <option value="Inativo">Inativo</option>
-            </select>
-          </Field>
-          <div className="flex gap-3 pt-2 border-t border-slate-100">
+          {!isEdit && (
+            <div className="p-3 mb-4 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-700 font-medium">
+              Preencha os dados pessoais abaixo e o vínculo estrutural inicial. Férias e licenças devem ser cadastradas depois, na aba de Afastamentos.
+            </div>
+          )}
+
+          {/* DADOS DA PESSOA */}
+          <div className="text-sm font-black text-slate-800 mb-3 uppercase border-b border-slate-100 pb-1">
+            Dados Pessoais
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <Field label="Nome completo (maiúsculas)">
+              <input
+                className={inp}
+                placeholder="NOME COMPLETO"
+                value={editD.nome || ""}
+                onChange={(e) =>
+                  setEditD((p) => ({ ...p, nome: e.target.value.toUpperCase() }))
+                }
+              />
+            </Field>
+            <Field label="CPF">
+              <input
+                className={inp}
+                placeholder="000.000.000-00"
+                value={editD.cpf || ""}
+                onChange={(e) => setEditD((p) => ({ ...p, cpf: e.target.value }))}
+              />
+            </Field>
+            <Field label="E-mail institucional">
+              <input
+                className={inp}
+                placeholder="nome@trabalho.gov.br"
+                type="email"
+                value={editD.email || ""}
+                onChange={(e) => setEditD((p) => ({ ...p, email: e.target.value }))}
+              />
+            </Field>
+            <Field label="Status da Pessoa">
+              <select
+                className={inp}
+                value={editD.status || "Ativo"}
+                onChange={(e) =>
+                  setEditD((p) => ({ ...p, status: e.target.value as any }))
+                }
+              >
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+              </select>
+            </Field>
+          </div>
+
+          {/* DADOS DO VÍNCULO (APENAS NA CRIAÇÃO) */}
+          {!isEdit && (
+            <>
+              <div className="text-sm font-black text-slate-800 mb-3 uppercase border-b border-slate-100 pb-1 mt-4">
+                Vínculo Inicial (Estrutural)
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                <Field label="Unidade">
+                  <select
+                    className={inp}
+                    value={editC.unidadeId || ""}
+                    onChange={(e) =>
+                      setEditC((p) => ({ ...p, unidadeId: e.target.value }))
+                    }
+                  >
+                    <option value="">Selecione...</option>
+                    {unidades.map((u) => (
+                      <option key={u.id} value={u.id}>{u.sigla} — {u.nome}</option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Cargo / Função">
+                  <input
+                    className={inp}
+                    placeholder="Ex: Secretário de Inspeção do Trabalho"
+                    value={editC.cargo || ""}
+                    onChange={(e) => setEditC((p) => ({ ...p, cargo: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Tipo de Vínculo">
+                  <select
+                    className={inp}
+                    value={editC.tipoVinculo || "Titular"}
+                    onChange={(e) =>
+                      setEditC((p) => ({ ...p, tipoVinculo: e.target.value as any }))
+                    }
+                  >
+                    <option value="Titular">Titular</option>
+                    <option value="Substituto Legal">Substituto Legal</option>
+                  </select>
+                </Field>
+                <Field label="Ato de Nomeação (link/texto)">
+                  <input
+                    className={inp}
+                    placeholder="Ex: Portaria nº 123, de 01/01/2023"
+                    value={editC.atoNomeacao || ""}
+                    onChange={(e) => setEditC((p) => ({ ...p, atoNomeacao: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Início do Exercício">
+                  <input
+                    type="date"
+                    className={inp}
+                    value={editC.inicioExercicio || ""}
+                    onChange={(e) => setEditC((p) => ({ ...p, inicioExercicio: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Fim do Exercício (Opcional)">
+                  <input
+                    type="date"
+                    className={inp}
+                    value={editC.fimExercicio || ""}
+                    onChange={(e) => setEditC((p) => ({ ...p, fimExercicio: e.target.value || undefined }))}
+                  />
+                </Field>
+              </div>
+            </>
+          )}
+
+          <div className="flex gap-3 pt-2 border-t border-slate-100 mt-2">
             <button
               onClick={closeModal}
               className="flex-1 py-2 rounded-xl border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50"
@@ -1208,10 +1305,16 @@ export default function RolModule() {
             </button>
             <button
               onClick={saveDirigente}
-              disabled={busy || !editD.nome || !editD.cpf || !editD.email}
+              disabled={
+                busy ||
+                !editD.nome ||
+                !editD.cpf ||
+                !editD.email ||
+                (!isEdit && (!editC.unidadeId || !editC.cargo || !editC.inicioExercicio))
+              }
               className="flex-1 py-2 rounded-xl text-sm font-black text-white bg-[#003366] hover:bg-slate-900 disabled:opacity-50"
             >
-              {busy ? "Salvando..." : isEdit ? "Salvar" : "Cadastrar"}
+              {busy ? "Salvando..." : isEdit ? "Salvar" : "Cadastrar Dirigente e Vínculo"}
             </button>
           </div>
         </Modal>

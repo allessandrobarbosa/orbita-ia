@@ -110,7 +110,7 @@ A plataforma tem como missao prover instrumentos tecnologicos que permitam a AEC
 +------------------------------------------------------------+
 |               SERVIDOR (Node.js / TSX)                    |
 |  Express.js REST API + Vite Dev Server + Session Store     |
-|  server.ts (monolitico - 3.815 linhas, 149 KB)            |
+|  server.ts (monolitico, 4.491 linhas, 183 KB)             |
 |  +-- Auth Routes   (/api/auth/*)                          |
 |  +-- TCU Routes    (/api/acordaos/*)                      |
 |  +-- CGU Routes    (/api/cgu/*)                           |
@@ -119,15 +119,16 @@ A plataforma tem como missao prover instrumentos tecnologicos que permitam a AEC
 |  +-- SRTE Routes   (/api/srte/*, /api/contratos/*)        |
 |  +-- AI Routes     (/api/ai/*)                            |
 |  +-- Admin Routes  (/api/admin/*)                         |
+|  +-- Webhooks      (/api/webhooks/importacao)             |
 |  Persistencia: data/orbita_db.json + data/sessions.json   |
 +------------------------------------------------------------+
-             |                        |
-             v                        v
-+--------------------+   +-----------------------------+
-| API TCU (externa)  |   | API Google Gemini (externa) |
-| pesquisa.apps.tcu  |   | @google/genai v2.4.0        |
-| .gov.br/rest/      |   | gemini-2.5-flash            |
-+--------------------+   +-----------------------------+
+             |                        |                 ^
+             v                        v                 | (POST Webhooks)
++--------------------+   +-----------------------------+ +-------------------+
+| API TCU (externa)  |   | API Google Gemini (externa) | | n8n (Docker) /    |
+| pesquisa.apps.tcu  |   | @google/genai v2.4.0        | | Power Automate    |
+| .gov.br/rest/      |   | gemini-2.5-flash            | | SIAFI & RPA       |
++--------------------+   +-----------------------------+ +-------------------+
 ```
 
 ### 3.2 Padrao Arquitetural
@@ -158,6 +159,7 @@ O sistema adota o padrao **BFF (Backend for Frontend)**:
 | Backend | dotenv | 17.2.3 | Variaveis de ambiente |
 | Banco de Dados | JSON (orbita_db.json) | N/A | Persistencia principal |
 | Banco de Dados | SQLite3 | 6.0.1 | Suporte alternativo de persistencia |
+| Automação RPA | n8n | latest (Docker) | Orquestração de rotinas e leitura de e-mails SIAFI |
 | IA | @google/genai | 2.4.0 | Integracao com Google Gemini |
 | Dados | XLSX | 0.18.5 | Importacao e exportacao de planilhas |
 | Build | esbuild | 0.25.0 | Empacotamento do servidor para producao |

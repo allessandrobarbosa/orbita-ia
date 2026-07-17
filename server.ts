@@ -1674,6 +1674,55 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Webhook para Automação (n8n, Power Automate) recebendo dados SIAFI/TCU
+  app.post("/api/webhooks/importacao", (req, res) => {
+    const apiKey = req.headers["x-api-key"];
+    // Em produção, usar process.env.WEBHOOK_API_KEY
+    if (apiKey !== process.env.WEBHOOK_API_KEY && apiKey !== "orbita-default-webhook-key") {
+      return res.status(401).json({ error: "Acesso não autorizado. Chave de API inválida." });
+    }
+
+    const { tipo, dados } = req.body;
+    if (!tipo || !dados || !Array.isArray(dados)) {
+      return res.status(400).json({ error: "Payload inválido. Esperado 'tipo' e 'dados' (array)." });
+    }
+
+    const db = loadDatabase();
+    let processados = 0;
+
+    if (tipo === "SIAFI") {
+      if (!db.tces) db.tces = [];
+      for (const item of dados) {
+        const tceIdx = db.tces.findIndex((t: any) => 
+          (item.processo && typeof t.NUMERO_ANO_TCE === 'string' && t.NUMERO_ANO_TCE.includes(item.processo)) || 
+          (item.cpf_cnpj && typeof t.CPF_CNPJ === 'string' && t.CPF_CNPJ.includes(item.cpf_cnpj))
+        );
+
+        if (tceIdx >= 0) {
+          db.tces[tceIdx].STATUS_TCE = "Cumprido";
+          db.tces[tceIdx].OBSERVACOES = `[Atualização Automática SIAFI]: Pagamento identificado no valor de ${item.valor || 'N/A'} em ${item.data || 'N/A'}.`;
+          processados++;
+        }
+      }
+    } else if (tipo === "TCU_ACORDAOS") {
+      if (!db.acordaos) db.acordaos = [];
+      for (const item of dados) {
+        const idx = db.acordaos.findIndex((a: any) => a.KEY === item.KEY);
+        if (idx >= 0) {
+          db.acordaos[idx] = { ...db.acordaos[idx], ...item };
+        } else {
+          db.acordaos.unshift(item);
+        }
+        processados++;
+      }
+    } else {
+      return res.status(400).json({ error: `Tipo de importação '${tipo}' não suportado.` });
+    }
+
+    saveDatabase(db);
+    return res.json({ success: true, message: `Webhook processado com sucesso. Itens processados: ${processados}` });
+  });
+
   app.post("/api/tces/import", (req, res) => {
     const db = loadDatabase();
     const { items } = req.body; // array of TceDemand

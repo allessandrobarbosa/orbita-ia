@@ -1423,14 +1423,17 @@ export default function TcuMonitoramento({
           updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
         }
         
-        await fetch("/api/acordaos/update", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updatedAc)
-        });
+        if (onUpdateAcordao) {
+          await onUpdateAcordao(updatedAc);
+        } else {
+          await fetch("/api/acordaos/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedAc)
+          });
+        }
         
         alert("Dossiê gerado com sucesso!");
-        window.location.reload(); // Simple reload to refresh all data seamlessly
       } else {
         alert("Falha ao gerar dossiê: " + data.error);
       }
