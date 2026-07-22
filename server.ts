@@ -13,6 +13,7 @@ import session from "express-session";
 import pg from "pg";
 
 import comunicacoesRoutes from "./src/backend/routes/comunicacoesRoutes.js";
+import rolRoutes from "./src/backend/routes/rolRoutes.js";
 import { pool } from "./src/backend/db";
 // Load environment variables
 dotenv.config();
@@ -3228,42 +3229,7 @@ ${acordaoText.slice(0, 15000)}`;
 
 
 // API 4: Rol de Responsáveis - GET & CRUD
-  app.get("/api/rol-responsaveis", (req, res) => {
-    const db = loadDatabase();
-    res.json(db.rolResponsaveis);
-  });
-
-  app.post("/api/rol-responsaveis", (req, res) => {
-    const db = loadDatabase();
-    const newItem = req.body as RolResponsavel;
-    newItem.id = "R-" + Date.now();
-    db.rolResponsaveis.unshift(newItem);
-    saveDatabase(db);
-    res.status(201).json(newItem);
-  });
-
-  app.put("/api/rol-responsaveis/:id", (req, res) => {
-    const db = loadDatabase();
-    const id = req.params.id;
-    const updateData = req.body;
-    const index = db.rolResponsaveis.findIndex((x: any) => x.id === id);
-
-    if (index >= 0) {
-      db.rolResponsaveis[index] = { ...db.rolResponsaveis[index], ...updateData };
-      saveDatabase(db);
-      res.json(db.rolResponsaveis[index]);
-    } else {
-      res.status(404).json({ error: "Responsável não encontrado." });
-    }
-  });
-
-  app.delete("/api/rol-responsaveis/:id", (req, res) => {
-    const db = loadDatabase();
-    const id = req.params.id;
-    db.rolResponsaveis = db.rolResponsaveis.filter((x: any) => x.id !== id);
-    saveDatabase(db);
-    res.json({ success: true });
-  });
+  app.use("/api/rol", rolRoutes);
 
   // API 5: Comissão de Ética - GET & CRUD
   app.get("/api/comissao-etica", (req, res) => {
