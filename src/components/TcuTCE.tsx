@@ -2286,16 +2286,16 @@ export default function TcuTCE({
                 {/* TCE GENERAL LISTING TABLE */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
                   <table className="w-full text-left border-collapse table-auto text-xs min-w-[900px]">
-                    <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
-                      <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
-                        <th className="px-4 py-3 w-8 no-print bg-slate-100"></th>
-                        <th className="px-5 py-3 bg-slate-100">Nº / Ano (TCE)</th>
-                        <th className="px-4 py-3 bg-slate-100">Processo TCU</th>
-                        <th className="px-4 py-3 bg-slate-100">Assunto / Motivo da Instauração</th>
-                        <th className="px-4 py-3 bg-slate-100 text-right">Débito Atualizado</th>
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                        <th className="p-4 w-8 no-print bg-slate-50"></th>
+                        <th className="p-4 bg-slate-50">Nº / Ano (TCE)</th>
+                        <th className="p-4 bg-slate-50">Processo TCU</th>
+                        <th className="p-4 bg-slate-50">Assunto / Motivo da Instauração</th>
+                        <th className="p-4 text-right bg-slate-50">Débito Atualizado</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 text-xs">
                       {filteredTces.length === 0 ? (
                         <tr>
                           <td colSpan={5} className="text-center py-12 text-slate-400 font-sans">
@@ -2420,18 +2420,18 @@ export default function TcuTCE({
                 {/* MAPPED WITH ACORDAOS VIEW */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
                   <table className="w-full text-left border-collapse table-auto text-xs min-w-[1100px]">
-                    <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
-                      <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
-                        <th className="px-4 py-3 w-8 no-print bg-slate-100"></th>
-                        <th className="px-5 py-3 bg-slate-100">Nº TCE</th>
-                        <th className="px-4 py-3 bg-slate-100 font-sans">Processo TCU / Motivo</th>
-                        <th className="px-4 py-3 bg-slate-100">Acórdão Mapeado (Referência)</th>
-                        <th className="px-4 py-3 bg-slate-100">Chave Base Recente</th>
-                        <th className="px-4 py-3 bg-slate-100 text-center">Status Cruzamento</th>
-                        <th className="px-4 py-3 bg-slate-100 pr-6">Colegiado / Data Sessão</th>
+                    <thead className="sticky top-0 z-10">
+                      <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                        <th className="p-4 w-8 no-print bg-slate-50"></th>
+                        <th className="p-4 bg-slate-50">Nº TCE</th>
+                        <th className="p-4 font-sans bg-slate-50">Processo TCU / Motivo</th>
+                        <th className="p-4 bg-slate-50">Acórdão Mapeado (Referência)</th>
+                        <th className="p-4 bg-slate-50">Chave Base Recente</th>
+                        <th className="p-4 text-center bg-slate-50">Status Cruzamento</th>
+                        <th className="p-4 pr-6 bg-slate-50">Colegiado / Data Sessão</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 text-xs">
                       {filteredMappings.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="text-center py-12 text-slate-400 font-sans">

@@ -2399,18 +2399,18 @@ export default function TcuComunicacoes({
 
                     {/* Highly Formatted Scrollable list table - SCROLLABLE WITHOUT PAGES */}
                     <div className="overflow-y-auto max-h-[500px] rounded-xl border border-slate-200 mt-4 bg-slate-50/20">
-                      <table className="w-full text-left border-collapse text-[10.5px] table-auto">
-                        <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs font-mono text-[8px] uppercase tracking-wider text-slate-500">
-                          <tr>
-                            <th className="p-2.5 font-extrabold bg-slate-100 w-10 text-center no-print"></th>
-                            <th className="p-2.5 font-extrabold bg-slate-100">Ofício / Comunicação</th>
-                            <th className="p-2.5 font-extrabold bg-slate-100">Destinatário MTE</th>
-                            <th className="p-2.5 font-extrabold bg-slate-100 text-center">Processo</th>
-                            <th className="p-2.5 font-extrabold bg-slate-100 text-center">Expedição</th>
-                            <th className="p-2.5 font-extrabold bg-slate-100 text-center">Situação</th>
+                      <table className="w-full text-left border-collapse text-xs table-auto min-w-[1000px]">
+                        <thead className="sticky top-0 z-10">
+                          <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                            <th className="p-4 text-center no-print bg-slate-50 w-10"></th>
+                            <th className="p-4 bg-slate-50">Ofício / Comunicação</th>
+                            <th className="p-4 bg-slate-50">Destinatário MTE</th>
+                            <th className="p-4 text-center bg-slate-50">Processo</th>
+                            <th className="p-4 text-center bg-slate-50">Expedição</th>
+                            <th className="p-4 text-center bg-slate-50">Situação</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 bg-white">
+                        <tbody className="divide-y divide-slate-100 text-xs">
                           {finalFiltered.length === 0 ? (
                             <tr>
                               <td colSpan={6} className="p-16 text-center text-slate-400 space-y-2">
@@ -2449,7 +2449,7 @@ export default function TcuComunicacoes({
                                   <tr className={`hover:bg-blue-50/15 border-b border-slate-100 transition duration-100 ${isExpanded ? "bg-slate-50/50" : ""}`}>
                                     
                                     {/* Expand toggle icon */}
-                                    <td className="p-2.5 text-center no-print">
+                                    <td className="p-4 text-center no-print">
                                       <button 
                                         onClick={() => setComExpandedRow(isExpanded ? null : item.KEY)}
                                         className="text-slate-400 hover:text-[#003366] hover:bg-slate-100 p-1.5 rounded-lg transition"
@@ -2459,7 +2459,7 @@ export default function TcuComunicacoes({
                                     </td>
 
                                     {/* Ofício/Comunicação */}
-                                    <td className="p-2.5 font-bold text-[#003366]">
+                                    <td className="p-4 font-bold text-[#003366]">
                                       <span 
                                         className="cursor-pointer hover:underline text-xs"
                                         onClick={() => setComExpandedRow(isExpanded ? null : item.KEY)}
@@ -2469,22 +2469,22 @@ export default function TcuComunicacoes({
                                     </td>
 
                                     {/* Destinatário */}
-                                    <td className="p-2.5 font-semibold text-slate-800 truncate max-w-[280px]" title={item.DESTINATARIO}>
+                                    <td className="p-4 font-semibold text-slate-800 truncate max-w-[280px]" title={item.DESTINATARIO}>
                                       {item.DESTINATARIO}
                                     </td>
 
                                     {/* Processo */}
-                                    <td className="p-2.5 font-mono text-[10px] text-slate-600 text-center whitespace-nowrap">
+                                    <td className="p-4 font-mono text-[10px] text-slate-600 text-center whitespace-nowrap">
                                       {item.PROCESSO || <span className="text-slate-350 italic">Não associado</span>}
                                     </td>
 
                                     {/* Expedição */}
-                                    <td className="p-2.5 text-slate-500 text-center whitespace-nowrap font-mono font-medium">
+                                    <td className="p-4 text-slate-500 text-center whitespace-nowrap font-mono font-medium">
                                       {item.DATA_EXPEDICAO}
                                     </td>
 
                                     {/* Situação */}
-                                    <td className="p-2.5 text-center whitespace-nowrap">
+                                    <td className="p-4 text-center whitespace-nowrap">
                                       <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 border ${situacaoStyle}`}>
                                         <span className={`w-1 h-1 rounded-full ${dotStyle}`} />
                                         {situacaoText}

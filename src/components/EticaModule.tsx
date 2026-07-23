@@ -719,11 +719,15 @@ export default function EticaModule({
       <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
           <div>
-            <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-              <ShieldAlert className="w-6 h-6 text-[#003366]" />
-              Comissão de Ética — ÉTICA
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Gerenciamento ágil de membros, mandatos, reuniões de pauta, atas oficiais e SLAs de conduta pública</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/20 text-white shrink-0">
+                <ShieldAlert size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Comissão de Ética — ÉTICA</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Gerenciamento ágil de membros, mandatos, reuniões de pauta, atas oficiais e SLAs de conduta pública</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1559,17 +1563,17 @@ export default function EticaModule({
           {/* Processes Grid or Table depending on subtab */}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
             <table className="w-full text-xs text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 font-display">
-                  <th className="px-4 py-3">Processo SEI</th>
-                  <th className="px-4 py-3">Início</th>
-                  {processoTipoSubTab === "SECI" && <th className="px-4 py-3">SLA (20 dias)</th>}
-                  {processoTipoSubTab === "Consulta" && <th className="px-4 py-3">Solicitante</th>}
-                  <th className="px-4 py-3">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                  <th className="p-4 bg-slate-50">Processo SEI</th>
+                  <th className="p-4 bg-slate-50">Início</th>
+                  {processoTipoSubTab === "SECI" && <th className="p-4 bg-slate-50">SLA (20 dias)</th>}
+                  {processoTipoSubTab === "Consulta" && <th className="p-4 bg-slate-50">Solicitante</th>}
+                  <th className="p-4 bg-slate-50">
                     {processoTipoSubTab === "SECI" ? "Responsável/Relator" : "Assunto / Resumo"}
                   </th>
-                  <th className="px-4 py-3">Situação</th>
-                  <th className="px-4 py-3 text-center">Ações</th>
+                  <th className="p-4 bg-slate-50">Situação</th>
+                  <th className="p-4 text-center bg-slate-50">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -1584,18 +1588,18 @@ export default function EticaModule({
                     const sla = calculateSeciSLA(p);
                     return (
                       <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3.5">
+                        <td className="p-4.5">
                           <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                             {p.processoSei}
                           </span>
                         </td>
-                        <td className="px-4 py-3.5 text-slate-500 font-mono">
+                        <td className="p-4.5 text-slate-500 font-mono">
                           {formatDate(p.dataInicio)}
                         </td>
 
                         {/* SECI SLA Column */}
                         {processoTipoSubTab === "SECI" && (
-                          <td className="px-4 py-3.5">
+                          <td className="p-4.5">
                             {sla.isCompleted ? (
                               <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-bold border">
                                 Concluído
@@ -1619,13 +1623,13 @@ export default function EticaModule({
 
                         {/* Consultas Solicitante Column */}
                         {processoTipoSubTab === "Consulta" && (
-                          <td className="px-4 py-3.5 text-slate-700 font-semibold truncate max-w-[200px]">
+                          <td className="p-4.5 text-slate-700 font-semibold truncate max-w-[200px]">
                             {p.solicitante || "-"}
                           </td>
                         )}
 
                         {/* Dynamic Description / Relator Column */}
-                        <td className="px-4 py-3.5 max-w-[320px] truncate text-slate-600">
+                        <td className="p-4.5 max-w-[320px] truncate text-slate-600">
                           {p.tipo === "SECI" ? (
                             <span className="font-bold text-slate-800">{p.responsavel || "Não designado"}</span>
                           ) : (

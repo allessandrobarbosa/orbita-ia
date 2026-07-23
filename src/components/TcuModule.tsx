@@ -48,11 +48,15 @@ export default function TcuModule(props: TcuModuleProps) {
       <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
           <div>
-            <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-              <Landmark className="w-6 h-6 text-[#003366]" />
-              Tribunal de Contas da União — TCU
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/20 text-white shrink-0">
+                <Landmark size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Tribunal de Contas da União — TCU</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

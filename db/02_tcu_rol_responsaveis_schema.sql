@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS unidades (
     sigla TEXT NOT NULL,
     nome TEXT NOT NULL,
     id_unidade_pai INTEGER REFERENCES unidades(id_unidade),
+    ato_criacao_alteracao TEXT,
     ativo BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -133,6 +134,7 @@ CREATE TABLE IF NOT EXISTS afastamentos (
     motivo TEXT NOT NULL,
     data_inicio DATE NOT NULL,
     data_fim DATE NOT NULL,
+    ato_autorizacao TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_datas_afastamento CHECK (data_fim >= data_inicio)
 );

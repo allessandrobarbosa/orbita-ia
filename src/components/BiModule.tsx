@@ -367,26 +367,20 @@ export default function BiModule({
     <div className="font-sans space-y-6">
       
       {/* Module Title Header area with futuristic theme */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 shadow-sm no-print relative overflow-hidden flex flex-col md:flex-row gap-5 justify-between items-center">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full -mr-24 -mt-24 pointer-events-none opacity-50"></div>
-        
-        <div className="space-y-1.5 text-center md:text-left">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-            <span className="bg-indigo-900 text-white font-extrabold text-[8px] uppercase tracking-widest px-2 py-0.5 rounded-md flex items-center gap-1">
-              <BrainCircuit className="w-2.5 h-2.5" /> ESTADO DE CONFORMIDADE ATIVA IND 84
-            </span>
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm flex flex-col md:flex-row gap-5 justify-between items-center no-print">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/20 text-white shrink-0">
+            <BrainCircuit size={20} strokeWidth={2.5} />
           </div>
-          <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center justify-center md:justify-start gap-1.5">
-            <span>Módulo de Estatísticas Gerais & IA Preditiva</span>
-          </h2>
-          <p className="text-xs text-slate-500">
-            Painel de Business Intelligence (BI), cruzamento de dados públicos e inteligência preditiva para mitigação de riscos regulatórios no MTE.
-          </p>
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Estatísticas Gerais & IA Preditiva</h1>
+            <p className="text-sm text-slate-500 font-medium mt-1">Painel de Business Intelligence (BI), cruzamento de dados públicos e inteligência preditiva.</p>
+          </div>
         </div>
 
         <button 
           onClick={() => window.print()}
-          className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs px-4 py-2 border border-slate-200 rounded-xl flex items-center gap-1.5 transition active:scale-95 shrink-0"
+          className="bg-white hover:bg-slate-50 text-slate-800 font-extrabold text-xs px-4 py-2 border border-slate-200 rounded-xl flex items-center gap-1.5 transition active:scale-95 shrink-0"
         >
           Imprimir Estatísticas
         </button>

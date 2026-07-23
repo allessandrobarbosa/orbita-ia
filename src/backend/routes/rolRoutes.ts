@@ -51,10 +51,10 @@ router.get("/unidades", async (req, res) => {
 
 router.post("/unidades", async (req, res) => {
   try {
-    const { id_unidade_pai, sigla, nome } = req.body;
+    const { id_unidade_pai, sigla, nome, ato_criacao_alteracao } = req.body;
     const result = await pool.query(
-      'INSERT INTO unidades (id_unidade_pai, sigla, nome) VALUES ($1, $2, $3) RETURNING *',
-      [id_unidade_pai || null, sigla, nome]
+      'INSERT INTO unidades (id_unidade_pai, sigla, nome, ato_criacao_alteracao) VALUES ($1, $2, $3, $4) RETURNING *',
+      [id_unidade_pai || null, sigla, nome, ato_criacao_alteracao || null]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -64,10 +64,10 @@ router.post("/unidades", async (req, res) => {
 
 router.put("/unidades/:id", async (req, res) => {
   try {
-    const { id_unidade_pai, sigla, nome } = req.body;
+    const { id_unidade_pai, sigla, nome, ato_criacao_alteracao } = req.body;
     const result = await pool.query(
-      'UPDATE unidades SET id_unidade_pai = $1, sigla = $2, nome = $3 WHERE id_unidade = $4 RETURNING *',
-      [id_unidade_pai || null, sigla, nome, req.params.id]
+      'UPDATE unidades SET id_unidade_pai = $1, sigla = $2, nome = $3, ato_criacao_alteracao = $4 WHERE id_unidade = $5 RETURNING *',
+      [id_unidade_pai || null, sigla, nome, ato_criacao_alteracao || null, req.params.id]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -202,15 +202,15 @@ router.post("/afastamentos", async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const { id_mandato, motivo, data_inicio, data_fim, id_designacao } = req.body;
+    const { id_mandato, motivo, data_inicio, data_fim, id_designacao, ato_autorizacao } = req.body;
     
     // Extrai o ID numérico se vier do frontend como 'T_123' ou 'S_456'
     const id_mandato_num = typeof id_mandato === 'string' ? id_mandato.split('_')[1] : id_mandato;
     const id_designacao_num = typeof id_designacao === 'string' ? id_designacao.split('_')[1] : id_designacao;
 
     const result = await client.query(
-      'INSERT INTO afastamentos (id_mandato, motivo, data_inicio, data_fim) VALUES ($1, $2, $3, $4) RETURNING *',
-      [id_mandato_num, motivo, data_inicio, data_fim || null]
+      'INSERT INTO afastamentos (id_mandato, motivo, data_inicio, data_fim, ato_autorizacao) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [id_mandato_num, motivo, data_inicio, data_fim || null, ato_autorizacao || null]
     );
     const novoAfastamento = result.rows[0];
 
@@ -236,15 +236,15 @@ router.put("/afastamentos/:id", async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const { id_mandato, motivo, data_inicio, data_fim, id_designacao } = req.body;
+    const { id_mandato, motivo, data_inicio, data_fim, id_designacao, ato_autorizacao } = req.body;
     const id_afastamento = req.params.id;
     
     const id_mandato_num = typeof id_mandato === 'string' ? id_mandato.split('_')[1] : id_mandato;
     const id_designacao_num = typeof id_designacao === 'string' ? id_designacao.split('_')[1] : id_designacao;
 
     const result = await client.query(
-      'UPDATE afastamentos SET id_mandato = $1, motivo = $2, data_inicio = $3, data_fim = $4 WHERE id_afastamento = $5 RETURNING *',
-      [id_mandato_num, motivo, data_inicio, data_fim || null, id_afastamento]
+      'UPDATE afastamentos SET id_mandato = $1, motivo = $2, data_inicio = $3, data_fim = $4, ato_autorizacao = $5 WHERE id_afastamento = $6 RETURNING *',
+      [id_mandato_num, motivo, data_inicio, data_fim || null, ato_autorizacao || null, id_afastamento]
     );
 
     // Atualiza ou insere o exercicio_substituicao
@@ -274,16 +274,31 @@ router.post("/dirigentes", async (req, res) => {
     await client.query("BEGIN");
     const { nome_completo, cpf, email, id_cargo, id_unidade, data_inicio, data_fim, is_substituto, ato_nomeacao, ato_exoneracao } = req.body;
     
+    // Validação de Negócio: Cargo e Unidade são obrigatórios
+    if (!id_cargo || !id_unidade) {
+      throw new Error("Cargo e Unidade são obrigatórios para registrar um dirigente.");
+    }
+
     // 1. Check or Create Pessoa
     let id_pessoa;
-    const pCheck = await client.query('SELECT id_pessoa FROM pessoas WHERE cpf = $1', [cpf]);
-    if (pCheck.rows.length > 0) {
-      id_pessoa = pCheck.rows[0].id_pessoa;
-      await client.query('UPDATE pessoas SET nome_completo = $1, email = $2 WHERE id_pessoa = $3', [nome_completo, email, id_pessoa]);
+    // Só tenta mesclar se o CPF for válido (evita mesclar todas as pessoas sem CPF num único registro)
+    if (cpf && cpf.trim() !== '') {
+      const pCheck = await client.query('SELECT id_pessoa FROM pessoas WHERE cpf = $1', [cpf]);
+      if (pCheck.rows.length > 0) {
+        id_pessoa = pCheck.rows[0].id_pessoa;
+        await client.query('UPDATE pessoas SET nome_completo = $1, email = $2 WHERE id_pessoa = $3', [nome_completo, email, id_pessoa]);
+      } else {
+        const pInsert = await client.query(
+          'INSERT INTO pessoas (nome_completo, cpf, email) VALUES ($1, $2, $3) RETURNING id_pessoa',
+          [nome_completo, cpf, email]
+        );
+        id_pessoa = pInsert.rows[0].id_pessoa;
+      }
     } else {
+      // Se não tem CPF, sempre cria uma pessoa nova (para não sobrescrever/duplicar mandatos de outras sem CPF)
       const pInsert = await client.query(
-        'INSERT INTO pessoas (nome_completo, cpf, email) VALUES ($1, $2, $3) RETURNING id_pessoa',
-        [nome_completo, cpf, email]
+        'INSERT INTO pessoas (nome_completo, cpf, email) VALUES ($1, NULL, $2) RETURNING id_pessoa',
+        [nome_completo, email]
       );
       id_pessoa = pInsert.rows[0].id_pessoa;
     }
@@ -310,6 +325,17 @@ router.post("/dirigentes", async (req, res) => {
     const id_ato_nom = await handleAto(ato_nomeacao);
     const id_ato_exo = await handleAto(ato_exoneracao);
 
+    // Validação de Negócio: Não pode ter dois mandatos ativos ao mesmo tempo na criação
+    if (!data_fim) {
+      if (is_substituto) {
+        const activeCheck = await client.query('SELECT id_designacao FROM designacoes_substituicao WHERE id_pessoa = $1 AND data_fim IS NULL', [id_pessoa]);
+        if (activeCheck.rows.length > 0) throw new Error("Este dirigente já possui uma designação de substituição ativa.");
+      } else {
+        const activeCheck = await client.query('SELECT id_mandato FROM mandatos WHERE id_pessoa = $1 AND data_fim IS NULL', [id_pessoa]);
+        if (activeCheck.rows.length > 0) throw new Error("Este dirigente já possui um mandato ativo.");
+      }
+    }
+
     // 4. Create Mandato ou Designacao
     let resultInsert;
     if (is_substituto) {
@@ -322,6 +348,32 @@ router.post("/dirigentes", async (req, res) => {
         'INSERT INTO mandatos (id_pessoa, id_funcao, data_inicio, data_fim, id_ato_nomeacao, id_ato_exoneracao) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
         [id_pessoa, id_funcao, data_inicio, data_fim || null, id_ato_nom, id_ato_exo]
       );
+      
+      // Auto-close any open Vacância for this function
+      if (!data_fim) {
+        // First close the exercicios_substituicao
+        await client.query(`
+          UPDATE exercicios_substituicao es
+          SET data_fim = $1
+          FROM afastamentos a
+          JOIN mandatos m ON a.id_mandato = m.id_mandato
+          WHERE es.id_afastamento = a.id_afastamento
+            AND m.id_funcao = $2
+            AND a.motivo = 'Vacância'
+            AND es.data_fim IS NULL
+        `, [data_inicio, id_funcao]);
+
+        // Then close the afastamentos
+        await client.query(`
+          UPDATE afastamentos a
+          SET data_fim = $1
+          FROM mandatos m
+          WHERE a.id_mandato = m.id_mandato
+            AND m.id_funcao = $2
+            AND a.motivo = 'Vacância'
+            AND a.data_fim IS NULL
+        `, [data_inicio, id_funcao]);
+      }
     }
 
     await client.query("COMMIT");
@@ -343,6 +395,10 @@ router.put("/dirigentes/:id_registro", async (req, res) => {
     await client.query("BEGIN");
     const { nome_completo, cpf, email, id_cargo, id_unidade, data_inicio, data_fim, is_substituto, ato_nomeacao, ato_exoneracao } = req.body;
     
+    if (!id_cargo || !id_unidade) {
+      throw new Error("Cargo e Unidade são obrigatórios para registrar um dirigente.");
+    }
+
     // Parse ID "T_123" ou "S_123"
     const [tipo, id_original] = req.params.id_registro.split('_');
 
@@ -359,14 +415,19 @@ router.put("/dirigentes/:id_registro", async (req, res) => {
     }
 
     // 1. Update or Merge Pessoa
-    const pCheck = await client.query('SELECT id_pessoa FROM pessoas WHERE cpf = $1', [cpf]);
-    if (pCheck.rows.length > 0 && pCheck.rows[0].id_pessoa !== id_pessoa) {
-      // O CPF já pertence a outra pessoa (ex: o usuário está unificando cadastros duplicados do csv)
-      id_pessoa = pCheck.rows[0].id_pessoa;
-      await client.query('UPDATE pessoas SET nome_completo = $1, email = $2 WHERE id_pessoa = $3', [nome_completo, email, id_pessoa]);
+    if (cpf && cpf.trim() !== '') {
+      const pCheck = await client.query('SELECT id_pessoa FROM pessoas WHERE cpf = $1', [cpf]);
+      if (pCheck.rows.length > 0 && pCheck.rows[0].id_pessoa !== id_pessoa) {
+        // O CPF já pertence a outra pessoa (ex: o usuário está unificando cadastros duplicados do csv)
+        id_pessoa = pCheck.rows[0].id_pessoa;
+        await client.query('UPDATE pessoas SET nome_completo = $1, email = $2 WHERE id_pessoa = $3', [nome_completo, email, id_pessoa]);
+      } else {
+        // O CPF está livre ou já é da própria pessoa
+        await client.query('UPDATE pessoas SET nome_completo = $1, cpf = $2, email = $3 WHERE id_pessoa = $4', [nome_completo, cpf, email, id_pessoa]);
+      }
     } else {
-      // O CPF está livre ou já é da própria pessoa
-      await client.query('UPDATE pessoas SET nome_completo = $1, cpf = $2, email = $3 WHERE id_pessoa = $4', [nome_completo, cpf, email, id_pessoa]);
+      // Sem CPF, apenas atualizamos a pessoa atual sem mesclar
+      await client.query('UPDATE pessoas SET nome_completo = $1, cpf = NULL, email = $2 WHERE id_pessoa = $3', [nome_completo, email, id_pessoa]);
     }
 
     // Validação de Negócio: Não pode ter dois mandatos ativos ao mesmo tempo

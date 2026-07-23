@@ -21,7 +21,8 @@ import {
   BookOpen,
   User,
   Map,
-  Shield
+  Shield,
+  LayoutDashboard
 } from "lucide-react";
 
 interface DashboardOverviewProps {
@@ -138,24 +139,20 @@ export default function DashboardOverview({
   return (
     <div className="font-sans space-y-8 animate-fade-in max-w-7xl mx-auto py-2 px-4 no-print">
       
-      {/* AECI Welcome Header & Banner Block */}
-      <div className="bg-[#e6f1fe] text-slate-800 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xs border border-blue-100/50">
-        <div className="relative z-10 space-y-4 md:max-w-5xl text-left">
-          <div className="flex gap-2 items-center">
-            <span className="bg-[#003366]/10 text-[#003366] border border-[#003366]/20 font-extrabold text-[8.5px] uppercase tracking-widest px-2.5 py-0.5 rounded-md">
-              MINISTÉRIO DO TRABALHO E EMPREGO
-            </span>
+      {/* Dashboard Title Header */}
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/20 text-white shrink-0">
+                <LayoutDashboard size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Plataforma ÓRBITA | AECI</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Gestão de Demandas de Controle Interno do Ministério do Trabalho e Emprego</p>
+              </div>
+            </div>
           </div>
-
-          <div className="space-y-1.5">
-            <h1 className="text-lg md:text-xl lg:text-2xl font-black tracking-tight text-[#003366] uppercase">
-              PLATAFORMA ÓRBITA | GESTÃO DE DEMANDAS DE CONTROLE INTERNO
-            </h1>
-          </div>
-
-          <p className="text-[11.5px] md:text-xs text-[#003366]/80 leading-relaxed font-semibold">
-            Bem-vindo à Plataforma ÓRBITA, seu centro integrado para a gestão e rastreabilidade de TODAS as demandas de controle interno. Esta ferramenta reúne módulos para a gestão de processos, auditorias, conformidade e transparência, garantindo eficiência rigorosa em toda a esfera do Ministério do Trabalho e Emprego.
-          </p>
         </div>
       </div>
 

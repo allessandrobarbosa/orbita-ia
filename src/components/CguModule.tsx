@@ -1218,11 +1218,15 @@ export default function CguModule({
       <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
           <div>
-            <h2 className="text-2xl font-black text-slate-900 font-display flex items-center gap-2">
-              <Building2 className="w-6 h-6 text-[#003366]" />
-              Controladoria-Geral da União — CGU
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Gestão de Recomendações e Monitoramento de Auditorias</p>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/20 text-white shrink-0">
+                <Building2 size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Controladoria-Geral da União — CGU</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Gestão de Recomendações e Monitoramento de Auditorias</p>
+              </div>
+            </div>
           </div>
         </div>
       {/* CGU Submodules Navigation (TCU Pattern) */}
@@ -2035,18 +2039,18 @@ export default function CguModule({
 
         <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
           <table className="w-full text-left border-collapse table-auto text-xs min-w-[1100px]">
-            <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
-              <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
-                <th className="px-3 py-3 w-8 no-print bg-slate-100"></th>
-                <th className="px-5 py-3 bg-slate-100">Relatório de Auditoria / Avaliação</th>
-                <th className="px-4 py-3 bg-slate-100">Unidade Auditada</th>
-                <th className="px-4 py-3 bg-slate-100">Categoria</th>
-                <th className="px-4 py-3 bg-slate-100 text-center">Total de Recomendações</th>
-                <th className="px-4 py-3 bg-slate-100 text-center">Status das Recomendações</th>
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                <th className="p-4 w-8 no-print bg-slate-50"></th>
+                <th className="p-4 bg-slate-50">Relatório de Auditoria / Avaliação</th>
+                <th className="p-4 bg-slate-50">Unidade Auditada</th>
+                <th className="p-4 bg-slate-50">Categoria</th>
+                <th className="p-4 text-center bg-slate-50">Total de Recomendações</th>
+                <th className="p-4 text-center bg-slate-50">Status das Recomendações</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-150">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {isLoading ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-slate-400 font-sans">

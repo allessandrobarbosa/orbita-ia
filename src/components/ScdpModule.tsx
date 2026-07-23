@@ -24,7 +24,8 @@ import {
   Building,
   Check,
   XCircle,
-  X
+  X,
+  FileText
 } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -436,14 +437,15 @@ export default function ScdpModule() {
         {/* Header Oficial Gov.br */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">MTE • AUDITORIA INTERNA</span>
-            <h2 className="text-2xl font-black text-[#003366] font-display flex items-center gap-2 mt-0.5">
-              <Plane className="w-6 h-6 transform -rotate-45" />
-              Diárias e Passagens — SCDP
-            </h2>
-            <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
-              Monitoramento preventivo em conformidade com o <strong>Decreto nº 5.992/2006</strong> e cruzamento financeiro com o <strong>SIAFI</strong>.
-            </p>
+            <div className="flex items-center gap-4 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/20 text-white shrink-0">
+                <Plane size={20} strokeWidth={2.5} className="transform -rotate-45" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Diárias e Passagens — SCDP</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Monitoramento preventivo em conformidade com o <strong>Decreto nº 5.992/2006</strong> e cruzamento financeiro com o <strong>SIAFI</strong>.</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -524,7 +526,7 @@ export default function ScdpModule() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-100">
+        <div className="flex flex-wrap items-center justify-between gap-4 mt-4 pt-4 border-t border-slate-100">
           <div className="flex flex-col gap-1 text-[10px] text-slate-400">
             <span className="font-medium">Órgão Superior Fixado: Ministério do Trabalho e Emprego (38000)</span>
             <span className="text-slate-450 italic">Dica: Adicione planilhas (.xlsx/.csv) do Painel de Viagens em <strong>data/scdp_imports/</strong>. O batimento e saneamento de destinos/status ocorrerão automaticamente ao clicar em Buscar Auditoria.</span>
@@ -630,7 +632,7 @@ export default function ScdpModule() {
           </div>
 
           {/* Search filter inside tab */}
-          <div className="flex flex-wrap gap-3 mb-4 justify-between items-center">
+          <div className="flex flex-wrap gap-4 mb-4 justify-between items-center">
             <div className="relative w-full max-w-sm">
               <input
                 type="text"
@@ -642,26 +644,36 @@ export default function ScdpModule() {
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
             </div>
 
-            {/* Audit Segment Filter Control */}
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 gap-1 select-none text-xs">
+            {/* Navigation Tabs using Etica Pattern */}
+            <div className="no-print w-full border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-4">
               {[
-                { id: "TODOS", label: "Todas as Viagens" },
-                { id: "INADIMPLENCIA", label: "Inadimplência / Atraso" },
-                { id: "SIAFI", label: "Divergência SIAFI" },
-                { id: "SOBREPOSICAO", label: "Sobreposições" }
-              ].map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setAuditFilter(f.id as any)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition cursor-pointer ${
-                    auditFilter === f.id
-                      ? "bg-[#003366] text-white shadow-xs"
-                      : "text-slate-500 hover:text-slate-805 hover:bg-white/50"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
+                { id: "TODOS", label: "Todas as Viagens", desc: "Listagem Geral", icon: FileText },
+                { id: "INADIMPLENCIA", label: "Inadimplência", desc: "Atrasos na Prestação", icon: AlertTriangle },
+                { id: "SIAFI", label: "SIAFI", desc: "Divergências Físico-Financeiras", icon: Search },
+                { id: "SOBREPOSICAO", label: "Sobreposições", desc: "Conflitos de Datas", icon: Calendar }
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = auditFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setAuditFilter(tab.id as any)}
+                    className={`flex-1 min-w-[150px] flex items-center justify-between gap-4 p-4 rounded-xl transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
+                        : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`} />
+                      <div className="text-left">
+                        <span className="block text-xs font-black uppercase tracking-wide leading-none">{tab.label}</span>
+                        <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{tab.desc}</span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
             
             <div className="flex gap-2">
@@ -686,12 +698,12 @@ export default function ScdpModule() {
             <table className="w-full text-left border-collapse text-xs">
               <thead className="sticky top-0 bg-slate-50 z-10 border-b border-slate-150 shadow-3xs">
                 <tr className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  <th className="p-3">Servidor Viajante</th>
-                  <th className="p-3">Período Ida/Volta</th>
-                  <th className="p-3 text-right">Valores</th>
-                  <th className="p-3">Prestação de Contas</th>
-                  <th className="p-3">Auditoria / Alertas</th>
-                  <th className="p-3 text-center">Ações</th>
+                  <th className="p-4">Servidor Viajante</th>
+                  <th className="p-4">Período Ida/Volta</th>
+                  <th className="p-4 text-right">Valores</th>
+                  <th className="p-4">Prestação de Contas</th>
+                  <th className="p-4">Auditoria / Alertas</th>
+                  <th className="p-4 text-center">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -719,7 +731,7 @@ export default function ScdpModule() {
                         }}
                       >
                         {/* Combined cell 1: Servidor Name, CPF, Lotação */}
-                        <td className="p-3">
+                        <td className="p-4">
                           <div className="font-bold text-slate-800 leading-none">{v.nomeViajante}</div>
                           <div className="text-[10px] text-slate-450 font-mono mt-1 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
                             <span>CPF: {v.cpfViajante}</span>
@@ -733,12 +745,12 @@ export default function ScdpModule() {
                           </div>
                         </td>
 
-                        <td className="p-3 text-slate-600 font-medium font-mono">
+                        <td className="p-4 text-slate-600 font-medium font-mono">
                           {v.dataInicio} ➔ {v.dataFim}
                         </td>
 
                         {/* Combined cell 3: Total value + breakdown */}
-                        <td className="p-3 text-right">
+                        <td className="p-4 text-right">
                           <div className="font-extrabold text-[#003366]">{formatCurrency(v.valorTotal)}</div>
                           <span className="text-[9px] text-slate-400 block mt-0.5 font-mono">Diárias: {formatCurrency(v.valorDiarias)}</span>
                           {v.valorDevolucao > 0 && (
@@ -748,7 +760,7 @@ export default function ScdpModule() {
                           )}
                         </td>
 
-                        <td className="p-3">
+                        <td className="p-4">
                           <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider inline-block ${statusBg}`}>
                             {v.statusPrestacao}
                           </span>
@@ -758,7 +770,7 @@ export default function ScdpModule() {
                         </td>
 
                         {/* Auditoria / Alertas */}
-                        <td className="p-3">
+                        <td className="p-4">
                           <div className="flex flex-wrap gap-1 max-w-[180px]">
                             {v.inconsistenciaVinculo && (
                               <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-rose-50 text-rose-800 border border-rose-100">
@@ -788,7 +800,7 @@ export default function ScdpModule() {
                           </div>
                         </td>
 
-                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => {
@@ -909,13 +921,13 @@ export default function ScdpModule() {
                   <div className="bg-white p-4.5 rounded-xl border border-slate-200 space-y-3">
                     <span className="text-[10px] text-[#003366] block uppercase font-black tracking-wider border-b pb-1">Verificação de Restrições Cadastrais</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="flex justify-between items-center border border-slate-150 p-3.5 rounded-xl bg-slate-50/50">
+                      <div className="flex justify-between items-center border border-slate-150 p-4.5 rounded-xl bg-slate-50/50">
                         <span className="text-slate-500 font-bold">Restrição Diária (SIAPE):</span> 
                         <span className={`font-black px-2.5 py-0.5 rounded text-[10px] ${dossieItem.siapePendenciaScdp ? "text-rose-700 bg-rose-50" : "text-emerald-700 bg-emerald-50"}`}>
                           {dossieItem.siapePendenciaScdp ? "Consta Pendência (Impedido)" : "Regular (Sem Impedimento)"}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center border border-slate-150 p-3.5 rounded-xl bg-slate-50/50">
+                      <div className="flex justify-between items-center border border-slate-150 p-4.5 rounded-xl bg-slate-50/50">
                         <span className="text-slate-500 font-bold">Validação de Vínculo:</span> 
                         <span className={`font-black px-2.5 py-0.5 rounded text-[10px] ${dossieItem.inconsistenciaVinculo ? "text-rose-700 bg-rose-50" : "text-emerald-700 bg-emerald-50"}`}>
                           {dossieItem.inconsistenciaVinculo ? "Inconsistente (Sem Vínculo)" : "Vínculo Regularizado"}

@@ -2245,8 +2245,7 @@ export default function TcuMonitoramento({
           </div>
         </div>
       </div>
-
-      {/* Main Datagrid - Bento Rounded Table wrapping */}
+{/* Main Datagrid - Bento Rounded Table wrapping */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
         
         {/* Status indicator rail */}
@@ -2260,17 +2259,18 @@ export default function TcuMonitoramento({
 
         <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
           <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
-            
             <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
-              <tr className="bg-slate-50 text-slate-705 font-bold uppercase tracking-wide text-[10px]">
-                <th className="px-4 py-3 w-8 no-print bg-slate-100"></th>
-                <th className="px-5 py-3 bg-slate-100">Título do Acórdão</th>
-                <th className="px-4 py-3 bg-slate-100 font-sans">Processo TCU</th>
-                <th className="px-4 py-3 bg-slate-100">Sessão / Data</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                <th className="p-4 w-8 no-print bg-slate-100"></th>
+                <th className="p-4 bg-slate-100">Título do Acórdão</th>
+                <th className="p-4 bg-slate-100 font-sans">Processo TCU</th>
+                <th className="p-4 bg-slate-100">Sessão / Data</th>
+                <th className="p-4 bg-slate-100">Status / Resumo</th>
+                <th className="p-4 text-center bg-slate-100">Ações</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {isLoading && filteredAcordaos.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-12 text-slate-400 font-sans">
@@ -2308,7 +2308,7 @@ export default function TcuMonitoramento({
                       >
                         
                         {/* Expand toggle icon */}
-                        <td className="px-4 py-3.5 no-print">
+                        <td className="p-4 no-print">
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -2326,7 +2326,7 @@ export default function TcuMonitoramento({
                         </td>
 
                         {/* Title & Colegiado details */}
-                        <td className="px-5 py-3.5">
+                        <td className="p-4">
                           <div>
                             <span 
                               className="font-extrabold text-[#003366] cursor-pointer hover:underline text-xs"
@@ -2349,21 +2349,21 @@ export default function TcuMonitoramento({
                         </td>
 
                         {/* Process ID */}
-                        <td className="px-4 py-3.5">
+                        <td className="p-4">
                           <code className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded font-mono text-[10px] text-slate-750 font-medium">
                             {ac.PROC}
                           </code>
                         </td>
 
                         {/* Session Date */}
-                        <td className="px-4 py-3.5 text-slate-600 font-mono text-[11px]">{ac.DATASESSAO}</td>
+                        <td className="p-4 text-slate-600 font-mono text-[11px]">{ac.DATASESSAO}</td>
 
                       </tr>
 
                       {/* Detail panel expansion */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={4} className="bg-slate-50/25 px-8 py-6 border-b border-slate-200">
+                          <td colSpan={6} className="bg-slate-50/25 px-8 py-6 border-b border-slate-200">
                             <div className="space-y-4">
                               
                               {/* Internal monitoring values annotations */}
