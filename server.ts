@@ -193,23 +193,23 @@ function loadDatabase() {
       data.superintendencias = Seeds.SEED_SUPERINTENDENCIAS;
       dataModified = true;
     }
-    if (!data.comunicacoes) {
+    if (!data.comunicacoes || data.comunicacoes.length === 0) {
       data.comunicacoes = SEED_COMUNICACOES;
       dataModified = true;
     }
-    if (!data.tces) {
+    if (!data.tces || data.tces.length === 0) {
       data.tces = Seeds.SEED_TCES;
       dataModified = true;
     }
-    if (!data.tceAcordaoMappings) {
+    if (!data.tceAcordaoMappings || data.tceAcordaoMappings.length === 0) {
       data.tceAcordaoMappings = Seeds.SEED_TCE_ACORDAO_MAPPINGS;
       dataModified = true;
     }
-    if (!data.users) {
+    if (!data.users || data.users.length === 0) {
       data.users = Seeds.SEED_PROFILES;
       dataModified = true;
     }
-    if (!data.cgu) {
+    if (!data.cgu || data.cgu.length === 0) {
       data.cgu = SEED_CGU;
       dataModified = true;
     }
