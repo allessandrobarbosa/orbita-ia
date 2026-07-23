@@ -10,6 +10,8 @@ import { GoogleGenAI } from "@google/genai";
 import Groq from "groq-sdk";
 import dotenv from "dotenv";
 import session from "express-session";
+import pgSession from 'connect-pg-simple';
+import compression from 'compression';
 import pg from "pg";
 
 import comunicacoesRoutes from "./src/backend/routes/comunicacoesRoutes.js";
@@ -152,6 +154,9 @@ function migrateProcessTypes(data: any): boolean {
   return modified;
 }
 
+let cachedDbData: any = null;
+let dbLastModified: number = 0;
+
 // Helper to load/save database state
 function loadDatabase() {
   if (!fs.existsSync(DB_PATH)) {
@@ -188,6 +193,11 @@ function loadDatabase() {
     return defaultData;
   }
   try {
+    const stat = fs.statSync(DB_PATH);
+    if (cachedDbData && stat.mtimeMs === dbLastModified) {
+      return cachedDbData;
+    }
+
     const raw = fs.readFileSync(DB_PATH, "utf-8").replace(/^\uFEFF/, "");
     const data = JSON.parse(raw);
 
@@ -313,7 +323,12 @@ function loadDatabase() {
 
     if (dataModified) {
       fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
+      dbLastModified = fs.statSync(DB_PATH).mtimeMs;
+    } else {
+      dbLastModified = stat.mtimeMs;
     }
+    
+    cachedDbData = data;
     return data;
   } catch (err) {
     console.error("Error reading database fallback to seed:", err);
@@ -341,6 +356,8 @@ function loadDatabase() {
 function saveDatabase(data: any) {
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");
+    cachedDbData = data;
+    dbLastModified = fs.statSync(DB_PATH).mtimeMs;
   } catch (err) {
     console.error("Failed to save database file:", err);
   }
@@ -1101,6 +1118,9 @@ class FileSessionStore extends session.Store {
 // Start up Express full-stack flow
 async function startServer() {
   const app = express();
+  
+  // Enable GZIP compression for all responses
+  app.use(compression());
 
   // Set up session middleware
   app.use(session({
