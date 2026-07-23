@@ -14,6 +14,10 @@ import pg from "pg";
 
 import comunicacoesRoutes from "./src/backend/routes/comunicacoesRoutes.js";
 import rolRoutes from "./src/backend/routes/rolRoutes.js";
+import acordaoRoutes from "./src/backend/routes/acordaoRoutes.js";
+import tceRoutes from "./src/backend/routes/tceRoutes.js";
+import cguRoutes from "./src/backend/routes/cguRoutes.js";
+import superintendenciasRoutes from "./src/backend/routes/superintendenciasRoutes.js";
 import { pool } from "./src/backend/db";
 // Load environment variables
 dotenv.config();
@@ -1610,8 +1614,13 @@ async function startServer() {
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", system: "ORBITA.AECI", localTime: new Date().toISOString() });
   });
+  // Register PostgreSQL Routes
+  app.use("/api", acordaoRoutes);
+  app.use("/api", tceRoutes);
+  app.use("/api", cguRoutes);
+  app.use("/api", superintendenciasRoutes);
 
-  // API 2: Acórdãos TCU - GET & CRUD
+  // API 2: Acórdãos TCU - GET & CRUD (Legacy Fallbacks)
   app.get("/api/acordaos", (req, res) => {
     const db = loadDatabase();
     res.json(db.acordaos);

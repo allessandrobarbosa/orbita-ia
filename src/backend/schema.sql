@@ -100,13 +100,27 @@ CREATE TABLE IF NOT EXISTS comunicacoes (
 
 -- 5. Demandas CGU
 CREATE TABLE IF NOT EXISTS cgu_demands (
-    id VARCHAR(100) PRIMARY KEY,
-    protocolo VARCHAR(100),
-    tema TEXT,
-    area_responsavel VARCHAR(100),
-    status VARCHAR(50),
-    prazo VARCHAR(50),
-    observacoes TEXT
+    id_tarefa VARCHAR(100) PRIMARY KEY,
+    situacao VARCHAR(100),
+    estado VARCHAR(100),
+    titulo_tarefa TEXT,
+    data_inicio VARCHAR(50),
+    data_fim VARCHAR(50),
+    data_limite VARCHAR(50),
+    unidade_auditada VARCHAR(200),
+    unidades_auditoria VARCHAR(200),
+    texto_monitoramento TEXT,
+    providencia TEXT,
+    tipo_ultima_manifestacao VARCHAR(100),
+    texto_ultima_manifestacao TEXT,
+    data_ultima_manifestacao VARCHAR(50),
+    tipo_ultimo_posicionamento VARCHAR(100),
+    texto_ultimo_posicionamento TEXT,
+    data_ultimo_posicionamento VARCHAR(50),
+    categoria VARCHAR(100),
+    data_limite_inicial VARCHAR(50),
+    ano INTEGER,
+    ultima_atualizacao VARCHAR(50)
 );
 
 CREATE TABLE IF NOT EXISTS cgu_reports (
