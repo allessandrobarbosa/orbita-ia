@@ -1621,6 +1621,11 @@ async function startServer() {
   app.use("/api", superintendenciasRoutes);
 
   // API 2: Acórdãos TCU - GET & CRUD (Legacy Fallbacks)
+  app.get("/api/rol-responsaveis", (req, res) => {
+    // Fallback for legacy frontend fetch in Promise.all
+    res.json([]);
+  });
+  
   app.get("/api/acordaos", (req, res) => {
     const db = loadDatabase();
     res.json(db.acordaos);
