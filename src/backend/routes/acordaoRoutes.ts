@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get("/acordaos", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM acordaos');
+    const result = await pool.query('SELECT * FROM tcu_acordaos');
     const mapped = result.rows.map(row => ({
       KEY: row.key,
       TITULO: row.titulo,
@@ -28,7 +28,7 @@ router.get("/acordaos", async (req, res) => {
       DECISAO: row.decisao,
       RECOMENDACOES: row.recomendacoes,
       DETERMINACOES: row.determinacoes,
-      RECOMENDACOES_DETERMINACOES_UNIFICADO: row.rec_det_unificado,
+      RECOMENDACOES_DETERMINACOES_UNIFICADO: row.recomendacoes_determinacoes_unificado,
       STATUS_MONITORAMENTO: row.status_monitoramento,
       RESPONSAVEL_INTERNO: row.responsavel_interno,
       PRAZO_LIMITE: row.prazo_limite,
@@ -49,13 +49,13 @@ router.post("/acordaos/update", async (req, res) => {
     const updatedAt = new Date().toLocaleString("pt-BR");
     
     const query = `
-      UPDATE acordaos SET
+      UPDATE tcu_acordaos SET
         titulo = $2, num_acordao = $3, ano_acordao = $4, num_ata = $5,
         colegiado = $6, data_sessao = $7, situacao = $8, proc = $9,
         acordaos_relacionados = $10, tipo_processo = $11, interessados = $12,
         entidade = $13, unidade_tecnica = $14, relator = $15, assunto = $16,
         sumario = $17, acordao = $18, decisao = $19, recomendacoes = $20,
-        determinacoes = $21, rec_det_unificado = $22, status_monitoramento = $23,
+        determinacoes = $21, recomendacoes_determinacoes_unificado = $22, status_monitoramento = $23,
         responsavel_interno = $24, prazo_limite = $25, observacoes = $26,
         ultima_atualizacao = $27, ai_analysis_data = $28
       WHERE key = $1 RETURNING *
@@ -89,7 +89,7 @@ router.post("/acordaos/update", async (req, res) => {
 router.delete("/acordaos/:key", async (req, res) => {
   try {
     const { key } = req.params;
-    await pool.query('DELETE FROM acordaos WHERE key = $1', [key]);
+    await pool.query('DELETE FROM tcu_acordaos WHERE key = $1', [key]);
     res.json({ success: true });
   } catch (err) {
     console.error("Error deleting Acórdão from Postgres:", err);

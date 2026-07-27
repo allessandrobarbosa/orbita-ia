@@ -6,7 +6,7 @@ const router = Router();
 // API: Get all comunicacoes
 router.get("/comunicacoes", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM comunicacoes');
+    const result = await pool.query('SELECT * FROM tcu_comunicacoes');
     const mapped = result.rows.map(row => ({
       KEY: row.key,
       COMUNICACAO: row.comunicacao,
@@ -38,11 +38,11 @@ router.post("/comunicacoes/update", async (req, res) => {
     const updated = req.body;
     updated.ULTIMA_ATUALIZACAO = new Date().toLocaleString("pt-BR");
 
-    const checkResult = await pool.query('SELECT key FROM comunicacoes WHERE key = $1', [updated.KEY]);
+    const checkResult = await pool.query('SELECT key FROM tcu_comunicacoes WHERE key = $1', [updated.KEY]);
     
     if (checkResult.rows.length > 0) {
       await pool.query(`
-        UPDATE comunicacoes SET
+        UPDATE tcu_comunicacoes SET
           comunicacao = $2, destinatario = $3, contato = $4, unidade_emitente = $5,
           processo = $6, data_expedicao = $7, data_resposta = $8, ano = $9,
           carece_resposta = $10, prazo_dias = $11, resposta_enviada_internamente = $12,
@@ -70,7 +70,7 @@ router.post("/comunicacoes/update", async (req, res) => {
 router.delete("/comunicacoes/:key", async (req, res) => {
   try {
     const { key } = req.params;
-    await pool.query('DELETE FROM comunicacoes WHERE key = $1', [key]);
+    await pool.query('DELETE FROM tcu_comunicacoes WHERE key = $1', [key]);
     res.json({ success: true });
   } catch (err) {
     console.error("Error deleting comunicacao:", err);
@@ -96,14 +96,14 @@ router.post("/comunicacoes/import", async (req, res) => {
       }
       
       const checkResult = await pool.query(
-        'SELECT key FROM comunicacoes WHERE key = $1 OR (comunicacao = $2 AND ano = $3)',
+        'SELECT key FROM tcu_comunicacoes WHERE key = $1 OR (comunicacao = $2 AND ano = $3)',
         [item.KEY, item.COMUNICACAO, item.ANO]
       );
       
       if (checkResult.rows.length > 0) {
         const targetKey = checkResult.rows[0].key;
         await pool.query(`
-          UPDATE comunicacoes SET
+          UPDATE tcu_comunicacoes SET
             comunicacao = $2, destinatario = $3, contato = $4, unidade_emitente = $5,
             processo = $6, data_expedicao = $7, data_resposta = $8, ano = $9,
             carece_resposta = $10, prazo_dias = $11, resposta_enviada_internamente = $12,
@@ -120,7 +120,7 @@ router.post("/comunicacoes/import", async (req, res) => {
         updatedCount++;
       } else {
         await pool.query(`
-          INSERT INTO comunicacoes (
+          INSERT INTO tcu_comunicacoes (
             key, comunicacao, destinatario, contato, unidade_emitente,
             processo, data_expedicao, data_resposta, ano, carece_resposta,
             prazo_dias, resposta_enviada_internamente, unidade_executora,
@@ -140,7 +140,7 @@ router.post("/comunicacoes/import", async (req, res) => {
       }
     }
 
-    const totalResult = await pool.query('SELECT COUNT(*) FROM comunicacoes');
+    const totalResult = await pool.query('SELECT COUNT(*) FROM tcu_comunicacoes');
     
     res.json({
       success: true,

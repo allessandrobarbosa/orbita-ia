@@ -153,6 +153,18 @@ export default function App() {
 
   // Layout navigation states
   const [activeTab, setActiveTab] = useState<string>("dashboard"); // dashboard, tcu, rol, etica, srte
+  const [renderedTab, setRenderedTab] = useState<string>("dashboard");
+  
+  // Efeito para liberar o main thread (UI não trava ao clicar nos botões pesados)
+  useEffect(() => {
+    if (activeTab !== renderedTab) {
+      // Pequeno delay para o navegador redesenhar a tela (botão de nav) antes do travamento do React
+      const timer = setTimeout(() => {
+        setRenderedTab(activeTab);
+      }, 30);
+      return () => clearTimeout(timer);
+    }
+  }, [activeTab, renderedTab]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -1148,10 +1160,10 @@ export default function App() {
               { id: "dashboard", label: "INÍCIO", icon: LayoutDashboard, title: "Painel de Controle e Monitoramento" },
               { id: "tcu", label: "TCU", icon: Database, title: "Tribunal de Contas da União" },
               { id: "cgu", label: "CGU", icon: ShieldCheck, title: "Controladoria-Geral da União" },
-              { id: "etica", label: "ÉTICA", icon: ShieldAlert, title: "Comissão de Ética Coletiva" },
               { id: "rol", label: "ROL", icon: Users, title: "Gestão do Rol de Responsáveis" },
-              { id: "srte", label: "STRES", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
               { id: "scdp", label: "SCDP", icon: Plane, title: "Diárias e Passagens (SCDP)" },
+              { id: "srte", label: "SRTEs", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
+              { id: "etica", label: "ÉTICA", icon: ShieldAlert, title: "Comissão de Ética Coletiva" },
               { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
             ].filter(link => hasModulePermission(link.id)).map((moduleLink) => {
               const ModuleIcon = moduleLink.icon;
@@ -1299,8 +1311,15 @@ export default function App() {
             <div className="max-w-7xl mx-auto pb-12">
 
               {/* Tab selector content renderer */}
-              {activeTab === "dashboard" && (
-                <DashboardOverview
+              {activeTab !== renderedTab ? (
+                <div className="flex flex-col items-center justify-center py-32 space-y-4 font-sans h-full fade-in">
+                  <div className="w-12 h-12 rounded-full border-4 border-slate-200 border-t-blue-600 animate-spin" />
+                  <p className="text-sm font-bold text-slate-500 animate-pulse">Carregando módulo...</p>
+                </div>
+              ) : (
+                <>
+                  {renderedTab === "dashboard" && (
+                    <DashboardOverview
                   stats={dashboardStats}
                   onNavigate={setActiveTab}
                   acordaos={acordaos}
@@ -1314,8 +1333,8 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "bi" && (
-                <BiModule
+                  {renderedTab === "bi" && (
+                    <BiModule
                   acordaos={acordaos}
                   comunicacoes={comunicacoes}
                   tces={tces}
@@ -1326,8 +1345,8 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "tcu" && (
-                <TcuModule
+                  {renderedTab === "tcu" && (
+                    <TcuModule
                   acordaos={acordaos}
                   onUpdateAcordao={handleUpdateAcordao}
                   onDeleteAcordao={handleDeleteAcordao}
@@ -1350,8 +1369,8 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "rol" && (
-                <RolModule
+                  {renderedTab === "rol" && (
+                    <RolModule
                   rol={rolResponsaveis}
                   onAddRol={handleAddRol}
                   onUpdateRol={handleUpdateRol}
@@ -1359,8 +1378,8 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "etica" && (
-                <EticaModule
+                  {renderedTab === "etica" && (
+                    <EticaModule
                   etica={comissaoEtica}
                   onAddEtica={handleAddEtica}
                   onUpdateEtica={handleUpdateEtica}
@@ -1383,8 +1402,8 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "srte" && (
-                <SrteModule
+                  {renderedTab === "srte" && (
+                    <SrteModule
                   superintendencias={superintendencias}
                   onUpdateSrte={handleUpdateSrte}
                   acordaos={acordaos}
@@ -1394,8 +1413,8 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "cgu" && (
-                <CguModule
+                  {renderedTab === "cgu" && (
+                    <CguModule
                   cguDemands={cguDemands}
                   onUpdateCgu={handleUpdateCgu}
                   onDeleteCgu={handleDeleteCgu}
@@ -1408,8 +1427,10 @@ export default function App() {
                 />
               )}
 
-              {activeTab === "scdp" && (
-                <ScdpModule />
+                  {renderedTab === "scdp" && (
+                    <ScdpModule />
+                  )}
+                </>
               )}
 
             </div>

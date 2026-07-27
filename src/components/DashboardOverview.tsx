@@ -80,17 +80,6 @@ export default function DashboardOverview({
   // Define Category 2 (Outras Funcionalidades e Serviços) modules
   const outrasFuncionalidadesModules = [
     {
-      id: "etica",
-      title: "Comissão de Ética",
-      acronym: "ÉTICA",
-      desc: "Trâmite preventivo e correcional de denúncias de conduta, acompanhamento de apurações preliminares e processos éticos.",
-      indicator: `${comissaoEtica.length || 3} Cases Registrados`,
-      icon: Shield,
-      accent: "border-t-4 border-l-0 border-red-500",
-      bg: "bg-white",
-      hoverRing: "hover:ring-2 hover:ring-rose-500/20"
-    },
-    {
       id: "rol",
       title: "Rol de Responsáveis",
       acronym: "ROL",
@@ -100,6 +89,17 @@ export default function DashboardOverview({
       accent: "border-t-4 border-l-0 border-emerald-600",
       bg: "bg-white",
       hoverRing: "hover:ring-2 hover:ring-emerald-500/20"
+    },
+    {
+      id: "scdp",
+      title: "Diárias e Passagens (SCDP)",
+      acronym: "SCDP",
+      desc: "Monitoramento de viagens a serviço, prestação de contas de diárias e passagens aéreas conforme Decreto nº 5.992/2006.",
+      indicator: "Viagens · Prestação de Contas",
+      icon: Plane,
+      accent: "border-t-4 border-l-0 border-sky-500",
+      bg: "bg-white",
+      hoverRing: "hover:ring-2 hover:ring-sky-500/20"
     },
     {
       id: "srte",
@@ -113,15 +113,15 @@ export default function DashboardOverview({
       hoverRing: "hover:ring-2 hover:ring-indigo-500/20"
     },
     {
-      id: "scdp",
-      title: "Diárias e Passagens (SCDP)",
-      acronym: "SCDP",
-      desc: "Monitoramento de viagens a serviço, prestação de contas de diárias e passagens aéreas conforme Decreto nº 5.992/2006.",
-      indicator: "Viagens · Prestação de Contas",
-      icon: Plane,
-      accent: "border-t-4 border-l-0 border-sky-500",
+      id: "etica",
+      title: "Comissão de Ética",
+      acronym: "ÉTICA",
+      desc: "Trâmite preventivo e correcional de denúncias de conduta, acompanhamento de apurações preliminares e processos éticos.",
+      indicator: `${comissaoEtica.length || 3} Cases Registrados`,
+      icon: Shield,
+      accent: "border-t-4 border-l-0 border-red-500",
       bg: "bg-white",
-      hoverRing: "hover:ring-2 hover:ring-sky-500/20"
+      hoverRing: "hover:ring-2 hover:ring-rose-500/20"
     },
     {
       id: "bi",

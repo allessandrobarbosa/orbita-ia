@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get("/tces", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM tces');
+    const result = await pool.query('SELECT * FROM tcu_tce');
     // Map snake_case to camelCase/PascalCase as expected by frontend
     const mapped = result.rows.map(row => ({
       id: row.id,
@@ -41,7 +41,7 @@ router.post("/tces/update", async (req, res) => {
     
     // Note: Usually we would only update changed fields or do a full update.
     const query = `
-      UPDATE tces SET
+      UPDATE tcu_tce SET
         numero_ano_tce = $2, processo_administrativo = $3, motivo_instauracao = $4,
         submotivo_instauracao = $5, debito_original = $6, debito_atualizado = $7,
         data_atualizacao_debito = $8, ultimo_posicionamento = $9, tc = $10,
@@ -76,7 +76,7 @@ router.post("/tces/update", async (req, res) => {
 router.delete("/tces/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query('DELETE FROM tces WHERE id = $1', [id]);
+    await pool.query('DELETE FROM tcu_tce WHERE id = $1', [id]);
     res.json({ success: true });
   } catch (err) {
     console.error("Error deleting TCE from Postgres:", err);
@@ -97,13 +97,13 @@ router.post("/tces/import", async (req, res) => {
 
     for (const item of items) {
       // Upsert logic
-      const checkResult = await pool.query('SELECT id FROM tces WHERE id = $1 OR numero_ano_tce = $2', [item.id, item.NUMERO_ANO_TCE]);
+      const checkResult = await pool.query('SELECT id FROM tcu_tce WHERE id = $1 OR numero_ano_tce = $2', [item.id, item.NUMERO_ANO_TCE]);
       
       if (checkResult.rows.length > 0) {
         // Update
         const targetId = checkResult.rows[0].id;
         await pool.query(`
-          UPDATE tces SET
+          UPDATE tcu_tce SET
             numero_ano_tce = $2, processo_administrativo = $3, motivo_instauracao = $4,
             submotivo_instauracao = $5, debito_original = $6, debito_atualizado = $7,
             data_atualizacao_debito = $8, ultimo_posicionamento = $9, tc = $10,
@@ -123,27 +123,26 @@ router.post("/tces/import", async (req, res) => {
       } else {
         // Insert
         await pool.query(`
-          INSERT INTO tces (
+          INSERT INTO tcu_tce (
             id, numero_ano_tce, processo_administrativo, motivo_instauracao,
             submotivo_instauracao, debito_original, debito_atualizado, data_atualizacao_debito,
             ultimo_posicionamento, tc, estado_processo, situacao_processo, primeiro_julgamento,
-            encerramento, numero_siafi, siafi_ressarcido, ano, ultima_atualizacao
+            encerramento, numero_siafi, siafi_ressarcido, ano
           ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
           )
         `, [
           item.id, item.NUMERO_ANO_TCE, item.PROCESSO_ADMINISTRATIVO, item.MOTIVO_INSTAURACAO,
           item.SUBMOTIVO_INSTAURACAO, item.DEBITO_ORIGINAL, item.DEBITO_ATUALIZADO,
           item.DATA_ATUALIZACAO_DEBITO, item.ULTIMO_POSICIONAMENTO, item.TC,
           item.ESTADO_PROCESSO, item.SITUACAO_PROCESSO, item.PRIMEIRO_JULGAMENTO,
-          item.ENCERRAMENTO, item.NUMERO_SIAFI, item.SIAFI_RESSARCIDO, item.ANO,
-          updatedAt
+          item.ENCERRAMENTO, item.NUMERO_SIAFI, item.SIAFI_RESSARCIDO, item.ANO
         ]);
         importedCount++;
       }
     }
 
-    const totalResult = await pool.query('SELECT COUNT(*) FROM tces');
+    const totalResult = await pool.query('SELECT COUNT(*) FROM tcu_tce');
     
     res.json({
       success: true,
@@ -161,13 +160,10 @@ router.post("/tces/import", async (req, res) => {
 // API 2.8: TCE com Acórdão mappings (Mapeamentos)
 router.get("/tce-mappings", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM tce_mappings');
+    const result = await pool.query('SELECT * FROM tcu_tce_acordao_mapping');
     const mapped = result.rows.map(row => ({
-      id: row.id,
       NUMERO_ANO_TCE: row.numero_ano_tce,
-      ACORDAO_KEY: row.acordao_key,
-      TIPO_RELACIONAMENTO: row.tipo_relacionamento,
-      NOTAS: row.notas
+      ACORDAO_KEY: row.acordao_key
     }));
     res.json(mapped);
   } catch (err) {
@@ -188,26 +184,20 @@ router.post("/tce-mappings/import", async (req, res) => {
 
     for (const item of items) {
       const checkResult = await pool.query(
-        'SELECT id FROM tce_mappings WHERE numero_ano_tce = $1 AND acordao_key = $2', 
+        'SELECT 1 FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2', 
         [item.NUMERO_ANO_TCE, item.ACORDAO_KEY]
       );
       
-      if (checkResult.rows.length > 0) {
+      if (checkResult.rows.length === 0) {
         await pool.query(
-          'UPDATE tce_mappings SET tipo_relacionamento = $3, notas = $4 WHERE id = $1',
-          [checkResult.rows[0].id, item.TIPO_RELACIONAMENTO, item.NOTAS]
-        );
-        updatedCount++;
-      } else {
-        await pool.query(
-          'INSERT INTO tce_mappings (numero_ano_tce, acordao_key, tipo_relacionamento, notas) VALUES ($1, $2, $3, $4)',
-          [item.NUMERO_ANO_TCE, item.ACORDAO_KEY, item.TIPO_RELACIONAMENTO, item.NOTAS]
+          'INSERT INTO tcu_tce_acordao_mapping (numero_ano_tce, acordao_key) VALUES ($1, $2)',
+          [item.NUMERO_ANO_TCE, item.ACORDAO_KEY]
         );
         importedCount++;
       }
     }
 
-    const totalResult = await pool.query('SELECT COUNT(*) FROM tce_mappings');
+    const totalResult = await pool.query('SELECT COUNT(*) FROM tcu_tce_acordao_mapping');
 
     res.json({
       success: true,
