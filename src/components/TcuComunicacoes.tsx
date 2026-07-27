@@ -64,6 +64,7 @@ interface TcuModuleProps {
   onClearOlderAcordaos?: () => Promise<any>;
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
+  onRefreshData?: () => Promise<void>;
 }
 
 export default function TcuComunicacoes({ 
@@ -84,7 +85,8 @@ export default function TcuComunicacoes({
   onImportTceMappings,
   onClearOlderAcordaos,
   onResetDatabase,
-  isLoading 
+  isLoading,
+  onRefreshData
 }: TcuModuleProps) {
   
   // Robust Portuguese Text Repair function
@@ -1838,113 +1840,7 @@ export default function TcuComunicacoes({
 
         <div className="space-y-6 animate-fade-in">
 
-          {showComImporter && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm no-print space-y-4">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-black text-[#003366] uppercase tracking-wide">
-                    Sincronizador Inteligente Year-over-Year
-                  </h3>
-                  <p className="text-xs text-slate-500 max-w-3xl">
-                    Arraste ou selecione a planilha de qualquer ano (formato CSV separado por ponto e vírgula). O sistema analisará o lote, identificará o ano correspondente das expedições e unificará no banco consolidado, protegendo edições locais existentes.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowComImporter(false)}
-                  className="text-slate-400 hover:text-slate-600 transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Drag zone */}
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setIsDragOverCom(true); }}
-                  onDragLeave={(e) => { e.preventDefault(); setIsDragOverCom(false); }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    setIsDragOverCom(false);
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) readComFileContent(file);
-                  }}
-                  onClick={() => document.getElementById("com-file-input")?.click()}
-                  className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center transition text-center cursor-pointer ${
-                    isDragOverCom
-                      ? "border-[#003366] bg-blue-50/50"
-                      : "border-slate-200 hover:border-slate-300 bg-slate-50/50"
-                  }`}
-                >
-                  <input
-                    type="file"
-                    id="com-file-input"
-                    accept=".csv,.txt"
-                    className="hidden"
-                    onChange={handleComFileChange}
-                  />
-                  <div className="p-3 bg-white rounded-full shadow-2xs mb-2">
-                    <Upload className="w-6 h-6 text-[#003366]" />
-                  </div>
-                  <h4 className="text-xs font-bold text-slate-800">
-                    Soltar arquivo CSV aqui, ou clique para navegar
-                  </h4>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Aceita planilha com Comunicação;Destinatário;Contato;Unidade Emitente;Processo;Data de Expedição;Data da Resposta
-                  </p>
-                </div>
-
-                {/* Paste Area / Preview Area */}
-                <div className="flex flex-col space-y-2">
-                  <label className="text-[10px] font-extrabold text-[#003366] uppercase tracking-wider block">
-                    Carga Manual ou Visualização das Linhas Lido
-                  </label>
-                  <textarea
-                    className="w-full flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition"
-                    placeholder="Cole as linhas separadas por ponto e vírgula aqui caso não tenha o arquivo físico no dispositivo..."
-                    value={comPasteContent}
-                    onChange={(e) => {
-                      setComPasteContent(e.target.value);
-                      setParsedComItems(null);
-                    }}
-                    style={{ minHeight: "120px" }}
-                  ></textarea>
-                </div>
-              </div>
-
-              {comImportMessage && (
-                <div className="p-3.5 bg-blue-50 border border-blue-100 text-[#003366] rounded-xl text-xs font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{comImportMessage}</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 text-xs">
-                {comPasteContent.trim() && !parsedComItems && (
-                  <button
-                    onClick={() => {
-                      const items = parseCommunicationsCSV(comPasteContent);
-                      setParsedComItems(items);
-                      setComImportMessage(`Identificados ${items.length} ofícios/comunicações na caixa de texto. Pronto para sincronizar.`);
-                    }}
-                    className="px-4 py-2 border border-slate-200 text-slate-700 bg-white rounded-xl hover:bg-slate-50 font-bold transition"
-                  >
-                    Analisar Texto
-                  </button>
-                )}
-
-                {parsedComItems && parsedComItems.length > 0 && (
-                  <button
-                    onClick={handleExecuteComImport}
-                    disabled={isSavingCom}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 disabled:opacity-55 transition inline-flex items-center gap-1.5"
-                  >
-                    <Check className="w-4 h-4" />
-                    {isSavingCom ? "Salvando no Banco..." : `Confirmar Sincronização (${parsedComItems.length} itens)`}
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Core Analytics & Filtering */}
           {(() => {
@@ -2344,14 +2240,7 @@ export default function TcuComunicacoes({
                       <RefreshCw className={`w-4 h-4 ${isSyncingLocalCom ? "animate-spin" : ""}`} />
                       {isSyncingLocalCom ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
                     </button>
-                    <button
-                      onClick={() => setShowComImporter(!showComImporter)}
-                      className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
-                      title="Importar planilhas CSV de comunicações de qualquer ano"
-                    >
-                      <Upload className="w-4 h-4" />
-                      {showComImporter ? "Ocultar Importador" : "Importar Comunicações"}
-                    </button>
+>
                     <button
                       onClick={handleExportToExcel}
                       disabled={finalFiltered.length === 0}

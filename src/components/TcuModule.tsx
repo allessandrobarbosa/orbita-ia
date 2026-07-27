@@ -36,6 +36,7 @@ interface TcuModuleProps {
   onClearOlderAcordaos?: () => Promise<any>;
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
+  onRefreshData?: () => Promise<void>;
 }
 
 export default function TcuModule(props: TcuModuleProps) {

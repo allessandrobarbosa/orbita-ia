@@ -245,55 +245,71 @@ router.post("/comunicacoes/import", async (req, res) => {
     let updatedCount = 0;
     const updatedAt = new Date().toLocaleString("pt-BR");
 
-    for (const item of items) {
-      if (!item.KEY) {
-        item.KEY = `${item.COMUNICACAO}-${item.ANO}`; 
-      }
-      
-      const checkResult = await pool.query(
-        'SELECT key FROM tcu_comunicacoes WHERE key = $1 OR (comunicacao = $2 AND ano = $3)',
-        [item.KEY, item.COMUNICACAO, item.ANO]
-      );
-      
-      if (checkResult.rows.length > 0) {
-        const targetKey = checkResult.rows[0].key;
-        await pool.query(`
-          UPDATE tcu_comunicacoes SET
-            comunicacao = $2, destinatario = $3, contato = $4, unidade_emitente = $5,
-            processo = $6, data_expedicao = $7, data_resposta = $8, ano = $9,
-            carece_resposta = $10, prazo_dias = $11, resposta_enviada_internamente = $12,
-            unidade_executora = $13, processo_sei = $14, destinacao = $15, ultima_atualizacao = $16
-          WHERE key = $1
-        `, [
-          targetKey, item.COMUNICACAO, item.DESTINATARIO, item.CONTATO,
-          item.UNIDADE_EMITENTE, item.PROCESSO, item.DATA_EXPEDICAO,
-          item.DATA_RESPOSTA, item.ANO, item.CARECE_RESPOSTA,
-          item.PRAZO_DIAS, item.RESPOSTA_ENVIADA_INTERNAMENTE,
-          item.UNIDADE_EXECUTORA, item.PROCESSO_SEI, item.DESTINACAO,
-          updatedAt
-        ]);
-        updatedCount++;
-      } else {
-        await pool.query(`
-          INSERT INTO tcu_comunicacoes (
-            key, comunicacao, destinatario, contato, unidade_emitente,
-            processo, data_expedicao, data_resposta, ano, carece_resposta,
-            prazo_dias, resposta_enviada_internamente, unidade_executora,
-            processo_sei, destinacao, ultima_atualizacao
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
-          )
-        `, [
-          item.KEY, item.COMUNICACAO, item.DESTINATARIO, item.CONTATO,
-          item.UNIDADE_EMITENTE, item.PROCESSO, item.DATA_EXPEDICAO,
-          item.DATA_RESPOSTA, item.ANO, item.CARECE_RESPOSTA,
-          item.PRAZO_DIAS, item.RESPOSTA_ENVIADA_INTERNAMENTE,
-          item.UNIDADE_EXECUTORA, item.PROCESSO_SEI, item.DESTINACAO,
-          updatedAt
-        ]);
-        importedCount++;
-      }
+// Bulk upsert for comunicação items
+const batchSize = 500;
+let importedCount = 0;
+let updatedCount = 0;
+for (let i = 0; i < items.length; i += batchSize) {
+  const batch = items.slice(i, i + batchSize);
+  // Ensure each item has a KEY
+  batch.forEach(item => {
+    if (!item.KEY) {
+      item.KEY = `${item.COMUNICACAO}-${item.ANO}`;
     }
+  });
+  const values: string[] = [];
+  const params: any[] = [];
+  batch.forEach((item, idx) => {
+    const base = idx * 16;
+    values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10}, $${base + 11}, $${base + 12}, $${base + 13}, $${base + 14}, $${base + 15}, $${base + 16})`);
+    params.push(
+      item.KEY,
+      item.COMUNICACAO,
+      item.DESTINATARIO,
+      item.CONTATO,
+      item.UNIDADE_EMITENTE,
+      item.PROCESSO,
+      item.DATA_EXPEDICAO,
+      item.DATA_RESPOSTA,
+      item.ANO,
+      item.CARECE_RESPOSTA,
+      item.PRAZO_DIAS,
+      item.RESPOSTA_ENVIADA_INTERNAMENTE,
+      item.UNIDADE_EXECUTORA,
+      item.PROCESSO_SEI,
+      item.DESTINACAO,
+      updatedAt
+    );
+  });
+  const query = `
+    INSERT INTO tcu_comunicacoes (key, comunicacao, destinatario, contato, unidade_emitente,
+      processo, data_expedicao, data_resposta, ano, carece_resposta,
+      prazo_dias, resposta_enviada_internamente, unidade_executora,
+      processo_sei, destinacao, ultima_atualizacao)
+    VALUES ${values.join(',')}
+    ON CONFLICT (key) DO UPDATE SET
+      comunicacao = EXCLUDED.comunicacao,
+      destinatario = EXCLUDED.destinatario,
+      contato = EXCLUDED.contato,
+      unidade_emitente = EXCLUDED.unidade_emitente,
+      processo = EXCLUDED.processo,
+      data_expedicao = EXCLUDED.data_expedicao,
+      data_resposta = EXCLUDED.data_resposta,
+      ano = EXCLUDED.ano,
+      carece_resposta = EXCLUDED.carece_resposta,
+      prazo_dias = EXCLUDED.prazo_dias,
+      resposta_enviada_internamente = EXCLUDED.resposta_enviada_internamente,
+      unidade_executora = EXCLUDED.unidade_executora,
+      processo_sei = EXCLUDED.processo_sei,
+      destinacao = EXCLUDED.destinacao,
+      ultima_atualizacao = EXCLUDED.ultima_atualizacao
+    RETURNING (xmax = 0) AS inserted;`;
+  const result = await pool.query(query, params);
+  result.rows.forEach(row => {
+    if (row.inserted) importedCount++;
+    else updatedCount++;
+  });
+}
 
     const totalResult = await pool.query('SELECT COUNT(*) FROM tcu_comunicacoes');
     

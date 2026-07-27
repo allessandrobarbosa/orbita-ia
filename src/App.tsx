@@ -1366,6 +1366,7 @@ export default function App() {
                   onClearOlderAcordaos={handleClearOlderAcordaos}
                   onResetDatabase={handleResetDatabase}
                   isLoading={isLoading}
+                  onRefreshData={fetchAllData}
                 />
               )}
 

@@ -209,11 +209,11 @@ router.post("/tces/sync-local", async (req, res) => {
                 submotivo_instauracao = $5, debito_original = $6, debito_atualizado = $7,
                 data_atualizacao_debito = $8, ultimo_posicionamento = $9, tc = $10,
                 estado_processo = $11, situacao_processo = $12, primeiro_julgamento = $13,
-                encerramento = $14, ano = $15, ultima_atualizacao = $16
+                encerramento = $14, ano = $15
               WHERE id = $1
             `, [
               targetId, numeroAnoTce, pa, motivo, submotivo, debitoOrig, debitoAtual,
-              dataAtual, posicionamento, tc, estado, situacao, julgamento, encerramento, ano, updatedAt
+              dataAtual, posicionamento, tc, estado, situacao, julgamento, encerramento, ano
             ]);
             updatedGeral++;
           } else {
@@ -222,11 +222,11 @@ router.post("/tces/sync-local", async (req, res) => {
                 id, numero_ano_tce, processo_administrativo, motivo_instauracao,
                 submotivo_instauracao, debito_original, debito_atualizado, data_atualizacao_debito,
                 ultimo_posicionamento, tc, estado_processo, situacao_processo, primeiro_julgamento,
-                encerramento, ano, ultima_atualizacao
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+                encerramento, ano
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
             `, [
               id, numeroAnoTce, pa, motivo, submotivo, debitoOrig, debitoAtual,
-              dataAtual, posicionamento, tc, estado, situacao, julgamento, encerramento, ano, updatedAt
+              dataAtual, posicionamento, tc, estado, situacao, julgamento, encerramento, ano
             ]);
             importedGeral++;
           }
