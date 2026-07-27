@@ -1604,23 +1604,8 @@ function LockScreen({
         setErrorMsg("Por favor, informe seu CPF.");
         return;
       }
-      // Validação de CPF
-      let cpfStr = identifier.replace(/[^\d]+/g, "");
-      let cpfValido = false;
-      if (cpfStr.length === 11 && !cpfStr.match(/(\d)\1{10}/)) {
-        const cpfDigits = cpfStr.split("").map(el => +el);
-        const rest = (count: number) => (cpfDigits.slice(0, count - 12).reduce((soma, el, index) => (soma + el * (count - index)), 0) * 10) % 11 % 10;
-        if (rest(10) === cpfDigits[9] && rest(11) === cpfDigits[10]) {
-          cpfValido = true;
-        }
-      }
-
-      if (!cpfValido) {
-        alert("O CPF informado é inválido. Por favor, digite um CPF válido.");
-        setErrorMsg("O CPF informado é inválido.");
-        setIdentifier("");
-        return;
-      }
+      // Removendo validação rígida de CPF para permitir login por email ou ID
+      setLoginStep("password");
 
       setLoginStep("password");
     } else {
@@ -1688,11 +1673,10 @@ function LockScreen({
                   </div>
                   <input
                     type="text"
-                    placeholder="Informe seu CPF (Apenas Números)"
+                    placeholder="Informe seu CPF ou E-mail"
                     value={identifier}
                     onChange={e => {
-                      const val = e.target.value.replace(/\D/g, "");
-                      setIdentifier(val);
+                      setIdentifier(e.target.value);
                       setErrorMsg("");
                     }}
                     disabled={loginStep === "password"}
