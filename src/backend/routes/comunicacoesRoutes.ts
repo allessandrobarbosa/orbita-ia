@@ -37,11 +37,11 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
       if (!content || content.trim().length < 10) continue;
 
       // Autodetect delimiter
-      const firstLineEnd = content.indexOf('n');
+      const firstLineEnd = content.indexOf('\n');
       const headerLine = firstLineEnd > 0 ? content.substring(0, firstLineEnd) : content;
       const semiCount = (headerLine.match(/;/g) || []).length;
       const commaCount = (headerLine.match(/,/g) || []).length;
-      const tabCount = (headerLine.match(/t/g) || []).length;
+      const tabCount = (headerLine.match(/\t/g) || []).length;
       let delimiter = ",";
       if (semiCount > commaCount && semiCount > tabCount) delimiter = ";";
       else if (tabCount > commaCount && tabCount > semiCount) delimiter = "t";
@@ -241,8 +241,7 @@ router.post("/comunicacoes/import", async (req, res) => {
       return res.status(400).json({ error: "Formato inválido." });
     }
 
-    let importedCount = 0;
-    let updatedCount = 0;
+
     const updatedAt = new Date().toLocaleString("pt-BR");
 
 // Bulk upsert for comunicação items

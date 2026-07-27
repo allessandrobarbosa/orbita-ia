@@ -2240,7 +2240,7 @@ export default function TcuComunicacoes({
                       <RefreshCw className={`w-4 h-4 ${isSyncingLocalCom ? "animate-spin" : ""}`} />
                       {isSyncingLocalCom ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
                     </button>
->
+
                     <button
                       onClick={handleExportToExcel}
                       disabled={finalFiltered.length === 0}
