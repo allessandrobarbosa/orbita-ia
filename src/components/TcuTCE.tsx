@@ -64,6 +64,7 @@ interface TcuModuleProps {
   onClearOlderAcordaos?: () => Promise<any>;
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
+  onRefreshData?: () => Promise<void>;
 }
 
 export default function TcuTCE({ 
@@ -84,7 +85,8 @@ export default function TcuTCE({
   onImportTceMappings,
   onClearOlderAcordaos,
   onResetDatabase,
-  isLoading 
+  isLoading,
+  onRefreshData
 }: TcuModuleProps) {
   
   // Robust Portuguese Text Repair function
@@ -2239,7 +2241,7 @@ export default function TcuTCE({
               </div>
             )}
 
-            {/* Filter Row and Contextual Importer Button */}
+            {/* Filter Row and Sync/Export Buttons */}
             <div className="bg-slate-100 p-2.5 rounded-2xl flex flex-col items-stretch md:flex-row md:items-center justify-between gap-3 shadow-3xs">
               <div className="flex gap-1.5 shrink-0">
                 {syncLocalTceMessage && (
@@ -2247,36 +2249,15 @@ export default function TcuTCE({
                     {syncLocalTceMessage}
                   </span>
                 )}
+                
                 <button
                   onClick={handleLocalSyncTce}
                   disabled={isSyncingLocalTce}
-                  className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#003366] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
+                  className={`px-3.5 py-1.5 ${isSyncingLocalTce ? "bg-slate-800 text-white opacity-50" : "bg-[#003366] text-white hover:bg-[#002244]"} rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs`}
                   title="Sincronizar Arquivos Locais (data/tces)"
                 >
                   <RefreshCw className={`w-4 h-4 ${isSyncingLocalTce ? "animate-spin" : ""}`} />
                   {isSyncingLocalTce ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
-                </button>
-
-                <button
-                  id="btn-tce-importer-toggle"
-                  onClick={() => {
-                    setShowTceImporter(!showTceImporter);
-                    setTceImportMessage(null);
-                    setParsedTceItems(null);
-                    setParsedTceMappingItems(null);
-                  }}
-                  className={`px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                    showTceImporter
-                      ? "bg-slate-800 text-white shadow-xs"
-                      : "bg-[#003366] text-white hover:bg-[#002244] shadow-sm"
-                  }`}
-                >
-                  <Plus className="w-4 h-4" />
-                  {showTceImporter 
-                    ? "Ocultar Importador" 
-                    : tceActiveSubTab === "geral" 
-                      ? "Sincronizar Planilha Geral" 
-                      : "Sincronizar Mapeamentos de Acórdãos"}
                 </button>
               </div>
 

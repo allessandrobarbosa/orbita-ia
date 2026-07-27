@@ -122,6 +122,7 @@ export default function TcuModule(props: TcuModuleProps) {
           onImportTces={props.onImportTces}
           onImportTceMappings={props.onImportTceMappings}
           isLoading={props.isLoading}
+          onRefreshData={props.onRefreshData}
         />
       </div>
 
@@ -145,6 +146,7 @@ export default function TcuModule(props: TcuModuleProps) {
           onImportTces={props.onImportTces}
           onImportTceMappings={props.onImportTceMappings}
           isLoading={props.isLoading}
+          onRefreshData={props.onRefreshData}
         />
       </div>
 
@@ -168,6 +170,7 @@ export default function TcuModule(props: TcuModuleProps) {
           onImportTces={props.onImportTces}
           onImportTceMappings={props.onImportTceMappings}
           isLoading={props.isLoading}
+          onRefreshData={props.onRefreshData}
         />
       </div>
     </div>

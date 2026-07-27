@@ -25,21 +25,17 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
     let imported = 0;
     let updated = 0;
     const updatedAt = new Date().toLocaleString("pt-BR");
-    // Ensure column sizes can accommodate longer values (e.g., full datetime strings)
-    await pool.query(`
-      ALTER TABLE tcu_comunicacoes ALTER COLUMN data_expedicao TYPE VARCHAR(255);
-      ALTER TABLE tcu_comunicacoes ALTER COLUMN data_resposta TYPE VARCHAR(255);
-      ALTER TABLE tcu_comunicacoes ALTER COLUMN prazo_dias TYPE VARCHAR(255);
-      ALTER TABLE tcu_comunicacoes ALTER COLUMN ultima_atualizacao TYPE VARCHAR(255);
-    `);
+    console.log("[SYNC-LOCAL] Iniciando sincronização de comunicações...");
     for (const file of csvFiles) {
+      console.log(`[SYNC-LOCAL-COM] Iniciando processamento do arquivo: ${file}`);
+      console.time(`Processamento ${file}`);
       const isPendente = file.toLowerCase().includes("pendente");
       const isRespondida = file.toLowerCase().includes("respondida") || file.toLowerCase().includes("encerrada");
       
       const filePath = path.join(COM_DIR, file);
       // Lê o CSV (considerando a mesma codificação base, ou utf8)
       // O módulo do TCU usa ISO-8859-1 geralmente, mas como estamos lendo localmente, utf8 é o padrão se eles salvarem do excel
-      let content = fs.readFileSync(filePath, 'utf8');
+      let content = fs.readFileSync(filePath, 'latin1');
       if (!content || content.trim().length < 10) continue;
 
       // Autodetect delimiter
@@ -50,7 +46,7 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
       const tabCount = (headerLine.match(/\t/g) || []).length;
       let delimiter = ",";
       if (semiCount > commaCount && semiCount > tabCount) delimiter = ";";
-      else if (tabCount > commaCount && tabCount > semiCount) delimiter = "t";
+      else if (tabCount > commaCount && tabCount > semiCount) delimiter = "\t";
 
       // Parse CSV Robust (same logic as frontend)
       const rows: string[][] = [];
@@ -63,18 +59,18 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
         if (inQuotes) {
           if (char === '"' && nextChar === '"') { currentField += '"'; i++; }
           else if (char === '"') {
-            const isEndOfField = nextChar === delimiter || nextChar === 'r' || nextChar === 'n' || nextChar === undefined;
+            const isEndOfField = nextChar === delimiter || nextChar === '\r' || nextChar === '\n' || nextChar === undefined;
             if (isEndOfField) inQuotes = false;
             else currentField += '"';
           } else { currentField += char; }
         } else {
           if (char === '"') inQuotes = true;
           else if (char === delimiter) { currentRow.push(currentField.trim()); currentField = ""; }
-          else if (char === 'r' && nextChar === 'n') {
+          else if (char === '\r' && nextChar === '\n') {
             currentRow.push(currentField.trim());
             if (currentRow.length > 0) rows.push(currentRow);
             currentRow = []; currentField = ""; i++;
-          } else if (char === 'n') {
+          } else if (char === '\n') {
             currentRow.push(currentField.trim());
             if (currentRow.length > 0) rows.push(currentRow);
             currentRow = []; currentField = "";
@@ -91,24 +87,32 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
         const fields = rows[i];
         if (fields.length < 5) continue;
         
+        // CSV columns: Comunicação;Destinatário;Contato;Unidade Emitente;Processo;Data de Expedição;[Prazo para Resposta | Data da Resposta]
         const comunicacao = fields[0] || "";
         const destinatario = fields[1] || "";
         const contato = fields[2] || "";
         const unidadeEmitente = fields[3] || "";
         const processo = fields[4] || "";
         const dataExpedicao = fields[5] || "";
-        let dataResposta = fields[6] || "";
+        
+        // Field[6] meaning depends on file type:
+        // pendentes.csv -> "Prazo para Resposta" (number of days)
+        // respondidasencerradas.csv -> "Data da Resposta"
+        let dataResposta = "";
+        let prazoDias = "";
+        if (isPendente) {
+          prazoDias = fields[6] || "";
+          dataResposta = "";
+        } else {
+          dataResposta = fields[6] || "";
+          prazoDias = "";
+        }
 
         // Ignorar headers
         if (comunicacao.toLowerCase().includes("comunicac") || destinatario.toLowerCase().includes("destinat")) continue;
 
-        // Force DATA_RESPOSTA based on filename
-        if (isPendente) {
-          dataResposta = "";
-        } else if (isRespondida && dataResposta.trim() === "") {
-          // If the file is 'respondidas' but date is empty, force a generic date or just leave it.
-          // Usually they have dates if they are in the respondidas report.
-        }
+        // carece_resposta: pendentes carecem, respondidas/encerradas não
+        const carece = isPendente;
 
         // Extract year
         let ano = 2026;
@@ -124,35 +128,36 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
 
         const checkResult = await pool.query('SELECT key FROM tcu_comunicacoes WHERE key = $1 OR (comunicacao = $2 AND ano = $3)', [key, comunicacao, ano.toString()]);
         
-        const carece = true; // Por default as importadas carecem, ou ajustar se for o caso
-        
         if (checkResult.rows.length > 0) {
           const existingKey = checkResult.rows[0].key;
           await pool.query(`
             UPDATE tcu_comunicacoes SET
               destinatario = $2, contato = $3, unidade_emitente = $4,
               processo = $5, data_expedicao = $6, data_resposta = $7,
-              ultima_atualizacao = $8
+              prazo_dias = $8, carece_resposta = $9, ultima_atualizacao = $10
             WHERE key = $1
-          `, [existingKey, destinatario, contato, unidadeEmitente, processo, dataExpedicao, dataResposta, updatedAt]);
+          `, [existingKey, destinatario, contato, unidadeEmitente, processo, dataExpedicao, dataResposta, prazoDias, carece, updatedAt]);
           updated++;
         } else {
           await pool.query(`
             INSERT INTO tcu_comunicacoes (
               key, comunicacao, destinatario, contato, unidade_emitente,
               processo, data_expedicao, data_resposta, ano, carece_resposta,
-              ultima_atualizacao
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+              prazo_dias, ultima_atualizacao
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           `, [
             key, comunicacao, destinatario, contato, unidadeEmitente,
             processo, dataExpedicao, dataResposta, ano.toString(), carece,
-            updatedAt
+            prazoDias, updatedAt
           ]);
           imported++;
         }
       }
+      console.log(`[SYNC-LOCAL-COM] Concluído processamento de ${file}. Importados totais até agora: ${imported}, Atualizados: ${updated}`);
+      console.timeEnd(`Processamento ${file}`);
     }
 
+    console.log(`[SYNC-LOCAL-COM] Sincronização finalizada. Total Importados: ${imported}, Atualizados: ${updated}`);
     res.json({ 
       success: true, 
       message: `Sincronização local concluída: ${imported} novos, ${updated} atualizados.`,
@@ -247,74 +252,73 @@ router.post("/comunicacoes/import", async (req, res) => {
       return res.status(400).json({ error: "Formato inválido." });
     }
 
-
     const updatedAt = new Date().toLocaleString("pt-BR");
 
-// Bulk upsert for comunicação items
-const batchSize = 500;
-let importedCount = 0;
-let updatedCount = 0;
-for (let i = 0; i < items.length; i += batchSize) {
-  const batch = items.slice(i, i + batchSize);
-  // Ensure each item has a KEY
-  batch.forEach(item => {
-    if (!item.KEY) {
-      item.KEY = `${item.COMUNICACAO}-${item.ANO}`;
+    // Bulk upsert for comunicação items
+    const batchSize = 500;
+    let importedCount = 0;
+    let updatedCount = 0;
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      // Ensure each item has a KEY
+      batch.forEach(item => {
+        if (!item.KEY) {
+          item.KEY = `${item.COMUNICACAO}-${item.ANO}`;
+        }
+      });
+      const values: string[] = [];
+      const params: any[] = [];
+      batch.forEach((item, idx) => {
+        const base = idx * 16;
+        values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10}, $${base + 11}, $${base + 12}, $${base + 13}, $${base + 14}, $${base + 15}, $${base + 16})`);
+        params.push(
+          item.KEY,
+          item.COMUNICACAO,
+          item.DESTINATARIO,
+          item.CONTATO,
+          item.UNIDADE_EMITENTE,
+          item.PROCESSO,
+          item.DATA_EXPEDICAO,
+          item.DATA_RESPOSTA,
+          item.ANO,
+          item.CARECE_RESPOSTA,
+          item.PRAZO_DIAS,
+          item.RESPOSTA_ENVIADA_INTERNAMENTE,
+          item.UNIDADE_EXECUTORA,
+          item.PROCESSO_SEI,
+          item.DESTINACAO,
+          updatedAt
+        );
+      });
+      const query = `
+        INSERT INTO tcu_comunicacoes (key, comunicacao, destinatario, contato, unidade_emitente,
+          processo, data_expedicao, data_resposta, ano, carece_resposta,
+          prazo_dias, resposta_enviada_internamente, unidade_executora,
+          processo_sei, destinacao, ultima_atualizacao)
+        VALUES ${values.join(',')}
+        ON CONFLICT (key) DO UPDATE SET
+          comunicacao = EXCLUDED.comunicacao,
+          destinatario = EXCLUDED.destinatario,
+          contato = EXCLUDED.contato,
+          unidade_emitente = EXCLUDED.unidade_emitente,
+          processo = EXCLUDED.processo,
+          data_expedicao = EXCLUDED.data_expedicao,
+          data_resposta = EXCLUDED.data_resposta,
+          ano = EXCLUDED.ano,
+          carece_resposta = EXCLUDED.carece_resposta,
+          prazo_dias = EXCLUDED.prazo_dias,
+          resposta_enviada_internamente = EXCLUDED.resposta_enviada_internamente,
+          unidade_executora = EXCLUDED.unidade_executora,
+          processo_sei = EXCLUDED.processo_sei,
+          destinacao = EXCLUDED.destinacao,
+          ultima_atualizacao = EXCLUDED.ultima_atualizacao
+        RETURNING (xmax = 0) AS inserted;`;
+      const result = await pool.query(query, params);
+      result.rows.forEach(row => {
+        if (row.inserted) importedCount++;
+        else updatedCount++;
+      });
     }
-  });
-  const values: string[] = [];
-  const params: any[] = [];
-  batch.forEach((item, idx) => {
-    const base = idx * 16;
-    values.push(`($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8}, $${base + 9}, $${base + 10}, $${base + 11}, $${base + 12}, $${base + 13}, $${base + 14}, $${base + 15}, $${base + 16})`);
-    params.push(
-      item.KEY,
-      item.COMUNICACAO,
-      item.DESTINATARIO,
-      item.CONTATO,
-      item.UNIDADE_EMITENTE,
-      item.PROCESSO,
-      item.DATA_EXPEDICAO,
-      item.DATA_RESPOSTA,
-      item.ANO,
-      item.CARECE_RESPOSTA,
-      item.PRAZO_DIAS,
-      item.RESPOSTA_ENVIADA_INTERNAMENTE,
-      item.UNIDADE_EXECUTORA,
-      item.PROCESSO_SEI,
-      item.DESTINACAO,
-      updatedAt
-    );
-  });
-  const query = `
-    INSERT INTO tcu_comunicacoes (key, comunicacao, destinatario, contato, unidade_emitente,
-      processo, data_expedicao, data_resposta, ano, carece_resposta,
-      prazo_dias, resposta_enviada_internamente, unidade_executora,
-      processo_sei, destinacao, ultima_atualizacao)
-    VALUES ${values.join(',')}
-    ON CONFLICT (key) DO UPDATE SET
-      comunicacao = EXCLUDED.comunicacao,
-      destinatario = EXCLUDED.destinatario,
-      contato = EXCLUDED.contato,
-      unidade_emitente = EXCLUDED.unidade_emitente,
-      processo = EXCLUDED.processo,
-      data_expedicao = EXCLUDED.data_expedicao,
-      data_resposta = EXCLUDED.data_resposta,
-      ano = EXCLUDED.ano,
-      carece_resposta = EXCLUDED.carece_resposta,
-      prazo_dias = EXCLUDED.prazo_dias,
-      resposta_enviada_internamente = EXCLUDED.resposta_enviada_internamente,
-      unidade_executora = EXCLUDED.unidade_executora,
-      processo_sei = EXCLUDED.processo_sei,
-      destinacao = EXCLUDED.destinacao,
-      ultima_atualizacao = EXCLUDED.ultima_atualizacao
-    RETURNING (xmax = 0) AS inserted;`;
-  const result = await pool.query(query, params);
-  result.rows.forEach(row => {
-    if (row.inserted) importedCount++;
-    else updatedCount++;
-  });
-}
 
     const totalResult = await pool.query('SELECT COUNT(*) FROM tcu_comunicacoes');
     

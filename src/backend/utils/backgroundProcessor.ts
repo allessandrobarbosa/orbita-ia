@@ -61,13 +61,24 @@ export async function processSingleAcordao(key: string) {
   }
   const acordao = acResult.rows[0];
 
-  if (!acordao.acordao || acordao.acordao.trim() === "") {
-    throw new Error("Este acórdão não possui o Inteiro Teor para ser analisado.");
+  let acordaoTeor = acordao.acordao;
+
+  if (!acordaoTeor || acordaoTeor.trim() === "") {
+    console.log(`[Background] Acórdão ${acordao.num_acordao}/${acordao.ano_acordao} não possui Inteiro Teor no banco. Tentando buscar no cache da API TCU...`);
+    const { getInteiroTeorFromCache } = require('./tcuCsvParser');
+    const fetchedTeor = await getInteiroTeorFromCache(acordao.num_acordao, acordao.ano_acordao);
+    if (fetchedTeor) {
+      console.log(`[Background] Atualizando Inteiro Teor no banco para ${key}...`);
+      await pool.query('UPDATE tcu_acordaos SET acordao = $1 WHERE key = $2', [fetchedTeor, key]);
+      acordaoTeor = fetchedTeor;
+    } else {
+      throw new Error("Este acórdão não possui o Inteiro Teor para ser analisado e não foi possível encontrar no cache/API do TCU.");
+    }
   }
 
   // 2. Extração via IA
   // O contexto do TCE (tceContext) pode ser buscado aqui se implementado no BD
-  const aiResultJson = await extractTcuDataWithGemini(acordao.acordao);
+  const aiResultJson = await extractTcuDataWithGemini(acordaoTeor);
 
   // 3. Simular ou Preparar a Conciliação com SIAFI (A conciliação real pode ser feita em outra rotina)
   // Como o usuário pediu para a IA apenas separar os dados necessários, o cruzamento do SIAFI será o próximo passo da pipeline

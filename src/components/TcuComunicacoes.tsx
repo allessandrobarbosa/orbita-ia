@@ -1610,6 +1610,7 @@ export default function TcuComunicacoes({
       const res = await response.json();
       if (res && res.success) {
         setSyncLocalComMessage(res.message);
+        if (onRefreshData) await onRefreshData();
         setTimeout(() => setSyncLocalComMessage(null), 4000);
       } else {
         setSyncLocalComMessage(res?.message || "Erro na sincronização local de comunicações.");

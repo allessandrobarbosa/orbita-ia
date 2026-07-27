@@ -64,6 +64,7 @@ interface TcuModuleProps {
   onClearOlderAcordaos?: () => Promise<any>;
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
+  onRefreshData?: () => Promise<void>;
 }
 
 export default function TcuMonitoramento({ 
@@ -84,7 +85,8 @@ export default function TcuMonitoramento({
   onImportTceMappings,
   onClearOlderAcordaos,
   onResetDatabase,
-  isLoading 
+  isLoading,
+  onRefreshData
 }: TcuModuleProps) {
   
   // Robust Portuguese Text Repair function
@@ -1645,6 +1647,7 @@ export default function TcuMonitoramento({
       if (res && res.success) {
         setSyncLocalMessage(res.message);
         setLocalSyncReport(res.report || []);
+        if (onRefreshData) await onRefreshData();
       } else {
         setSyncLocalMessage(res?.message || "Erro na sincronização local de acórdãos.");
       }
@@ -2128,15 +2131,16 @@ export default function TcuMonitoramento({
             <div className="flex flex-wrap gap-2 items-center">
               <button 
                 id="btn-importer-toggle"
-                onClick={() => { setShowImporter(!showImporter); }}
+                onClick={handleLocalSync}
+                disabled={isSyncingLocal}
                 className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  showImporter 
-                    ? "bg-slate-800 text-white shadow-xs" 
+                  isSyncingLocal 
+                    ? "bg-slate-800 text-white shadow-xs opacity-50" 
                     : "bg-[#003366] text-white hover:bg-[#0f4396] shadow-sm"
                 }`}
               >
-                <Plus className="w-4 h-4" />
-                {showImporter ? "Ocultar Importador" : "Importar Acórdãos"}
+                {isSyncingLocal ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                {isSyncingLocal ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
               </button>
 
               <button 
@@ -2172,9 +2176,7 @@ export default function TcuMonitoramento({
                 onClick={handleExportExcel}
                 className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
               >
-                <Download className="w-4 h-4" />
-                Exportar Excel
-              </button>
+                <Download className="w-4 h-4" /><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> XLSX</button>
             </div>
 
             <div className="relative w-full xl:w-[300px] shrink-0">

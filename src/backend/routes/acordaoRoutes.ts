@@ -28,13 +28,20 @@ router.post("/acordaos/sync-local", async (req, res) => {
     let updated = 0;
 
     for (const file of csvFiles) {
+      console.log(`[SYNC-LOCAL-ACORDAOS] Iniciando processamento do arquivo: ${file}`);
+      console.time(`Processamento ${file}`);
       const filePath = path.join(TCU_DIR, file);
-      const content = fs.readFileSync(filePath, 'utf8');
-      const lines = content.split('n');
+      const content = fs.readFileSync(filePath, 'latin1');
+      const lines = content.split('\n');
+      console.log(`[SYNC-LOCAL-ACORDAOS] Encontradas ${lines.length} linhas em ${file}`);
       
+      let skippedLines = 0;
       for (let i = 2; i < lines.length; i++) {
         const line = lines[i].trim();
-        if (!line) continue;
+        if (!line) {
+          skippedLines++;
+          continue;
+        }
         
         const parts = line.split('""').map(p => p.replace(/"/g, ''));
         if (parts.length < 5) continue;
@@ -86,8 +93,12 @@ router.post("/acordaos/sync-local", async (req, res) => {
           imported++;
         }
       }
+      console.log(`[SYNC-LOCAL-ACORDAOS] Concluído processamento de ${file}. Linhas puladas: ${skippedLines}`);
+      console.timeEnd(`Processamento ${file}`);
     }
 
+    console.log(`[SYNC-LOCAL-ACORDAOS] Sincronização finalizada. Importados: ${imported}, Atualizados: ${updated}`);
+    
     // Enfileirar apenas do ano corrente (estáticos de anos anteriores não são atualizados via IA na importação)
     const currentYear = new Date().getFullYear();
     try {

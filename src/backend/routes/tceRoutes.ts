@@ -81,10 +81,12 @@ router.post("/tces/sync-local", async (req, res) => {
     };
 
     for (const file of csvFiles) {
+      console.log(`[SYNC-LOCAL-TCES] Iniciando processamento do arquivo: ${file}`);
+      console.time(`Processamento ${file}`);
       const isMapping = file.toLowerCase().includes("acordao") || file.toLowerCase().includes("acórdão") || file.toLowerCase().includes("mapping");
       const filePath = path.join(TCE_DIR, file);
       
-      let contentStr = fs.readFileSync(filePath, 'utf8');
+      let contentStr = fs.readFileSync(filePath, 'latin1');
       if (!contentStr || contentStr.trim().length < 10) continue;
 
       const firstLineEnd = contentStr.indexOf('\n');
@@ -232,8 +234,11 @@ router.post("/tces/sync-local", async (req, res) => {
           }
         }
       }
+      console.log(`[SYNC-LOCAL-TCES] Concluído processamento de ${file}.`);
+      console.timeEnd(`Processamento ${file}`);
     }
 
+    console.log(`[SYNC-LOCAL-TCES] Sincronização finalizada. TCEs importadas: ${importedGeral}, Atualizadas: ${updatedGeral}. Mapeamentos inseridos: ${importedMap}.`);
     res.json({ 
       success: true, 
       message: `Sincronização concluída: ${importedGeral} TCEs novas, ${updatedGeral} atualizadas e ${importedMap} mapeamentos inseridos.`
