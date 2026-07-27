@@ -1,7 +1,162 @@
 import { Router } from "express";
 import { pool } from "../db.js";
+import fs from "fs";
+import path from "path";
 
 const router = Router();
+
+// =====================================
+// API: Sync Local Comunicacoes
+// =====================================
+router.post("/comunicacoes/sync-local", async (req, res) => {
+  const COM_DIR = path.join(process.cwd(), "data", "tcu", "comunicacoes");
+  if (!fs.existsSync(COM_DIR)) {
+    return res.status(400).json({ success: false, message: "Diretório data/tcu/comunicacoes não encontrado." });
+  }
+
+  const files = fs.readdirSync(COM_DIR);
+  const csvFiles = files.filter(f => f.toLowerCase().endsWith(".csv"));
+
+  if (csvFiles.length === 0) {
+    return res.json({ success: false, message: "Nenhum arquivo .csv encontrado na pasta data/tcu/comunicacoes/." });
+  }
+
+  try {
+    let imported = 0;
+    let updated = 0;
+    const updatedAt = new Date().toLocaleString("pt-BR");
+
+    for (const file of csvFiles) {
+      const isPendente = file.toLowerCase().includes("pendente");
+      const isRespondida = file.toLowerCase().includes("respondida") || file.toLowerCase().includes("encerrada");
+      
+      const filePath = path.join(COM_DIR, file);
+      // Lê o CSV (considerando a mesma codificação base, ou utf8)
+      // O módulo do TCU usa ISO-8859-1 geralmente, mas como estamos lendo localmente, utf8 é o padrão se eles salvarem do excel
+      let content = fs.readFileSync(filePath, 'utf8');
+      if (!content || content.trim().length < 10) continue;
+
+      // Autodetect delimiter
+      const firstLineEnd = content.indexOf('n');
+      const headerLine = firstLineEnd > 0 ? content.substring(0, firstLineEnd) : content;
+      const semiCount = (headerLine.match(/;/g) || []).length;
+      const commaCount = (headerLine.match(/,/g) || []).length;
+      const tabCount = (headerLine.match(/t/g) || []).length;
+      let delimiter = ",";
+      if (semiCount > commaCount && semiCount > tabCount) delimiter = ";";
+      else if (tabCount > commaCount && tabCount > semiCount) delimiter = "t";
+
+      // Parse CSV Robust (same logic as frontend)
+      const rows: string[][] = [];
+      let currentField = "";
+      let currentRow: string[] = [];
+      let inQuotes = false;
+      for (let i = 0; i < content.length; i++) {
+        const char = content[i];
+        const nextChar = content[i + 1];
+        if (inQuotes) {
+          if (char === '"' && nextChar === '"') { currentField += '"'; i++; }
+          else if (char === '"') {
+            const isEndOfField = nextChar === delimiter || nextChar === 'r' || nextChar === 'n' || nextChar === undefined;
+            if (isEndOfField) inQuotes = false;
+            else currentField += '"';
+          } else { currentField += char; }
+        } else {
+          if (char === '"') inQuotes = true;
+          else if (char === delimiter) { currentRow.push(currentField.trim()); currentField = ""; }
+          else if (char === 'r' && nextChar === 'n') {
+            currentRow.push(currentField.trim());
+            if (currentRow.length > 0) rows.push(currentRow);
+            currentRow = []; currentField = ""; i++;
+          } else if (char === 'n') {
+            currentRow.push(currentField.trim());
+            if (currentRow.length > 0) rows.push(currentRow);
+            currentRow = []; currentField = "";
+          } else { currentField += char; }
+        }
+      }
+      if (currentRow.length > 0 || currentField !== "") {
+        currentRow.push(currentField.trim());
+        rows.push(currentRow);
+      }
+
+      // Process parsed rows
+      for (let i = 0; i < rows.length; i++) {
+        const fields = rows[i];
+        if (fields.length < 5) continue;
+        
+        const comunicacao = fields[0] || "";
+        const destinatario = fields[1] || "";
+        const contato = fields[2] || "";
+        const unidadeEmitente = fields[3] || "";
+        const processo = fields[4] || "";
+        const dataExpedicao = fields[5] || "";
+        let dataResposta = fields[6] || "";
+
+        // Ignorar headers
+        if (comunicacao.toLowerCase().includes("comunicac") || destinatario.toLowerCase().includes("destinat")) continue;
+
+        // Force DATA_RESPOSTA based on filename
+        if (isPendente) {
+          dataResposta = "";
+        } else if (isRespondida && dataResposta.trim() === "") {
+          // If the file is 'respondidas' but date is empty, force a generic date or just leave it.
+          // Usually they have dates if they are in the respondidas report.
+        }
+
+        // Extract year
+        let ano = 2026;
+        const dateMatch = dataExpedicao.match(/\/(\d{4})/);
+        if (dateMatch) ano = parseInt(dateMatch[1]);
+        else {
+          const nameMatch = comunicacao.match(/\/(\d{4})/);
+          if (nameMatch) ano = parseInt(nameMatch[1]);
+        }
+
+        const numOnly = (comunicacao.match(/\d+[\.\d]*/) || [""])[0].replace(/\D/g, "");
+        const key = `COM-${numOnly || Math.floor(Math.random() * 1000000)}-${ano}`;
+
+        const checkResult = await pool.query('SELECT key FROM tcu_comunicacoes WHERE key = $1 OR (comunicacao = $2 AND ano = $3)', [key, comunicacao, ano.toString()]);
+        
+        const carece = true; // Por default as importadas carecem, ou ajustar se for o caso
+        
+        if (checkResult.rows.length > 0) {
+          const existingKey = checkResult.rows[0].key;
+          await pool.query(`
+            UPDATE tcu_comunicacoes SET
+              destinatario = $2, contato = $3, unidade_emitente = $4,
+              processo = $5, data_expedicao = $6, data_resposta = $7,
+              ultima_atualizacao = $8
+            WHERE key = $1
+          `, [existingKey, destinatario, contato, unidadeEmitente, processo, dataExpedicao, dataResposta, updatedAt]);
+          updated++;
+        } else {
+          await pool.query(`
+            INSERT INTO tcu_comunicacoes (
+              key, comunicacao, destinatario, contato, unidade_emitente,
+              processo, data_expedicao, data_resposta, ano, carece_resposta,
+              ultima_atualizacao
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `, [
+            key, comunicacao, destinatario, contato, unidadeEmitente,
+            processo, dataExpedicao, dataResposta, ano.toString(), carece,
+            updatedAt
+          ]);
+          imported++;
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Sincronização local concluída: ${imported} novos, ${updated} atualizados.`,
+      report: [{ file: "Geral", imported, updated, skipped: 0 }]
+    });
+  } catch (err: any) {
+    console.error("Erro na sincronização local de comunicacoes:", err);
+    res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });
+  }
+});
 
 // API: Get all comunicacoes
 router.get("/comunicacoes", async (req, res) => {

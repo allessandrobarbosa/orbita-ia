@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { 
   Plus, 
   Search, 
@@ -1445,17 +1445,17 @@ export default function TcuMonitoramento({
     }
   };
 
+  const abortBatchRef = useRef(false);
+
   const handleBatchProcessAi = async () => {
-    // 1. Encontrar todos os acórdãos que ainda não possuem dossieRessarcimento
-    // ou que possuem dossiê vazio (tentativa anterior falhou) E tem possível débito no texto
-    const pendentes = acordaos.filter(ac => {
-      const isMissing = !ac.aiAnalysisData?.dossieRessarcimento;
-      const isEmpty = ac.aiAnalysisData?.dossieRessarcimento?.length === 0;
-      const hasDebtText = /\b(condenar.*?em débito|tesouro nacional|recolhimento aos cofres)\b/.test(((ac.SUMARIO || "") + " " + (ac.ACORDAO || "")).toLowerCase());
-      
-      return isMissing || (isEmpty && hasDebtText);
+    const pendentes = acordaos.filter(a => {
+      if (a.STATUS_MONITORAMENTO === "Cumprido" || a.STATUS_MONITORAMENTO === "Atrasado") return false;
+      const dossie = a.aiAnalysisData?.dossieRessarcimento;
+      if (!dossie || dossie.length === 0) return true;
+      if (dossie[0].status === "pendente") return true;
+      return false;
     });
-    
+
     if (pendentes.length === 0) {
       alert("Todos os Acórdãos já possuem Dossiê IA gerado!");
       return;
@@ -1464,10 +1464,18 @@ export default function TcuMonitoramento({
     const confirmar = window.confirm(`Foram encontrados ${pendentes.length} Acórdãos pendentes de extração em lote.\n\nO processamento ocorrerá de forma instantânea através do nosso Agente Nativo local, sem limites ou bloqueios.\n\nDeseja iniciar?`);
     if (!confirmar) return;
 
+    abortBatchRef.current = false;
     setIsBatchProcessing(true);
     setBatchProgress({ current: 0, total: pendentes.length });
+    
+    let wasAborted = false;
 
     for (let i = 0; i < pendentes.length; i++) {
+      if (abortBatchRef.current) {
+        wasAborted = true;
+        break;
+      }
+      
       const ac = pendentes[i];
       setBatchProgress({ current: i + 1, total: pendentes.length });
       
@@ -1475,6 +1483,10 @@ export default function TcuMonitoramento({
       let retryCount = 0;
       
       while (!success && retryCount < 5) {
+        if (abortBatchRef.current) {
+          wasAborted = true;
+          break;
+        }
         try {
           const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
             method: "POST",
@@ -1507,7 +1519,6 @@ export default function TcuMonitoramento({
               updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
             }
             
-            // Call API directly to save without triggering full re-render on every loop
             await fetch("/api/acordaos/update", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -1520,20 +1531,20 @@ export default function TcuMonitoramento({
               await new Promise(r => setTimeout(r, 62000));
               retryCount++;
             } else {
-              break; // Stop retry on non-429 error
+              break; 
             }
           }
         } catch (err) {
           console.error(`Erro ao processar lote no Acórdão ${ac.KEY}:`, err);
           alert(`Erro de conexão ao processar o item ${i + 1}. O lote foi pausado para evitar perda de dados.`);
-          break; // Stop the retry on network error!
+          wasAborted = true;
+          break; 
         }
       }
-
-      // Evitar que o sistema faça logout por inatividade
-      window.dispatchEvent(new Event('mousemove'));
       
-      // Pequeno respiro pro React atualizar a barra de progresso
+      if (wasAborted) break;
+
+      window.dispatchEvent(new Event('mousemove'));
       if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
     }
 
@@ -1542,7 +1553,11 @@ export default function TcuMonitoramento({
     }
     
     setIsBatchProcessing(false);
-    alert("✨ Processamento em Lote concluído com sucesso!");
+    if (wasAborted) {
+      alert("Processamento em Lote foi abortado/interrompido.");
+    } else {
+      alert("✨ Processamento em Lote concluído com sucesso!");
+    }
   };
 
   const handleAnalyzeDossieAI = async (ac: AcordaoDemand) => {
@@ -1910,7 +1925,7 @@ export default function TcuMonitoramento({
                   Sincronização Automática via Planilhas Locais
                 </h4>
                 <p className="text-[11px] text-slate-500 max-w-[650px] leading-relaxed">
-                  Para maior segurança e controle de dados, salve as planilhas completas obtidas no TCU (ex: <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">Acórdãos2026.csv</code>) dentro da pasta segura <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">data/tcu/</code> do projeto.
+                  Para maior segurança e controle de dados, salve as planilhas completas obtidas no TCU (ex: <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">Acórdãos2026.csv</code>) dentro da pasta segura <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">data/tcu/acordaos/</code> do projeto.
                 </p>
                 <p className="text-[10px] text-slate-400">
                   O sistema fará a leitura local em lote de forma otimizada para atualizar os teores das decisões sem depender da conexão externa do TCU.
@@ -2126,18 +2141,23 @@ export default function TcuMonitoramento({
 
               <button 
                 id="btn-batch-process-ai"
-                onClick={handleBatchProcessAi}
-                disabled={isBatchProcessing}
+                onClick={() => {
+                  if (isBatchProcessing) {
+                    abortBatchRef.current = true;
+                  } else {
+                    handleBatchProcessAi();
+                  }
+                }}
                 className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
                   isBatchProcessing
-                    ? "bg-[#1351b4]/60 cursor-not-allowed text-white shadow-xs"
+                    ? "bg-red-600 hover:bg-red-700 text-white shadow-xs"
                     : "bg-[#1351b4] text-white hover:bg-[#0f4396] shadow-sm"
                 }`}
               >
                 {isBatchProcessing ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    Processando ({batchProgress.current}/{batchProgress.total})...
+                    Abortar Operação ({batchProgress.current}/{batchProgress.total})
                   </>
                 ) : (
                   <>

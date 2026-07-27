@@ -1604,7 +1604,10 @@ function LockScreen({
         setErrorMsg("Por favor, informe seu CPF.");
         return;
       }
-      // Removendo validação rígida de CPF para permitir login por email ou ID
+      if (identifier.length !== 11) {
+        setErrorMsg("O CPF deve conter exatamente 11 números.");
+        return;
+      }
       setLoginStep("password");
 
       setLoginStep("password");
@@ -1673,10 +1676,12 @@ function LockScreen({
                   </div>
                   <input
                     type="text"
-                    placeholder="Informe seu CPF ou E-mail"
+                    placeholder="Informe seu CPF"
                     value={identifier}
+                    maxLength={11}
                     onChange={e => {
-                      setIdentifier(e.target.value);
+                      const val = e.target.value.replace(/\D/g, "");
+                      setIdentifier(val);
                       setErrorMsg("");
                     }}
                     disabled={loginStep === "password"}

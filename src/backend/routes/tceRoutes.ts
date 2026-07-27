@@ -1,7 +1,248 @@
 import express from "express";
 import { pool } from "../db";
 
+import fs from "fs";
+import path from "path";
+
+
 const router = express.Router();
+
+
+
+// =====================================
+// API: Sync Local TCEs
+// =====================================
+router.post("/tces/sync-local", async (req, res) => {
+  const TCE_DIR = path.join(process.cwd(), "data", "tcu", "tces");
+  if (!fs.existsSync(TCE_DIR)) {
+    return res.status(400).json({ success: false, message: "Diretório data/tcu/tces não encontrado." });
+  }
+
+  const files = fs.readdirSync(TCE_DIR);
+  const csvFiles = files.filter(f => f.toLowerCase().endsWith(".csv"));
+
+  if (csvFiles.length === 0) {
+    return res.json({ success: false, message: "Nenhum arquivo .csv encontrado na pasta data/tcu/tces/." });
+  }
+
+  try {
+    let importedGeral = 0;
+    let updatedGeral = 0;
+    let importedMap = 0;
+    let updatedMap = 0;
+    const updatedAt = new Date().toLocaleString("pt-BR");
+
+    const parseCSVRobust = (csvText: string, delimiter: string): string[][] => {
+      const rows: string[][] = [];
+      let currentField = "";
+      let currentRow: string[] = [];
+      let inQuotes = false;
+      for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        const nextChar = csvText[i + 1];
+        if (inQuotes) {
+          if (char === '"' && nextChar === '"') { currentField += '"'; i++; }
+          else if (char === '"') {
+            const isEndOfField = nextChar === delimiter || nextChar === '\r' || nextChar === '\n' || nextChar === undefined;
+            if (isEndOfField) inQuotes = false;
+            else currentField += '"';
+          } else { currentField += char; }
+        } else {
+          if (char === '"') inQuotes = true;
+          else if (char === delimiter) { currentRow.push(currentField.trim()); currentField = ""; }
+          else if (char === '\r' && nextChar === '\n') {
+            currentRow.push(currentField.trim());
+            if (currentRow.length > 0) rows.push(currentRow);
+            currentRow = []; currentField = ""; i++;
+          } else if (char === '\n') {
+            currentRow.push(currentField.trim());
+            if (currentRow.length > 0) rows.push(currentRow);
+            currentRow = []; currentField = "";
+          } else { currentField += char; }
+        }
+      }
+      if (currentRow.length > 0 || currentField !== "") {
+        currentRow.push(currentField.trim());
+        rows.push(currentRow);
+      }
+      return rows;
+    };
+
+    const normalizeHeaderName = (str: string) => {
+      if (!str) return "";
+      return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    };
+
+    const extractYearFromTceString = (str: string) => {
+      if (!str) return 2026;
+      const match = str.match(/(?:20|19)\d{2}/);
+      if (match) return parseInt(match[0]);
+      return 2026;
+    };
+
+    for (const file of csvFiles) {
+      const isMapping = file.toLowerCase().includes("acordao") || file.toLowerCase().includes("acórdão") || file.toLowerCase().includes("mapping");
+      const filePath = path.join(TCE_DIR, file);
+      
+      let contentStr = fs.readFileSync(filePath, 'utf8');
+      if (!contentStr || contentStr.trim().length < 10) continue;
+
+      const firstLineEnd = contentStr.indexOf('\n');
+      const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
+      const semiCount = (headerLine.match(/;/g) || []).length;
+      const commaCount = (headerLine.match(/,/g) || []).length;
+      const tabCount = (headerLine.match(/\t/g) || []).length;
+      let delimiter = ",";
+      if (semiCount > commaCount && semiCount > tabCount) delimiter = ";";
+      else if (tabCount > commaCount && tabCount > semiCount) delimiter = "\t";
+
+      const allRows = parseCSVRobust(contentStr, delimiter);
+      if (allRows.length < 2) continue;
+
+      if (isMapping) {
+        let headerRowIdx = 0;
+        for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+          const rowJoined = allRows[i].join(" ").toLowerCase();
+          if (rowJoined.includes("acordao") || rowJoined.includes("acrdo") || rowJoined.includes("tce") || rowJoined.includes("sess") || rowJoined.includes("descr")) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+        const headers = allRows[headerRowIdx];
+        const normalizedHeaders = headers.map(normalizeHeaderName);
+
+        let colTCE = -1;
+        let colAcordao = -1;
+        for (let i = 0; i < normalizedHeaders.length; i++) {
+          const ch = normalizedHeaders[i];
+          if (ch === "tce" || ch.includes("tce") || ch.includes("numero") || ch.includes("numeroano") || ch.includes("processo")) colTCE = i;
+          if (ch.includes("acord") || ch.includes("acr") || ch.includes("desc") || ch.includes("depoiment")) colAcordao = i;
+        }
+        if (colTCE === -1) colTCE = normalizedHeaders.length - 1;
+        if (colAcordao === -1) colAcordao = Math.min(2, normalizedHeaders.length - 1);
+
+        const startRowIdx = headerRowIdx + 1;
+        for (let i = startRowIdx; i < allRows.length; i++) {
+          const fields = allRows[i];
+          if (fields.length < 2) continue;
+          let tceVal = fields[colTCE]?.trim();
+          let acordaoVal = fields[colAcordao]?.trim();
+          if (tceVal && acordaoVal) {
+            tceVal = tceVal.replace(/\|/g, "/");
+            const checkResult = await pool.query('SELECT 1 FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2', [tceVal, acordaoVal]);
+            if (checkResult.rows.length === 0) {
+              await pool.query('INSERT INTO tcu_tce_acordao_mapping (numero_ano_tce, acordao_key) VALUES ($1, $2)', [tceVal, acordaoVal]);
+              importedMap++;
+            }
+          }
+        }
+
+      } else {
+        let headerRowIdx = 0;
+        for (let i = 0; i < Math.min(allRows.length, 5); i++) {
+          const rowJoined = allRows[i].join(" ").toLowerCase();
+          if (rowJoined.includes("processo") || rowJoined.includes("tce") || rowJoined.includes("motivo") || rowJoined.includes("debito") || rowJoined.includes("dbito") || rowJoined.includes("instaur")) {
+            headerRowIdx = i;
+            break;
+          }
+        }
+
+        const headers = allRows[headerRowIdx];
+        const normalizedHeaders = headers.map(normalizeHeaderName);
+        
+        const findIndexRobust = (keywords: string[], excludes?: string[]): number => {
+          for (const kw of keywords) {
+            const cleanKw = normalizeHeaderName(kw);
+            const idx = normalizedHeaders.findIndex(ch => {
+              if (!ch.includes(cleanKw)) return false;
+              if (excludes) return !excludes.some(ex => ch.includes(normalizeHeaderName(ex)));
+              return true;
+            });
+            if (idx !== -1) return idx;
+          }
+          return -1;
+        };
+
+        const colNumeroAno = findIndexRobust(["nmeroano", "numeroano", "numero", "ano"]);
+        const colPA = findIndexRobust(["processoadministrativo", "pa", "processoadm"]);
+        const colMotivo = findIndexRobust(["motivodainstauracao", "motivo"]);
+        const colSubmotivo = findIndexRobust(["submotivodainstauracao", "submotivo"]);
+        const colDebitoOrig = findIndexRobust(["debitooriginal", "debitoorig"]);
+        const colDebitoAtual = findIndexRobust(["debitoatualizado", "atualizado"]);
+        const colDataAtual = findIndexRobust(["dataatualizacao", "data_atualizacao"]);
+        const colPosicionamento = findIndexRobust(["ultimoposicionamento", "posicionamento"]);
+        const colTC = normalizedHeaders.indexOf("tc");
+        const colEstado = findIndexRobust(["estadoprocesso", "estado"]);
+        const colSituacao = findIndexRobust(["situacaoprocesso", "situacao"]);
+        const colJulgamento = findIndexRobust(["primeirojulgamento", "julgamento"]);
+        const colEncerramento = normalizedHeaders.indexOf("encerramento");
+
+        const startRowIdx = headerRowIdx + 1;
+        for (let i = startRowIdx; i < allRows.length; i++) {
+          const fields = allRows[i];
+          if (fields.length < 5) continue;
+
+          const getFieldValue = (colIdx: number, fallback: string = "") => (colIdx !== -1 && colIdx < fields.length) ? (fields[colIdx] || fallback) : fallback;
+
+          const numeroAnoTce = getFieldValue(colNumeroAno !== -1 ? colNumeroAno : 0, `TCE ${i}`);
+          const pa = getFieldValue(colPA !== -1 ? colPA : 6);
+          const motivo = getFieldValue(colMotivo !== -1 ? colMotivo : 7);
+          const submotivo = getFieldValue(colSubmotivo !== -1 ? colSubmotivo : 8);
+          const debitoOrig = getFieldValue(colDebitoOrig !== -1 ? colDebitoOrig : 12);
+          const debitoAtual = getFieldValue(colDebitoAtual !== -1 ? colDebitoAtual : 13);
+          const dataAtual = getFieldValue(colDataAtual !== -1 ? colDataAtual : 14);
+          const posicionamento = getFieldValue(colPosicionamento !== -1 ? colPosicionamento : 33);
+          const tc = getFieldValue(colTC !== -1 ? colTC : 46);
+          const estado = getFieldValue(colEstado !== -1 ? colEstado : 59);
+          const situacao = getFieldValue(colSituacao !== -1 ? colSituacao : 60);
+          const julgamento = getFieldValue(colJulgamento !== -1 ? colJulgamento : 71);
+          const encerramento = getFieldValue(colEncerramento !== -1 ? colEncerramento : 72);
+          let ano = extractYearFromTceString(numeroAnoTce);
+          const id = numeroAnoTce;
+
+          const checkResult = await pool.query('SELECT id FROM tcu_tce WHERE id = $1 OR numero_ano_tce = $2', [id, numeroAnoTce]);
+          if (checkResult.rows.length > 0) {
+            const targetId = checkResult.rows[0].id;
+            await pool.query(`
+              UPDATE tcu_tce SET
+                numero_ano_tce = $2, processo_administrativo = $3, motivo_instauracao = $4,
+                submotivo_instauracao = $5, debito_original = $6, debito_atualizado = $7,
+                data_atualizacao_debito = $8, ultimo_posicionamento = $9, tc = $10,
+                estado_processo = $11, situacao_processo = $12, primeiro_julgamento = $13,
+                encerramento = $14, ano = $15, ultima_atualizacao = $16
+              WHERE id = $1
+            `, [
+              targetId, numeroAnoTce, pa, motivo, submotivo, debitoOrig, debitoAtual,
+              dataAtual, posicionamento, tc, estado, situacao, julgamento, encerramento, ano, updatedAt
+            ]);
+            updatedGeral++;
+          } else {
+            await pool.query(`
+              INSERT INTO tcu_tce (
+                id, numero_ano_tce, processo_administrativo, motivo_instauracao,
+                submotivo_instauracao, debito_original, debito_atualizado, data_atualizacao_debito,
+                ultimo_posicionamento, tc, estado_processo, situacao_processo, primeiro_julgamento,
+                encerramento, ano, ultima_atualizacao
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            `, [
+              id, numeroAnoTce, pa, motivo, submotivo, debitoOrig, debitoAtual,
+              dataAtual, posicionamento, tc, estado, situacao, julgamento, encerramento, ano, updatedAt
+            ]);
+            importedGeral++;
+          }
+        }
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Sincronização concluída: ${importedGeral} TCEs novas, ${updatedGeral} atualizadas e ${importedMap} mapeamentos inseridos.`
+    });
+  } catch (err: any) {
+    console.error("Erro na sincronização local de TCEs:", err);
+    res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });
+  }
+});
 
 router.get("/tces", async (req, res) => {
   try {

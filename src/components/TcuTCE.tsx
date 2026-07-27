@@ -499,6 +499,8 @@ export default function TcuTCE({
   const [parsedTceMappingItems, setParsedTceMappingItems] = useState<TceAcordaoMapping[] | null>(null);
   const [isSavingTce, setIsSavingTce] = useState(false);
   const [tceImportMessage, setTceImportMessage] = useState<string | null>(null);
+  const [isSyncingLocalTce, setIsSyncingLocalTce] = useState(false);
+  const [syncLocalTceMessage, setSyncLocalTceMessage] = useState<string | null>(null);
   const [tceExpandedId, setTceExpandedId] = useState<string | null>(null);
   const [tceCurrentPage, setTceCurrentPage] = useState(1);
   const tceItemsPerPage = 15;
@@ -926,6 +928,30 @@ export default function TcuTCE({
       setIsSavingTce(false);
     } else {
       setTceImportMessage("Nenhum dado pronto para sincronização. Por favor, carregue um arquivo válido começado com 'tce'.");
+    }
+  };
+
+  const handleLocalSyncTce = async () => {
+    setIsSyncingLocalTce(true);
+    setSyncLocalTceMessage("Sincronizando arquivos de TCEs locais...");
+    try {
+      const response = await fetch('/api/tces/sync-local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const res = await response.json();
+      if (res && res.success) {
+        setSyncLocalTceMessage(res.message);
+        setTimeout(() => setSyncLocalTceMessage(null), 4000);
+      } else {
+        setSyncLocalTceMessage(res?.message || "Erro na sincronização local de TCEs.");
+        setTimeout(() => setSyncLocalTceMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setSyncLocalTceMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
+      setTimeout(() => setSyncLocalTceMessage(null), 4000);
+    } finally {
+      setIsSyncingLocalTce(false);
     }
   };
 
@@ -2042,7 +2068,7 @@ export default function TcuTCE({
                         ? "Sincronização de Instâncias e Carga de TCE Geral" 
                         : "Sincronização de Mapeamentos e Vínculos de Acórdãos"}
                     </h3>
-                    <p className="text-xs text-slate-500 leading-relaxed max-w-4xl">
+                    <p className="text-xs text-slate-50 leading-relaxed max-w-4xl">
                       {tceActiveSubTab === "geral" 
                         ? 'Arraste ou cole o conteúdo do arquivo CSV estruturado das TCEs gerais. O nome do arquivo físico deve iniciar com "tce" (ex: tces_geral.csv).'
                         : 'Arraste ou cole o arquivo de mapeamento de vínculos. Certifique-se de que o nome inclua as palavras "acordao" ou "mapping" (ex: tce_acordao_link.csv).'}
@@ -2216,6 +2242,21 @@ export default function TcuTCE({
             {/* Filter Row and Contextual Importer Button */}
             <div className="bg-slate-100 p-2.5 rounded-2xl flex flex-col items-stretch md:flex-row md:items-center justify-between gap-3 shadow-3xs">
               <div className="flex gap-1.5 shrink-0">
+                {syncLocalTceMessage && (
+                  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 self-center">
+                    {syncLocalTceMessage}
+                  </span>
+                )}
+                <button
+                  onClick={handleLocalSyncTce}
+                  disabled={isSyncingLocalTce}
+                  className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#003366] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
+                  title="Sincronizar Arquivos Locais (data/tces)"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isSyncingLocalTce ? "animate-spin" : ""}`} />
+                  {isSyncingLocalTce ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
+                </button>
+
                 <button
                   id="btn-tce-importer-toggle"
                   onClick={() => {
@@ -2593,9 +2634,7 @@ export default function TcuTCE({
                                             <button
                                               type="button"
                                               onClick={() => {
-                                                setTcuActiveSection("monitoramento");
-                                                setSearchTerm(item.mapping.ACORDAO_KEY);
-                                                window.scrollTo({ top: 300, behavior: "smooth" });
+                                                alert(`Por favor, acesse a aba "Monitoramento de Acórdãos" e busque por: ${item.mapping.ACORDAO_KEY}`);
                                               }}
                                               className="px-3.5 py-1.5 bg-[#003366] hover:bg-slate-900 text-white rounded-xl text-[10.5px] font-bold transition flex items-center gap-1.5 shadow-2xs"
                                             >

@@ -35,12 +35,12 @@ import {
   Landmark,
   Activity,
   Users,
+  RefreshCw,
   Building2,
   ArrowLeftRight,
   Archive,
   Sparkles,
   Bot,
-  RefreshCw,
   Brain
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
@@ -448,6 +448,8 @@ export default function TcuComunicacoes({
   const [isSyncingLocal, setIsSyncingLocal] = useState(false);
   const [syncLocalMessage, setSyncLocalMessage] = useState<string | null>(null);
   const [localSyncReport, setLocalSyncReport] = useState<any[] | null>(null);
+  const [isSyncingLocalCom, setIsSyncingLocalCom] = useState(false);
+  const [syncLocalComMessage, setSyncLocalComMessage] = useState<string | null>(null);
 
   // Portal da Transparência verification states
   const [docVerifyInput, setDocVerifyInput] = useState("");
@@ -1594,6 +1596,31 @@ export default function TcuComunicacoes({
     }
   };
 
+  // Trigger Local Sync Action for Comunicacoes
+  const handleLocalSyncCom = async () => {
+    setIsSyncingLocalCom(true);
+    setSyncLocalComMessage("Sincronizando comunicações locais...");
+    try {
+      const response = await fetch('/api/comunicacoes/sync-local', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const res = await response.json();
+      if (res && res.success) {
+        setSyncLocalComMessage(res.message);
+        setTimeout(() => setSyncLocalComMessage(null), 4000);
+      } else {
+        setSyncLocalComMessage(res?.message || "Erro na sincronização local de comunicações.");
+        setTimeout(() => setSyncLocalComMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setSyncLocalComMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
+      setTimeout(() => setSyncLocalComMessage(null), 4000);
+    } finally {
+      setIsSyncingLocalCom(false);
+    }
+  };
+
 
 
   // Extract unique sorted list of years from the acórdãos
@@ -2303,6 +2330,20 @@ export default function TcuComunicacoes({
                   </div>
 
                   <div className="flex gap-2">
+                    {syncLocalComMessage && (
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                        {syncLocalComMessage}
+                      </span>
+                    )}
+                    <button
+                      onClick={handleLocalSyncCom}
+                      disabled={isSyncingLocalCom}
+                      className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#003366] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
+                      title="Sincronizar Arquivos Locais (data/comunicacoes)"
+                    >
+                      <RefreshCw className={`w-4 h-4 ${isSyncingLocalCom ? "animate-spin" : ""}`} />
+                      {isSyncingLocalCom ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
+                    </button>
                     <button
                       onClick={() => setShowComImporter(!showComImporter)}
                       className="px-3.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
