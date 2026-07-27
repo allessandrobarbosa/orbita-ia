@@ -25,7 +25,13 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
     let imported = 0;
     let updated = 0;
     const updatedAt = new Date().toLocaleString("pt-BR");
-
+    // Ensure column sizes can accommodate longer values (e.g., full datetime strings)
+    await pool.query(`
+      ALTER TABLE tcu_comunicacoes ALTER COLUMN data_expedicao TYPE VARCHAR(255);
+      ALTER TABLE tcu_comunicacoes ALTER COLUMN data_resposta TYPE VARCHAR(255);
+      ALTER TABLE tcu_comunicacoes ALTER COLUMN prazo_dias TYPE VARCHAR(255);
+      ALTER TABLE tcu_comunicacoes ALTER COLUMN ultima_atualizacao TYPE VARCHAR(255);
+    `);
     for (const file of csvFiles) {
       const isPendente = file.toLowerCase().includes("pendente");
       const isRespondida = file.toLowerCase().includes("respondida") || file.toLowerCase().includes("encerrada");
