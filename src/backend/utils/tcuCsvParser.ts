@@ -1,292 +1,392 @@
 import fs from "fs";
 import path from "path";
-import readline from "readline";
-import { fetchAcordaoCompleto } from "./tcuApi";
 
-function normalizeHeaderName(header: string): string {
-  return header.toLowerCase()
-    .replace(/[áàâã]/g, "a")
-    .replace(/[éê]/g, "e")
-    .replace(/[í]/g, "i")
-    .replace(/[óôõ]/g, "o")
-    .replace(/[úü]/g, "u")
-    .replace(/[ç]/g, "c")
-    .replace(/[^a-z0-9]/g, "");
-}
+const TCU_DIR = path.resolve(process.cwd(), "data", "tcu", "acordaos");
 
-function parseCSVLine(line: string, delimiter: string = ","): string[] {
-  const result: string[] = [];
-  let currentVal = "";
-  let insideQuotes = false;
+// =========================================================================
+// DETECÇÃO AUTOMÁTICA DE ENCODING
+// =========================================================================
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"' && (i === 0 || line[i - 1] !== '\\')) {
-      if (insideQuotes && line[i + 1] === '"') {
-        currentVal += '"';
-        i++; // skip escaped quote
-      } else {
-        insideQuotes = !insideQuotes;
-      }
-    } else if (char === delimiter && !insideQuotes) {
-      result.push(currentVal.trim());
-      currentVal = "";
-    } else {
-      currentVal += char;
-    }
+/**
+ * Detecta automaticamente o encoding de um buffer de texto.
+ *
+ * O arquivo Acórdãos{ANO}.csv exportado do portal TCU vem geralmente em
+ * Windows-1252 (ANSI/Latin-1). Alguns ambientes podem converter para UTF-8.
+ * Esta função detecta a presença de bytes inválidos em UTF-8 para determinar
+ * qual encoding usar.
+ *
+ * @param buffer - Buffer com os primeiros bytes do arquivo
+ * @returns 'utf8' ou 'latin1'
+ */
+function detectarEncoding(buffer: Buffer): BufferEncoding {
+  // Verifica se o arquivo começa com BOM UTF-8
+  if (buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) {
+    return "utf8";
   }
-  result.push(currentVal.trim());
-  return result;
-}
 
-export async function getInteiroTeorFromCache(numAcordao: number, anoAcordao: number): Promise<string | null> {
+  // Tenta decodificar os primeiros 2000 bytes como UTF-8 estritamente
+  const amostra = buffer.slice(0, Math.min(2000, buffer.length));
   try {
-    const cachePath = await fetchAcordaoCompleto(anoAcordao);
-    if (!fs.existsSync(cachePath)) return null;
-
-    console.log(`[getInteiroTeor] Parsing ${cachePath} for ${numAcordao}/${anoAcordao}...`);
-    // Need to stream it because the file might be hundreds of megabytes
-    // We'll just read line by line manually or chunk it
-    const fileStream = fs.createReadStream(cachePath, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-
-    let headers: string[] = [];
-    let normHeaders: string[] = [];
-    let colNum = -1;
-    let colAno = -1;
-    let colInteiro = -1;
-    let isFirstLine = true;
-    let foundInteiro: string | null = null;
-
-    let currentLine = "";
-
-    const processAccumulatedLine = (fullLine: string): boolean => {
-      if (isFirstLine) {
-        headers = parseCSVLine(fullLine, "|");
-        normHeaders = headers.map(normalizeHeaderName);
-        colNum = normHeaders.indexOf("numacordao") !== -1 ? normHeaders.indexOf("numacordao") : normHeaders.indexOf("numero");
-        colAno = normHeaders.indexOf("anoacordao") !== -1 ? normHeaders.indexOf("anoacordao") : normHeaders.indexOf("ano");
-        colInteiro = normHeaders.indexOf("inteiroteor") !== -1 ? normHeaders.indexOf("inteiroteor") : normHeaders.indexOf("acordao");
-        isFirstLine = false;
-        
-        if (colNum === -1 || colAno === -1 || colInteiro === -1) {
-          console.log(`[getInteiroTeor] Could not find required columns. Headers: ${normHeaders.join(',')}`);
-          return true; // sinaliza para parar
-        }
-        return false;
-      }
-
-      if (!fullLine.trim()) return false;
-      
-      const parts = parseCSVLine(fullLine, "|");
-      if (parts.length > colNum && parts.length > colAno) {
-        if (parts[colNum] == String(numAcordao) && parts[colAno] == String(anoAcordao)) {
-          console.log(`[getInteiroTeor] Found Inteiro Teor for ${numAcordao}/${anoAcordao}!`);
-          
-          const cleanStr = (str: string) => {
-            if (!str) return str;
-            try { return decodeURIComponent(escape(str)); } catch (e) { return str; }
-          };
-          
-          foundInteiro = parts[colInteiro] ? cleanStr(parts[colInteiro]) : null;
-          return true; // sinaliza para parar
-        }
-      }
-      return false;
-    };
-
-    for await (const line of rl) {
-      const isNewRow = line.startsWith('"ACORDAO-COMPLETO-') || line.startsWith('"KEY"|"TIPO"');
-
-      if (isNewRow) {
-        if (currentLine) {
-          const shouldStop = processAccumulatedLine(currentLine);
-          if (shouldStop) {
-            rl.close();
-            break;
-          }
-        }
-        currentLine = line; // começa nova linha
-      } else {
-        if (currentLine) {
-          currentLine += "\n" + line;
-        }
-      }
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(amostra);
+    // Se decodificou sem erro E contém caracteres acentuados comuns em pt-BR,
+    // é seguro dizer que é UTF-8
+    if (decoded.includes("ã") || decoded.includes("ç") || decoded.includes("ê") || decoded.includes("ó")) {
+      return "utf8";
     }
-    
-    if (currentLine && !foundInteiro) {
-      processAccumulatedLine(currentLine);
-    }
-    
-    return foundInteiro;
-  } catch (err) {
-    console.error(`[getInteiroTeor] Error:`, err);
-    return null;
+    return "utf8";
+  } catch {
+    // Falhou na decodificação UTF-8 estrita — é Latin1/Windows-1252
+    return "latin1";
   }
 }
 
-export interface ComplementaryData {
-  key: string;
-  acordao: string;
-  num_ata: string;
-  situacao: string;
-  proc: string;
+/**
+ * Lê um arquivo com detecção automática de encoding.
+ * Converte Windows-1252 para string JavaScript nativamente.
+ */
+export function lerArquivoComEncoding(filePath: string): string {
+  const buffer = fs.readFileSync(filePath);
+  const encoding = detectarEncoding(buffer);
+
+  console.log(`[CSV-ENCODING] Arquivo: ${path.basename(filePath)} → Encoding detectado: ${encoding}`);
+
+  if (encoding === "utf8") {
+    // Remove BOM se presente
+    let content = buffer.toString("utf8");
+    if (content.charCodeAt(0) === 0xfeff) {
+      content = content.substring(1);
+    }
+    return content;
+  }
+
+  // Latin1/Windows-1252: usa TextDecoder para converter corretamente
+  return new TextDecoder("windows-1252").decode(buffer);
+}
+
+// =========================================================================
+// PARSER DO CSV FILTRADO LOCAL (Acórdãos{ANO}.csv)
+// =========================================================================
+// Formato: exportação do portal TCU com campos entre aspas duplas e
+// separados por "" (aspas duplas como delimitador entre campos).
+// Linha 0: metadados ("Parâmetros de pesquisa:""Ano - 2026")
+// Linha 1: cabeçalho
+// Linha 2+: dados
+
+export interface AcordaoFiltrado {
+  numAcordao: number;
+  anoAcordao: number;
+  dataSessao: string;
+  colegiado: string;
+  processo: string;
+  tipoProcesso: string;
+  relator: string;
+  unidadeTecnica: string;
+}
+
+/**
+ * Parseia o CSV filtrado local (Acórdãos{ANO}.csv) com detecção de encoding.
+ * Retorna os acórdãos extraídos do arquivo.
+ */
+export function parsearCsvFiltrado(filePath: string): AcordaoFiltrado[] {
+  const content = lerArquivoComEncoding(filePath);
+  const linhas = content.split(/\r?\n/);
+  const resultados: AcordaoFiltrado[] = [];
+
+  // Linha 0 = parâmetros de pesquisa (ignorar)
+  // Linha 1 = cabeçalho (ignorar - já sabemos o formato)
+  // Linha 2+ = dados
+
+  for (let i = 2; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
+    if (!linha) continue;
+
+    // O separador real no CSV filtrado do TCU é: cada campo está entre aspas
+    // e os campos são separados por vírgula (ou por "" dependendo da exportação).
+    // Vamos usar o parser CSV robusto que lida com ambos os casos.
+    const partes = parsearLinhaCsvRobusta(linha);
+
+    if (partes.length < 2) continue;
+
+    // Coluna 0: "NUMACORDAO/ANO" (ex: "4092/2026-1C" ou "1234/2026")
+    const colAcordao = partes[0] ?? "";
+    const match = colAcordao.match(/(\d+)\/(\d{4})/);
+    if (!match) continue;
+
+    const numAcordao = parseInt(match[1], 10);
+    const anoAcordao = parseInt(match[2], 10);
+
+    if (isNaN(numAcordao) || isNaN(anoAcordao)) continue;
+
+    resultados.push({
+      numAcordao,
+      anoAcordao,
+      dataSessao:     partes[1] ?? "",
+      colegiado:      partes[2] ?? "",
+      processo:       partes[3] ?? "",
+      tipoProcesso:   partes[4] ?? "",
+      relator:        partes[5] ?? "",
+      unidadeTecnica: partes[6] ?? "",
+    });
+  }
+
+  console.log(`[CSV-FILTRADO] Arquivo: ${path.basename(filePath)} → ${resultados.length} acórdãos extraídos`);
+  return resultados;
+}
+
+// =========================================================================
+// PARSER GENÉRICO DE LINHA CSV (com suporte a aspas)
+// =========================================================================
+
+/**
+ * Parseia uma linha CSV com suporte a campos entre aspas e
+ * aspas duplas escapadas ("").
+ * Suporta tanto vírgula quanto ponto-e-vírgula como delimitador.
+ */
+export function parsearLinhaCsvRobusta(
+  linha: string,
+  delimitador: string = ","
+): string[] {
+  const resultado: string[] = [];
+  let valorAtual = "";
+  let dentroDeAspas = false;
+
+  for (let i = 0; i < linha.length; i++) {
+    const char = linha[i];
+
+    if (char === '"') {
+      if (dentroDeAspas && linha[i + 1] === '"') {
+        // Aspas dupla escapada: "" → "
+        valorAtual += '"';
+        i++;
+      } else {
+        // Abre ou fecha campo entre aspas
+        dentroDeAspas = !dentroDeAspas;
+      }
+    } else if (char === delimitador && !dentroDeAspas) {
+      resultado.push(valorAtual.trim());
+      valorAtual = "";
+    } else {
+      valorAtual += char;
+    }
+  }
+
+  resultado.push(valorAtual.trim());
+  return resultado;
+}
+
+// =========================================================================
+// PARSER DO CSV COMPLETO DO TCU (cache-acordao-completo-{ANO}.csv)
+// =========================================================================
+// Formato: separador pipe "|", campos entre aspas, 33 colunas.
+// Registros multi-linha começam com "ACORDAO-COMPLETO-" ou "KEY"|"TIPO".
+
+export interface AcordaoComplementar {
+  key:              string;
+  numAcordao:       string;
+  anoAcordao:       string;
+  colegiado:        string;
+  acordao:          string; // Inteiro teor consolidado (ACORDAO + RELATORIO + VOTO)
+  num_ata:          string;
+  situacao:         string;
+  proc:             string;
   acordaos_relacionados: string;
-  interessados: string;
-  entidade: string;
-  unidade_tecnica: string;
-  assunto: string;
-  sumario: string;
-  decisao: string;
+  interessados:     string;
+  entidade:         string;
+  unidade_tecnica:  string;
+  assunto:          string;
+  sumario:          string;
+  decisao:          string;
+  relator:          string;
 }
 
 export interface TargetAcordao {
   numAcordao: string;
   anoAcordao: string;
-  colegiado: string;
+  colegiado:  string;
 }
 
-export async function getComplementaryDataBulk(anoAcordao: number, targets: TargetAcordao[]): Promise<Map<string, ComplementaryData>> {
-  const result = new Map<string, ComplementaryData>();
-  try {
-    const cachePath = await fetchAcordaoCompleto(anoAcordao);
-    if (!fs.existsSync(cachePath)) return result;
+function normalizarNomeColuna(header: string): string {
+  return header
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
 
-    console.log(`[getInteiroTeorBulk] Parsing ${cachePath} to find ${targets.length} acórdãos...`);
-    const fileStream = fs.createReadStream(cachePath, { encoding: 'utf8' });
-    const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+function normalizarColegiado(str: string): string {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, "")
+    .toUpperCase();
+}
 
-    const normalizeColegiado = (str: string) => {
-      if (!str) return "";
-      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toUpperCase();
-    };
+/**
+ * Lê o CSV completo do TCU em streaming e retorna os dados complementares
+ * para os acórdãos solicitados (busca em lote para evitar múltiplas leituras).
+ *
+ * @param cachePath - Caminho do arquivo cache-acordao-completo-{ano}.csv
+ * @param targets   - Lista de acórdãos a localizar no CSV
+ * @returns Map com chave "{numAcordao}-{COLEGIADO}" → dados complementares
+ */
+export async function getComplementaryDataBulk(
+  cachePath: string,
+  targets: TargetAcordao[]
+): Promise<Map<string, AcordaoComplementar>> {
+  const resultado = new Map<string, AcordaoComplementar>();
 
-    const cleanStr = (str: string) => {
-      if (!str) return str;
-      try {
-        return decodeURIComponent(escape(str));
-      } catch (e) {
-        return str;
-      }
-    };
-
-    let headers: string[] = [];
-    let normHeaders: string[] = [];
-    let colKey = -1;
-    let colNum = -1;
-    let colAno = -1;
-    let colColegiado = -1;
-    
-    // We create a map for all columns dynamically based on headers
-    let colIndices: Record<string, number> = {};
-
-    let isFirstLine = true;
-    let currentLine = "";
-
-    const processAccumulatedLine = (fullLine: string) => {
-      if (isFirstLine) {
-        headers = parseCSVLine(fullLine, "|");
-        normHeaders = headers.map(normalizeHeaderName);
-        
-        colKey = normHeaders.indexOf("key");
-        colNum = normHeaders.indexOf("numacordao") !== -1 ? normHeaders.indexOf("numacordao") : normHeaders.indexOf("numero");
-        colAno = normHeaders.indexOf("anoacordao") !== -1 ? normHeaders.indexOf("anoacordao") : normHeaders.indexOf("ano");
-        colColegiado = normHeaders.indexOf("colegiado");
-        
-        colIndices = {
-          acordao: normHeaders.indexOf("acordao"),
-          relatorio: normHeaders.indexOf("relatorio"),
-          voto: normHeaders.indexOf("voto"),
-          num_ata: normHeaders.indexOf("numata"),
-          situacao: normHeaders.indexOf("situacao"),
-          proc: normHeaders.indexOf("proc") !== -1 ? normHeaders.indexOf("proc") : normHeaders.indexOf("processo"),
-          acordaos_relacionados: normHeaders.indexOf("acordaosrelacionados"),
-          interessados: normHeaders.indexOf("interessados"),
-          entidade: normHeaders.indexOf("entidade"),
-          unidade_tecnica: normHeaders.indexOf("unidadetecnica"),
-          assunto: normHeaders.indexOf("assunto"),
-          sumario: normHeaders.indexOf("sumario"),
-          decisao: normHeaders.indexOf("decisao")
-        };
-        
-        isFirstLine = false;
-        return;
-      }
-
-      if (!fullLine.trim()) return;
-      
-      const parts = parseCSVLine(fullLine, "|");
-      if (parts.length > colNum && parts.length > colAno && parts.length > colColegiado) {
-        if (parts[colAno] == String(anoAcordao)) {
-          const rowNum = parts[colNum];
-          const rowCol = parts[colColegiado] ? normalizeColegiado(cleanStr(parts[colColegiado])) : "";
-          
-          // Check if this matches any target
-          const target = targets.find(t => t.numAcordao === rowNum && normalizeColegiado(t.colegiado) === rowCol);
-          
-          if (target) {
-            const getPart = (idx: number) => (idx !== -1 && parts[idx]) ? cleanStr(parts[idx]) : "";
-            
-            // O "Inteiro Teor" no TCU é a junção do Relatório, Voto e Acórdão/Decisão
-            const txtAcordao = getPart(colIndices.acordao);
-            const txtRelatorio = getPart(colIndices.relatorio);
-            const txtVoto = getPart(colIndices.voto);
-            const txtDecisao = getPart(colIndices.decisao);
-            
-            let fullTeor = "";
-            if (txtRelatorio) fullTeor += "RELATÓRIO:\n" + txtRelatorio + "\n\n";
-            if (txtVoto) fullTeor += "VOTO:\n" + txtVoto + "\n\n";
-            if (txtAcordao) fullTeor += "ACÓRDÃO:\n" + txtAcordao + "\n\n";
-            if (txtDecisao && txtDecisao !== txtAcordao) fullTeor += "DECISÃO:\n" + txtDecisao + "\n\n";
-            
-            const newAcordao = fullTeor.trim() || txtAcordao;
-            
-            const mapKey = `${target.numAcordao}-${target.colegiado.toUpperCase()}`;
-            const existing = result.get(mapKey);
-            
-            if (!existing || newAcordao.length > (existing.acordao?.length || 0)) {
-              result.set(mapKey, {
-                key: getPart(colKey),
-                acordao: newAcordao,
-                num_ata: getPart(colIndices.num_ata),
-                situacao: getPart(colIndices.situacao) || "OFICIALIZADO",
-                proc: getPart(colIndices.proc),
-                acordaos_relacionados: getPart(colIndices.acordaos_relacionados),
-                interessados: getPart(colIndices.interessados),
-                entidade: getPart(colIndices.entidade),
-                unidade_tecnica: getPart(colIndices.unidade_tecnica),
-                assunto: getPart(colIndices.assunto),
-                sumario: getPart(colIndices.sumario),
-                decisao: getPart(colIndices.decisao)
-              });
-            }
-          }
-        }
-      }
-    };
-
-    for await (const line of rl) {
-      const isNewRow = line.startsWith('"ACORDAO-COMPLETO-') || line.startsWith('"KEY"|"TIPO"');
-
-      if (isNewRow) {
-        if (currentLine) {
-          processAccumulatedLine(currentLine);
-        }
-        currentLine = line; // inicia o novo chunk
-      } else {
-        if (currentLine) {
-          currentLine += "\n" + line; // acumula linhas internas
-        }
-      }
-    }
-    
-    // Processa a última linha pendente
-    if (currentLine) {
-      processAccumulatedLine(currentLine);
-    }
-  } catch (err) {
-    console.error(`[getComplementaryDataBulk] Error:`, err);
+  if (!fs.existsSync(cachePath)) {
+    console.warn(`[CSV-COMPLETO] Arquivo não encontrado: ${cachePath}`);
+    return resultado;
   }
-  return result;
-}
 
+  if (targets.length === 0) return resultado;
+
+  // Cria um índice de busca rápida: "numAcordao-COLEGIADO_NORMALIZADO" → TargetAcordao
+  const indiceBusca = new Map<string, TargetAcordao>();
+  for (const t of targets) {
+    const chave = `${t.numAcordao}-${normalizarColegiado(t.colegiado)}`;
+    indiceBusca.set(chave, t);
+  }
+
+  console.log(`[CSV-COMPLETO] Iniciando parse de ${path.basename(cachePath)} para ${targets.length} alvos...`);
+
+  const { createReadStream } = await import("fs");
+  const readline = await import("readline");
+
+  const fileStream = createReadStream(cachePath, { encoding: "utf8" });
+  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+  let cabecalhoProcessado = false;
+  let colIndices: Record<string, number> = {};
+  let colKey = -1, colNum = -1, colAno = -1, colColegiado = -1;
+  let linhaAtual = "";
+  let totalProcessadas = 0;
+  let encontrados = 0;
+
+  const processarLinhaAcumulada = (linhaCompleta: string): boolean => {
+    if (!cabecalhoProcessado) {
+      // Processa cabeçalho
+      const headers = parsearLinhaCsvRobusta(linhaCompleta, "|");
+      const normHeaders = headers.map(normalizarNomeColuna);
+
+      colKey       = normHeaders.indexOf("key");
+      colNum       = normHeaders.findIndex(h => h === "numacordao" || h === "numero");
+      colAno       = normHeaders.findIndex(h => h === "anoacordao" || h === "ano");
+      colColegiado = normHeaders.indexOf("colegiado");
+
+      colIndices = {
+        acordao:               normHeaders.indexOf("acordao"),
+        relatorio:             normHeaders.indexOf("relatorio"),
+        voto:                  normHeaders.indexOf("voto"),
+        num_ata:               normHeaders.indexOf("numata"),
+        situacao:              normHeaders.indexOf("situacao"),
+        proc:                  normHeaders.findIndex(h => h === "proc" || h === "processo"),
+        acordaos_relacionados: normHeaders.indexOf("acordaosrelacionados"),
+        interessados:          normHeaders.indexOf("interessados"),
+        entidade:              normHeaders.indexOf("entidade"),
+        unidade_tecnica:       normHeaders.indexOf("unidadetecnica"),
+        assunto:               normHeaders.indexOf("assunto"),
+        sumario:               normHeaders.indexOf("sumario"),
+        decisao:               normHeaders.indexOf("decisao"),
+        relator:               normHeaders.indexOf("relator"),
+      };
+
+      cabecalhoProcessado = true;
+      console.log(`[CSV-COMPLETO] Cabeçalho processado. Colunas mapeadas: ${Object.keys(colIndices).length}`);
+      return false;
+    }
+
+    if (!linhaCompleta.trim()) return false;
+
+    const partes = parsearLinhaCsvRobusta(linhaCompleta, "|");
+    if (partes.length <= Math.max(colNum, colAno, colColegiado)) return false;
+
+    const rowNum = partes[colNum] ?? "";
+    const rowColegiado = normalizarColegiado(partes[colColegiado] ?? "");
+    const chaveRow = `${rowNum}-${rowColegiado}`;
+
+    const target = indiceBusca.get(chaveRow);
+    if (!target) return false;
+
+    totalProcessadas++;
+
+    const getParte = (idx: number): string =>
+      idx !== -1 && partes[idx] ? partes[idx].trim() : "";
+
+    // Consolida inteiro teor: RELATÓRIO + VOTO + ACÓRDÃO (campos distintos no CSV)
+    const txtAcordao  = getParte(colIndices.acordao);
+    const txtRelatorio = getParte(colIndices.relatorio);
+    const txtVoto     = getParte(colIndices.voto);
+    const txtDecisao  = getParte(colIndices.decisao);
+
+    let inteiroteor = "";
+    if (txtRelatorio) inteiroteor += "RELATÓRIO:\n" + txtRelatorio + "\n\n";
+    if (txtVoto)      inteiroteor += "VOTO:\n"      + txtVoto      + "\n\n";
+    if (txtAcordao)   inteiroteor += "ACÓRDÃO:\n"   + txtAcordao   + "\n\n";
+    if (txtDecisao && txtDecisao !== txtAcordao)
+                      inteiroteor += "DECISÃO:\n"   + txtDecisao   + "\n\n";
+    const teorFinal = inteiroteor.trim() || txtAcordao;
+
+    const existing = resultado.get(chaveRow);
+    if (!existing || teorFinal.length > (existing.acordao?.length ?? 0)) {
+      resultado.set(chaveRow, {
+        key:                   getParte(colKey),
+        numAcordao:            rowNum,
+        anoAcordao:            partes[colAno] ?? "",
+        colegiado:             partes[colColegiado] ?? "",
+        acordao:               teorFinal,
+        num_ata:               getParte(colIndices.num_ata),
+        situacao:              getParte(colIndices.situacao) || "OFICIALIZADO",
+        proc:                  getParte(colIndices.proc),
+        acordaos_relacionados: getParte(colIndices.acordaos_relacionados),
+        interessados:          getParte(colIndices.interessados),
+        entidade:              getParte(colIndices.entidade),
+        unidade_tecnica:       getParte(colIndices.unidade_tecnica),
+        assunto:               getParte(colIndices.assunto),
+        sumario:               getParte(colIndices.sumario),
+        decisao:               txtDecisao,
+        relator:               getParte(colIndices.relator),
+      });
+      encontrados++;
+    }
+
+    // Para se já encontrou todos os alvos
+    return encontrados >= indiceBusca.size;
+  };
+
+  for await (const linha of rl) {
+    // O CSV completo do TCU tem registros multi-linha.
+    // Cada novo registro começa com "ACORDAO-COMPLETO-" ou com o cabeçalho "KEY"|"TIPO"
+    const isNovoRegistro =
+      linha.startsWith('"ACORDAO-COMPLETO-') ||
+      linha.startsWith('"KEY"|"TIPO"');
+
+    if (isNovoRegistro) {
+      if (linhaAtual) {
+        const parar = processarLinhaAcumulada(linhaAtual);
+        if (parar) {
+          rl.close();
+          break;
+        }
+      }
+      linhaAtual = linha;
+    } else {
+      if (linhaAtual) {
+        linhaAtual += "\n" + linha;
+      }
+    }
+  }
+
+  // Processa última linha pendente
+  if (linhaAtual) {
+    processarLinhaAcumulada(linhaAtual);
+  }
+
+  console.log(
+    `[CSV-COMPLETO] Parse concluído. Alvos: ${targets.length} | Encontrados: ${resultado.size} | Linhas processadas: ${totalProcessadas}`
+  );
+
+  return resultado;
+}

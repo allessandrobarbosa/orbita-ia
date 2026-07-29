@@ -295,6 +295,18 @@ export default function TcuMonitoramento({
   const [isSyncingLocal, setIsSyncingLocal] = useState(false);
   const [syncLocalMessage, setSyncLocalMessage] = useState<string | null>(null);
   const [localSyncReport, setLocalSyncReport] = useState<any[] | null>(null);
+  const [importStatus, setImportStatus] = useState<any[]>([]);
+
+  // Fetches import control status (data da última sincronização)
+  const fetchImportStatus = async () => {
+    try {
+      const res = await fetch("/api/acordaos/import-status");
+      if (res.ok) {
+        const data = await res.json();
+        setImportStatus(data.data || []);
+      }
+    } catch {}
+  };
 
   // Portal da Transparência verification states
   const [docVerifyInput, setDocVerifyInput] = useState("");
@@ -1492,6 +1504,8 @@ export default function TcuMonitoramento({
         setSyncLocalMessage(res.message);
         setLocalSyncReport(res.report || []);
         if (onRefreshData) await onRefreshData();
+        // Atualiza status de importação após sincronização
+        setTimeout(() => fetchImportStatus(), 3000);
       } else {
         setSyncLocalMessage(res?.message || "Erro na sincronização local de acórdãos.");
       }
@@ -1501,6 +1515,11 @@ export default function TcuMonitoramento({
       setIsSyncingLocal(false);
     }
   };
+
+  // Busca status de importação na montagem do componente
+  React.useEffect(() => {
+    fetchImportStatus();
+  }, []);
 
 
 
@@ -1777,6 +1796,32 @@ export default function TcuMonitoramento({
                 <p className="text-[10px] text-slate-400">
                   O sistema fará a leitura local em lote de forma otimizada para atualizar os teores das decisões sem depender da conexão externa do TCU.
                 </p>
+                {/* Label de última atualização por ano */}
+                {importStatus.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {importStatus
+                      .filter((s: any) => s.status === 'CONCLUIDO')
+                      .map((s: any) => (
+                        <span
+                          key={s.ano_referencia}
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border"
+                          style={{
+                            background: s.eh_historico ? '#f0fdf4' : '#eff6ff',
+                            borderColor: s.eh_historico ? '#bbf7d0' : '#bfdbfe',
+                            color: s.eh_historico ? '#166534' : '#1e40af'
+                          }}
+                        >
+                          {s.ano_referencia}
+                          {s.eh_historico ? ' ✓ Histórico' : ' ↻ Corrente'}
+                          {s.data_fim && (
+                            <span className="text-slate-400 font-normal ml-0.5">
+                              — {new Date(s.data_fim).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                  </div>
+                )}
               </div>
               <button
                 id="btn-sync-local"
