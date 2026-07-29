@@ -51,7 +51,7 @@ Retorne APENAS um JSON válido. Exemplo de estrutura esperada:
       }
     });
 
-    const text = response.text();
+    const text = response.text;
     if (!text) {
       throw new Error("Resposta vazia da IA.");
     }

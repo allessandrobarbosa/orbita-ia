@@ -249,27 +249,40 @@ router.post("/tces/sync-local", async (req, res) => {
   }
 });
 
+function cleanEncoding(text: string | null | undefined): string {
+  if (!text) return "";
+  let decoded = text;
+  if (decoded.includes("Ã¢") || decoded.includes("Ã§") || decoded.includes("Ã£") || decoded.includes("Ã³") || decoded.includes("Ã")) {
+    try {
+      decoded = Buffer.from(decoded, 'binary').toString('utf8');
+    } catch (e) {
+      // fallback
+    }
+  }
+  return decoded;
+}
+
 router.get("/tces", async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM tcu_tce');
     // Map snake_case to camelCase/PascalCase as expected by frontend
     const mapped = result.rows.map(row => ({
       id: row.id,
-      NUMERO_ANO_TCE: row.numero_ano_tce,
-      PROCESSO_ADMINISTRATIVO: row.processo_administrativo,
-      MOTIVO_INSTAURACAO: row.motivo_instauracao,
-      SUBMOTIVO_INSTAURACAO: row.submotivo_instauracao,
-      DEBITO_ORIGINAL: row.debito_original,
-      DEBITO_ATUALIZADO: row.debito_atualizado,
-      DATA_ATUALIZACAO_DEBITO: row.data_atualizacao_debito,
-      ULTIMO_POSICIONAMENTO: row.ultimo_posicionamento,
-      TC: row.tc,
-      ESTADO_PROCESSO: row.estado_processo,
-      SITUACAO_PROCESSO: row.situacao_processo,
-      PRIMEIRO_JULGAMENTO: row.primeiro_julgamento,
-      ENCERRAMENTO: row.encerramento,
-      NUMERO_SIAFI: row.numero_siafi,
-      SIAFI_RESSARCIDO: row.siafi_ressarcido,
+      NUMERO_ANO_TCE: cleanEncoding(row.numero_ano_tce),
+      PROCESSO_ADMINISTRATIVO: cleanEncoding(row.processo_administrativo),
+      MOTIVO_INSTAURACAO: cleanEncoding(row.motivo_instauracao),
+      SUBMOTIVO_INSTAURACAO: cleanEncoding(row.submotivo_instauracao),
+      DEBITO_ORIGINAL: cleanEncoding(row.debito_original),
+      DEBITO_ATUALIZADO: cleanEncoding(row.debito_atualizado),
+      DATA_ATUALIZACAO_DEBITO: cleanEncoding(row.data_atualizacao_debito),
+      ULTIMO_POSICIONAMENTO: cleanEncoding(row.ultimo_posicionamento),
+      TC: cleanEncoding(row.tc),
+      ESTADO_PROCESSO: cleanEncoding(row.estado_processo),
+      SITUACAO_PROCESSO: cleanEncoding(row.situacao_processo),
+      PRIMEIRO_JULGAMENTO: cleanEncoding(row.primeiro_julgamento),
+      ENCERRAMENTO: cleanEncoding(row.encerramento),
+      NUMERO_SIAFI: cleanEncoding(row.numero_siafi),
+      SIAFI_RESSARCIDO: cleanEncoding(row.siafi_ressarcido),
       ANO: row.ano,
       ULTIMA_ATUALIZACAO: row.ultima_atualizacao
     }));

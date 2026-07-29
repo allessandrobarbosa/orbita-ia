@@ -32,20 +32,35 @@ async function processQueue() {
     const key = queue[0]; // Pega o primeiro da fila
     console.log(`[Background] Processando Acórdão: ${key} (${queue.length} restantes)`);
     
+    let retryWait = 10000; // Default 10 seconds delay
+    let success = false;
+    
     try {
       // O processamento interno chama a IA e atualiza o banco
       await processSingleAcordao(key);
+      success = true;
     } catch (err: any) {
       console.error(`[Background] Erro ao processar ${key}:`, err.message);
-      // Opcional: tentar novamente mais tarde, ou apenas remover da fila
+      
+      if (err.message && err.message.includes("429")) {
+        console.log(`[Background] Rate limit (429) detectado. Removendo da fila temporariamente para não bloquear a extração do Inteiro Teor.`);
+        // Remove da fila para permitir que os outros acórdãos tenham seu Inteiro Teor salvo no banco
+        success = true; 
+        retryWait = 2000;
+      } else {
+        // Erro fatal (ex: TypeError, etc) - remove da fila
+        success = true; 
+      }
     }
     
-    // Remove o item processado da fila
-    queue.shift();
+    // Remove o item processado da fila apenas se não for rate limit
+    if (success) {
+      queue.shift();
+    }
     
-    // Respeitar Rate Limit da API do Gemini (ex: esperar 5 segundos entre cada chamada)
+    // Respeitar Rate Limit da API do Gemini (ex: esperar 10 segundos entre cada chamada)
     if (queue.length > 0) {
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, retryWait));
     }
   }
   
@@ -65,7 +80,8 @@ export async function processSingleAcordao(key: string) {
 
   if (!acordaoTeor || acordaoTeor.trim() === "") {
     console.log(`[Background] Acórdão ${acordao.num_acordao}/${acordao.ano_acordao} não possui Inteiro Teor no banco. Tentando buscar no cache da API TCU...`);
-    const { getInteiroTeorFromCache } = require('./tcuCsvParser');
+    // Usando importação dinâmica para contornar o require no ES Module
+    const { getInteiroTeorFromCache } = await import('./tcuCsvParser.js');
     const fetchedTeor = await getInteiroTeorFromCache(acordao.num_acordao, acordao.ano_acordao);
     if (fetchedTeor) {
       console.log(`[Background] Atualizando Inteiro Teor no banco para ${key}...`);

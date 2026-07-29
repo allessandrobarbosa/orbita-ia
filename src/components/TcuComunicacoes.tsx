@@ -441,6 +441,23 @@ export default function TcuComunicacoes({
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [copySuccessAlert, setCopySuccessAlert] = useState(false);
   const [fullTextAcordao, setFullTextAcordao] = useState<AcordaoDemand | null>(null);
+
+  const handleViewFullText = async (ac: AcordaoDemand) => {
+    setFullTextAcordao(ac);
+    if (!ac.ACORDAO) {
+      try {
+        const res = await fetch(`/api/acordaos/${ac.KEY}/teor`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.acordao) {
+            setFullTextAcordao({ ...ac, ACORDAO: data.acordao });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch full text", e);
+      }
+    }
+  };
   const [copySuccessFullText, setCopySuccessFullText] = useState(false);
 
   // Trace / Sync audit logs states
@@ -2245,11 +2262,10 @@ export default function TcuComunicacoes({
                     <button
                       onClick={handleExportToExcel}
                       disabled={finalFiltered.length === 0}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs inline-flex items-center gap-1.5 disabled:opacity-50 transition duration-150 shadow-xs"
+                      className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer disabled:opacity-50"
                       title="Exportar dados e estatísticas para planilha Excel formatada com duas abas"
                     >
-                      <Download className="w-4 h-4" />
-                      Exportar para Excel (.xlsx)
+                      <Download size={16} /> Excel
                     </button>
                   </div>
                 </div>

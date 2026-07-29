@@ -169,26 +169,39 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
   }
 });
 
+function cleanEncoding(text: string | null | undefined): string {
+  if (!text) return "";
+  let decoded = text;
+  if (decoded.includes("Ã¢") || decoded.includes("Ã§") || decoded.includes("Ã£") || decoded.includes("Ã³") || decoded.includes("Ã")) {
+    try {
+      decoded = Buffer.from(decoded, 'binary').toString('utf8');
+    } catch (e) {
+      // fallback
+    }
+  }
+  return decoded;
+}
+
 // API: Get all comunicacoes
 router.get("/comunicacoes", async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM tcu_comunicacoes');
     const mapped = result.rows.map(row => ({
       KEY: row.key,
-      COMUNICACAO: row.comunicacao,
-      DESTINATARIO: row.destinatario,
-      CONTATO: row.contato,
-      UNIDADE_EMITENTE: row.unidade_emitente,
-      PROCESSO: row.processo,
+      COMUNICACAO: cleanEncoding(row.comunicacao),
+      DESTINATARIO: cleanEncoding(row.destinatario),
+      CONTATO: cleanEncoding(row.contato),
+      UNIDADE_EMITENTE: cleanEncoding(row.unidade_emitente),
+      PROCESSO: cleanEncoding(row.processo),
       DATA_EXPEDICAO: row.data_expedicao,
       DATA_RESPOSTA: row.data_resposta,
       ANO: row.ano,
       CARECE_RESPOSTA: row.carece_resposta,
       PRAZO_DIAS: row.prazo_dias,
       RESPOSTA_ENVIADA_INTERNAMENTE: row.resposta_enviada_internamente,
-      UNIDADE_EXECUTORA: row.unidade_executora,
-      PROCESSO_SEI: row.processo_sei,
-      DESTINACAO: row.destinacao,
+      UNIDADE_EXECUTORA: cleanEncoding(row.unidade_executora),
+      PROCESSO_SEI: cleanEncoding(row.processo_sei),
+      DESTINACAO: cleanEncoding(row.destinacao),
       ULTIMA_ATUALIZACAO: row.ultima_atualizacao
     }));
     res.json(mapped);

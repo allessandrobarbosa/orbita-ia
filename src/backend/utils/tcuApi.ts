@@ -31,22 +31,35 @@ export async function fetchAcordaoCompleto(year: number): Promise<string> {
   
   const inProgressPath = tempPath + ".tmp";
   try {
+    const response = await fetch(onlineUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/csv,application/csv,text/plain,*/*'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status} ${response.statusText}`);
+    }
+
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
     const fileStream = fs.createWriteStream(inProgressPath);
-    await new Promise<void>((resolve, reject) => {
-      https.get(onlineUrl, (response) => {
-        if (response.statusCode !== 200) {
-          reject(new Error(`HTTP error ${response.statusCode}`));
-          return;
-        }
-        response.pipe(fileStream);
-        fileStream.on("finish", () => {
+    const { Readable } = require('stream');
+    
+    await new Promise((resolve, reject) => {
+      Readable.fromWeb(response.body as any)
+        .pipe(fileStream)
+        .on("finish", () => {
           fileStream.close();
-          resolve();
+          resolve(undefined);
+        })
+        .on("error", (err: any) => {
+          fileStream.close();
+          reject(err);
         });
-      }).on("error", (err) => {
-        fs.unlink(inProgressPath, () => {});
-        reject(err);
-      });
     });
     
     fs.renameSync(inProgressPath, tempPath);
@@ -54,6 +67,9 @@ export async function fetchAcordaoCompleto(year: number): Promise<string> {
     return tempPath;
   } catch (err: any) {
     console.error(`[TCU CSV] Failed to download temporary CSV for year ${year}:`, err.message);
+    if (fs.existsSync(inProgressPath)) {
+      try { fs.unlinkSync(inProgressPath); } catch (e) {}
+    }
     if (fs.existsSync(tempPath)) {
       console.log(`[TCU CSV] Falling back to existing expired cache.`);
       return tempPath;

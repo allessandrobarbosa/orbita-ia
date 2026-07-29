@@ -457,13 +457,15 @@ export default function App() {
         body: JSON.stringify(updated)
       });
       if (res.ok) {
-        await fetchAllData();
+        // Update local state without fetching all data again
+        setAcordaos(prev => prev.map(ac => ac.KEY === updated.KEY ? updated : ac));
         return true;
       }
+      return false;
     } catch (err) {
-      console.error("Falha ao salvar acórdão:", err);
+      console.error("Erro ao atualizar acórdão:", err);
+      return false;
     }
-    return false;
   };
 
   const handleDeleteAcordao = async (key: string): Promise<boolean> => {

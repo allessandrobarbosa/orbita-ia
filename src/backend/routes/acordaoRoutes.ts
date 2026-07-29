@@ -3,6 +3,7 @@ import { pool } from "../db";
 import fs from "fs";
 import path from "path";
 import { parseCsvStream } from "../utils/tcuUtils";
+import { getInteiroTeorFromCache, getComplementaryDataBulk, ComplementaryData } from "../utils/tcuCsvParser";
 import { enqueueAcordaosForAnalysis, processSingleAcordao } from "../utils/backgroundProcessor";
 import { GoogleGenAI } from '@google/genai';
 
@@ -17,7 +18,7 @@ router.post("/acordaos/sync-local", async (req, res) => {
   }
 
   const files = fs.readdirSync(TCU_DIR);
-  const csvFiles = files.filter(f => f.toLowerCase().endsWith(".csv"));
+  const csvFiles = files.filter(f => f.toLowerCase().endsWith(".csv") && !f.toLowerCase().includes("cache"));
 
   if (csvFiles.length === 0) {
     return res.json({ success: false, message: "Nenhum arquivo .csv encontrado na pasta data/tcu/acordaos/." });
@@ -31,11 +32,17 @@ router.post("/acordaos/sync-local", async (req, res) => {
       console.log(`[SYNC-LOCAL-ACORDAOS] Iniciando processamento do arquivo: ${file}`);
       console.time(`Processamento ${file}`);
       const filePath = path.join(TCU_DIR, file);
-      const content = fs.readFileSync(filePath, 'latin1');
+      const content = fs.readFileSync(filePath, 'utf8'); // Arquivos de filtro são UTF-8 com BOM
       const lines = content.split('\n');
       console.log(`[SYNC-LOCAL-ACORDAOS] Encontradas ${lines.length} linhas em ${file}`);
       
       let skippedLines = 0;
+      
+      const parsedRows: any[] = [];
+      const missingByYear = new Map<number, Set<string>>();
+      const seenKeysInFile = new Set<string>();
+
+      // PASSO 1: Lê as linhas, verifica no BD o que falta de inteiro teor
       for (let i = 2; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) {
@@ -46,53 +53,115 @@ router.post("/acordaos/sync-local", async (req, res) => {
         const parts = line.split('""').map(p => p.replace(/"/g, ''));
         if (parts.length < 5) continue;
         
-        // parts[0] is Acórdão, e.g. "3651/2026-1C"
-        // parts[1] is Data da sessão
-        // parts[2] is Colegiado
-        // parts[3] is Processo
-        // parts[4] is Tipo de processo
-        // parts[5] is Relator
-        // parts[6] is Unidade técnica
-        
         const acordaoStr = parts[0];
         const match = acordaoStr.match(/(\d+)\/(\d{4})/);
         if (!match) continue;
         
         const numAcordao = Number(match[1]);
         const anoAcordao = Number(match[2]);
-        
         const key = `AC-${numAcordao}-${anoAcordao}`;
-        const check = await pool.query('SELECT key FROM tcu_acordaos WHERE num_acordao = $1 AND ano_acordao = $2', [numAcordao, anoAcordao]);
+        
+        if (seenKeysInFile.has(key)) {
+          skippedLines++;
+          continue;
+        }
+        seenKeysInFile.add(key);
+        
+        const check = await pool.query('SELECT key, acordao FROM tcu_acordaos WHERE num_acordao = $1 AND ano_acordao = $2', [numAcordao, anoAcordao]);
+        let teor = check.rows.length > 0 ? check.rows[0].acordao : null;
+        
+        parsedRows.push({
+          numAcordao, anoAcordao, key, parts, 
+          hasDb: check.rows.length > 0, 
+          dbKey: check.rows.length > 0 ? check.rows[0].key : null,
+          teor
+        });
+
+        if (!teor) {
+          if (!missingByYear.has(anoAcordao)) missingByYear.set(anoAcordao, new Set());
+          missingByYear.get(anoAcordao)!.add(String(numAcordao));
+        }
+      }
+
+      // PASSO 2: Carrega todos os teores ausentes em lote para evitar parsing lento do CSV
+      const fetchedTeores = new Map<number, Map<string, ComplementaryData>>();
+      for (const [ano, numsSet] of missingByYear.entries()) {
+        const mapForYear = await getComplementaryDataBulk(ano, numsSet);
+        fetchedTeores.set(ano, mapForYear);
+      }
+
+      // PASSO 3: Insere ou atualiza os registros no BD
+      for (const row of parsedRows) {
         const updatedAt = new Date().toLocaleString("pt-BR");
         
-        if (check.rows.length > 0) {
-          await pool.query(`
-            UPDATE tcu_acordaos SET
-              colegiado = $2, data_sessao = $3,
-              tipo_processo = $4, relator = $5,
-              ultima_atualizacao = $6
-            WHERE key = $1
-          `, [
-            check.rows[0].key, 
-            parts[2], parts[1],
-            parts[4], parts[5], updatedAt
-          ]);
+        // Defaults to what we had in DB (or parts if new)
+        let compData: ComplementaryData | null = null;
+
+        if (!row.teor && fetchedTeores.has(row.anoAcordao)) {
+          compData = fetchedTeores.get(row.anoAcordao)!.get(String(row.numAcordao)) || null;
+        }
+
+        if (row.hasDb) {
+          if (compData) {
+            await pool.query(`
+              UPDATE tcu_acordaos SET
+                colegiado = $2, data_sessao = $3,
+                tipo_processo = $4, relator = $5,
+                ultima_atualizacao = $6, acordao = $7,
+                num_ata = $8, situacao = $9, proc = $10,
+                acordaos_relacionados = $11, interessados = $12,
+                entidade = $13, unidade_tecnica = $14,
+                assunto = $15, sumario = $16, decisao = $17
+              WHERE key = $1
+            `, [
+              row.dbKey, 
+              row.parts[2], row.parts[1], row.parts[4], row.parts[5], updatedAt, 
+              compData.acordao, compData.num_ata, compData.situacao, compData.proc,
+              compData.acordaos_relacionados, compData.interessados, compData.entidade,
+              compData.unidade_tecnica, compData.assunto, compData.sumario, compData.decisao
+            ]);
+          } else {
+            await pool.query(`
+              UPDATE tcu_acordaos SET
+                colegiado = $2, data_sessao = $3,
+                tipo_processo = $4, relator = $5,
+                ultima_atualizacao = $6
+              WHERE key = $1
+            `, [
+              row.dbKey, 
+              row.parts[2], row.parts[1],
+              row.parts[4], row.parts[5], updatedAt
+            ]);
+          }
           updated++;
         } else {
+          // If we don't have compData because it's somehow missing from API, provide defaults
+          const fallbackTeor = compData?.acordao || row.teor || null;
+          
           await pool.query(`
             INSERT INTO tcu_acordaos (
               key, titulo, num_acordao, ano_acordao, colegiado, data_sessao,
-              situacao, tipo_processo, relator, status_monitoramento, ultima_atualizacao
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+              situacao, tipo_processo, relator, status_monitoramento, ultima_atualizacao, 
+              acordao, num_ata, proc, acordaos_relacionados, interessados, 
+              entidade, unidade_tecnica, assunto, sumario, decisao
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 
+              $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+            )
           `, [
-            key, `ACÓRDÃO ${numAcordao}/${anoAcordao} - ${parts[2].toUpperCase()}`, numAcordao, anoAcordao,
-            parts[2], parts[1],
-            "OFICIALIZADO", parts[4], parts[5],
-            "Pendente", updatedAt
+            row.key, `ACÓRDÃO ${row.numAcordao}/${row.anoAcordao} - ${row.parts[2].toUpperCase()}`, row.numAcordao, row.anoAcordao,
+            row.parts[2], row.parts[1],
+            compData?.situacao || "OFICIALIZADO", row.parts[4], row.parts[5],
+            "Pendente", updatedAt, 
+            fallbackTeor, compData?.num_ata || null, compData?.proc || null, compData?.acordaos_relacionados || null, 
+            compData?.interessados || null, compData?.entidade || null, compData?.unidade_tecnica || row.parts[6] || null, 
+            compData?.assunto || null, compData?.sumario || null, compData?.decisao || null
           ]);
           imported++;
         }
       }
+
+
       console.log(`[SYNC-LOCAL-ACORDAOS] Concluído processamento de ${file}. Linhas puladas: ${skippedLines}`);
       console.timeEnd(`Processamento ${file}`);
     }
@@ -128,7 +197,16 @@ router.post("/acordaos/sync-local", async (req, res) => {
 
 router.get("/acordaos", async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM tcu_acordaos');
+    const result = await pool.query(`
+      SELECT 
+        key, titulo, num_acordao, ano_acordao, num_ata, colegiado, data_sessao, 
+        situacao, proc, acordaos_relacionados, tipo_processo, interessados, 
+        entidade, unidade_tecnica, relator, assunto, sumario, decisao, 
+        recomendacoes, determinacoes, recomendacoes_determinacoes_unificado, 
+        status_monitoramento, responsavel_interno, prazo_limite, observacoes, 
+        ultima_atualizacao, ai_analysis_data
+      FROM tcu_acordaos
+    `);
     const mapped = result.rows.map(row => ({
       KEY: row.key,
       TITULO: row.titulo,
@@ -147,7 +225,7 @@ router.get("/acordaos", async (req, res) => {
       RELATOR: row.relator,
       ASSUNTO: row.assunto,
       SUMARIO: row.sumario,
-      ACORDAO: row.acordao,
+      ACORDAO: "", // Omitted to save bandwidth and memory
       DECISAO: row.decisao,
       RECOMENDACOES: row.recomendacoes,
       DETERMINACOES: row.determinacoes,
@@ -163,6 +241,46 @@ router.get("/acordaos", async (req, res) => {
   } catch (err) {
     console.error("Error fetching Acórdãos from Postgres:", err);
     res.status(500).json({ error: "Failed to fetch Acórdãos." });
+  }
+});
+
+function cleanTeor(rawTeor: string): string {
+  if (!rawTeor) return "";
+  let text = rawTeor;
+  
+  // Strip XML/HTML tags and replace with newlines to preserve spacing between sections
+  text = text.replace(/<br\s*[\/]?>/gi, "\n");
+  text = text.replace(/<p[^>]*>/gi, "\n\n");
+  text = text.replace(/<\/p>/gi, "");
+  // Substituir outras tags por quebra de linha para não juntar palavras
+  text = text.replace(/<[^>]*>?/gm, "\n");
+  
+  // Remover múltiplas quebras de linha que foram geradas
+  text = text.replace(/\n{3,}/g, "\n\n");
+  
+  // Decode common HTML entities
+  text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&gt;/g, ">");
+  text = text.replace(/&quot;/g, "\"");
+  text = text.replace(/&#39;/g, "'");
+
+  return text.trim();
+}
+
+router.get("/acordaos/:key/teor", async (req, res) => {
+  try {
+    const { key } = req.params;
+    const result = await pool.query('SELECT acordao FROM tcu_acordaos WHERE key = $1', [key]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Acórdão não encontrado." });
+    }
+    const cleanText = cleanTeor(result.rows[0].acordao || "");
+    res.json({ acordao: cleanText });
+  } catch (err) {
+    console.error("Error fetching teor from Postgres:", err);
+    res.status(500).json({ error: "Failed to fetch teor." });
   }
 });
 

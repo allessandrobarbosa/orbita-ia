@@ -1,0 +1,1 @@
+const fs = require('fs'); const files = fs.readdirSync('data/tcu/acordaos'); const cacheFile = files.find(f => f.startsWith('cache-acordao-completo-2022')); const cacheTxt = fs.readFileSync('data/tcu/acordaos/' + cacheFile, 'utf8').split('\n')[1]; console.log('Cache key example:', cacheTxt.substring(0, 50));

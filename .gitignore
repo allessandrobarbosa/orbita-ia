@@ -24,3 +24,5 @@ data/tcu/temp-acordao-completo-2024.csv
 
 data/tcu/*.csv
 data/tcu/*.tmp
+
+data/tcu/acordaos/cache-*.csv

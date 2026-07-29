@@ -102,11 +102,19 @@ export default function RolModule() {
     setModalType(type);
   };
 
+  const toYMD = (d: string) => {
+    if (d.includes("/")) {
+      const [day, month, year] = d.split("/");
+      if (year && month && day) return `${year}-${month}-${day}`;
+    }
+    return d.split("T")[0];
+  };
+
   const openEditModal = (type: any, data: any) => {
     setIsEdit(true);
     const parsedData = { ...data };
-    if (parsedData.data_inicio) parsedData.data_inicio = parsedData.data_inicio.split("T")[0];
-    if (parsedData.data_fim) parsedData.data_fim = parsedData.data_fim.split("T")[0];
+    if (parsedData.data_inicio) parsedData.data_inicio = toYMD(parsedData.data_inicio);
+    if (parsedData.data_fim) parsedData.data_fim = toYMD(parsedData.data_fim);
     
     setFormData(parsedData);
     setModalType(type);
@@ -167,7 +175,9 @@ export default function RolModule() {
 
   const fmtDate = (dStr: string | null) => {
     if (!dStr) return "Em Exercício";
+    if (dStr.includes("/")) return dStr; // already formatted!
     const [year, month, day] = dStr.split("T")[0].split("-");
+    if (!month || !day) return dStr;
     return `${day}/${month}/${year}`;
   };
 
@@ -278,9 +288,13 @@ export default function RolModule() {
                   <div className="flex-1 w-full overflow-x-auto no-scrollbar flex items-center gap-2">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-2 flex-shrink-0">Unidades:</span>
                     <button onClick={() => setUnidadeFilter("TODAS")} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${unidadeFilter === "TODAS" ? "bg-[#003366] text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"}`}>TODAS</button>
-                    {siglasUnidades.map(sigla => (
-                      <button key={sigla} onClick={() => setUnidadeFilter(sigla)} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${unidadeFilter === sigla ? "bg-[#003366] text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"}`}>{sigla}</button>
-                    ))}
+                    {siglasUnidades.map(sigla => {
+                      const u = unidades.find(un => un.id_unidade === sigla || un.nome === sigla);
+                      const displaySigla = u ? u.sigla : sigla;
+                      return (
+                        <button key={sigla} onClick={() => setUnidadeFilter(sigla)} title={sigla} className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${unidadeFilter === sigla ? "bg-[#003366] text-white" : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"}`}>{displaySigla}</button>
+                      );
+                    })}
                   </div>
                   <div className="flex gap-2 w-full lg:w-auto">
                     <select className={`${inp} py-1.5 h-auto text-xs font-bold w-36`} value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)}>
@@ -315,14 +329,13 @@ export default function RolModule() {
                           </td>
                           <td className="p-4">
                             <div className="font-bold text-slate-700">{m.nome_cargo}</div>
-                            {m.is_substituto ? (
-                              <div className="mt-1"><Badge color="purple">Substituto</Badge></div>
-                            ) : (
-                              <div className="mt-1 flex gap-1 items-center">
-                                <Badge color="blue">Titular</Badge>
-                                {m.tipo_responsabilidade && <Badge color="gray">{m.tipo_responsabilidade}</Badge>}
-                              </div>
-                            )}
+                              {m.is_substituto ? (
+                                <div className="mt-1"><Badge color="purple">Substituto</Badge></div>
+                              ) : (
+                                <div className="mt-1 flex gap-1 items-center">
+                                  {m.tipo_responsabilidade && <Badge color={m.tipo_responsabilidade === 'Titular' ? 'blue' : 'gray'}>{m.tipo_responsabilidade}</Badge>}
+                                </div>
+                              )}
                           </td>
                           <td className="p-4"><div className="font-bold text-[#003366]">{m.sigla_unidade}</div><div className="text-[10px] text-slate-500 truncate max-w-[150px]" title={m.nome_unidade}>{m.nome_unidade}</div></td>
                           <td className="p-4 font-medium text-slate-600">{fmtDate(m.data_inicio)}</td>

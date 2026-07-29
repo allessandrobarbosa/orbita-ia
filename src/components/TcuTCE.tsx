@@ -441,6 +441,23 @@ export default function TcuTCE({
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [copySuccessAlert, setCopySuccessAlert] = useState(false);
   const [fullTextAcordao, setFullTextAcordao] = useState<AcordaoDemand | null>(null);
+
+  const handleViewFullText = async (ac: AcordaoDemand) => {
+    setFullTextAcordao(ac);
+    if (!ac.ACORDAO) {
+      try {
+        const res = await fetch(`/api/acordaos/${ac.KEY}/teor`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.acordao) {
+            setFullTextAcordao({ ...ac, ACORDAO: data.acordao });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch full text", e);
+      }
+    }
+  };
   const [copySuccessFullText, setCopySuccessFullText] = useState(false);
 
   // Trace / Sync audit logs states
@@ -944,7 +961,8 @@ export default function TcuTCE({
       const res = await response.json();
       if (res && res.success) {
         setSyncLocalTceMessage(res.message);
-        setTimeout(() => setSyncLocalTceMessage(null), 4000);
+          if (onRefreshData) onRefreshData();
+          setTimeout(() => setSyncLocalTceMessage(null), 4000);
       } else {
         setSyncLocalTceMessage(res?.message || "Erro na sincronização local de TCEs.");
         setTimeout(() => setSyncLocalTceMessage(null), 4000);
@@ -2260,7 +2278,6 @@ export default function TcuTCE({
                   {isSyncingLocalTce ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
                 </button>
               </div>
-
               {/* Real-time search and filter tools */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 grow max-w-xl self-end">
                 <div className="relative grow">
@@ -2285,10 +2302,9 @@ export default function TcuTCE({
                       handleExportTcesAcordaosExcel(filteredMappings);
                     }
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5"
+                  className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                  XLSX
+                  <Download size={16} /> Excel
                 </button>
               </div>
             </div>
@@ -2598,7 +2614,7 @@ export default function TcuTCE({
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  setFullTextAcordao(item.acordao);
+                                                  handleViewFullText(item.acordao);
                                                 }}
                                                 className="px-4 py-2 bg-[#1351b4] hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-3xs"
                                               >

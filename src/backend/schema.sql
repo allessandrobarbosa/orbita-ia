@@ -88,6 +88,13 @@ CREATE TABLE IF NOT EXISTS tcu_tce_acordao_mapping (
     PRIMARY KEY (numero_ano_tce, acordao_key)
 );
 
+-- Índices de Alta Performance (TCU)
+CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_num_ano ON tcu_acordaos(num_acordao, ano_acordao);
+CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_colegiado ON tcu_acordaos(colegiado);
+CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_status ON tcu_acordaos(status_monitoramento);
+CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_ano ON tcu_comunicacoes(ano);
+CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_proc ON tcu_comunicacoes(processo);
+CREATE INDEX IF NOT EXISTS idx_tcu_tce_numero_ano ON tcu_tce(numero_ano_tce);
 
 -- ==========================================
 -- 2. MÓDULO: ROL (Rol de Responsáveis - IN 84/2020 TCU)

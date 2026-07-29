@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { extractLocalHeuristics } from "../utils/tcuLocalExtractor";
+
 import React, { useState, useRef } from "react";
 import { 
   Plus, 
@@ -89,193 +91,9 @@ export default function TcuMonitoramento({
   onRefreshData
 }: TcuModuleProps) {
   
-  // Robust Portuguese Text Repair function
+  // Robust Portuguese Text Repair function (Now bypassed since ETL cleans at root)
   const sanitizePortugueseText = (text: string | undefined | null): string => {
-    if (!text) return "";
-    let clean = text;
-
-    // Strip HTML tags if present (detect by looking for < and >)
-    if (clean.includes("<") && clean.includes(">")) {
-      clean = clean.replace(/<br\s*\/?>/gi, "\n")
-                   .replace(/<\/p>/gi, "\n\n")
-                   .replace(/<p\b[^>]*>/gi, "")
-                   .replace(/<\/li>/gi, "\n")
-                   .replace(/<li\b[^>]*>/gi, "  • ")
-                   .replace(/<\/tr>/gi, "\n")
-                   .replace(/<td>|<\/td>|<th>|<\/th>/gi, " | ")
-                   .replace(/<[^>]*>/g, "")
-                   .replace(/&nbsp;/g, " ")
-                   .replace(/&amp;/g, "&")
-                   .replace(/&lt;/g, "<")
-                   .replace(/&gt;/g, ">")
-                   .replace(/&quot;/g, '"');
-    }
-
-    // Convert standard Unicode Replacement Character and other weird placeholder characters to '?'
-    // to normalize all encodings before passing through the targeted repairs
-    clean = clean.replace(/[\uFFFD\u009d]/g, "?");
-
-    // Repair "Órgão" and "Órgãos" when starting/ending letters are corrupted to '?' or similar
-    clean = clean.replace(/[?\uFFFD]*rg[?\uFFFD]*os?/gi, (match) => {
-      const isPlural = match.toLowerCase().endsWith("s");
-      const isCap = match.startsWith("Ó") || match.startsWith("O") || match.startsWith("?") || match.startsWith("\uFFFD");
-      const base = isCap ? "Órgão" : "órgão";
-      return isPlural ? base + "s" : base;
-    });
-
-    // Special repair: Match Omissão / Omissao followed by corrupted/uncorrupt preposition patterns
-    clean = clean.replace(/\bOmis[s]?o\s+(?:n[\uFFFD\?]+o|não?|no)\b/gi, (match) => {
-      return match.startsWith("O") ? "Omissão no" : "omissão no";
-    });
-
-    // Direct words with clean accents
-    clean = clean.replace(/minsist\?rio/gi, "ministério")
-                 .replace(/minist\?rio/gi, "ministério")
-                 .replace(/minsistério/gi, "ministério")
-                 .replace(/ministerio/gi, "ministério")
-                 .replace(/omiss\?o/gi, "omissão")
-                 .replace(/omis\?o/gi, "omissão")
-                 // Avoid generic /No/g inside words, use word bounds and check for standard corrupted shapes only
-                 .replace(/\bN(?:[?\uFFFD]|[\s])o\b/g, "Não")
-                 .replace(/\bn(?:[?\uFFFD]|[\s])o\b/g, "não")
-                 .replace(/comprovao/g, "comprovação")
-                 .replace(/comprovaao/g, "comprovação")
-                 .replace(/aplicao/g, "aplicação")
-                 .replace(/aplicaao/g, "aplicação")
-                 .replace(/regulao/g, "regulação")
-                 .replace(/regulaao/g, "regulação")
-                 .replace(/Instaurao/g, "Instauração")
-                 .replace(/instaurao/g, "instauração")
-                 .replace(/Acrdo/g, "Acórdão")
-                 .replace(/acrdo/g, "acórdão")
-                 .replace(/consecuo/g, "consecução")
-                 .replace(/consecuao/g, "consecução")
-                 .replace(/Ministrio/g, "Ministério")
-                 .replace(/Omisso/g, "Omissão")
-                 .replace(/omisso/g, "omissão")
-                 .replace(/Impugnao/g, "Impugnação")
-                 .replace(/impugnao/g, "impugnação")
-                 .replace(/Atribuio/g, "Atribuição")
-                 .replace(/atribuio/g, "atribuição")
-                 .replace(/Sesso/g, "Sessão")
-                 .replace(/sesso/g, "sessão")
-                 .replace(/Mnimo/g, "Mínimo")
-                 .replace(/mnimo/g, "mínimo")
-                 .replace(/Deciso/g, "Decisão")
-                 .replace(/deciso/g, "decisão")
-                 .replace(/Informao/g, "Informação")
-                 .replace(/informao/g, "informação")
-                 .replace(/Situao/g, "Situação")
-                 .replace(/situao/g, "situação")
-                 .replace(/Ateno/g, "Atenção")
-                 .replace(/ateno/g, "atenção")
-                 .replace(/pblicos/g, "públicos")
-                 .replace(/pblico/g, "público")
-                 .replace(/Pblico/g, "Público")
-                 .replace(/relatrio/g, "relatório")
-                 .replace(/Relatrio/g, "Relatório")
-                 .replace(/orgo/g, "órgão")
-                 .replace(/Orgo/g, "Órgão")
-                 .replace(/rgo/g, "órgão")
-                 .replace(/rgos/g, "órgãos")
-                 .replace(/reunio/g, "reunião");
-
-    // Common double UTF-8 decoding / Latin-1 corruptions
-    clean = clean
-      .replace(/Ã¡/g, "á")
-      .replace(/Ã¢/g, "â")
-      .replace(/Ã£/g, "ã")
-      .replace(/Ã§/g, "ç")
-      .replace(/Ã©/g, "é")
-      .replace(/Ãª/g, "ê")
-      .replace(/Ã\u00ad/g, "í")
-      .replace(/Ã­/g, "í")
-      .replace(/Ã³/g, "ó")
-      .replace(/Ã´/g, "ô")
-      .replace(/Ãµ/g, "õ")
-      .replace(/Ãº/g, "ú")
-      .replace(/Ã\u0081/g, "Á")
-      .replace(/Ã\u0082/g, "Â")
-      .replace(/Ã\u0083/g, "Ã")
-      .replace(/Ã\u0087/g, "Ç")
-      .replace(/Ã\u0089/g, "É")
-      .replace(/Ã\u008a/g, "Ê")
-      .replace(/Ã\u008d/g, "Í")
-      .replace(/Ã\u0093/g, "Ó")
-      .replace(/Ã\u0094/g, "Ô")
-      .replace(/Ã\u0095/g, "Õ")
-      .replace(/Ã\u009a/g, "Ú");
-
-    // Repair corruptions from bad import encodings
-    clean = clean
-      .replace(/minsist\?rio/gi, "ministério")
-      .replace(/minist\?rio/gi, "ministério")
-      .replace(/omiss\?o/gi, "omissão")
-      .replace(/omis\?o/gi, "omissão")
-      .replace(/N\?o/gi, "Não")
-      .replace(/comprova\?o/gi, "comprovação")
-      .replace(/aplica\?o/gi, "aplicação")
-      .replace(/regula\?o/gi, "regulação")
-      .replace(/consecu\?o/gi, "consecução")
-      .replace(/Insta\?o/gi, "Instauração")
-      .replace(/Ac\?rd\?o/gi, "Acórdão")
-      .replace(/acr\?rd\?o/gi, "acórdão")
-      .replace(/ac\?rd\?o/gi, "acórdão")
-      .replace(/Acr\?do/gi, "Acórdão")
-      .replace(/Aco\?rda\?o/gi, "Acórdão")
-      .replace(/aco\?rda\?o/gi, "acórdão")
-      .replace(/Omis\?o/gi, "Omissão")
-      .replace(/omis\?o/gi, "omissão")
-      .replace(/Impugna\?o/gi, "Impugnação")
-      .replace(/impugna\?o/gi, "impugnação")
-      .replace(/Atribui\?o/gi, "Atribuição")
-      .replace(/atribui\?o/gi, "atribuição")
-      .replace(/Sess\?o/gi, "Sessão")
-      .replace(/sess\?o/gi, "sessão")
-      .replace(/M\?nimo/gi, "Mínimo")
-      .replace(/m\?nimo/gi, "mínimo")
-      .replace(/Decis\?o/gi, "Decisão")
-      .replace(/decis\?o/gi, "decisão")
-      .replace(/Informa\?o/gi, "Informação")
-      .replace(/informa\?o/gi, "informação")
-      .replace(/Situa\?o/gi, "Situação")
-      .replace(/situa\?o/gi, "situação")
-      .replace(/Aten\?o/gi, "Atenção")
-      .replace(/aten\?o/gi, "atenção")
-      .replace(/p\?blico/gi, "público")
-      .replace(/Relat\?rio/gi, "Relatório")
-      .replace(/relat\?rio/gi, "relatório")
-      .replace(/org\?o/gi, "órgão")
-      .replace(/Org\?o/gi, "Órgão");
-
-    // Contextual regex repair for non-alphanumeric replacement sequences
-    clean = clean
-      .replace(/N[^a-zA-Z0-9\s]o /g, "Não ")
-      .replace(/N[^a-zA-Z0-9\s]o/g, "Não")
-      .replace(/comprova[^a-zA-Z0-9\s]+o/g, "comprovação")
-      .replace(/aplica[^a-zA-Z0-9\s]+o/g, "aplicação")
-      .replace(/regula[^a-zA-Z0-9\s]+o/g, "regulação")
-      .replace(/consecu[^a-zA-Z0-9\s]+o/g, "consecução")
-      .replace(/omis[^a-zA-Z0-9\s]+o/g, "omissão")
-      .replace(/Omis[^a-zA-Z0-9\s]+o/g, "Omissão")
-      .replace(/Impugna[^a-zA-Z0-9\s]+o/g, "Impugnação")
-      .replace(/impugna[^a-zA-Z0-9\s]+o/g, "impugnação")
-      .replace(/Ac[^a-zA-Z0-9\s]+rd[^a-zA-Z0-9\s]+o/g, "Acórdão")
-      .replace(/ac[^a-zA-Z0-9\s]+rd[^a-zA-Z0-9\s]+o/g, "acórdão")
-      .replace(/Atribui[^a-zA-Z0-9\s]+o/g, "Atribuição")
-      .replace(/atribui[^a-zA-Z0-9\s]+o/g, "atribuição")
-      .replace(/Situa[^a-zA-Z0-9\s]+o/g, "Situação")
-      .replace(/situa[^a-zA-Z0-9\s]+o/g, "situação")
-      .replace(/Informa[^a-zA-Z0-9\s]+o/g, "Informação")
-      .replace(/informa[^a-zA-Z0-9\s]+o/g, "informação")
-      .replace(/Sess[^a-zA-Z0-9\s]+o/g, "Sessão")
-      .replace(/sess[^a-zA-Z0-9\s]+o/g, "sessão")
-      .replace(/Relat[^a-zA-Z0-9\s]+rio/g, "Relatório")
-      .replace(/relat[^a-zA-Z0-9\s]+rio/g, "relatório")
-      .replace(/org[^a-zA-Z0-9\s]+o/g, "órgão")
-      .replace(/Org[^a-zA-Z0-9\s]+o/g, "Órgão");
-
-    return clean;
+    return text || "";
   };
 
   // Robust function to extract correct 4-digit year from TCE designation, avoiding matching sequence number
@@ -442,6 +260,32 @@ export default function TcuMonitoramento({
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [copySuccessAlert, setCopySuccessAlert] = useState(false);
   const [fullTextAcordao, setFullTextAcordao] = useState<AcordaoDemand | null>(null);
+
+  const [isLoadingTeor, setIsLoadingTeor] = useState(false);
+  const handleViewFullText = async (ac: AcordaoDemand, silent?: boolean) => {
+    if (!silent) setFullTextAcordao(ac);
+    if (!ac.ACORDAO) {
+      setIsLoadingTeor(true);
+      try {
+        const res = await fetch(`/api/acordaos/${ac.KEY}/teor`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.acordao) {
+            if (!silent) setFullTextAcordao({ ...ac, ACORDAO: data.acordao });
+            return data;
+          } else if (!silent) {
+            // Also update state if it is truly empty, so it doesn't try to fetch again next time
+            setFullTextAcordao({ ...ac, ACORDAO: "" });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch full text", e);
+      } finally {
+        setIsLoadingTeor(false);
+      }
+    }
+    return { acordao: ac.ACORDAO };
+  };
   const [copySuccessFullText, setCopySuccessFullText] = useState(false);
 
   // Trace / Sync audit logs states
@@ -2144,39 +1988,12 @@ export default function TcuMonitoramento({
               </button>
 
               <button 
-                id="btn-batch-process-ai"
-                onClick={() => {
-                  if (isBatchProcessing) {
-                    abortBatchRef.current = true;
-                  } else {
-                    handleBatchProcessAi();
-                  }
-                }}
-                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  isBatchProcessing
-                    ? "bg-red-600 hover:bg-red-700 text-white shadow-xs"
-                    : "bg-[#1351b4] text-white hover:bg-[#0f4396] shadow-sm"
-                }`}
-              >
-                {isBatchProcessing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    Abortar Operação ({batchProgress.current}/{batchProgress.total})
-                  </>
-                ) : (
-                  <>
-                    <Bot className="w-4 h-4" />
-                    Gerar Dossiês Pendentes
-                  </>
-                )}
-              </button>
-
-              <button 
-                id="btn-export-excel"
-                onClick={handleExportExcel}
-                className="px-4 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 hover:bg-slate-50 hover:border-emerald-600 hover:text-emerald-700 transition duration-200 shadow-xs"
-              >
-                <Download className="w-4 h-4" /><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> XLSX</button>
+                  id="btn-export-excel"
+                  onClick={handleExportExcel}
+                  className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
+                >
+                  <Download size={16} /> Excel
+                </button>
             </div>
 
             <div className="relative w-full xl:w-[300px] shrink-0">
@@ -2307,7 +2124,7 @@ export default function TcuMonitoramento({
                 </tr>
               ) : (
                 filteredAcordaos.map((ac, idx) => {
-                  const uniqueKey = `${ac.KEY}-${idx}`;
+                  const uniqueKey = ac.KEY; // Removed -idx to prevent row collapse on updates
                   const isExpanded = expandedRow === uniqueKey;
                   const isLate = ac.STATUS_MONITORAMENTO === "Atrasado" || (ac.STATUS_MONITORAMENTO !== "Cumprido" && new Date(ac.PRAZO_LIMITE).getTime() < Date.now());
                   const hasFullText = !!(ac.ACORDAO || (ac as any).acordao);
@@ -2319,27 +2136,55 @@ export default function TcuMonitoramento({
                       {/* Row Item */}
                       <tr 
                         className={`hover:bg-slate-50/50 transition duration-150 cursor-pointer ${isExpanded ? "bg-slate-50/70" : ""}`}
-                        onClick={() => {
-                          setExpandedRow(isExpanded ? null : uniqueKey);
+                        onClick={async () => {
+                          const willExpand = !isExpanded;
+                          setExpandedRow(willExpand ? uniqueKey : null);
                           setDocVerifyInput("");
                           setVerifyResult(null);
                           setFavorecidoInput("");
                           setFavorecidoDocsResult(null);
                           setSearchMode("documento");
+
+                          if (willExpand && !ac.aiAnalysisData?.dossieRessarcimento) {
+                            try {
+                              const fullTextData = await handleViewFullText(ac, true);
+                              const teor = fullTextData?.acordao || currentFullText || "";
+                              if (teor) {
+                                const result = extractLocalHeuristics(teor);
+                                await onUpdateAcordao({ ...ac, aiAnalysisData: result });
+                              }
+                            } catch (e) {
+                              console.error("Auto extraction error:", e);
+                            }
+                          }
                         }}
                       >
                         
                         {/* Expand toggle icon */}
                         <td className="p-4 no-print">
                           <button 
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              setExpandedRow(isExpanded ? null : uniqueKey);
+                              const willExpand = !isExpanded;
+                              setExpandedRow(willExpand ? uniqueKey : null);
                               setDocVerifyInput("");
                               setVerifyResult(null);
                               setFavorecidoInput("");
                               setFavorecidoDocsResult(null);
                               setSearchMode("documento");
+
+                              if (willExpand && !ac.aiAnalysisData?.dossieRessarcimento) {
+                                try {
+                                  const fullTextData = await handleViewFullText(ac, true);
+                                  const teor = fullTextData?.acordao || currentFullText || "";
+                                  if (teor) {
+                                    const result = extractLocalHeuristics(teor);
+                                    await onUpdateAcordao({ ...ac, aiAnalysisData: result });
+                                  }
+                                } catch (err) {
+                                  console.error("Auto extraction error:", err);
+                                }
+                              }
                             }}
                             className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
                           >
@@ -2379,6 +2224,30 @@ export default function TcuMonitoramento({
 
                         {/* Session Date */}
                         <td className="p-4 text-slate-600 font-mono text-[11px]">{ac.DATASESSAO}</td>
+
+                        {/* Status / Resumo */}
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            ac.STATUS_MONITORAMENTO === "Cumprido" ? "bg-emerald-100 text-emerald-800" :
+                            isLate ? "bg-red-100 text-red-800" :
+                            "bg-blue-100 text-blue-800"
+                          }`}>
+                            {ac.STATUS_MONITORAMENTO || "Pendente"}
+                          </span>
+                        </td>
+
+                        {/* Ações */}
+                        <td className="p-4 text-center">
+                          <button 
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold transition"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedRow(isExpanded ? null : uniqueKey);
+                            }}
+                          >
+                            Detalhes
+                          </button>
+                        </td>
 
                       </tr>
 
@@ -2440,13 +2309,15 @@ export default function TcuMonitoramento({
 
                               {/* Recomendações e Determinações (Unificadas / IA) */}
                               {ac.aiAnalysisData ? (
-                                <div className="bg-gradient-to-br from-[#003366]/5 to-transparent p-4.5 rounded-xl border border-[#003366]/20 relative overflow-hidden">
-                                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#003366]/5 rounded-full -mr-4 -mt-4 pointer-events-none"></div>
-                                  <div className="flex items-center gap-2 mb-3">
-                                    <FileCheck className="w-4 h-4 text-[#003366]" />
-                                    <span className="text-[10px] text-[#003366] block uppercase font-extrabold tracking-wider">
-                                      Checklist Extraído por IA (Inteiro Teor)
+                                <div className="bg-white p-4.5 rounded-xl border border-slate-200 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
+                                    <FileCheck className="w-4 h-4 text-[#1351b4]" />
+                                    <span className="text-[10px] text-[#1351b4] block uppercase font-extrabold tracking-wider">
+                                      Checklist Extraído do Acórdão
                                     </span>
+                                    {ac.aiAnalysisData.method === 'local_heuristic' && (
+                                      <span className="ml-auto text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-mono">EXTRAÇÃO LOCAL (REGEX)</span>
+                                    )}
                                   </div>
                                   <div className="space-y-4">
                                     {(Array.isArray(ac.aiAnalysisData.determinacoes) && ac.aiAnalysisData.determinacoes.length > 0) && (
@@ -2482,102 +2353,91 @@ export default function TcuMonitoramento({
                                      (!Array.isArray(ac.aiAnalysisData.recomendacoes) || ac.aiAnalysisData.recomendacoes.length === 0) && 
                                      (!Array.isArray(ac.aiAnalysisData.darCiencia) || ac.aiAnalysisData.darCiencia.length === 0) && 
                                      !ac.aiAnalysisData.determinaArquivamento && (
-                                      <span className="text-xs text-slate-500">Nenhuma ação técnica identificada pela IA neste documento.</span>
+                                      <span className="text-xs text-slate-500">Nenhuma ação técnica identificada neste documento.</span>
                                     )}
                                   </div>
                                 </div>
                               ) : (ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || ac.RECOMENDACOES || ac.DETERMINACOES) && (
-                                <div className="bg-gradient-to-br from-[#003366]/5 to-transparent p-4.5 rounded-xl border border-[#003366]/20 relative overflow-hidden">
-                                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#003366]/5 rounded-full -mr-4 -mt-4 pointer-events-none"></div>
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <FileCheck className="w-4 h-4 text-[#003366]" />
-                                    <span className="text-[10px] text-[#003366] block uppercase font-extrabold tracking-wider">
+                                <div className="bg-white p-4.5 rounded-xl border border-slate-200 shadow-sm">
+                                  <div className="flex items-center gap-2 mb-2 border-b border-slate-100 pb-2">
+                                    <FileCheck className="w-4 h-4 text-[#1351b4]" />
+                                    <span className="text-[10px] text-[#1351b4] block uppercase font-extrabold tracking-wider">
                                       Recomendações e Determinações
                                     </span>
                                   </div>
-                                  <div className="text-xs text-slate-800 leading-relaxed font-sans whitespace-pre-wrap">
+                                  <div className="text-xs text-slate-800 leading-relaxed font-sans whitespace-pre-wrap mt-2">
                                     {ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || "Nenhuma recomendação ou determinação registrada."}
                                   </div>
                                 </div>
                               )}
 
                               {/* Document content */}
-                              <div className="space-y-1">
-                                <div className="text-[9px] text-slate-400 uppercase font-extrabold tracking-wider flex justify-between items-center mb-1">
+                              <div className="bg-white p-4.5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                                <div className="text-[10px] text-[#1351b4] uppercase font-extrabold tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+                                  <FileText className="w-4 h-4" />
                                   <span>Texto Completo do Acórdão</span>
-                                  <div className="flex items-center gap-2">
-                                    <button 
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setFullTextAcordao(ac);
-                                      }}
-                                      className="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg transition flex items-center gap-1 cursor-pointer border border-blue-200 font-sans"
-                                    >
-                                      <ExternalLink className="w-3 h-3" /> Visualizar em Tela Cheia (Popup)
-                                    </button>
-                                    <span className="text-[9px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono">INTEGRA_DOS_AUTOS</span>
-                                  </div>
                                 </div>
-                                <div className="relative group max-h-52 overflow-y-auto bg-slate-900 text-slate-200 p-4 rounded-xl font-mono text-[11px] whitespace-pre-line leading-relaxed scrollbar-thin border border-slate-950/20">
-                                  {currentFullText || "O inteiro teor para este acórdão ainda não foi baixado."}
-                                  {currentFullText && (
-                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent h-12 flex items-end justify-center pb-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <button 
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setFullTextAcordao(ac);
-                                        }}
-                                        className="bg-[#1351b4] text-white hover:bg-blue-700 text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-md transition flex items-center gap-1 cursor-pointer font-sans"
-                                      >
-                                        <ExternalLink className="w-3 h-3" /> Expandir para Leitura Completa
-                                      </button>
-                                    </div>
-                                  )}
+                                <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                  <span className="text-xs text-slate-600 font-medium">O documento original pode ser visualizado na íntegra.</span>
+                                  <button 
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewFullText(ac);
+                                    }}
+                                    className="text-[11px] text-white font-bold bg-[#1351b4] hover:bg-blue-800 px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2 cursor-pointer font-sans"
+                                  >
+                                    <ExternalLink className="w-3.5 h-3.5" /> Ler Inteiro Teor
+                                  </button>
                                 </div>
                               </div>
 
                               {/* Verification Panel (SIAFI / Portal da Transparência) */}
-                              <div className={`p-4 rounded-xl border space-y-3 no-print transition-all duration-300 ${hasValoresARessarcir(ac) ? "bg-orange-50/50 border-orange-200 ring-2 ring-orange-100 shadow-sm" : "bg-slate-50 border-slate-200"}`}>
+                              <div className={`p-4.5 rounded-xl border space-y-3 no-print transition-all duration-300 ${hasValoresARessarcir(ac) ? "bg-orange-50 border-orange-200 shadow-sm" : "bg-white border-slate-200 shadow-sm"}`}>
                                 {hasValoresARessarcir(ac) && (
                                   <div className="flex items-center gap-1.5 mb-2 bg-orange-100 text-orange-800 w-fit px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
                                     <AlertCircle className="w-3.5 h-3.5" /> Possível Débito ao Tesouro Nacional
                                   </div>
                                 )}
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[10px] text-slate-500 uppercase font-black tracking-wider flex items-center gap-1.5">
-                                    <Scale className="w-3.5 h-3.5 text-blue-600" />
-                                    Verificação Financeira de Ressarcimento (SIAFI / Portal da Transparência)
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                  <span className="text-[10px] text-[#1351b4] uppercase font-black tracking-wider flex items-center gap-1.5">
+                                    <Scale className="w-4 h-4" />
+                                    Dossiê de Ressarcimento (SIAFI / Extração)
                                   </span>
-                                  <span className="text-[9px] bg-slate-200 px-1.5 py-0.5 rounded text-slate-650 font-mono font-bold">
-                                    CONCILIAÇÃO AUTOMÁTICA GRU
+                                  <span className="text-[9px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-mono font-bold">
+                                    CONCILIAÇÃO
                                   </span>
                                 </div>
                                 
 
-
-                                <div className="bg-[#1351b4]/5 border border-[#1351b4]/20 p-3 rounded-lg mt-3">
-                                  <div className="flex items-center gap-2 mb-2 pb-2 border-b border-[#1351b4]/20">
-                                    <Bot className="w-4 h-4 text-[#1351b4]" />
-                                    <span className="font-bold text-[#1351b4] text-xs">Dossiê Inteligente de Ressarcimento (IA)</span>
-                                  </div>
-                                  
+                                  <div className="pt-2">
                                   {!ac.aiAnalysisData?.dossieRessarcimento ? (
-                                    <div className="text-xs text-slate-500 italic py-2 flex flex-col gap-2">
-                                      <span>Dossiê de IA ainda não gerado para este Acórdão.</span>
-                                      <button 
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); handleSingleProcessAi(ac); }}
-                                        disabled={processingAiKey === ac.KEY}
-                                        className="text-[10px] font-bold mt-1 bg-white border border-[#1351b4]/30 text-[#1351b4] hover:bg-[#1351b4] hover:text-white transition px-3 py-1.5 rounded flex items-center gap-2 w-fit shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                      >
-                                        {processingAiKey === ac.KEY ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Bot className="w-3 h-3" />}
-                                        {processingAiKey === ac.KEY ? "Processando Inteligência Artificial..." : "Gerar Dossiê para este Acórdão"}
-                                      </button>
+                                    <div className="text-xs text-slate-500 italic flex flex-col gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                      <span>Nenhum dossiê extraído. Clique abaixo para extrair dados localmente via RegEx.</span>
+                                      <div className="flex gap-2 mt-1">
+                                        <button 
+                                          type="button"
+                                          onClick={async (e) => { 
+                                            e.stopPropagation(); 
+                                            try {
+                                              const fullTextData = await handleViewFullText(ac, true);
+                                              const teor = fullTextData?.acordao || currentFullText || "";
+                                              if (teor) {
+                                                const result = extractLocalHeuristics(teor);
+                                                await onUpdateAcordao({ ...ac, aiAnalysisData: result });
+                                              }
+                                            } catch (err) {
+                                              console.error("Erro na extração local:", err);
+                                            }
+                                          }}
+                                          className="text-[11px] font-bold bg-[#1351b4] text-white hover:bg-blue-800 transition px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm"
+                                        >
+                                          <Search className="w-3.5 h-3.5" /> Extrair Dados Localmente (RegEx)
+                                        </button>
+                                      </div>
                                     </div>
                                   ) : Array.isArray(ac.aiAnalysisData.dossieRessarcimento) && ac.aiAnalysisData.dossieRessarcimento.length === 0 ? (
-                                    <div className="text-xs text-slate-600 italic">A inteligência artificial não identificou condenação em débito ou devolução de valores no inteiro teor deste acórdão.</div>
+                                    <div className="text-xs text-slate-600 italic">O extrator local não identificou condenação em débito ou devolução de valores no inteiro teor deste acórdão.</div>
                                   ) : Array.isArray(ac.aiAnalysisData.dossieRessarcimento) ? (
                                     <div className="space-y-3">
                                       {ac.aiAnalysisData.dossieRessarcimento.map((resp: any, i: number) => (
@@ -2894,7 +2754,14 @@ export default function TcuMonitoramento({
 
             {/* Modal Content Scroll Area */}
             <div className="p-6 overflow-y-auto bg-slate-950 text-slate-100 flex-1 font-mono text-[11.5px] whitespace-pre-line leading-relaxed scrollbar-thin">
-              {fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "Este acórdão não possui a íntegra dos autos gravada."}
+              {isLoadingTeor ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                  <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+                  <span>Baixando o inteiro teor do acórdão do banco de dados...</span>
+                </div>
+              ) : (
+                fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "Este acórdão não possui a íntegra dos autos gravada."
+              )}
             </div>
 
             {/* Modal Footer */}
