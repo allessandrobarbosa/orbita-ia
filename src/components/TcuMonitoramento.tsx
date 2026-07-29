@@ -67,6 +67,7 @@ interface TcuModuleProps {
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
   onRefreshData?: () => Promise<void>;
+  initialMonitoramentoSearch?: string;
 }
 
 export default function TcuMonitoramento({ 
@@ -88,7 +89,8 @@ export default function TcuMonitoramento({
   onClearOlderAcordaos,
   onResetDatabase,
   isLoading,
-  onRefreshData
+  onRefreshData,
+  initialMonitoramentoSearch
 }: TcuModuleProps) {
   
   // Robust Portuguese Text Repair function (Now bypassed since ETL cleans at root)
@@ -230,6 +232,12 @@ export default function TcuMonitoramento({
   }, [rawComunicacoes]);
   
   const [searchTerm, setSearchTerm] = useState("");
+
+  React.useEffect(() => {
+    if (initialMonitoramentoSearch) {
+      setSearchTerm(initialMonitoramentoSearch);
+    }
+  }, [initialMonitoramentoSearch]);
   const [isBatchProcessing, setIsBatchProcessing] = useState(false);
   const [processingAiKey, setProcessingAiKey] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });

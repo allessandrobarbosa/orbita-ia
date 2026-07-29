@@ -68,6 +68,7 @@ interface TcuModuleProps {
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
   onRefreshData?: () => Promise<void>;
+  onNavigateToMonitoramento?: (searchKey: string) => void;
 }
 
 export default function TcuTCE({
@@ -91,7 +92,8 @@ export default function TcuTCE({
   onClearOlderAcordaos,
   onResetDatabase,
   isLoading,
-  onRefreshData
+  onRefreshData,
+  onNavigateToMonitoramento
 }: TcuModuleProps) {
 
   // Robust Portuguese Text Repair function
@@ -1976,7 +1978,20 @@ export default function TcuTCE({
           const fullText = `${tceStr} ${acStr} ${refStr}`.toLowerCase();
 
           const matchesSearch = !tceSearchTerm || fullText.includes(tceSearchTerm.toLowerCase());
-          return matchesYear && matchesSearch;
+
+          let matchesStatus = true;
+          if (tceFilterStatus !== "TODOS") {
+            matchesStatus = rm.tce ? rm.tce.ESTADO_PROCESSO === tceFilterStatus : false;
+          }
+
+          let matchesVinculacao = true;
+          if (tceFilterVinculacao === "LOCALIZADOS") {
+            matchesVinculacao = !!rm.acordao;
+          } else if (tceFilterVinculacao === "NAO_LOCALIZADOS") {
+            matchesVinculacao = !rm.acordao;
+          }
+
+          return matchesYear && matchesSearch && matchesStatus && matchesVinculacao;
         });
 
         // Pagination calculations
@@ -1995,11 +2010,12 @@ export default function TcuTCE({
                 onClick={() => {
                   setTceActiveSubTab("geral");
                   setTceCurrentPage(1);
+                  setTceFilterVinculacao("TODOS");
                   setShowTceImporter(false);
                 }}
                 className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${tceActiveSubTab === "geral"
-                    ? "bg-gradient-to-br from-[#003366] to-[#0b4d8c] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
-                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
+                  ? "bg-gradient-to-br from-[#003366] to-[#0b4d8c] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
+                  : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
                   }`}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
@@ -2020,11 +2036,12 @@ export default function TcuTCE({
                 onClick={() => {
                   setTceActiveSubTab("com-acordaos");
                   setTceCurrentPage(1);
+                  setTceFilterVinculacao("TODOS");
                   setShowTceImporter(false);
                 }}
                 className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${tceActiveSubTab === "com-acordaos"
-                    ? "bg-gradient-to-br from-[#1351b4] to-[#1a64df] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
-                    : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
+                  ? "bg-gradient-to-br from-[#1351b4] to-[#1a64df] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
+                  : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
                   }`}
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
@@ -2047,8 +2064,8 @@ export default function TcuTCE({
               <button
                 onClick={() => { setTceSelectedYear("TODOS"); setTceCurrentPage(1); }}
                 className={`px-4 py-1.5 -mb-px text-[11px] font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${tceSelectedYear === "TODOS"
-                    ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
-                    : "text-slate-400 hover:text-slate-700"
+                  ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+                  : "text-slate-400 hover:text-slate-700"
                   }`}
               >
                 Todos os Anos
@@ -2058,8 +2075,8 @@ export default function TcuTCE({
                   key={yr}
                   onClick={() => { setTceSelectedYear(yr.toString()); setTceCurrentPage(1); }}
                   className={`px-4 py-1.5 -mb-px text-[11px] font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${tceSelectedYear === yr.toString()
-                      ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
-                      : "text-slate-400 hover:text-slate-700"
+                    ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+                    : "text-slate-400 hover:text-slate-700"
                     }`}
                 >
                   Ano {yr} {yr === 2026 && <span className="bg-emerald-200 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
@@ -2159,8 +2176,8 @@ export default function TcuTCE({
                     }}
                     onClick={() => document.getElementById("tce-file-import-input")?.click()}
                     className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center transition text-center cursor-pointer ${isDragOverTce
-                        ? "border-[#003366] bg-blue-50/50"
-                        : "border-slate-200 hover:border-slate-300 bg-slate-50/55"
+                      ? "border-[#003366] bg-blue-50/50"
+                      : "border-slate-200 hover:border-slate-300 bg-slate-50/55"
                       }`}
                   >
                     <input
@@ -2467,9 +2484,19 @@ export default function TcuTCE({
                     setTceCurrentPage(1);
                   }}
                 >
-                  <option value="TODOS">Todas Vinculações</option>
-                  <option value="VINCULADOS">Apenas Vinculados</option>
-                  <option value="NAO_VINCULADOS">Apenas Não Vinculados</option>
+                  {tceActiveSubTab === "geral" ? (
+                    <>
+                      <option value="TODOS">Todas Vinculações</option>
+                      <option value="VINCULADOS">Apenas Vinculados</option>
+                      <option value="NAO_VINCULADOS">Apenas Não Vinculados</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="TODOS">Todos Acórdãos Mapeados</option>
+                      <option value="LOCALIZADOS">Acórdãos Localizados na Base</option>
+                      <option value="NAO_LOCALIZADOS">Acórdãos Não Localizados</option>
+                    </>
+                  )}
                 </select>
 
                 <button
@@ -2817,12 +2844,16 @@ export default function TcuTCE({
                                           ) : (
                                             <div className="p-5 bg-rose-50/20 border border-rose-100 rounded-xl space-y-3">
                                               <p className="text-[11px] text-slate-650 leading-relaxed">
-                                                Este acórdão (<strong className="text-rose-800">{item.mapping.ACORDAO_KEY}</strong>) está mapeado para esta TCE, mas o teor oficial ou seus metadados ainda não foram importados para o Repositório AECI.
+                                                Este acórdão (<strong className="text-rose-800">{item.mapping.ACORDAO_KEY}</strong>) está mapeado para esta TCE, mas o teor oficial não foi localizado na base de dados do monitoramento de Acórdãos.
                                               </p>
                                               <button
                                                 type="button"
                                                 onClick={() => {
-                                                  alert(`Por favor, acesse a aba "Monitoramento de Acórdãos" e busque por: ${item.mapping.ACORDAO_KEY}`);
+                                                  if (onNavigateToMonitoramento) {
+                                                    onNavigateToMonitoramento(item.mapping.ACORDAO_KEY);
+                                                  } else {
+                                                    alert(`Por favor, acesse a aba "Monitoramento de Acórdãos" e busque por: ${item.mapping.ACORDAO_KEY}`);
+                                                  }
                                                 }}
                                                 className="px-3.5 py-1.5 bg-[#003366] hover:bg-slate-900 text-white rounded-xl text-[10.5px] font-bold transition flex items-center gap-1.5 shadow-2xs"
                                               >
@@ -2916,8 +2947,8 @@ export default function TcuTCE({
                 <button
                   onClick={handleCopyReportText}
                   className={`w-full py-3 px-4 font-extrabold text-xs rounded-xl flex items-center justify-center gap-2 border transition cursor-pointer ${copySuccessAlert
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                      : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
                     }`}
                 >
                   {copySuccessAlert ? (
@@ -3006,8 +3037,8 @@ export default function TcuTCE({
                     });
                   }}
                   className={`px-3 py-1.5 rounded-lg text-[11px] font-bold border transition flex items-center gap-1.5 cursor-pointer ${copySuccessFullText
-                      ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                      : "bg-white border-slate-200 hover:bg-slate-100 text-slate-700"
+                    ? "bg-emerald-50 border-emerald-300 text-emerald-800"
+                    : "bg-white border-slate-200 hover:bg-slate-100 text-slate-700"
                     }`}
                 >
                   {copySuccessFullText ? (

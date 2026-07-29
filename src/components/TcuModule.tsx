@@ -39,10 +39,18 @@ interface TcuModuleProps {
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
   onRefreshData?: () => Promise<void>;
+  onNavigateToMonitoramento?: (searchKey: string) => void;
+  initialMonitoramentoSearch?: string;
 }
 
 export default function TcuModule(props: TcuModuleProps) {
   const [tcuActiveSection, setTcuActiveSection] = useState<"monitoramento" | "comunicacoes" | "tce">("monitoramento");
+  const [initialMonitoramentoSearch, setInitialMonitoramentoSearch] = useState<string>("");
+
+  const handleNavigateToMonitoramento = (searchKey: string) => {
+    setInitialMonitoramentoSearch(searchKey);
+    setTcuActiveSection("monitoramento");
+  };
 
   return (
     <div className="space-y-6 font-sans">
@@ -106,6 +114,7 @@ export default function TcuModule(props: TcuModuleProps) {
 
       <div className={tcuActiveSection === "monitoramento" ? "block" : "hidden"}>
         <TcuMonitoramento 
+          initialMonitoramentoSearch={initialMonitoramentoSearch}
           acordaos={props.acordaos}
           onUpdateAcordao={props.onUpdateAcordao}
           onDeleteAcordao={props.onDeleteAcordao}
@@ -156,6 +165,7 @@ export default function TcuModule(props: TcuModuleProps) {
 
       <div className={tcuActiveSection === "tce" ? "block" : "hidden"}>
         <TcuTCE 
+          onNavigateToMonitoramento={handleNavigateToMonitoramento}
           acordaos={props.acordaos}
           onUpdateAcordao={props.onUpdateAcordao}
           onDeleteAcordao={props.onDeleteAcordao}
