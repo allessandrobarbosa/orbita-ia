@@ -126,6 +126,7 @@ export async function getInteiroTeorFromCache(numAcordao: number, anoAcordao: nu
 }
 
 export interface ComplementaryData {
+  key: string;
   acordao: string;
   num_ata: string;
   situacao: string;
@@ -139,13 +140,19 @@ export interface ComplementaryData {
   decisao: string;
 }
 
-export async function getComplementaryDataBulk(anoAcordao: number, numsToFind: Set<string>): Promise<Map<string, ComplementaryData>> {
+export interface TargetAcordao {
+  numAcordao: string;
+  anoAcordao: string;
+  colegiado: string;
+}
+
+export async function getComplementaryDataBulk(anoAcordao: number, targets: TargetAcordao[]): Promise<Map<string, ComplementaryData>> {
   const result = new Map<string, ComplementaryData>();
   try {
     const cachePath = await fetchAcordaoCompleto(anoAcordao);
     if (!fs.existsSync(cachePath)) return result;
 
-    console.log(`[getInteiroTeorBulk] Parsing ${cachePath} to find ${numsToFind.size} acórdãos...`);
+    console.log(`[getInteiroTeorBulk] Parsing ${cachePath} to find ${targets.length} acórdãos...`);
     const fileStream = fs.createReadStream(cachePath, { encoding: 'latin1' });
     const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
@@ -160,8 +167,10 @@ export async function getComplementaryDataBulk(anoAcordao: number, numsToFind: S
 
     let headers: string[] = [];
     let normHeaders: string[] = [];
+    let colKey = -1;
     let colNum = -1;
     let colAno = -1;
+    let colColegiado = -1;
     
     // We create a map for all columns dynamically based on headers
     let colIndices: Record<string, number> = {};
@@ -174,8 +183,10 @@ export async function getComplementaryDataBulk(anoAcordao: number, numsToFind: S
         headers = parseCSVLine(fullLine, "|");
         normHeaders = headers.map(normalizeHeaderName);
         
+        colKey = normHeaders.indexOf("key");
         colNum = normHeaders.indexOf("numacordao") !== -1 ? normHeaders.indexOf("numacordao") : normHeaders.indexOf("numero");
         colAno = normHeaders.indexOf("anoacordao") !== -1 ? normHeaders.indexOf("anoacordao") : normHeaders.indexOf("ano");
+        colColegiado = normHeaders.indexOf("colegiado");
         
         colIndices = {
           acordao: normHeaders.indexOf("inteiroteor") !== -1 ? normHeaders.indexOf("inteiroteor") : normHeaders.indexOf("acordao"),
@@ -198,27 +209,37 @@ export async function getComplementaryDataBulk(anoAcordao: number, numsToFind: S
       if (!fullLine.trim()) return;
       
       const parts = parseCSVLine(fullLine, "|");
-      if (parts.length > colNum && parts.length > colAno) {
-        if (parts[colAno] == String(anoAcordao) && numsToFind.has(parts[colNum])) {
-          const getPart = (idx: number) => (idx !== -1 && parts[idx]) ? cleanStr(parts[idx]) : "";
+      if (parts.length > colNum && parts.length > colAno && parts.length > colColegiado) {
+        if (parts[colAno] == String(anoAcordao)) {
+          const rowNum = parts[colNum];
+          const rowCol = parts[colColegiado] ? cleanStr(parts[colColegiado]).toUpperCase() : "";
           
-          const newAcordao = getPart(colIndices.acordao);
-          const existing = result.get(parts[colNum]);
+          // Check if this matches any target
+          const target = targets.find(t => t.numAcordao === rowNum && t.colegiado.toUpperCase() === rowCol);
           
-          if (!existing || newAcordao.length > (existing.acordao?.length || 0)) {
-            result.set(parts[colNum], {
-              acordao: newAcordao,
-              num_ata: getPart(colIndices.num_ata),
-              situacao: getPart(colIndices.situacao) || "OFICIALIZADO",
-              proc: getPart(colIndices.proc),
-              acordaos_relacionados: getPart(colIndices.acordaos_relacionados),
-              interessados: getPart(colIndices.interessados),
-              entidade: getPart(colIndices.entidade),
-              unidade_tecnica: getPart(colIndices.unidade_tecnica),
-              assunto: getPart(colIndices.assunto),
-              sumario: getPart(colIndices.sumario),
-              decisao: getPart(colIndices.decisao)
-            });
+          if (target) {
+            const getPart = (idx: number) => (idx !== -1 && parts[idx]) ? cleanStr(parts[idx]) : "";
+            
+            const newAcordao = getPart(colIndices.acordao);
+            const mapKey = `${target.numAcordao}-${target.colegiado.toUpperCase()}`;
+            const existing = result.get(mapKey);
+            
+            if (!existing || newAcordao.length > (existing.acordao?.length || 0)) {
+              result.set(mapKey, {
+                key: getPart(colKey),
+                acordao: newAcordao,
+                num_ata: getPart(colIndices.num_ata),
+                situacao: getPart(colIndices.situacao) || "OFICIALIZADO",
+                proc: getPart(colIndices.proc),
+                acordaos_relacionados: getPart(colIndices.acordaos_relacionados),
+                interessados: getPart(colIndices.interessados),
+                entidade: getPart(colIndices.entidade),
+                unidade_tecnica: getPart(colIndices.unidade_tecnica),
+                assunto: getPart(colIndices.assunto),
+                sumario: getPart(colIndices.sumario),
+                decisao: getPart(colIndices.decisao)
+              });
+            }
           }
         }
       }

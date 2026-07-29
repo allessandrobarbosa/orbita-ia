@@ -27,6 +27,16 @@ import viaturasRoutes from "./src/backend/routes/viaturasRoutes.js";
 import rolLegacyRoutes from "./src/backend/routes/rolLegacyRoutes.js";
 import dashboardRoutes from "./src/backend/routes/dashboardRoutes.js";
 import { pool } from "./src/backend/db";
+// User management services (PostgreSQL + bcrypt + e-mail)
+import {
+  initUsersTable, findUserByIdentifier, findUserBySiapeAndCpf,
+  userExistsByEmailOrCpf, listAllUsers, createPendingUser, approveUser,
+  updateUser, inactivateUser, reactivateUser, updatePassword, setProvisionalPassword,
+  verifyPassword, generateTempPassword, userToSessionFormat,
+} from "./src/backend/userService.js";
+import {
+  sendAccessRequestNotification, sendAccessApprovedEmail, sendPasswordResetEmail,
+} from "./src/backend/emailService.js";
 // Load environment variables
 dotenv.config();
 
@@ -112,14 +122,19 @@ if (!fs.existsSync(TCU_DIR)) {
 // Initial High-Quality Mock/Seed Data in Portuguese (Brazilian Gov Pattern)
 import * as Seeds from "./src/data/seed_db";
 
-
-
-let mockUsers: any[] = [...Seeds.SEED_PROFILES];
+// NOTE: Users are now managed in PostgreSQL via userService.ts — not in mockUsers.
 
 
 async function startServer() {
   const app = express();
-  
+
+  // Initialize PostgreSQL user table and migrate admin seed
+  try {
+    await initUsersTable();
+  } catch (err) {
+    console.error("[Server] Falha ao inicializar tabela de usuários. O servidor continuará, mas o login pode não funcionar.", err);
+  }
+
   // Enable GZIP compression for all responses
   app.use(compression());
 
@@ -166,32 +181,29 @@ async function startServer() {
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // ==========================================
+  // MIDDLEWARE DE SEGURANÇA — ADMIN
+  // ==========================================
+  const requireAdmin = (req: any, res: any, next: any) => {
+    if (!req.session?.user || req.session.user.clearance !== "ADMIN") {
+      return res.status(403).json({ error: "Acesso restrito a administradores." });
+    }
+    next();
+  };
 
   // ==========================================
   // AUTENTICAÇÃO E GOV.BR AUTH API
   // ==========================================
 
   // Auth API: Get current session user
-  app.get("/api/auth/session", (req, res) => {
+  app.get("/api/auth/session", async (req, res) => {
     if (req.session && req.session.user) {
-      // Fetch fresh data from db to ensure permissions are up to date
-      const data = { users: mockUsers };
-      const freshUser = (data.users || []).find((u: any) => u.id === req.session.user.id);
-      
-      if (freshUser) {
-        // Update session with fresh data
-        req.session.user = {
-          id: freshUser.id,
-          name: freshUser.name,
-          role: freshUser.role,
-          email: freshUser.email,
-          register: freshUser.register,
-          clearance: freshUser.clearance,
-          avatarColor: freshUser.avatarColor,
-          badgeText: freshUser.badgeText,
-          allowedModules: freshUser.allowedModules
-        };
-      }
+      try {
+        const freshUser = await findUserByIdentifier(req.session.user.id);
+        if (freshUser && freshUser.status === "ACTIVE") {
+          req.session.user = userToSessionFormat(freshUser) as any;
+        }
+      } catch (e) { /* mantém sessão existente se DB falhar */ }
       return res.json({ authenticated: true, user: req.session.user });
     }
     return res.json({ authenticated: false });
@@ -206,257 +218,212 @@ async function startServer() {
     return res.json({ success: false });
   });
 
-  // Auth API: Login with PIN (local/fallback)
+  // Auth API: Login with PIN (fallback/simulação)
   app.post("/api/auth/login-pin", (req, res) => {
     const { profileId, pin } = req.body;
     if (!profileId || !pin) {
       return res.status(400).json({ error: "Perfil e PIN são obrigatórios." });
     }
-
-    const matchedProfile = Seeds.SEED_PROFILES.find(p => p.id === profileId);
+    const matchedProfile = Seeds.SEED_PROFILES.find((p: any) => p.id === profileId);
     if (!matchedProfile) {
       return res.status(404).json({ error: "Perfil não encontrado." });
     }
-
     if (matchedProfile.pin === pin || matchedProfile.clearance === "PUBLIC") {
       req.session.user = {
-        id: matchedProfile.id,
-        name: matchedProfile.name,
-        role: matchedProfile.role,
-        email: matchedProfile.email,
-        register: matchedProfile.register,
-        clearance: matchedProfile.clearance,
-        avatarColor: matchedProfile.avatarColor,
+        id: matchedProfile.id, name: matchedProfile.name, role: matchedProfile.role,
+        email: matchedProfile.email, register: matchedProfile.register,
+        clearance: matchedProfile.clearance, avatarColor: matchedProfile.avatarColor,
         badgeText: matchedProfile.badgeText
-      };
+      } as any;
       return res.json({ success: true, user: req.session.user });
-    } else {
-      return res.status(401).json({ error: "Código PIN de assinatura inválido para este perfil." });
     }
+    return res.status(401).json({ error: "Código PIN de assinatura inválido para este perfil." });
   });
 
-  // Auth API: Login with local credentials (new flow)
-  app.post("/api/auth/login-local", (req, res) => {
+  // Auth API: Login with local credentials (bcrypt + PostgreSQL)
+  app.post("/api/auth/login-local", async (req, res) => {
     const { identifier, password } = req.body;
     if (!identifier || !password) {
       return res.status(400).json({ error: "Identificador e senha são obrigatórios." });
     }
-
-    const data = { users: mockUsers };
-    const users = data.users || [];
-    
-    // Find by exact email or exact CPF (numbers only) or exact id
-    const cleanId = String(identifier || "").replace(/\D/g, "");
-    console.log(`[Login Info] Incoming identifier: "${identifier}", cleanId: "${cleanId}", password: "${password}"`);
-    
-    const matchedProfile = users.find((p: any) => 
-      p.email === identifier || p.id === identifier || (p.cpf && p.cpf.replace(/\D/g, "") === cleanId)
-    );
-
-    if (!matchedProfile) {
-      console.log(`[Login Error] No matched profile for identifier: "${identifier}"`);
-      return res.status(404).json({ error: `Credenciais inválidas. CPF/Login não localizado no banco: ${cleanId}` });
-    }
-
-    console.log(`[Login Info] Matched user: "${matchedProfile.id}" (CPF: "${matchedProfile.cpf}", status: "${matchedProfile.status}")`);
-
-    if (matchedProfile.status && matchedProfile.status !== "ACTIVE") {
-      return res.status(403).json({ error: "Usuário não está ativo (status: " + matchedProfile.status + ")." });
-    }
-
-    // fallback to pin if password not set (for old mock profiles)
-    const validPassword = matchedProfile.password || matchedProfile.pin;
-    
-    if (validPassword === password || matchedProfile.clearance === "PUBLIC") {
-      req.session.user = {
-        id: matchedProfile.id,
-        name: matchedProfile.name,
-        role: matchedProfile.role,
-        email: matchedProfile.email,
-        register: matchedProfile.register,
-        clearance: matchedProfile.clearance,
-        avatarColor: matchedProfile.avatarColor,
-        badgeText: matchedProfile.badgeText,
-        allowedModules: matchedProfile.allowedModules
-      };
-      return res.json({ 
-        success: true, 
-        user: req.session.user, 
-        requiresPasswordChange: matchedProfile.requiresPasswordChange || false 
+    const cleanId = String(identifier).replace(/\D/g, "");
+    const maskedId = cleanId.length >= 6
+      ? `${cleanId.substring(0, 3)}***${cleanId.slice(-2)}`
+      : "***";
+    console.log(`[Auth] Login attempt — identifier: ${maskedId}`);
+    try {
+      const user = await findUserByIdentifier(identifier);
+      if (!user) {
+        console.log(`[Auth] Login failed — user not found: ${maskedId}`);
+        return res.status(401).json({ error: "Credenciais inválidas. Verifique o CPF e a senha informados." });
+      }
+      if (user.status !== "ACTIVE") {
+        return res.status(403).json({ error: "Usuário não está ativo (status: " + user.status + ")." });
+      }
+      const valid = await verifyPassword(user, password);
+      if (!valid) {
+        console.log(`[Auth] Login failed — wrong password for user: ${user.id}`);
+        return res.status(401).json({ error: "Credenciais inválidas. Senha incorreta." });
+      }
+      console.log(`[Auth] Login OK — user: ${user.id}`);
+      req.session.user = userToSessionFormat(user) as any;
+      return res.json({
+        success: true,
+        user: req.session.user,
+        requiresPasswordChange: user.requires_password_change,
       });
-    } else {
-      return res.status(401).json({ error: `Credenciais inválidas. Senha incorreta para o usuário: ${matchedProfile.id}` });
+    } catch (err) {
+      console.error("[Auth] Erro no login:", err);
+      return res.status(500).json({ error: "Erro interno ao processar login." });
     }
   });
 
-  // Auth API: Request Access
-  app.post("/api/auth/request-access", (req, res) => {
-    const { name, cpf, phone, email, unidade } = req.body;
+  // Auth API: Request Access (PostgreSQL + e-mail ao admin)
+  app.post("/api/auth/request-access", async (req, res) => {
+    const { name, cpf, siape, phone, email, role, unidade, unidadeSigla, justificativa } = req.body;
     if (!name || !cpf || !email) {
       return res.status(400).json({ error: "Nome, CPF e E-mail são obrigatórios." });
     }
-    
-    const data = { users: mockUsers };
-    data.users = data.users || [];
-    
-    // Check if exists
-    const cleanCpf = cpf.replace(/\D/g, "");
-    const exists = data.users.find((p:any) => p.email === email || (p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf));
-    if (exists) {
-      return res.status(400).json({ error: "Usuário com este E-mail ou CPF já está cadastrado." });
+    try {
+      const exists = await userExistsByEmailOrCpf(email, cpf);
+      if (exists) {
+        return res.status(400).json({ error: "Já existe um cadastro com este E-mail ou CPF." });
+      }
+      const newUser = await createPendingUser({ name, cpf, siape, phone, email, role, unidade, unidadeSigla, justificativa });
+      // Notificar admin por e-mail
+      sendAccessRequestNotification({ name, email, cpf, siape, role, unidade, justificativa }).catch(e =>
+        console.error("[Email] Falha ao notificar admin:", e)
+      );
+      return res.json({ success: true, message: "Solicitação enviada com sucesso. O administrador será notificado." });
+    } catch (err) {
+      console.error("[Auth] Erro ao solicitar acesso:", err);
+      return res.status(500).json({ error: "Erro ao registrar solicitação de acesso." });
     }
-
-    const newUser = {
-      id: "usr_" + Math.random().toString(36).substr(2, 9),
-      name,
-      cpf,
-      phone,
-      unidade,
-      email,
-      role: "Acesso Solicitado",
-      register: "Pendente",
-      clearance: "PENDING",
-      avatarColor: "bg-slate-300 text-slate-700 border-slate-300",
-      pin: "0000",
-      password: "",
-      requiresPasswordChange: true,
-      status: "PENDING",
-      badgeText: "PENDENTE"
-    };
-
-    data.users.push(newUser);
-    if (data.users) mockUsers = data.users;
-
-    console.log(`[EMAIL SIMULATION] To: admins | Subject: Nova Solicitação de Acesso | Body: O usuário ${name} (${email}) solicitou acesso.`);
-
-    return res.json({ success: true, message: "Solicitação enviada com sucesso." });
   });
 
-  // Auth API: Forgot Password
-  app.post("/api/auth/forgot-password", (req, res) => {
-    const { email, cpf } = req.body;
-    
-    const data = { users: mockUsers };
-    const users = data.users || [];
-    
-    const cleanCpf = cpf ? cpf.replace(/\D/g, "") : "";
-    const userIndex = users.findIndex((p:any) => p.email === email && p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf);
-    
-    if (userIndex === -1) {
-      // Return success anyway for security reasons (don't leak emails)
-      return res.json({ success: true, message: "Se os dados estiverem corretos, um e-mail foi enviado." });
+  // Auth API: Forgot Password (CPF + SIAPE — duplo fator)
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const { cpf, siape } = req.body;
+    const genericMsg = "Se os dados estiverem corretos, um e-mail será enviado em instantes.";
+    if (!cpf || !siape) {
+      return res.json({ success: true, message: genericMsg });
     }
-
-    // Generate provisional password
-    const provPass = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digits
-    data.users[userIndex].password = provPass;
-    data.users[userIndex].requiresPasswordChange = true;
-    if (data.users) mockUsers = data.users;
-
-    console.log(`[EMAIL SIMULATION] To: ${email} | Subject: Recuperação de Senha | Body: Sua nova senha provisória é ${provPass}. Você deverá trocá-la no próximo acesso.`);
-
-    return res.json({ success: true, message: "E-mail de recuperação enviado." });
+    try {
+      const user = await findUserBySiapeAndCpf(siape, cpf);
+      if (!user) {
+        return res.json({ success: true, message: genericMsg });
+      }
+      const tempPass = generateTempPassword();
+      await setProvisionalPassword(user.id, tempPass);
+      sendPasswordResetEmail({ name: user.name, email: user.email }, tempPass).catch(e =>
+        console.error("[Email] Falha ao enviar e-mail de recuperação:", e)
+      );
+      return res.json({ success: true, message: genericMsg });
+    } catch (err) {
+      console.error("[Auth] Erro ao recuperar senha:", err);
+      return res.json({ success: true, message: genericMsg });
+    }
   });
 
-  // Auth API: Reset Password (after login)
-  app.post("/api/auth/reset-password", (req, res) => {
+  // Auth API: Reset Password — troca obrigatória no primeiro acesso (bcrypt)
+  app.post("/api/auth/reset-password", async (req, res) => {
+    if (!req.session?.user) return res.status(401).json({ error: "Não autenticado." });
     const { userId, oldPassword, newPassword } = req.body;
-    // In a real app, we check if req.session.user.id == userId
-    
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p:any) => p.id === userId);
-    
-    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
-    
-    const user = data.users[userIndex];
-    if (user.password !== oldPassword && user.pin !== oldPassword) {
-      return res.status(403).json({ error: "Senha atual incorreta." });
+    if (req.session.user.id !== userId) {
+      return res.status(403).json({ error: "Acesso negado." });
     }
-
-    data.users[userIndex].password = newPassword;
-    data.users[userIndex].requiresPasswordChange = false;
-    data.users[userIndex].pin = newPassword; // keeping pin in sync for mock fallback
-    if (data.users) mockUsers = data.users;
-
-    return res.json({ success: true, message: "Senha atualizada com sucesso." });
+    try {
+      const user = await findUserByIdentifier(userId);
+      if (!user) return res.status(404).json({ error: "Usuário não encontrado." });
+      const valid = await verifyPassword(user, oldPassword);
+      if (!valid) return res.status(403).json({ error: "Senha atual incorreta." });
+      await updatePassword(userId, newPassword);
+      return res.json({ success: true, message: "Senha atualizada com sucesso." });
+    } catch (err) {
+      console.error("[Auth] Erro ao resetar senha:", err);
+      return res.status(500).json({ error: "Erro interno ao atualizar senha." });
+    }
   });
 
-  // Admin API: List Users
-  app.get("/api/admin/users", (req, res) => {
-    // Should check clearance === ADMIN here
-    const data = { users: mockUsers };
-    return res.json(data.users || []);
+  // Admin API: List Users (requer ADMIN)
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await listAllUsers();
+      // Remove password_hash antes de enviar ao frontend
+      return res.json(users.map(u => { const { password_hash, ...safe } = u; return safe; }));
+    } catch (err) {
+      return res.status(500).json({ error: "Erro ao listar usuários." });
+    }
   });
 
-  // Admin API: Approve or Update User
-  app.post("/api/admin/users/:id/approve", (req, res) => {
+  // Admin API: Approve User (requer ADMIN) + e-mail ao usuário
+  app.post("/api/admin/users/:id/approve", requireAdmin, async (req, res) => {
     const { role, clearance, badgeText, allowedModules } = req.body;
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p:any) => p.id === req.params.id);
-    
-    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
-    
-    const isNewApproval = data.users[userIndex].status === "PENDING";
-    let provPass = data.users[userIndex].password;
-
-    if (isNewApproval) {
-      provPass = Math.floor(100000 + Math.random() * 900000).toString();
-      data.users[userIndex].password = provPass;
-      data.users[userIndex].pin = provPass;
-      data.users[userIndex].requiresPasswordChange = true;
+    const adminId = (req.session as any).user.id;
+    try {
+      const tempPass = generateTempPassword();
+      const updated = await approveUser(
+        req.params.id,
+        { role, clearance: clearance || "PUBLIC", badgeText, allowedModules },
+        adminId,
+        tempPass
+      );
+      sendAccessApprovedEmail(
+        { name: updated.name, email: updated.email, cpf: updated.cpf, unidade: updated.unidade, badgeText: updated.badge_text },
+        tempPass
+      ).catch(e => console.error("[Email] Falha ao enviar aprovação:", e));
+      const { password_hash, ...safe } = updated;
+      return res.json({ success: true, user: safe });
+    } catch (err) {
+      console.error("[Admin] Erro ao aprovar usuário:", err);
+      return res.status(500).json({ error: "Erro ao aprovar usuário." });
     }
-    
-    data.users[userIndex].status = "ACTIVE";
-    data.users[userIndex].role = role || data.users[userIndex].role;
-    data.users[userIndex].clearance = clearance || "PUBLIC";
-    data.users[userIndex].badgeText = badgeText || "AUTORIZADO";
-    if (allowedModules) {
-      data.users[userIndex].allowedModules = allowedModules;
-    }
-    
-    if (data.users) mockUsers = data.users;
-
-    if (isNewApproval) {
-      console.log(`\n\n=== SIMULAÇÃO DE ENVIO DE E-MAIL ===\nPara: ${data.users[userIndex].email}\nAssunto: Acesso Aprovado\nMensagem: Seu acesso ao ÓRBITA.AECI foi aprovado.\nSua senha provisória é: ${provPass}\n====================================\n\n`);
-    }
-
-    return res.json({ success: true, user: data.users[userIndex] });
   });
 
-  // Admin API: Update active user permissions
-  app.post("/api/admin/users/:id", (req, res) => {
-    const { badgeText, allowedModules } = req.body;
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p:any) => p.id === req.params.id);
-    
-    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
-    
-    if (badgeText) data.users[userIndex].badgeText = badgeText;
-    if (allowedModules) data.users[userIndex].allowedModules = allowedModules;
-    
-    if (data.users) mockUsers = data.users;
-    return res.json({ success: true, user: data.users[userIndex] });
+  // Admin API: Update active user data and permissions (requer ADMIN)
+  app.post("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    const { badgeText, allowedModules, clearance, role, name, email, siape, unidade } = req.body;
+    try {
+      const user = await findUserByIdentifier(req.params.id);
+      if (!user) return res.status(404).json({ error: "Usuário não encontrado." });
+      
+      const updated = await updateUser(
+        req.params.id,
+        { role, clearance, badgeText, allowedModules, name, email, siape, unidade }
+      );
+      
+      const { password_hash, ...safe } = updated;
+      return res.json({ success: true, user: safe });
+    } catch (err) {
+      console.error("[Admin] Erro ao atualizar usuário:", err);
+      return res.status(500).json({ error: "Erro ao atualizar usuário." });
+    }
   });
 
-  // Admin API: Inactivate User
-  app.post("/api/admin/users/:id/inactivate", (req, res) => {
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p:any) => p.id === req.params.id);
-    
-    if (userIndex === -1) return res.status(404).json({ error: "Usuário não encontrado." });
-    
-    data.users[userIndex].status = "INACTIVE";
-    if (data.users) mockUsers = data.users;
+  // Admin API: Inactivate User (requer ADMIN)
+  app.post("/api/admin/users/:id/inactivate", requireAdmin, async (req, res) => {
+    try {
+      await inactivateUser(req.params.id);
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: "Erro ao inativar usuário." });
+    }
+  });
 
-    return res.json({ success: true, user: data.users[userIndex] });
+  // Admin API: Reactivate User (requer ADMIN)
+  app.post("/api/admin/users/:id/reactivate", requireAdmin, async (req, res) => {
+    try {
+      await reactivateUser(req.params.id);
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: "Erro ao reativar usuário." });
+    }
   });
 
   // Auth API: Logout
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Erro ao encerrar sessão." });
-      }
+      if (err) return res.status(500).json({ error: "Erro ao encerrar sessão." });
       res.clearCookie("connect.sid");
       return res.json({ success: true });
     });

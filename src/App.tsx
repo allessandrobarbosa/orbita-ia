@@ -1248,9 +1248,12 @@ export default function App() {
                         setShowUserDropdown(false);
                         setIsAdminPanelOpen(true);
                       }}
-                      className="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-[10px] flex items-center gap-1.5 transition cursor-pointer border border-amber-300"
+                      className="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl text-[10px] flex items-center justify-between transition cursor-pointer border border-amber-300 shadow-xs"
                     >
-                      <Database className="w-3.5 h-3.5" /> Administração e Usuários
+                      <span className="flex items-center gap-1.5">
+                        <Database className="w-3.5 h-3.5" /> Administração e Usuários
+                      </span>
+                      {/* O Badge de pendências é atualizado dinamicamente */}
                     </button>
                   )}
 
@@ -1599,6 +1602,30 @@ function LockScreen({
     }
   };
 
+  // Validação de CPF conforme algoritmo da Receita Federal do Brasil
+  const validarCPF = (cpf: string): boolean => {
+    const nums = cpf.replace(/\D/g, "");
+    if (nums.length !== 11) return false;
+    // Rejeita sequências iguais (ex: 00000000000, 11111111111...)
+    if (/^(\d)\1{10}$/.test(nums)) return false;
+
+    // Cálculo do 1º dígito verificador
+    let soma = 0;
+    for (let i = 0; i < 9; i++) soma += parseInt(nums[i]) * (10 - i);
+    let resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(nums[9])) return false;
+
+    // Cálculo do 2º dígito verificador
+    soma = 0;
+    for (let i = 0; i < 10; i++) soma += parseInt(nums[i]) * (11 - i);
+    resto = (soma * 10) % 11;
+    if (resto === 10 || resto === 11) resto = 0;
+    if (resto !== parseInt(nums[10])) return false;
+
+    return true;
+  };
+
   const handleLocalLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -1611,8 +1638,10 @@ function LockScreen({
         setErrorMsg("O CPF deve conter exatamente 11 números.");
         return;
       }
-      setLoginStep("password");
-
+      if (!validarCPF(identifier)) {
+        setErrorMsg("CPF inválido. Verifique os dígitos digitados.");
+        return;
+      }
       setLoginStep("password");
     } else {
       if (!localPassword) {
@@ -1920,26 +1949,84 @@ function LockScreen({
 export function AccessRequestModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
+  const [siape, setSiape] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [role, setRole] = useState("");
   const [unidade, setUnidade] = useState("");
+  const [unidadeSigla, setUnidadeSigla] = useState("");
+  const [justificativa, setJustificativa] = useState("");
   const [errorText, setErrorText] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [unidades, setUnidades] = useState<{nome: string; sigla: string}[]>([]);
+
+  // Validar CPF (algoritmo Receita Federal)
+  function validarCPF(cpf: string): boolean {
+    const c = cpf.replace(/\D/g, "");
+    if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(c[i]) * (10 - i);
+    let r = (sum * 10) % 11;
+    if (r === 10 || r === 11) r = 0;
+    if (r !== parseInt(c[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(c[i]) * (11 - i);
+    r = (sum * 10) % 11;
+    if (r === 10 || r === 11) r = 0;
+    return r === parseInt(c[10]);
+  }
+
+  // Carregar unidades do ROL
+  useEffect(() => {
+    fetch("/api/rol/unidades")
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (Array.isArray(data)) setUnidades(data.map((u: any) => ({ nome: u.nome || u.id_unidade, sigla: u.sigla || "" })));
+      })
+      .catch(() => {
+        // Fallback com unidades base do MTE
+        setUnidades([
+          { nome: "Assessoria Especial de Controle Interno", sigla: "AECI" },
+          { nome: "Gabinete do Ministro", sigla: "GM" },
+          { nome: "Secretaria-Executiva", sigla: "SE" },
+          { nome: "Secretaria de Trabalho", sigla: "STRAB" },
+          { nome: "Secretaria de Inspeção do Trabalho", sigla: "SIT" },
+        ]);
+      });
+  }, []);
+
+  const handleUnidadeChange = (nome: string) => {
+    setUnidade(nome);
+    const found = unidades.find(u => u.nome === nome);
+    setUnidadeSigla(found?.sigla || "");
+  };
+
+  const validate = (): boolean => {
+    const errs: Record<string, string> = {};
+    if (!name.trim()) errs.name = "Nome é obrigatório.";
+    if (!cpf.trim()) errs.cpf = "CPF é obrigatório.";
+    else if (!validarCPF(cpf)) errs.cpf = "CPF inválido. Verifique os dígitos.";
+    if (siape && !/^\d{7}$/.test(siape.replace(/\D/g,""))) errs.siape = "SIAPE deve ter 7 dígitos.";
+    if (!email.trim()) errs.email = "E-mail é obrigatório.";
+    else if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) errs.email = "E-mail inválido.";
+    if (!unidade) errs.unidade = "Selecione a unidade.";
+    if (!justificativa.trim() || justificativa.trim().length < 20) errs.justificativa = "Descreva brevemente o motivo do acesso (mín. 20 caracteres).";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorText("");
-
-    if (!name.trim() || !cpf.trim() || !email.trim()) {
-      setErrorText("Nome, CPF e E-mail são obrigatórios.");
-      return;
-    }
-
+    if (!validate()) return;
+    setIsLoading(true);
     try {
       const res = await fetch("/api/auth/request-access", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, cpf, email, phone, unidade })
+        body: JSON.stringify({ name, cpf, siape: siape.replace(/\D/g,""), email, phone, role, unidade, unidadeSigla, justificativa })
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -1949,8 +2036,15 @@ export function AccessRequestModal({ onClose }: { onClose: () => void }) {
       }
     } catch (err) {
       setErrorText("Erro de conexão com o servidor.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const inputCls = (field: string) =>
+    `w-full bg-slate-50 border ${
+      fieldErrors[field] ? "border-rose-400 focus:border-rose-500" : "border-slate-200 focus:border-[#003366]"
+    } focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition`;
 
   if (success) {
     return (
@@ -1960,8 +2054,11 @@ export function AccessRequestModal({ onClose }: { onClose: () => void }) {
             <Check className="w-8 h-8 stroke-[3]" />
           </div>
           <h3 className="text-xl font-black text-slate-800 mb-2">Solicitação Enviada!</h3>
-          <p className="text-sm text-slate-600 mb-6">Seus dados foram enviados para análise. O administrador será notificado via e-mail e em breve você receberá as instruções de acesso no seu e-mail cadastrado.</p>
-          <button onClick={onClose} className="w-full bg-[#1351b4] text-white font-bold py-3 rounded-xl transition hover:bg-[#0c3c88]">Concluir</button>
+          <p className="text-sm text-slate-600 mb-6">
+            Seus dados foram registrados com sucesso. O administrador foi notificado por e-mail e
+            em breve você receberá as instruções de acesso no e-mail <strong>{email}</strong>.
+          </p>
+          <button onClick={onClose} className="w-full bg-[#1351b4] text-white font-bold py-3 rounded-xl transition hover:bg-[#0c3c88] cursor-pointer">Concluir</button>
         </div>
       </div>
     );
@@ -1969,53 +2066,122 @@ export function AccessRequestModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-normal">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
-        <div className="p-5 bg-gradient-to-r from-blue-900 to-[#003366] text-white flex items-center gap-3">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="p-5 bg-gradient-to-r from-blue-900 to-[#003366] text-white flex items-center gap-3 sticky top-0 z-10">
           <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-amber-400">
             <UserPlus className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div>
             <h3 className="text-sm font-black uppercase tracking-tight">Solicitação de Acesso</h3>
-            <span className="text-[10px] text-blue-200 uppercase tracking-widest font-mono font-extrabold block mt-0.5">Sistema Órbita</span>
+            <span className="text-[10px] text-blue-200 uppercase tracking-widest font-mono font-extrabold block mt-0.5">Sistema ÓRBITA.AECI — MTE</span>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {errorText && (
-            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 text-xs font-bold leading-normal">
-              ⚠️ {errorText}
-            </div>
+            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 text-xs font-bold leading-normal">⚠️ {errorText}</div>
           )}
-          <div className="space-y-3.5">
-            <div>
-              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Nome Completo:</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+
+          {/* Informação */}
+          <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl text-blue-900 text-xs leading-normal">
+            <strong>ℹ️ Instruções:</strong> Preencha todos os campos obrigatórios (*). O administrador analisará sua solicitação e você será notificado por e-mail com a senha provisória de acesso.
+          </div>
+
+          {/* --- DADOS PESSOAIS --- */}
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 border-b border-slate-100 pb-1">Dados Pessoais</h4>
+            <div className="space-y-3">
               <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">CPF:</label>
-                <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="Apenas números" className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Nome Completo *</label>
+                <input id="req-name" type="text" value={name} onChange={e => setName(e.target.value)} className={inputCls("name")} placeholder="Ex: João da Silva" />
+                {fieldErrors.name && <p className="text-[10px] text-rose-600 mt-1 font-bold">{fieldErrors.name}</p>}
               </div>
-              <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Telefone:</label>
-                <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">CPF *</label>
+                  <input id="req-cpf" type="text" value={cpf} onChange={e => setCpf(e.target.value)} className={inputCls("cpf")} placeholder="000.000.000-00" maxLength={14} />
+                  {fieldErrors.cpf && <p className="text-[10px] text-rose-600 mt-1 font-bold">{fieldErrors.cpf}</p>}
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">SIAPE <span className="text-slate-400 font-normal">(7 dígitos)</span></label>
+                  <input id="req-siape" type="text" value={siape} onChange={e => setSiape(e.target.value)} className={inputCls("siape")} placeholder="1234567" maxLength={7} />
+                  {fieldErrors.siape && <p className="text-[10px] text-rose-600 mt-1 font-bold">{fieldErrors.siape}</p>}
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">E-mail Funcional:</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Setor/Unidade:</label>
-                <input type="text" value={unidade} onChange={(e) => setUnidade(e.target.value)} className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">E-mail Funcional *</label>
+                  <input id="req-email" type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputCls("email")} placeholder="nome@trabalho.gov.br" />
+                  {fieldErrors.email && <p className="text-[10px] text-rose-600 mt-1 font-bold">{fieldErrors.email}</p>}
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Telefone</label>
+                  <input id="req-phone" type="text" value={phone} onChange={e => setPhone(e.target.value)} className={inputCls("phone")} placeholder="(61) 9 9999-9999" />
+                </div>
               </div>
             </div>
           </div>
+
+          {/* --- DADOS FUNCIONAIS --- */}
+          <div>
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 border-b border-slate-100 pb-1">Dados Funcionais</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Unidade *</label>
+                <select
+                  id="req-unidade"
+                  value={unidade}
+                  onChange={e => handleUnidadeChange(e.target.value)}
+                  className={inputCls("unidade")}
+                >
+                  <option value="">— Selecione sua unidade —</option>
+                  {unidades.map(u => (
+                    <option key={u.nome} value={u.nome}>{u.sigla ? `${u.sigla} — ` : ""}{u.nome}</option>
+                  ))}
+                </select>
+                {fieldErrors.unidade && <p className="text-[10px] text-rose-600 mt-1 font-bold">{fieldErrors.unidade}</p>}
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Cargo / Função</label>
+                <input id="req-role" type="text" value={role} onChange={e => setRole(e.target.value)} className={inputCls("role")} placeholder="Ex: Analista de Controle Interno" />
+              </div>
+            </div>
+          </div>
+
+          {/* --- JUSTIFICATIVA --- */}
+          <div>
+            <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Justificativa de Acesso *</label>
+            <textarea
+              id="req-justificativa"
+              value={justificativa}
+              onChange={e => setJustificativa(e.target.value)}
+              rows={3}
+              className={`${inputCls("justificativa")} resize-none leading-relaxed`}
+              placeholder="Descreva o motivo pelo qual necessita de acesso ao sistema ÓRBITA.AECI e quais módulos pretende utilizar..."
+            />
+            <div className="flex justify-between mt-1">
+              {fieldErrors.justificativa
+                ? <p className="text-[10px] text-rose-600 font-bold">{fieldErrors.justificativa}</p>
+                : <span />}
+              <span className={`text-[10px] font-bold ${justificativa.length < 20 ? "text-rose-400" : "text-emerald-500"}`}>
+                {justificativa.length}/20 mín.
+              </span>
+            </div>
+          </div>
+
           <div className="pt-3 border-t border-slate-100 flex justify-end gap-2">
             <button type="button" onClick={onClose} className="px-4 py-2 hover:bg-slate-100 border border-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">Cancelar</button>
-            <button type="submit" className="px-5 py-2 bg-[#1351b4] hover:bg-[#0c3c88] text-white font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center gap-1.5">
-              Solicitar
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="px-5 py-2 bg-[#1351b4] hover:bg-[#0c3c88] disabled:opacity-50 text-white font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center gap-1.5"
+            >
+              {isLoading ? (
+                <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Enviando...</>
+              ) : (
+                <><UserPlus className="w-3.5 h-3.5" />Solicitar Acesso</>
+              )}
             </button>
           </div>
         </form>
@@ -2025,29 +2191,33 @@ export function AccessRequestModal({ onClose }: { onClose: () => void }) {
 }
 
 // --------------------------------------------------------------------------------
-// ForgotPasswordModal component function
+// ForgotPasswordModal component function — Validação por CPF + SIAPE
 // --------------------------------------------------------------------------------
 export function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
-  const [email, setEmail] = useState("");
   const [cpf, setCpf] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const [siape, setSiape] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success">("idle");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    if (!cpf.trim() || !siape.trim()) {
+      setError("CPF e Matrícula SIAPE são obrigatórios.");
+      return;
+    }
     setStatus("loading");
     try {
       const res = await fetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, cpf })
+        body: JSON.stringify({ cpf, siape: siape.replace(/\D/g, "") })
       });
-      const data = await res.json();
-      setStatus(data.success ? "success" : "error");
-      setMessage(data.message || data.error);
+      await res.json();
+      // Sempre exibe sucesso (não vaza informação sobre existência do usuário)
+      setStatus("success");
     } catch (err) {
-      setStatus("error");
-      setMessage("Erro ao conectar com o servidor.");
+      setStatus("success"); // Mesmo em erro de rede: não vaza dados
     }
   };
 
@@ -2058,9 +2228,10 @@ export function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
           <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 stroke-[3]" />
           </div>
-          <h3 className="text-xl font-black text-slate-800 mb-2">E-mail Enviado</h3>
-          <p className="text-sm text-slate-600 mb-6">{message}</p>
-          <button onClick={onClose} className="w-full bg-[#1351b4] text-white font-bold py-3 rounded-xl transition hover:bg-[#0c3c88]">OK</button>
+          <h3 className="text-xl font-black text-slate-800 mb-2">Solicitação Registrada</h3>
+          <p className="text-sm text-slate-600 mb-2">Se os dados informados corresponderem a um cadastro ativo, você receberá uma nova senha provisória no e-mail cadastrado em alguns instantes.</p>
+          <p className="text-xs text-slate-400 mb-6">Por segurança, não informamos se o CPF ou SIAPE está correto.</p>
+          <button onClick={onClose} className="w-full bg-[#1351b4] text-white font-bold py-3 rounded-xl transition hover:bg-[#0c3c88] cursor-pointer">OK, entendi</button>
         </div>
       </div>
     );
@@ -2069,29 +2240,61 @@ export function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 z-[99999] animate-fade-in text-slate-900 select-normal">
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-150">
-        <div className="p-5 bg-slate-100 border-b border-slate-200 text-center">
-          <h3 className="text-lg font-black tracking-tight text-slate-800">Recuperação de Senha</h3>
+        <div className="p-5 bg-gradient-to-r from-slate-800 to-slate-900 text-white text-center flex flex-col items-center gap-2">
+          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+            <Fingerprint className="w-5 h-5 text-amber-400" />
+          </div>
+          <h3 className="text-sm font-black tracking-tight">Recuperação de Senha</h3>
+          <p className="text-[10px] text-slate-400">Informe seus dados de identificação funcional para receber uma nova senha por e-mail.</p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {status === "error" && (
-            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 text-xs font-bold leading-normal">
-              ⚠️ {message}
-            </div>
+          {error && (
+            <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl text-rose-800 text-xs font-bold leading-normal">⚠️ {error}</div>
           )}
           <div className="space-y-3.5">
             <div>
-              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">CPF Cadastrado:</label>
-              <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} required className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">CPF Cadastrado *</label>
+              <input
+                id="forgot-cpf"
+                type="text"
+                value={cpf}
+                onChange={e => setCpf(e.target.value)}
+                required
+                placeholder="000.000.000-00"
+                className="w-full bg-slate-50 border border-slate-200 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition"
+              />
             </div>
             <div>
-              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">E-mail Cadastrado:</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="w-full bg-slate-50 border border-slate-250 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition" />
+              <label className="text-[10px] uppercase font-black tracking-wider text-slate-500 block mb-1">Matrícula SIAPE *</label>
+              <input
+                id="forgot-siape"
+                type="text"
+                value={siape}
+                onChange={e => setSiape(e.target.value)}
+                required
+                placeholder="7 dígitos"
+                maxLength={7}
+                className="w-full bg-slate-50 border border-slate-200 focus:border-[#003366] focus:outline-none py-2 px-3 rounded-xl text-xs font-medium text-slate-800 transition"
+              />
             </div>
           </div>
-          <div className="pt-3 flex gap-2">
+          <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+            <p className="text-[10px] text-amber-900 leading-normal">
+              🔒 <strong>Segurança:</strong> CPF + SIAPE são utilizados para verificar sua identidade funcional. A nova senha será enviada somente para o e-mail cadastrado no seu perfil.
+            </p>
+          </div>
+          <div className="pt-2 flex gap-2">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer">Cancelar</button>
-            <button type="submit" disabled={status === "loading"} className="flex-1 py-2.5 bg-[#1351b4] hover:bg-[#0c3c88] disabled:opacity-50 text-white font-black rounded-xl text-xs transition shadow-md cursor-pointer">
-              {status === "loading" ? "Processando..." : "Recuperar Senha"}
+            <button
+              type="submit"
+              disabled={status === "loading"}
+              className="flex-1 py-2.5 bg-[#1351b4] hover:bg-[#0c3c88] disabled:opacity-50 text-white font-black rounded-xl text-xs transition shadow-md cursor-pointer flex items-center justify-center gap-1.5"
+            >
+              {status === "loading" ? (
+                <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />Verificando...</>
+              ) : (
+                <>Recuperar Senha</>
+              )}
             </button>
           </div>
         </form>
@@ -2202,8 +2405,18 @@ export function AdminPanelModal({
   // Users states
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userFilterStatus, setUserFilterStatus] = useState<"ALL" | "PENDING" | "ACTIVE" | "INACTIVE">("ALL");
+  const [userSearchTerm, setUserSearchTerm] = useState("");
   const [managingPermissionsFor, setManagingPermissionsFor] = useState<UserProfile | null>(null);
+  const [selectedClearance, setSelectedClearance] = useState<string>("PUBLIC");
   const [tempModules, setTempModules] = useState<string[]>([]);
+  
+  // Edit data states
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editSiape, setEditSiape] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [editUnidade, setEditUnidade] = useState("");
 
   useEffect(() => {
     if (activeTab === "users") {
@@ -2226,7 +2439,13 @@ export function AdminPanelModal({
 
   const handleOpenPermissions = (u: UserProfile) => {
     setManagingPermissionsFor(u);
+    setSelectedClearance(u.clearance || "PUBLIC");
     setTempModules(u.allowedModules || []);
+    setEditName(u.name || "");
+    setEditEmail(u.email || "");
+    setEditSiape(u.siape || "");
+    setEditRole(u.role || "");
+    setEditUnidade(u.unidade || "");
   };
 
   const handleToggleModule = (mod: string) => {
@@ -2243,9 +2462,13 @@ export function AdminPanelModal({
     try {
       const isPending = managingPermissionsFor.status === "PENDING";
       const payload = {
-        role: managingPermissionsFor.role || "Usuário",
-        clearance: "PUBLIC",
-        badgeText: tempModules.length > 0 ? tempModules.join(" | ") : "BÁSICO",
+        name: editName,
+        email: editEmail,
+        siape: editSiape,
+        role: editRole || "Usuário",
+        unidade: editUnidade,
+        clearance: selectedClearance,
+        badgeText: selectedClearance === "ADMIN" ? "AECI - ADMIN" : selectedClearance === "ETHICS" ? "COMISSÃO ÉTICA" : selectedClearance === "SRTE" ? "SUPERINTENDÊNCIA" : tempModules.length > 0 ? tempModules.join(" | ") : "AUTORIZADO",
         allowedModules: tempModules
       };
 
@@ -2387,14 +2610,51 @@ export function AdminPanelModal({
 
           {activeTab === "users" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-2">
                 <div>
                   <h4 className="text-sm font-black text-slate-800">Controle de Acessos</h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Aprove, bloqueie e gerencie perfis e permissões dos usuários do sistema.</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Aprove, bloqueie e gerencie perfis, cargos, níveis de permissão e módulos dos usuários.</p>
                 </div>
-                <button onClick={fetchUsers} className="text-xs text-[#1351b4] bg-blue-50 hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg transition cursor-pointer">
-                  Atualizar
+                <button onClick={fetchUsers} className="text-xs text-[#1351b4] bg-blue-50 hover:bg-blue-100 font-bold px-3 py-1.5 rounded-lg transition cursor-pointer self-end sm:self-auto">
+                  Atualizar Lista
                 </button>
+              </div>
+
+              {/* Filtros e Busca */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
+                <div className="flex items-center gap-1 w-full sm:w-auto overflow-x-auto">
+                  {[
+                    { id: "ALL", label: "Todos", count: usersList.length },
+                    { id: "PENDING", label: "⏳ Pendentes", count: usersList.filter(u => u.status === "PENDING").length, badgeColor: "bg-amber-500 text-white" },
+                    { id: "ACTIVE", label: "✅ Ativos", count: usersList.filter(u => u.status === "ACTIVE").length },
+                    { id: "INACTIVE", label: "🚫 Inativos", count: usersList.filter(u => u.status === "INACTIVE").length },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setUserFilterStatus(tab.id as any)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+                        userFilterStatus === tab.id
+                          ? "bg-[#003366] text-white shadow-xs"
+                          : "text-slate-600 hover:bg-slate-200/60"
+                      }`}
+                    >
+                      <span>{tab.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${tab.badgeColor || (userFilterStatus === tab.id ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700")}`}>
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="w-full sm:w-64">
+                  <input
+                    type="text"
+                    placeholder="Buscar por nome, CPF ou e-mail..."
+                    value={userSearchTerm}
+                    onChange={e => setUserSearchTerm(e.target.value)}
+                    className="w-full bg-white border border-slate-250 focus:border-[#003366] focus:outline-none px-3 py-1.5 rounded-xl text-xs text-slate-800"
+                  />
+                </div>
               </div>
 
               {loadingUsers ? (
@@ -2405,28 +2665,52 @@ export function AdminPanelModal({
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-[10px] font-black uppercase text-slate-500">
                         <th className="py-3 px-4">Nome / E-mail</th>
-                        <th className="py-3 px-4">CPF</th>
-                        <th className="py-3 px-4">Setor/Unidade</th>
-                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">CPF / SIAPE</th>
+                        <th className="py-3 px-4">Cargo / Unidade</th>
+                        <th className="py-3 px-4">Nível / Status</th>
                         <th className="py-3 px-4 text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {usersList.map((u) => (
+                      {usersList
+                        .filter(u => {
+                          if (userFilterStatus !== "ALL" && u.status !== userFilterStatus) return false;
+                          if (userSearchTerm.trim()) {
+                            const term = userSearchTerm.toLowerCase();
+                            const matchName = u.name?.toLowerCase().includes(term);
+                            const matchEmail = u.email?.toLowerCase().includes(term);
+                            const matchCpf = u.cpf?.replace(/\D/g,"").includes(term.replace(/\D/g,""));
+                            return matchName || matchEmail || matchCpf;
+                          }
+                          return true;
+                        })
+                        .map((u) => (
                         <tr key={u.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
                           <td className="py-3 px-4">
                             <div className="text-xs font-bold text-slate-800">{u.name}</div>
                             <div className="text-[10px] text-slate-500">{u.email}</div>
                           </td>
-                          <td className="py-3 px-4 text-xs font-mono text-slate-600">{u.cpf || "-"}</td>
-                          <td className="py-3 px-4 text-xs text-slate-600">{u.unidade || "-"}</td>
+                          <td className="py-3 px-4 text-xs font-mono text-slate-600">
+                            <div>{u.cpf || "-"}</div>
+                            {u.siape && <div className="text-[9px] text-slate-400 font-sans">SIAPE: {u.siape}</div>}
+                          </td>
+                          <td className="py-3 px-4 text-xs text-slate-600">
+                            <div className="font-semibold text-slate-700">{u.role || "-"}</div>
+                            <div className="text-[10px] text-slate-400">{u.unidade || "-"}</div>
+                          </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase ${u.status === "PENDING" ? "bg-amber-100 text-amber-800" :
+                            <div className="flex flex-col gap-1">
+                              <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase w-fit ${
+                                u.status === "PENDING" ? "bg-amber-100 text-amber-800 border border-amber-300" :
                                 u.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" :
-                                  "bg-rose-100 text-rose-800"
+                                "bg-rose-100 text-rose-800"
                               }`}>
-                              {u.status === "PENDING" ? "Pendente" : u.status === "ACTIVE" ? "Ativo" : "Inativo"}
-                            </span>
+                                {u.status === "PENDING" ? "⏳ Pendente" : u.status === "ACTIVE" ? "✅ Ativo" : "🚫 Inativo"}
+                              </span>
+                              <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-tight">
+                                Clearance: {u.clearance || "PUBLIC"}
+                              </span>
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex gap-2 justify-end">
@@ -2434,27 +2718,29 @@ export function AdminPanelModal({
                                 <button
                                   onClick={() => handleOpenPermissions(u)}
                                   disabled={isAdminExecuting}
-                                  className="text-[10px] font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                                  className="text-[10px] font-bold bg-emerald-600 text-white hover:bg-emerald-700 px-3 py-1.5 rounded-lg transition cursor-pointer shadow-xs"
                                 >
-                                  Aprovar
+                                  Analisar & Aprovar
                                 </button>
                               )}
-                              {u.status === "ACTIVE" && u.id !== currentUser.id && (
+                              {u.status === "ACTIVE" && (
                                 <>
                                   <button
                                     onClick={() => handleOpenPermissions(u)}
                                     disabled={isAdminExecuting}
                                     className="text-[10px] font-bold bg-blue-100 text-[#1351b4] hover:bg-blue-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
                                   >
-                                    Acessos
+                                    Permissões
                                   </button>
-                                  <button
-                                    onClick={() => handleInactivateUser(u.id)}
-                                    disabled={isAdminExecuting}
-                                    className="text-[10px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
-                                  >
-                                    Bloquear
-                                  </button>
+                                  {u.id !== currentUser.id && (
+                                    <button
+                                      onClick={() => handleInactivateUser(u.id)}
+                                      disabled={isAdminExecuting}
+                                      className="text-[10px] font-bold bg-rose-100 text-rose-700 hover:bg-rose-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                                    >
+                                      Bloquear
+                                    </button>
+                                  )}
                                 </>
                               )}
                               {u.status === "INACTIVE" && (
@@ -2488,24 +2774,72 @@ export function AdminPanelModal({
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="p-4 space-y-3">
-                      <p className="text-[10px] text-slate-500 font-medium mb-2 uppercase tracking-widest">Módulos Permitidos</p>
-                      {[
-                        { id: "BI", label: "BI & IA Preditiva" },
-                        { id: "TCU", label: "TCU (Controle Externo)" },
-                        { id: "CGU", label: "CGU (Controle Interno)" },
-                        { id: "ETHICS", label: "Comissão de Ética" },
-                        { id: "ROL", label: "Rol de Responsáveis" },
-                        { id: "SRTE", label: "Superintendências Regionais" }
-                      ].map(mod => (
-                        <label key={mod.id} className="flex items-center justify-between p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition">
-                          <span className="text-xs font-bold text-slate-700">{mod.label}</span>
-                          <div className={`w-10 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${tempModules.includes(mod.id) ? 'bg-[#1351b4]' : 'bg-slate-200'}`}>
-                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${tempModules.includes(mod.id) ? 'translate-x-5' : 'translate-x-0'}`} />
+                    <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+                      {/* Edição de Dados Básicos */}
+                      <div className="space-y-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                        <h5 className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-2">Dados do Usuário</h5>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-medium block mb-1">Nome Completo</label>
+                            <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-white border border-slate-200 focus:border-[#003366] text-xs p-1.5 rounded-lg" />
                           </div>
-                          <input type="checkbox" className="sr-only" checked={tempModules.includes(mod.id)} onChange={() => handleToggleModule(mod.id)} />
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-medium block mb-1">E-mail Institucional</label>
+                            <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="w-full bg-white border border-slate-200 focus:border-[#003366] text-xs p-1.5 rounded-lg" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-medium block mb-1">Matrícula SIAPE</label>
+                            <input type="text" value={editSiape} onChange={e => setEditSiape(e.target.value)} className="w-full bg-white border border-slate-200 focus:border-[#003366] text-xs p-1.5 rounded-lg" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-slate-500 font-medium block mb-1">Cargo / Função</label>
+                            <input type="text" value={editRole} onChange={e => setEditRole(e.target.value)} className="w-full bg-white border border-slate-200 focus:border-[#003366] text-xs p-1.5 rounded-lg" />
+                          </div>
+                          <div className="md:col-span-2">
+                            <label className="text-[10px] text-slate-500 font-medium block mb-1">Unidade / Lotação</label>
+                            <input type="text" value={editUnidade} onChange={e => setEditUnidade(e.target.value)} className="w-full bg-white border border-slate-200 focus:border-[#003366] text-xs p-1.5 rounded-lg" />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Seleção de Nível de Acesso (Clearance) */}
+                      <div>
+                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">
+                          Nível de Acesso no Sistema (Clearance) *
                         </label>
-                      ))}
+                        <select
+                          value={selectedClearance}
+                          onChange={e => setSelectedClearance(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-[#003366] text-xs font-bold text-slate-800 p-2 rounded-xl"
+                        >
+                          <option value="PUBLIC">PUBLIC — Consulta Básica Módulos Públicos</option>
+                          <option value="AUDITOR">AUDITOR — Auditor / Analista de Controle Interno</option>
+                          <option value="ETHICS">ETHICS — Gestor / Membro da Comissão de Ética</option>
+                          <option value="SRTE">SRTE — Gestor de Superintendência Regional</option>
+                          <option value="ADMIN">ADMIN — Administrador Pleno do ÓRBITA.AECI</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] text-slate-500 font-medium mb-2 uppercase tracking-widest">Módulos Específicos Permitidos</p>
+                        {[
+                          { id: "BI", label: "BI & IA Preditiva" },
+                          { id: "TCU", label: "TCU (Controle Externo)" },
+                          { id: "CGU", label: "CGU (Controle Interno)" },
+                          { id: "ETHICS", label: "Comissão de Ética" },
+                          { id: "ROL", label: "Rol de Responsáveis" },
+                          { id: "SRTE", label: "Superintendências Regionais" }
+                        ].map(mod => (
+                          <label key={mod.id} className="flex items-center justify-between p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer transition mb-1.5">
+                            <span className="text-xs font-bold text-slate-700">{mod.label}</span>
+                            <div className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-200 ease-in-out ${tempModules.includes(mod.id) ? 'bg-[#1351b4]' : 'bg-slate-200'}`}>
+                              <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ease-in-out ${tempModules.includes(mod.id) ? 'translate-x-4' : 'translate-x-0'}`} />
+                            </div>
+                            <input type="checkbox" className="sr-only" checked={tempModules.includes(mod.id)} onChange={() => handleToggleModule(mod.id)} />
+                          </label>
+                        ))}
+                      </div>
                     </div>
                     <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
                       <button onClick={() => setManagingPermissionsFor(null)} className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 cursor-pointer">

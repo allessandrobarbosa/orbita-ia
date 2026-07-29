@@ -3,7 +3,7 @@ import { pool } from "../db";
 import fs from "fs";
 import path from "path";
 import { parseCsvStream } from "../utils/tcuUtils";
-import { getInteiroTeorFromCache, getComplementaryDataBulk, ComplementaryData } from "../utils/tcuCsvParser";
+import { getInteiroTeorFromCache, getComplementaryDataBulk, ComplementaryData, TargetAcordao } from "../utils/tcuCsvParser";
 import { enqueueAcordaosForAnalysis, processSingleAcordao } from "../utils/backgroundProcessor";
 import { GoogleGenAI } from '@google/genai';
 
@@ -18,15 +18,34 @@ router.post("/acordaos/sync-local", async (req, res) => {
   }
 
   const files = fs.readdirSync(TCU_DIR);
-  const csvFiles = files.filter(f => f.toLowerCase().endsWith(".csv") && !f.toLowerCase().includes("cache"));
+  
+  // Verifica se a tabela está vazia
+  const countRes = await pool.query('SELECT COUNT(*) FROM tcu_acordaos');
+  const isEmpty = parseInt(countRes.rows[0].count) === 0;
+
+  const currentYear = new Date().getFullYear();
+  
+  const csvFiles = files.filter(f => {
+    const isCsv = f.toLowerCase().endsWith(".csv") && !f.toLowerCase().includes("cache");
+    if (!isCsv) return false;
+    
+    // Se a base está vazia, importa todos os anos. Senão, filtra pelo ano corrente.
+    return isEmpty ? true : f.includes(currentYear.toString());
+  });
 
   if (csvFiles.length === 0) {
-    return res.json({ success: false, message: "Nenhum arquivo .csv encontrado na pasta data/tcu/acordaos/." });
+    return res.json({ success: false, message: `Nenhum arquivo .csv encontrado na pasta data/tcu/acordaos/.` });
   }
 
   try {
     let imported = 0;
     let updated = 0;
+
+    const isTeorMissing = (teorVal: any): boolean => {
+      if (!teorVal) return true;
+      const str = String(teorVal).trim();
+      return str === '' || str === 'null' || str === 'undefined' || str === '[]' || str === '{}';
+    };
 
     for (const file of csvFiles) {
       console.log(`[SYNC-LOCAL-ACORDAOS] Iniciando processamento do arquivo: ${file}`);
@@ -58,35 +77,44 @@ router.post("/acordaos/sync-local", async (req, res) => {
         if (!match) continue;
         
         const numAcordao = Number(match[1]);
+        const numAcordao = Number(match[1]);
         const anoAcordao = Number(match[2]);
-        const key = `AC-${numAcordao}-${anoAcordao}`;
+        const colegiado = parts[2]; // Colegiado
         
-        if (seenKeysInFile.has(key)) {
+        // Use a composite temporary key for deduplication within the CSV
+        const tempKey = `AC-${numAcordao}-${anoAcordao}-${colegiado}`;
+        
+        if (seenKeysInFile.has(tempKey)) {
           skippedLines++;
           continue;
         }
-        seenKeysInFile.add(key);
+        seenKeysInFile.add(tempKey);
         
-        const check = await pool.query('SELECT key, acordao FROM tcu_acordaos WHERE num_acordao = $1 AND ano_acordao = $2', [numAcordao, anoAcordao]);
+        const check = await pool.query(
+          'SELECT key, acordao FROM tcu_acordaos WHERE num_acordao = $1 AND ano_acordao = $2 AND UPPER(colegiado) = UPPER($3)', 
+          [numAcordao, anoAcordao, colegiado]
+        );
         let teor = check.rows.length > 0 ? check.rows[0].acordao : null;
         
         parsedRows.push({
-          numAcordao, anoAcordao, key, parts, 
+          numAcordao, anoAcordao, colegiado, tempKey, parts, 
           hasDb: check.rows.length > 0, 
           dbKey: check.rows.length > 0 ? check.rows[0].key : null,
           teor
         });
 
-        if (!teor) {
+        if (isTeorMissing(teor)) {
           if (!missingByYear.has(anoAcordao)) missingByYear.set(anoAcordao, new Set());
-          missingByYear.get(anoAcordao)!.add(String(numAcordao));
+          missingByYear.get(anoAcordao)!.add(JSON.stringify({ numAcordao: String(numAcordao), anoAcordao: String(anoAcordao), colegiado }));
         }
       }
 
       // PASSO 2: Carrega todos os teores ausentes em lote para evitar parsing lento do CSV
+      // PASSO 2: Carrega todos os teores ausentes em lote para evitar parsing lento do CSV
       const fetchedTeores = new Map<number, Map<string, ComplementaryData>>();
-      for (const [ano, numsSet] of missingByYear.entries()) {
-        const mapForYear = await getComplementaryDataBulk(ano, numsSet);
+      for (const [ano, jsonSet] of missingByYear.entries()) {
+        const targets: TargetAcordao[] = Array.from(jsonSet).map(j => JSON.parse(j));
+        const mapForYear = await getComplementaryDataBulk(ano, targets);
         fetchedTeores.set(ano, mapForYear);
       }
 
@@ -97,8 +125,9 @@ router.post("/acordaos/sync-local", async (req, res) => {
         // Defaults to what we had in DB (or parts if new)
         let compData: ComplementaryData | null = null;
 
-        if (!row.teor && fetchedTeores.has(row.anoAcordao)) {
-          compData = fetchedTeores.get(row.anoAcordao)!.get(String(row.numAcordao)) || null;
+        if (isTeorMissing(row.teor) && fetchedTeores.has(row.anoAcordao)) {
+          const mapKey = `${row.numAcordao}-${row.colegiado.toUpperCase()}`;
+          compData = fetchedTeores.get(row.anoAcordao)!.get(mapKey) || null;
         }
 
         if (row.hasDb) {
@@ -121,6 +150,8 @@ router.post("/acordaos/sync-local", async (req, res) => {
               compData.unidade_tecnica, compData.assunto, compData.sumario, compData.decisao
             ]);
           } else {
+            // Se compData não existir e ele já tinha registro, tentamos pelo menos atualizar metadados básicos
+            // Porém, se ele for um dos que a IA quebrou com "null", garantimos que não fique assim.
             await pool.query(`
               UPDATE tcu_acordaos SET
                 colegiado = $2, data_sessao = $3,
@@ -132,11 +163,19 @@ router.post("/acordaos/sync-local", async (req, res) => {
               row.parts[2], row.parts[1],
               row.parts[4], row.parts[5], updatedAt
             ]);
+            
+            // Corrige o "null" no banco se for o caso
+            if (isTeorMissing(row.teor)) {
+               await pool.query(`UPDATE tcu_acordaos SET acordao = NULL WHERE key = $1`, [row.dbKey]);
+            }
           }
           updated++;
         } else {
           // If we don't have compData because it's somehow missing from API, provide defaults
           const fallbackTeor = compData?.acordao || row.teor || null;
+          
+          // Use API's native KEY if available, otherwise generate a composite fallback
+          const finalKey = compData?.key || row.tempKey;
           
           await pool.query(`
             INSERT INTO tcu_acordaos (
@@ -149,7 +188,7 @@ router.post("/acordaos/sync-local", async (req, res) => {
               $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
             )
           `, [
-            row.key, `ACÓRDÃO ${row.numAcordao}/${row.anoAcordao} - ${row.parts[2].toUpperCase()}`, row.numAcordao, row.anoAcordao,
+            finalKey, `ACÓRDÃO ${row.numAcordao}/${row.anoAcordao} - ${row.parts[2].toUpperCase()}`, row.numAcordao, row.anoAcordao,
             row.parts[2], row.parts[1],
             compData?.situacao || "OFICIALIZADO", row.parts[4], row.parts[5],
             "Pendente", updatedAt, 
@@ -168,25 +207,12 @@ router.post("/acordaos/sync-local", async (req, res) => {
 
     console.log(`[SYNC-LOCAL-ACORDAOS] Sincronização finalizada. Importados: ${imported}, Atualizados: ${updated}`);
     
-    // Enfileirar apenas do ano corrente (estáticos de anos anteriores não são atualizados via IA na importação)
-    const currentYear = new Date().getFullYear();
-    try {
-      const pendingRes = await pool.query(
-        "SELECT key FROM tcu_acordaos WHERE ano_acordao = $1 AND status_monitoramento = 'Pendente' AND (ai_analysis_data IS NULL OR ai_analysis_data::text = '{}' OR ai_analysis_data::text = 'null')", 
-        [currentYear]
-      );
-      if (pendingRes.rows.length > 0) {
-        const keysToProcess = pendingRes.rows.map(r => r.key);
-        enqueueAcordaosForAnalysis(keysToProcess);
-        console.log(`[Sync] Enfileirados ${keysToProcess.length} acórdãos de ${currentYear} para processamento de IA em background.`);
-      }
-    } catch (bgErr) {
-      console.error("Erro ao enfileirar acórdãos para IA:", bgErr);
-    }
+    // Conforme solicitado pelo usuário, a IA não deve atuar de forma automática na sincronização local.
+    // A extração e análise do inteiro teor via Gemini foi removida deste fluxo automático.
 
     res.json({ 
       success: true, 
-      message: `Sincronização concluída: ${imported} novos, ${updated} atualizados.`,
+      message: `Sincronização concluída (Ano ${currentYear}): ${imported} novos, ${updated} atualizados.`,
       report: [{ file: "Geral", imported, updated, skipped: 0 }]
     });
   } catch (err: any) {
