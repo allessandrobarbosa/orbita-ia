@@ -509,6 +509,31 @@ export default function TcuComunicacoes({
   const [editComProcessoSei, setEditComProcessoSei] = useState("");
   const [editComDestinacao, setEditComDestinacao] = useState("RESPOSTA");
 
+  const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
+
+  const fetchLastUpdateDate = async () => {
+    try {
+      const res = await fetch("/api/files/last-updates");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.comunicacoes) setLastUpdateDate(data.data.comunicacoes);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchLastUpdateDate();
+  }, []);
+
+  React.useEffect(() => {
+    window.scrollTo({ top: 0 });
+    setCurrentPage(1);
+    setTceCurrentPage(1);
+    setComCurrentPage(1);
+  }, []);
+
   // TCE module states
   const [tceActiveSubTab, setTceActiveSubTab] = useState<"geral" | "com-acordaos">("geral");
   const [tceSelectedYear, setTceSelectedYear] = useState("TODOS");
@@ -1176,6 +1201,7 @@ export default function TcuComunicacoes({
         setComImportMessage(`Sincronização concluída com sucesso! ${res.importedCount} novos registros adicionados e ${res.updatedCount} atualizados.`);
         setParsedComItems(null);
         setComPasteContent("");
+        if (onRefreshData) onRefreshData();
         setTimeout(() => {
           setShowComImporter(false);
           setComImportMessage(null);
@@ -2249,16 +2275,22 @@ export default function TcuComunicacoes({
                         {syncLocalComMessage}
                       </span>
                     )}
-                    <button
-                      onClick={handleLocalSyncCom}
-                      disabled={isSyncingLocalCom}
-                      className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#003366] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
-                      title="Sincronizar Arquivos Locais (data/comunicacoes)"
-                    >
-                      <RefreshCw className={`w-4 h-4 ${isSyncingLocalCom ? "animate-spin" : ""}`} />
-                      {isSyncingLocalCom ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
-                    </button>
-
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleLocalSyncCom}
+                        disabled={isSyncingLocalCom}
+                        className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#003366] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
+                        title="Sincronizar Arquivos Locais (data/comunicacoes)"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isSyncingLocalCom ? "animate-spin" : ""}`} />
+                        {isSyncingLocalCom ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
+                      </button>
+                      {lastUpdateDate && (
+                        <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
+                          Atualizado em: {lastUpdateDate}
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={handleExportToExcel}
                       disabled={finalFiltered.length === 0}

@@ -144,6 +144,26 @@ router.post("/acordaos/sync-local", async (req, res) => {
   let totalImportados = 0;
   let totalAtualizados = 0;
 
+  // Registra início da importação de todos os arquivos ANTES de responder
+  const pendingTasks: { arquivo: string; anoArquivo: number; ehHistorico: boolean; importControlId: number }[] = [];
+  for (const arquivo of arquivosParaProcessar) {
+    const matchAno = arquivo.match(/(\d{4})/);
+    if (!matchAno) continue;
+    const anoArquivo = parseInt(matchAno[1], 10);
+    const statusAno = getAnoStatus(anoArquivo, hoje);
+    const ehHistorico = statusAno === "historico";
+
+    const importControlId = await iniciarImportacao({
+      modulo: MODULO,
+      ano_referencia: anoArquivo,
+      tipo_arquivo: "FILTRADO_LOCAL",
+      nome_arquivo: arquivo,
+      forcado_por_usuario: forcarReprocessamento ? usuarioId : undefined,
+    });
+
+    pendingTasks.push({ arquivo, anoArquivo, ehHistorico, importControlId });
+  }
+
   res.json({
     success: true,
     message: `Sincronização iniciada em background para ${arquivosParaProcessar.length} arquivo(s). Consulte /api/acordaos/import-status para acompanhar.`,
@@ -152,33 +172,18 @@ router.post("/acordaos/sync-local", async (req, res) => {
 
   // Processamento assíncrono após o response
   (async () => {
-    for (const arquivo of arquivosParaProcessar) {
-      const matchAno = arquivo.match(/(\d{4})/);
-      if (!matchAno) continue;
-      const anoArquivo = parseInt(matchAno[1], 10);
-      const statusAno = getAnoStatus(anoArquivo, hoje);
-      const ehHistorico = statusAno === "historico";
-
-      let importControlId: number | null = null;
+    for (const task of pendingTasks) {
+      const { arquivo, anoArquivo, ehHistorico, importControlId } = task;
 
       try {
         const filePath = path.join(TCU_DIR, arquivo);
-
-        // Registra início da importação
-        importControlId = await iniciarImportacao({
-          modulo: MODULO,
-          ano_referencia: anoArquivo,
-          tipo_arquivo: "FILTRADO_LOCAL",
-          nome_arquivo: arquivo,
-          forcado_por_usuario: forcarReprocessamento ? usuarioId : undefined,
-        });
 
         await atualizarStatusImportacao({
           id: importControlId,
           status: "PROCESSANDO",
         });
 
-        console.log(`\n[SYNC] ═══ Iniciando: ${arquivo} (ano ${anoArquivo}, ${statusAno}) ═══`);
+        console.log(`\n[SYNC] ═══ Iniciando: ${arquivo} (ano ${anoArquivo}) ═══`);
         console.time(`[SYNC] Tempo total ${arquivo}`);
 
         // ─────────────────────────────────────────────
@@ -366,6 +371,13 @@ router.post("/acordaos/sync-local", async (req, res) => {
                      data_sessao        = EXCLUDED.data_sessao,
                      tipo_processo      = EXCLUDED.tipo_processo,
                      relator            = EXCLUDED.relator,
+                     acordao            = COALESCE(EXCLUDED.acordao, tcu_acordaos.acordao),
+                     num_ata            = COALESCE(EXCLUDED.num_ata, tcu_acordaos.num_ata),
+                     proc               = COALESCE(EXCLUDED.proc, tcu_acordaos.proc),
+                     interessados       = COALESCE(EXCLUDED.interessados, tcu_acordaos.interessados),
+                     assunto            = COALESCE(EXCLUDED.assunto, tcu_acordaos.assunto),
+                     sumario            = COALESCE(EXCLUDED.sumario, tcu_acordaos.sumario),
+                     decisao            = COALESCE(EXCLUDED.decisao, tcu_acordaos.decisao),
                      ultima_atualizacao = EXCLUDED.ultima_atualizacao`,
                   [
                     finalKey,
@@ -584,11 +596,11 @@ router.post("/acordaos/update", async (req, res) => {
         colegiado = $6, data_sessao = $7, situacao = $8, proc = $9,
         acordaos_relacionados = $10, tipo_processo = $11, interessados = $12,
         entidade = $13, unidade_tecnica = $14, relator = $15, assunto = $16,
-        sumario = $17, acordao = $18, decisao = $19, recomendacoes = $20,
-        determinacoes = $21, recomendacoes_determinacoes_unificado = $22,
-        status_monitoramento = $23, responsavel_interno = $24,
-        prazo_limite = $25, observacoes = $26,
-        ultima_atualizacao = $27, ai_analysis_data = $28
+        sumario = $17, decisao = $18, recomendacoes = $19,
+        determinacoes = $20, recomendacoes_determinacoes_unificado = $21,
+        status_monitoramento = $22, responsavel_interno = $23,
+        prazo_limite = $24, observacoes = $25,
+        ultima_atualizacao = $26, ai_analysis_data = $27
       WHERE key = $1
       RETURNING key
     `;

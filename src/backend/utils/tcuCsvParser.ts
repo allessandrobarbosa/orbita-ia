@@ -100,10 +100,9 @@ export function parsearCsvFiltrado(filePath: string): AcordaoFiltrado[] {
     const linha = linhas[i].trim();
     if (!linha) continue;
 
-    // O separador real no CSV filtrado do TCU é: cada campo está entre aspas
-    // e os campos são separados por vírgula (ou por "" dependendo da exportação).
-    // Vamos usar o parser CSV robusto que lida com ambos os casos.
-    const partes = parsearLinhaCsvRobusta(linha);
+    // O TCU exporta o CSV filtrado colando aspas duplas: "Campo1""Campo2""Campo3"
+    // Não há vírgulas ou ponto-e-vírgula entre os campos.
+    const partes = linha.split('""').map((p) => p.replace(/^"|"$/g, "").trim());
 
     if (partes.length < 2) continue;
 

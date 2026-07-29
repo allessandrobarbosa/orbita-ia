@@ -33,6 +33,8 @@ interface TcuModuleProps {
   onDeleteTce?: (id: string) => Promise<boolean>;
   onImportTces?: (items: TceDemand[]) => Promise<any>;
   onImportTceMappings?: (items: TceAcordaoMapping[]) => Promise<any>;
+  onAddTceMapping?: (numeroAnoTce: string, acordaoKey: string) => Promise<boolean>;
+  onDeleteTceMapping?: (numeroAnoTce: string, acordaoKey: string) => Promise<boolean>;
   onClearOlderAcordaos?: () => Promise<any>;
   onResetDatabase?: () => Promise<any>;
   isLoading: boolean;
@@ -121,6 +123,8 @@ export default function TcuModule(props: TcuModuleProps) {
           onDeleteTce={props.onDeleteTce}
           onImportTces={props.onImportTces}
           onImportTceMappings={props.onImportTceMappings}
+          onAddTceMapping={props.onAddTceMapping}
+          onDeleteTceMapping={props.onDeleteTceMapping}
           isLoading={props.isLoading}
           onRefreshData={props.onRefreshData}
         />

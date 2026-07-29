@@ -296,6 +296,7 @@ export default function TcuMonitoramento({
   const [syncLocalMessage, setSyncLocalMessage] = useState<string | null>(null);
   const [localSyncReport, setLocalSyncReport] = useState<any[] | null>(null);
   const [importStatus, setImportStatus] = useState<any[]>([]);
+  const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
 
   // Fetches import control status (data da última sincronização)
   const fetchImportStatus = async () => {
@@ -304,6 +305,14 @@ export default function TcuMonitoramento({
       if (res.ok) {
         const data = await res.json();
         setImportStatus(data.data || []);
+      }
+    } catch {}
+    
+    try {
+      const res = await fetch("/api/files/last-updates");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data?.acordaos) setLastUpdateDate(data.data.acordaos);
       }
     } catch {}
   };
@@ -1503,15 +1512,14 @@ export default function TcuMonitoramento({
       if (res && res.success) {
         setSyncLocalMessage(res.message);
         setLocalSyncReport(res.report || []);
-        if (onRefreshData) await onRefreshData();
-        // Atualiza status de importação após sincronização
-        setTimeout(() => fetchImportStatus(), 3000);
+        fetchImportStatus();
+        if (onRefreshData) onRefreshData();
       } else {
         setSyncLocalMessage(res?.message || "Erro na sincronização local de acórdãos.");
+        setIsSyncingLocal(false);
       }
     } catch (err: any) {
       setSyncLocalMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
-    } finally {
       setIsSyncingLocal(false);
     }
   };
@@ -1520,6 +1528,36 @@ export default function TcuMonitoramento({
   React.useEffect(() => {
     fetchImportStatus();
   }, []);
+
+  // Polling para acompanhar o status da importação em background
+  React.useEffect(() => {
+    let interval: any;
+    if (isSyncingLocal) {
+      interval = setInterval(async () => {
+        try {
+          const res = await fetch("/api/acordaos/import-status");
+          if (res.ok) {
+            const data = await res.json();
+            const statuses: any[] = data.data || [];
+            setImportStatus(statuses);
+            
+            // Verifica se tem algum rodando
+            const isProcessing = statuses.some(s => ["INICIADO", "PENDENTE", "BAIXANDO", "PROCESSANDO"].includes(s.status));
+            
+            if (!isProcessing && statuses.length > 0) {
+              // Todos concluídos ou com erro
+              setIsSyncingLocal(false);
+              clearInterval(interval);
+              if (onRefreshData) await onRefreshData();
+            }
+          }
+        } catch (e) {
+          console.error("Erro no polling de status:", e);
+        }
+      }, 3000);
+    }
+    return () => clearInterval(interval);
+  }, [isSyncingLocal, onRefreshData]);
 
 
 
@@ -2018,27 +2056,34 @@ export default function TcuMonitoramento({
           {/* Top Row: Action Buttons and Search */}
           <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
             <div className="flex flex-wrap gap-2 items-center">
-              <button 
-                id="btn-importer-toggle"
-                onClick={handleLocalSync}
-                disabled={isSyncingLocal}
-                className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
-                  isSyncingLocal 
-                    ? "bg-slate-800 text-white shadow-xs opacity-50" 
-                    : "bg-[#003366] text-white hover:bg-[#0f4396] shadow-sm"
-                }`}
-              >
-                {isSyncingLocal ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                {isSyncingLocal ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
-              </button>
-
-              <button 
-                  id="btn-export-excel"
-                  onClick={handleExportExcel}
-                  className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
+              <div className="flex items-center gap-2">
+                <button 
+                  id="btn-sync-local"
+                  onClick={handleLocalSync}
+                  disabled={isSyncingLocal}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
+                    isSyncingLocal 
+                      ? "bg-slate-800 text-white shadow-xs opacity-50" 
+                      : "bg-[#003366] text-white hover:bg-[#0f4396] shadow-sm"
+                  }`}
                 >
-                  <Download size={16} /> Excel
+                  {isSyncingLocal ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  {isSyncingLocal ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
                 </button>
+                {lastUpdateDate && (
+                  <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
+                    Atualizado em: {lastUpdateDate}
+                  </span>
+                )}
+              </div>
+              
+              <button 
+                id="btn-export-excel"
+                onClick={handleExportExcel}
+                className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
+              >
+                <Download size={16} /> Excel
+              </button>
             </div>
 
             <div className="relative w-full xl:w-[300px] shrink-0">
@@ -2805,7 +2850,7 @@ export default function TcuMonitoramento({
                   <span>Baixando o inteiro teor do acórdão do banco de dados...</span>
                 </div>
               ) : (
-                fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "Este acórdão não possui a íntegra dos autos gravada."
+                fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "O TCU ainda não disponibilizou o inteiro teor deste acórdão no arquivo de Dados Abertos (normalmente ocorre com acórdãos publicados nas últimas semanas)."
               )}
             </div>
 

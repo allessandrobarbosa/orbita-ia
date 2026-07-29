@@ -7,8 +7,37 @@ import path from "path";
 
 const router = express.Router();
 
+router.get("/files/last-updates", (req, res) => {
+  const getMostRecentDate = (dirPath: string): string | null => {
+    try {
+      if (!fs.existsSync(dirPath)) return null;
+      const files = fs.readdirSync(dirPath).filter(f => f.toLowerCase().endsWith(".csv"));
+      if (files.length === 0) return null;
+      
+      let maxTime = 0;
+      for (const file of files) {
+        const stat = fs.statSync(path.join(dirPath, file));
+        if (stat.mtimeMs > maxTime) maxTime = stat.mtimeMs;
+      }
+      return maxTime > 0 ? new Date(maxTime).toLocaleString("pt-BR") : null;
+    } catch {
+      return null;
+    }
+  };
 
+  const tcuAcordaos = getMostRecentDate(path.join(process.cwd(), "data", "tcu", "acordaos"));
+  const tcuTces = getMostRecentDate(path.join(process.cwd(), "data", "tcu", "tces"));
+  const tcuComs = getMostRecentDate(path.join(process.cwd(), "data", "tcu", "comunicacoes"));
 
+  res.json({
+    success: true,
+    data: {
+      acordaos: tcuAcordaos,
+      tces: tcuTces,
+      comunicacoes: tcuComs
+    }
+  });
+});
 // =====================================
 // API: Sync Local TCEs
 // =====================================
@@ -80,6 +109,21 @@ router.post("/tces/sync-local", async (req, res) => {
       return 2026;
     };
 
+    const fixExcelDateTce = (str: string | null | undefined): string => {
+      if (!str) return "";
+      const meses: Record<string, number> = {
+        jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6,
+        jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12
+      };
+      const match = str.trim().toLowerCase().match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\/(\d{2})$/);
+      if (match) {
+        const month = meses[match[1]];
+        const year = "20" + match[2];
+        return `${month}/${year}`;
+      }
+      return str.trim();
+    };
+
     for (const file of csvFiles) {
       console.log(`[SYNC-LOCAL-TCES] Iniciando processamento do arquivo: ${file}`);
       console.time(`Processamento ${file}`);
@@ -128,7 +172,8 @@ router.post("/tces/sync-local", async (req, res) => {
           const fields = allRows[i];
           if (fields.length < 2) continue;
           let tceVal = fields[colTCE]?.trim();
-          let acordaoVal = fields[colAcordao]?.trim();
+          tceVal = fixExcelDateTce(tceVal);
+          const acordaoVal = fields[colAcordao]?.trim();
           if (tceVal && acordaoVal) {
             tceVal = tceVal.replace(/\|/g, "/");
             const checkResult = await pool.query('SELECT 1 FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2', [tceVal, acordaoVal]);
@@ -186,7 +231,8 @@ router.post("/tces/sync-local", async (req, res) => {
 
           const getFieldValue = (colIdx: number, fallback: string = "") => (colIdx !== -1 && colIdx < fields.length) ? (fields[colIdx] || fallback) : fallback;
 
-          const numeroAnoTce = getFieldValue(colNumeroAno !== -1 ? colNumeroAno : 0, `TCE ${i}`);
+          let numeroAnoTce = getFieldValue(colNumeroAno !== -1 ? colNumeroAno : 0, `TCE ${i}`);
+          numeroAnoTce = fixExcelDateTce(numeroAnoTce);
           const pa = getFieldValue(colPA !== -1 ? colPA : 6);
           const motivo = getFieldValue(colMotivo !== -1 ? colMotivo : 7);
           const submotivo = getFieldValue(colSubmotivo !== -1 ? colSubmotivo : 8);
@@ -468,6 +514,46 @@ router.post("/tce-mappings/import", async (req, res) => {
   } catch (err) {
     console.error("Error importing TCE mappings:", err);
     res.status(500).json({ error: "Failed to import TCE mappings." });
+  }
+});
+
+router.post("/tce-mappings/add", async (req, res) => {
+  try {
+    const { NUMERO_ANO_TCE, ACORDAO_KEY } = req.body;
+    
+    // Check if it already exists
+    const checkResult = await pool.query(
+      'SELECT 1 FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2', 
+      [NUMERO_ANO_TCE, ACORDAO_KEY]
+    );
+    
+    if (checkResult.rows.length === 0) {
+      await pool.query(
+        'INSERT INTO tcu_tce_acordao_mapping (numero_ano_tce, acordao_key) VALUES ($1, $2)',
+        [NUMERO_ANO_TCE, ACORDAO_KEY]
+      );
+    }
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error adding TCE mapping:", err);
+    res.status(500).json({ error: "Failed to add TCE mapping." });
+  }
+});
+
+router.post("/tce-mappings/delete", async (req, res) => {
+  try {
+    const { NUMERO_ANO_TCE, ACORDAO_KEY } = req.body;
+    
+    await pool.query(
+      'DELETE FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2',
+      [NUMERO_ANO_TCE, ACORDAO_KEY]
+    );
+    
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting TCE mapping:", err);
+    res.status(500).json({ error: "Failed to delete TCE mapping." });
   }
 });
 

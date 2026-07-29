@@ -668,6 +668,42 @@ export default function App() {
     return null;
   };
 
+  const handleAddTceMapping = async (numeroAnoTce: string, acordaoKey: string): Promise<boolean> => {
+    if (!checkPermission("TCU")) return false;
+    try {
+      const res = await fetch("/api/tce-mappings/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ NUMERO_ANO_TCE: numeroAnoTce, ACORDAO_KEY: acordaoKey })
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error("Falha ao adicionar mapeamento de TCE:", err);
+    }
+    return false;
+  };
+
+  const handleDeleteTceMapping = async (numeroAnoTce: string, acordaoKey: string): Promise<boolean> => {
+    if (!checkPermission("TCU")) return false;
+    try {
+      const res = await fetch("/api/tce-mappings/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ NUMERO_ANO_TCE: numeroAnoTce, ACORDAO_KEY: acordaoKey })
+      });
+      if (res.ok) {
+        await fetchAllData();
+        return true;
+      }
+    } catch (err) {
+      console.error("Falha ao remover mapeamento de TCE:", err);
+    }
+    return false;
+  };
+
   // CGU actions
   const handleUpdateCgu = async (updated: CguDemand): Promise<boolean> => {
     if (!checkPermission("CGU")) return false;
@@ -1368,6 +1404,8 @@ export default function App() {
                   onDeleteTce={handleDeleteTce}
                   onImportTces={handleImportTces}
                   onImportTceMappings={handleImportTceMappings}
+                  onAddTceMapping={handleAddTceMapping}
+                  onDeleteTceMapping={handleDeleteTceMapping}
                   onClearOlderAcordaos={handleClearOlderAcordaos}
                   onResetDatabase={handleResetDatabase}
                   isLoading={isLoading}
