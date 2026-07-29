@@ -153,8 +153,13 @@ export async function getComplementaryDataBulk(anoAcordao: number, targets: Targ
     if (!fs.existsSync(cachePath)) return result;
 
     console.log(`[getInteiroTeorBulk] Parsing ${cachePath} to find ${targets.length} acórdãos...`);
-    const fileStream = fs.createReadStream(cachePath, { encoding: 'latin1' });
+    const fileStream = fs.createReadStream(cachePath, { encoding: 'utf8' });
     const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+
+    const normalizeColegiado = (str: string) => {
+      if (!str) return "";
+      return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toUpperCase();
+    };
 
     const cleanStr = (str: string) => {
       if (!str) return str;
@@ -189,7 +194,9 @@ export async function getComplementaryDataBulk(anoAcordao: number, targets: Targ
         colColegiado = normHeaders.indexOf("colegiado");
         
         colIndices = {
-          acordao: normHeaders.indexOf("inteiroteor") !== -1 ? normHeaders.indexOf("inteiroteor") : normHeaders.indexOf("acordao"),
+          acordao: normHeaders.indexOf("acordao"),
+          relatorio: normHeaders.indexOf("relatorio"),
+          voto: normHeaders.indexOf("voto"),
           num_ata: normHeaders.indexOf("numata"),
           situacao: normHeaders.indexOf("situacao"),
           proc: normHeaders.indexOf("proc") !== -1 ? normHeaders.indexOf("proc") : normHeaders.indexOf("processo"),
@@ -212,15 +219,28 @@ export async function getComplementaryDataBulk(anoAcordao: number, targets: Targ
       if (parts.length > colNum && parts.length > colAno && parts.length > colColegiado) {
         if (parts[colAno] == String(anoAcordao)) {
           const rowNum = parts[colNum];
-          const rowCol = parts[colColegiado] ? cleanStr(parts[colColegiado]).toUpperCase() : "";
+          const rowCol = parts[colColegiado] ? normalizeColegiado(cleanStr(parts[colColegiado])) : "";
           
           // Check if this matches any target
-          const target = targets.find(t => t.numAcordao === rowNum && t.colegiado.toUpperCase() === rowCol);
+          const target = targets.find(t => t.numAcordao === rowNum && normalizeColegiado(t.colegiado) === rowCol);
           
           if (target) {
             const getPart = (idx: number) => (idx !== -1 && parts[idx]) ? cleanStr(parts[idx]) : "";
             
-            const newAcordao = getPart(colIndices.acordao);
+            // O "Inteiro Teor" no TCU é a junção do Relatório, Voto e Acórdão/Decisão
+            const txtAcordao = getPart(colIndices.acordao);
+            const txtRelatorio = getPart(colIndices.relatorio);
+            const txtVoto = getPart(colIndices.voto);
+            const txtDecisao = getPart(colIndices.decisao);
+            
+            let fullTeor = "";
+            if (txtRelatorio) fullTeor += "RELATÓRIO:\n" + txtRelatorio + "\n\n";
+            if (txtVoto) fullTeor += "VOTO:\n" + txtVoto + "\n\n";
+            if (txtAcordao) fullTeor += "ACÓRDÃO:\n" + txtAcordao + "\n\n";
+            if (txtDecisao && txtDecisao !== txtAcordao) fullTeor += "DECISÃO:\n" + txtDecisao + "\n\n";
+            
+            const newAcordao = fullTeor.trim() || txtAcordao;
+            
             const mapKey = `${target.numAcordao}-${target.colegiado.toUpperCase()}`;
             const existing = result.get(mapKey);
             

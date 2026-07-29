@@ -77,7 +77,6 @@ router.post("/acordaos/sync-local", async (req, res) => {
         if (!match) continue;
         
         const numAcordao = Number(match[1]);
-        const numAcordao = Number(match[1]);
         const anoAcordao = Number(match[2]);
         const colegiado = parts[2]; // Colegiado
         
@@ -109,7 +108,6 @@ router.post("/acordaos/sync-local", async (req, res) => {
         }
       }
 
-      // PASSO 2: Carrega todos os teores ausentes em lote para evitar parsing lento do CSV
       // PASSO 2: Carrega todos os teores ausentes em lote para evitar parsing lento do CSV
       const fetchedTeores = new Map<number, Map<string, ComplementaryData>>();
       for (const [ano, jsonSet] of missingByYear.entries()) {

@@ -26,13 +26,26 @@ const parseCSVLine = (text: string, sep = ',') => {
 
 const content = fs.readFileSync('data/tcu/acordaos/cache-acordao-completo-2026.csv', 'utf8');
 const lines = content.split('\n');
-const line = lines.find(l => l.includes('ACORDAO-COMPLETO-2746292'));
-if (!line) {
-  console.log("NOT FOUND");
-} else {
-  const parts = parseCSVLine(line, '|');
-  console.log('Parsed len:', parts.length);
-  for (let i = 0; i < parts.length; i++) {
-    console.log(`[${i}] = ${parts[i].substring(0, 100)}`);
+
+let fullLine = "";
+let found = false;
+for (const line of lines) {
+  const isNewRow = line.startsWith('"ACORDAO-COMPLETO-') || line.startsWith('"KEY"|"TIPO"');
+  if (isNewRow) {
+    if (found) {
+      break;
+    }
+    if (line.includes('ACORDAO-COMPLETO-2746292')) {
+      found = true;
+      fullLine = line;
+    }
+  } else if (found) {
+    fullLine += "\n" + line;
   }
+}
+
+const parts = parseCSVLine(fullLine, '|');
+console.log('Parsed len:', parts.length);
+for (let i = 0; i < parts.length; i++) {
+  console.log(`[${i}] = ${parts[i].substring(0, 100).replace(/\n/g, '\\n')}`);
 }

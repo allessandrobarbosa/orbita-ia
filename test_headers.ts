@@ -24,15 +24,20 @@ const parseCSVLine = (text: string, sep = ',') => {
   return result;
 };
 
+const normalizeHeaderName = (header: string) => header.toLowerCase().replace(/[^a-z0-9]/g, '');
+
 const content = fs.readFileSync('data/tcu/acordaos/cache-acordao-completo-2026.csv', 'utf8');
 const lines = content.split('\n');
-const line = lines.find(l => l.includes('ACORDAO-COMPLETO-2746292'));
-if (!line) {
-  console.log("NOT FOUND");
-} else {
-  const parts = parseCSVLine(line, '|');
-  console.log('Parsed len:', parts.length);
-  for (let i = 0; i < parts.length; i++) {
-    console.log(`[${i}] = ${parts[i].substring(0, 100)}`);
-  }
-}
+const headers = parseCSVLine(lines[0], '|');
+const normHeaders = headers.map(normalizeHeaderName);
+
+const colIndices = {
+  acordao: normHeaders.indexOf("acordao"),
+  relatorio: normHeaders.indexOf("relatorio"),
+  voto: normHeaders.indexOf("voto"),
+  decisao: normHeaders.indexOf("decisao")
+};
+
+console.log("Headers:", headers);
+console.log("Norm Headers:", normHeaders);
+console.log("colIndices:", colIndices);
