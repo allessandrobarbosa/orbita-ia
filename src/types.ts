@@ -176,8 +176,14 @@ export interface SuperintendenciaRegional {
   longitude?: number;
   demandasTCU: number;
   demandasCGU: number;
+  demandasComunicacoes?: number;
+  demandasTces?: number;
   demandasEtica?: number;
   statusGeral: 'Regular' | 'Atenção' | 'Crítico';
+  acordaoIds?: string[];
+  comunicacaoIds?: string[];
+  tceIds?: string[];
+  cguIds?: string[];
 }
 
 // Tomada de Contas Especial (TCE)

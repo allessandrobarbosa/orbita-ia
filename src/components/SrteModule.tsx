@@ -65,6 +65,15 @@ const getMteCodeByUf = (uf: string): string => {
   return codes[uf] || "XXXXX";
 };
 
+// Helper para formatar moeda (R$)
+const formatCurrency = (value: string | number) => {
+  if (!value) return "R$ 0,00";
+  const strVal = String(value);
+  const num = parseFloat(strVal.replace(/\./g, "").replace(",", "."));
+  if (isNaN(num)) return `R$ ${strVal}`;
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+};
+
 // Scanner for matching acórdãos for each state
 const findRelatedAcordaos = (uf: string, capital: string, list: (AcordaoDemand & { _normalizedText?: string })[]) => {
   const ufLower = uf.toLowerCase();
@@ -185,30 +194,8 @@ const findRelatedCguDemands = (uf: string, capital: string, list: (CguDemand & {
 
 export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, comunicacoes, tces, cguDemands = [] }: SrteModuleProps) {
   
-  // Pre-normalize text for all items ONCE to avoid O(N*M) heavy string operations during render
-  const normalizedAcordaos = React.useMemo(() => acordaos.map(ac => ({
-    ...ac,
-    _normalizedText: `${ac.TITULO || ""} ${ac.INTERESSADOS || ""} ${ac.ASSUNTO || ""} ${ac.SUMARIO || ""} ${ac.ACORDAO || ""} ${ac.DECISAO || ""}`
-      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-  })), [acordaos]);
-
-  const normalizedComunicacoes = React.useMemo(() => comunicacoes.map(com => ({
-    ...com,
-    _normalizedText: `${com.DESTINATARIO || ""} ${com.CONTATO || ""} ${com.COMUNICACAO || ""}`
-      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-  })), [comunicacoes]);
-
-  const normalizedTces = React.useMemo(() => tces.map(tce => ({
-    ...tce,
-    _normalizedText: `${tce.NUMERO_ANO_TCE || ""} ${tce.PROCESSO_ADMINISTRATIVO || ""} ${tce.MOTIVO_INSTAURACAO || ""} ${tce.SUBMOTIVO_INSTAURACAO || ""} ${tce.ULTIMO_POSICIONAMENTO || ""}`
-      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-  })), [tces]);
-  
-  const normalizedCguDemands = React.useMemo(() => cguDemands.map(cgu => ({
-    ...cgu,
-    _normalizedText: `${cgu.tituloTarefa || ""} ${cgu.unidadeAuditada || ""} ${cgu.textoMonitoramento || ""} ${cgu.providencia || ""}`
-      .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-  })), [cguDemands]);
+  // The backend now provides the related item counts and IDs directly in the `superintendencias` object,
+  // making client-side O(N*M) scanning unnecessary.
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TODOS");
@@ -218,6 +205,8 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
   
   // Modal preview states
   const [selectedAcordao, setSelectedAcordao] = useState<AcordaoDemand | null>(null);
+  const [selectedTce, setSelectedTce] = useState<TceDemand | null>(null);
+  const [loadingAcordaoKey, setLoadingAcordaoKey] = useState<string | null>(null);
   const [detailsModal, setDetailsModal] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' } | null>(null);
 
   // Edit states
@@ -240,15 +229,39 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
     setEditCep(sr.cep || "");
   };
 
+  const handleViewAcordao = async (ac: AcordaoDemand) => {
+    if (ac.ACORDAO && ac.ACORDAO.trim() !== "") {
+      setSelectedAcordao(ac);
+      return;
+    }
+    setLoadingAcordaoKey(ac.KEY);
+    try {
+      const res = await fetch(`/api/acordaos/${encodeURIComponent(ac.KEY)}/teor`);
+      const data = await res.json();
+      setSelectedAcordao({
+        ...ac,
+        ACORDAO: data.acordao || "Inteiro teor indisponível."
+      });
+    } catch (error) {
+      console.error("Erro ao buscar teor do acórdão:", error);
+      setSelectedAcordao({
+        ...ac,
+        ACORDAO: "Erro ao carregar o inteiro teor."
+      });
+    } finally {
+      setLoadingAcordaoKey(null);
+    }
+  };
+
   const handleSaveEdit = async () => {
     if (!editingUf) return;
     
     // Locate original coordinates to preserve them
     const original = superintendencias.find(x => x.uf === editingUf);
 
-    // Auto-calculate counts based on actual database lists
-    const tcuCount = findRelatedAcordaos(editingUf, original?.capital || "", normalizedAcordaos).length;
-    const cguCount = findRelatedCguDemands(editingUf, original?.capital || "", normalizedCguDemands).length;
+    // Preserve current counts that are fetched from the DB
+    const tcuCount = original?.demandasTCU || 0;
+    const cguCount = original?.demandasCGU || 0;
     const computedStatus = calculateRisk(tcuCount, cguCount);
 
     const updateBody = {
@@ -273,24 +286,8 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
     }
   };
 
-  // Map and calculate all counts and risk status dynamically for consistency
-  const calculatedSrtes = React.useMemo(() => {
-    return superintendencias.map(s => {
-      const tcuCount = findRelatedAcordaos(s.uf, s.capital, normalizedAcordaos).length;
-      const cguCount = findRelatedCguDemands(s.uf, s.capital, normalizedCguDemands).length;
-      const comCount = findRelatedComunicacoes(s.uf, s.capital, normalizedComunicacoes).length;
-      const tceCount = findRelatedTces(s.uf, s.capital, normalizedTces).length;
-      
-      return {
-        ...s,
-        demandasTCU: tcuCount,
-        demandasCGU: cguCount,
-        demandasComunicacoes: comCount,
-        demandasTces: tceCount,
-        statusGeral: calculateRisk(tcuCount, cguCount)
-      };
-    });
-  }, [superintendencias, normalizedAcordaos, normalizedComunicacoes, normalizedTces, normalizedCguDemands]);
+  // Pass through superintendencias as they now have pre-calculated counts from the DB
+  const calculatedSrtes = superintendencias;
 
   // Filter List
   const filteredSrtes = calculatedSrtes.filter(s => {
@@ -392,7 +389,6 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredSrtes.map((sr) => {
           const isEditing = editingUf === sr.uf;
-          const relatedAcordaos = findRelatedAcordaos(sr.uf, sr.capital, acordaos);
 
           // Build precise Google Maps Search URL based on address, capital, UF, and CEP for pinpoint accuracy
           const mapsQuery = `${sr.endereco}, ${sr.capital} - ${sr.uf}, CEP: ${sr.cep || ""}, Superintendência Regional do Trabalho`;
@@ -653,6 +649,115 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
         </div>
       )}
 
+      {/* modal block for reading related TCE details */}
+      {selectedTce && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="bg-[#003366] text-white px-6 py-4 flex justify-between items-center select-none shrink-0">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-200" />
+                <h3 className="font-extrabold text-sm font-display tracking-tight text-white">
+                  Detalhes da TCE — {selectedTce.NUMERO_ANO_TCE}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setSelectedTce(null)} 
+                className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 text-white hover:text-slate-200 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 text-xs text-slate-700 leading-relaxed bg-slate-50">
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Processo Administrativo / TC</h4>
+                  <p className="font-mono text-sm text-slate-800 font-semibold">{selectedTce.PROCESSO_ADMINISTRATIVO}</p>
+                  {selectedTce.TC && <p className="font-mono text-xs text-slate-500 mt-1">TC: {selectedTce.TC}</p>}
+                </div>
+                
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Situação Atual</h4>
+                  <p className="font-bold text-sm text-slate-800">{selectedTce.ESTADO_PROCESSO || selectedTce.SITUACAO_PROCESSO || "Em Curso"}</p>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-3">Motivação</h4>
+                <div className="space-y-3">
+                  <div>
+                    <span className="font-semibold text-slate-900 block mb-0.5">Motivo da Instauração:</span>
+                    <p className="text-slate-600">{selectedTce.MOTIVO_INSTAURACAO}</p>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-slate-900 block mb-0.5">Submotivo:</span>
+                    <p className="text-slate-600">{selectedTce.SUBMOTIVO_INSTAURACAO}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Valores</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Débito Original:</span>
+                      <span className="font-mono font-medium">{formatCurrency(selectedTce.DEBITO_ORIGINAL)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-slate-100 pt-2">
+                      <span className="font-bold text-slate-700">Débito Atualizado:</span>
+                      <span className="font-mono font-bold text-rose-700">{formatCurrency(selectedTce.DEBITO_ATUALIZADO)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Datas e Prazos</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500">Atualização do Débito:</span>
+                      <span className="font-medium text-slate-800">{selectedTce.DATA_ATUALIZACAO_DEBITO || "-"}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-slate-100 pt-2">
+                      <span className="text-slate-500">Primeiro Julgamento:</span>
+                      <span className="font-medium text-slate-800">{selectedTce.PRIMEIRO_JULGAMENTO || "-"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Último Posicionamento / Parecer</h4>
+                <p className="text-slate-700 leading-relaxed">{selectedTce.ULTIMO_POSICIONAMENTO || "Nenhum posicionamento registrado."}</p>
+              </div>
+
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-200 p-4 bg-slate-100 flex justify-end gap-2 shrink-0 select-none">
+              <a 
+                href="https://pesquisa.apps.tcu.gov.br/#/pesquisa/processo" 
+                target="_blank" 
+                rel="noreferrer"
+                className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-blue-700 font-bold rounded-xl text-xs transition cursor-pointer flex items-center gap-2"
+                title="Pesquisar este processo no portal do TCU"
+              >
+                <ExternalLink className="w-4 h-4" /> Pesquisar no TCU
+              </a>
+              <button 
+                onClick={() => setSelectedTce(null)} 
+                className="px-4 py-2 bg-blue-800 hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Fechar Detalhes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* modal block for reading related indicators details */}
       {detailsModal && (() => {
         const { sr, type } = detailsModal;
@@ -662,7 +767,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
         
         if (type === "tcu") {
           title = `Processos TCU Vinculados — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = findRelatedAcordaos(sr.uf, sr.capital, normalizedAcordaos);
+          const matched = acordaos.filter(ac => sr.acordaoIds?.includes(ac.KEY));
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhum processo do TCU localizado para esta unidade regional.</p>
           ) : (
@@ -687,10 +792,11 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                       <td className="p-4 text-slate-500 leading-relaxed max-w-sm truncate" title={ac.SUMARIO}>{ac.SUMARIO}</td>
                       <td className="p-4 text-right">
                         <button
-                          onClick={() => setSelectedAcordao(ac)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-[#1351b4] font-bold hover:bg-blue-100 transition cursor-pointer text-[10px]"
+                          onClick={() => handleViewAcordao(ac)}
+                          disabled={loadingAcordaoKey === ac.KEY}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-[#1351b4] font-bold hover:bg-blue-100 transition cursor-pointer text-[10px] disabled:opacity-50"
                         >
-                          <FileText className="w-3.5 h-3.5" /> Ver Inteiro Teor
+                          <FileText className="w-3.5 h-3.5" /> {loadingAcordaoKey === ac.KEY ? "Carregando..." : "Ver Inteiro Teor"}
                         </button>
                       </td>
                     </tr>
@@ -701,7 +807,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
           );
         } else if (type === "cgu") {
           title = `Recomendações CGU Ativas — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = findRelatedCguDemands(sr.uf, sr.capital, normalizedCguDemands);
+          const matched = cguDemands.filter(cgu => sr.cguIds?.includes(cgu.idTarefa));
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma recomendação da CGU ativa para esta unidade regional.</p>
           ) : (
@@ -748,7 +854,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
           );
         } else if (type === "comunicacoes") {
           title = `Comunicações Oficiais (Ofícios) — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = findRelatedComunicacoes(sr.uf, sr.capital, normalizedComunicacoes);
+          const matched = comunicacoes.filter(com => sr.comunicacaoIds?.includes(com.KEY));
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma comunicação ou ofício localizado para esta unidade regional.</p>
           ) : (
@@ -792,7 +898,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
           );
         } else if (type === "tces") {
           title = `Tomadas de Contas Especiais (TCEs) — SRTE / ${sr.capital} (${sr.uf})`;
-          const matched = findRelatedTces(sr.uf, sr.capital, normalizedTces);
+          const matched = tces.filter(tce => sr.tceIds?.includes(tce.id));
           contentElement = matched.length === 0 ? (
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma TCE regionalizada localizada para esta unidade.</p>
           ) : (
@@ -810,7 +916,16 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                 <tbody className="divide-y divide-slate-100">
                   {matched.map(t => (
                     <tr key={t.id} className="hover:bg-slate-50/50">
-                      <td className="p-4 font-semibold text-rose-900">{t.NUMERO_ANO_TCE}</td>
+                      <td className="p-4 font-semibold text-rose-900">
+                        <button 
+                          onClick={() => setSelectedTce(t)}
+                          className="hover:underline flex items-center gap-1.5 text-blue-800 transition cursor-pointer text-left"
+                          title="Clique para ver os detalhes da TCE"
+                        >
+                          {t.NUMERO_ANO_TCE}
+                          <FileText className="w-3.5 h-3.5 text-blue-500" />
+                        </button>
+                      </td>
                       <td className="p-4">
                         <div className="font-mono text-[10.5px] text-slate-900">{t.PROCESSO_ADMINISTRATIVO}</div>
                         {t.TC && <div className="text-[10px] font-semibold font-mono text-slate-500 mt-0.5">TC {t.TC}</div>}
@@ -820,18 +935,18 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                         <div className="text-[10px] text-slate-500 truncate max-w-[200px]" title={t.SUBMOTIVO_INSTAURACAO}>{t.SUBMOTIVO_INSTAURACAO}</div>
                       </td>
                       <td className="p-4 text-right font-mono text-[11px]">
-                        <div className="text-slate-500">R$ {t.DEBITO_ORIGINAL}</div>
-                        <div className="font-bold text-slate-900 mt-0.5">R$ {t.DEBITO_ATUALIZADO}</div>
+                        <div className="text-slate-500">{formatCurrency(t.DEBITO_ORIGINAL)}</div>
+                        <div className="font-bold text-slate-900 mt-0.5">{formatCurrency(t.DEBITO_ATUALIZADO)}</div>
                       </td>
                       <td className="p-4 text-right">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
-                          t.SITUACAO_PROCESSO.toLowerCase().includes("condena") || t.ESTADO_PROCESSO.toLowerCase().includes("irregular")
+                          (t.ESTADO_PROCESSO || "").toLowerCase().includes("irregular")
                             ? "bg-rose-100 text-rose-800"
-                            : t.SITUACAO_PROCESSO.toLowerCase().includes("arquiv")
+                            : (t.ESTADO_PROCESSO || "").toLowerCase().includes("encerrado")
                             ? "bg-slate-100 text-slate-600"
                             : "bg-amber-100 text-amber-800"
                         }`}>
-                          {t.SITUACAO_PROCESSO || t.ESTADO_PROCESSO || "Em Curso"}
+                          {t.ESTADO_PROCESSO || "Em Curso"}
                         </span>
                       </td>
                     </tr>

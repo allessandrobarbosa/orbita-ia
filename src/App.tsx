@@ -737,59 +737,36 @@ export default function App() {
     return false;
   };
 
-  const handleImportCgu = async (items: CguDemand[]): Promise<any> => {
+  const handleSyncCguMonitoramentos = async (): Promise<any> => {
     if (!checkPermission("CGU")) return null;
     try {
-      const res = await fetch("/api/cgu/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items })
-      });
+      const res = await fetch("/api/cgu/sync-local/monitoramentos", { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         await fetchAllData();
         return data;
       }
+      return { success: false, error: "Erro ao sincronizar monitoramentos" };
     } catch (err) {
-      console.error("Falha no lote de importação CGU:", err);
+      console.error("Falha ao sincronizar monitoramentos CGU:", err);
+      return { success: false, error: "Falha de conexão" };
     }
-    return { success: false, error: "Falha de conexão ao importar demandas CGU." };
-  };
-
-  const handleImportCguReports = async (items: CguPublishedReport[]): Promise<any> => {
-    if (!checkPermission("CGU")) return null;
-    try {
-      const res = await fetch("/api/cgu/reports/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        await fetchAllData();
-        return data;
-      }
-    } catch (err) {
-      console.error("Falha no lote de importação de relatórios CGU:", err);
-    }
-    return { success: false, error: "Falha de conexão ao importar relatórios CGU." };
   };
 
   const handleSyncCguReports = async (): Promise<any> => {
     if (!checkPermission("CGU")) return null;
     try {
-      const res = await fetch("/api/cgu/reports/sync", {
-        method: "POST"
-      });
+      const res = await fetch("/api/cgu/sync-local/relatorios", { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         await fetchAllData();
         return data;
       }
+      return { success: false, error: "Erro ao sincronizar relatórios" };
     } catch (err) {
       console.error("Falha ao sincronizar relatórios CGU:", err);
+      return { success: false, error: "Falha de conexão" };
     }
-    return { success: false, error: "Falha de conexão ao sincronizar relatórios CGU com o portal." };
   };
 
   const handleDeleteCguReport = async (idTarefa: string): Promise<boolean> => {
@@ -1462,9 +1439,8 @@ export default function App() {
                   cguDemands={cguDemands}
                   onUpdateCgu={handleUpdateCgu}
                   onDeleteCgu={handleDeleteCgu}
-                  onImportCgu={handleImportCgu}
-                  cguPublishedReports={cguPublishedReports}
-                  onImportCguReports={handleImportCguReports}
+                  cguPublishedReports={cguReports}
+                  onSyncCguMonitoramentos={handleSyncCguMonitoramentos}
                   onSyncCguReports={handleSyncCguReports}
                   onDeleteCguReport={handleDeleteCguReport}
                   isLoading={isLoading}

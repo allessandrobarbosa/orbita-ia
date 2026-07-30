@@ -27,78 +27,79 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/backend/utils/tcuApi.ts
-async function fetchAcordaoCompleto(year) {
-  const tempPath = import_path3.default.join(TCU_DIR2, `cache-acordao-completo-${year}.csv`);
-  if (import_fs3.default.existsSync(tempPath)) {
-    const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
-    if (year < currentYear) {
-      console.log(`[TCU CSV] Found permanent cache for consolidated year ${year}.`);
-      return tempPath;
-    }
-    const stats = import_fs3.default.statSync(tempPath);
-    const now = Date.now();
-    const sevenDaysMs = 7 * 24 * 60 * 60 * 1e3;
-    if (now - stats.mtimeMs < sevenDaysMs) {
-      console.log(`[TCU CSV] Found valid 7-day cache for current year ${year}.`);
-      return tempPath;
-    } else {
-      console.log(`[TCU CSV] Cache for current year ${year} expired. Re-downloading...`);
-    }
-  }
-  const onlineUrl = `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/acordao-completo/acordao-completo-${year}.csv`;
-  console.log(`[TCU CSV] Downloading ${onlineUrl} to temporary file ${tempPath}...`);
-  const inProgressPath = tempPath + ".tmp";
-  try {
-    const response = await fetch(onlineUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/csv,application/csv,text/plain,*/*"
+// src/data/seed_db.ts
+var SEED_PROFILES;
+var init_seed_db = __esm({
+  "src/data/seed_db.ts"() {
+    SEED_PROFILES = [
+      {
+        id: "alessandro",
+        name: "Alessandro Barbosa",
+        cpf: "416.526.491-15",
+        phone: "(61) 2031-6261",
+        unidade: "AECI",
+        role: "Analista de Controle Interno Especial",
+        email: "alessandro@trabalho.gov.br",
+        register: "Matr\xEDcula: 1792381",
+        clearance: "ADMIN",
+        avatarColor: "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
+        pin: "Cmnsg@102030",
+        password: "Cmnsg@102030",
+        requiresPasswordChange: false,
+        status: "ACTIVE",
+        badgeText: "AECI - ADMIN"
       }
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status} ${response.statusText}`);
-    }
-    if (!response.body) {
-      throw new Error("Response body is null");
-    }
-    const fileStream = import_fs3.default.createWriteStream(inProgressPath);
-    const { Readable } = require("stream");
-    await new Promise((resolve, reject) => {
-      Readable.fromWeb(response.body).pipe(fileStream).on("finish", () => {
-        fileStream.close();
-        resolve(void 0);
-      }).on("error", (err) => {
-        fileStream.close();
-        reject(err);
-      });
-    });
-    import_fs3.default.renameSync(inProgressPath, tempPath);
-    console.log(`[TCU CSV] Download completed for year ${year}.`);
-    return tempPath;
-  } catch (err) {
-    console.error(`[TCU CSV] Failed to download temporary CSV for year ${year}:`, err.message);
-    if (import_fs3.default.existsSync(inProgressPath)) {
-      try {
-        import_fs3.default.unlinkSync(inProgressPath);
-      } catch (e) {
-      }
-    }
-    if (import_fs3.default.existsSync(tempPath)) {
-      console.log(`[TCU CSV] Falling back to existing expired cache.`);
-      return tempPath;
-    }
-    throw err;
+    ];
   }
-}
-var import_fs3, import_path3, TCU_DIR2;
-var init_tcuApi = __esm({
-  "src/backend/utils/tcuApi.ts"() {
-    import_fs3 = __toESM(require("fs"), 1);
-    import_path3 = __toESM(require("path"), 1);
-    TCU_DIR2 = import_path3.default.resolve(process.cwd(), "data", "tcu", "acordaos");
+});
+
+// src/data/seed_comunicacoes.ts
+var init_seed_comunicacoes = __esm({
+  "src/data/seed_comunicacoes.ts"() {
+  }
+});
+
+// src/data/seed_cgu.ts
+var init_seed_cgu = __esm({
+  "src/data/seed_cgu.ts"() {
+  }
+});
+
+// src/data/seed_etica.ts
+var init_seed_etica = __esm({
+  "src/data/seed_etica.ts"() {
+  }
+});
+
+// src/backend/db.ts
+var import_fs, import_path, import_pg, import_dotenv, pool, DATA_DIR, DB_PATH, TCU_DIR;
+var init_db = __esm({
+  "src/backend/db.ts"() {
+    import_fs = __toESM(require("fs"), 1);
+    import_path = __toESM(require("path"), 1);
+    import_pg = __toESM(require("pg"), 1);
+    import_dotenv = __toESM(require("dotenv"), 1);
+    init_seed_db();
+    init_seed_comunicacoes();
+    init_seed_cgu();
+    init_seed_etica();
+    import_dotenv.default.config();
+    pool = new import_pg.default.Pool({
+      connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://postgres:postgres@localhost:5432/postgres",
+      max: 10,
+      idleTimeoutMillis: 3e4,
+      connectionTimeoutMillis: 2e3
+    });
+    DATA_DIR = import_path.default.join(process.cwd(), "data");
+    DB_PATH = import_path.default.join(DATA_DIR, "orbita_db.json");
+    TCU_DIR = import_path.default.join(DATA_DIR, "tcu");
+    if (!import_fs.default.existsSync(DATA_DIR)) {
+      import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!import_fs.default.existsSync(TCU_DIR)) {
+      import_fs.default.mkdirSync(TCU_DIR, { recursive: true });
+    }
   }
 });
 
@@ -106,227 +107,362 @@ var init_tcuApi = __esm({
 var tcuCsvParser_exports = {};
 __export(tcuCsvParser_exports, {
   getComplementaryDataBulk: () => getComplementaryDataBulk,
-  getInteiroTeorFromCache: () => getInteiroTeorFromCache
+  lerArquivoComEncoding: () => lerArquivoComEncoding,
+  parsearCsvFiltrado: () => parsearCsvFiltrado,
+  parsearLinhaCsvRobusta: () => parsearLinhaCsvRobusta
 });
-function normalizeHeaderName(header) {
-  return header.toLowerCase().replace(/[áàâã]/g, "a").replace(/[éê]/g, "e").replace(/[í]/g, "i").replace(/[óôõ]/g, "o").replace(/[úü]/g, "u").replace(/[ç]/g, "c").replace(/[^a-z0-9]/g, "");
+function detectarEncoding(buffer) {
+  if (buffer[0] === 239 && buffer[1] === 187 && buffer[2] === 191) {
+    return "utf8";
+  }
+  const amostra = buffer.slice(0, Math.min(2e3, buffer.length));
+  try {
+    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(amostra);
+    if (decoded.includes("\xE3") || decoded.includes("\xE7") || decoded.includes("\xEA") || decoded.includes("\xF3")) {
+      return "utf8";
+    }
+    return "utf8";
+  } catch {
+    return "latin1";
+  }
 }
-function parseCSVLine(line, delimiter = ",") {
-  const result = [];
-  let currentVal = "";
-  let insideQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"' && (i === 0 || line[i - 1] !== "\\")) {
-      if (insideQuotes && line[i + 1] === '"') {
-        currentVal += '"';
+function lerArquivoComEncoding(filePath) {
+  const buffer = import_fs3.default.readFileSync(filePath);
+  const encoding = detectarEncoding(buffer);
+  console.log(`[CSV-ENCODING] Arquivo: ${import_path3.default.basename(filePath)} \u2192 Encoding detectado: ${encoding}`);
+  if (encoding === "utf8") {
+    let content = buffer.toString("utf8");
+    if (content.charCodeAt(0) === 65279) {
+      content = content.substring(1);
+    }
+    return content;
+  }
+  return new TextDecoder("windows-1252").decode(buffer);
+}
+function parsearCsvFiltrado(filePath) {
+  const content = lerArquivoComEncoding(filePath);
+  const linhas = content.split(/\r?\n/);
+  const resultados = [];
+  for (let i = 2; i < linhas.length; i++) {
+    const linha = linhas[i].trim();
+    if (!linha) continue;
+    const partes = linha.split('""').map((p) => p.replace(/^"|"$/g, "").trim());
+    if (partes.length < 2) continue;
+    const colAcordao = partes[0] ?? "";
+    const match = colAcordao.match(/(\d+)\/(\d{4})/);
+    if (!match) continue;
+    const numAcordao = parseInt(match[1], 10);
+    const anoAcordao = parseInt(match[2], 10);
+    if (isNaN(numAcordao) || isNaN(anoAcordao)) continue;
+    resultados.push({
+      numAcordao,
+      anoAcordao,
+      dataSessao: partes[1] ?? "",
+      colegiado: partes[2] ?? "",
+      processo: partes[3] ?? "",
+      tipoProcesso: partes[4] ?? "",
+      relator: partes[5] ?? "",
+      unidadeTecnica: partes[6] ?? ""
+    });
+  }
+  console.log(`[CSV-FILTRADO] Arquivo: ${import_path3.default.basename(filePath)} \u2192 ${resultados.length} ac\xF3rd\xE3os extra\xEDdos`);
+  return resultados;
+}
+function parsearLinhaCsvRobusta(linha, delimitador = ",") {
+  const resultado = [];
+  let valorAtual = "";
+  let dentroDeAspas = false;
+  for (let i = 0; i < linha.length; i++) {
+    const char = linha[i];
+    if (char === '"') {
+      if (dentroDeAspas && linha[i + 1] === '"') {
+        valorAtual += '"';
         i++;
       } else {
-        insideQuotes = !insideQuotes;
+        dentroDeAspas = !dentroDeAspas;
       }
-    } else if (char === delimiter && !insideQuotes) {
-      result.push(currentVal.trim());
-      currentVal = "";
+    } else if (char === delimitador && !dentroDeAspas) {
+      resultado.push(valorAtual.trim());
+      valorAtual = "";
     } else {
-      currentVal += char;
+      valorAtual += char;
     }
   }
-  result.push(currentVal.trim());
-  return result;
+  resultado.push(valorAtual.trim());
+  return resultado;
 }
-async function getInteiroTeorFromCache(numAcordao, anoAcordao) {
-  try {
-    const cachePath = await fetchAcordaoCompleto(anoAcordao);
-    if (!import_fs4.default.existsSync(cachePath)) return null;
-    console.log(`[getInteiroTeor] Parsing ${cachePath} for ${numAcordao}/${anoAcordao}...`);
-    const fileStream = import_fs4.default.createReadStream(cachePath, { encoding: "utf8" });
-    const rl = import_readline.default.createInterface({ input: fileStream, crlfDelay: Infinity });
-    let headers = [];
-    let normHeaders = [];
-    let colNum = -1;
-    let colAno = -1;
-    let colInteiro = -1;
-    let isFirstLine = true;
-    let foundInteiro = null;
-    for await (const line of rl) {
-      if (isFirstLine) {
-        headers = parseCSVLine(line, "|");
-        normHeaders = headers.map(normalizeHeaderName);
-        colNum = normHeaders.indexOf("numacordao") !== -1 ? normHeaders.indexOf("numacordao") : normHeaders.indexOf("numero");
-        colAno = normHeaders.indexOf("anoacordao") !== -1 ? normHeaders.indexOf("anoacordao") : normHeaders.indexOf("ano");
-        colInteiro = normHeaders.indexOf("inteiroteor") !== -1 ? normHeaders.indexOf("inteiroteor") : normHeaders.indexOf("acordao");
-        isFirstLine = false;
-        if (colNum === -1 || colAno === -1 || colInteiro === -1) {
-          console.log(`[getInteiroTeor] Could not find required columns. Headers: ${normHeaders.join(",")}`);
+function normalizarNomeColuna(header) {
+  return header.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+}
+function normalizarColegiado(str) {
+  if (!str) return "";
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toUpperCase();
+}
+async function getComplementaryDataBulk(cachePath, targets) {
+  const resultado = /* @__PURE__ */ new Map();
+  if (!import_fs3.default.existsSync(cachePath)) {
+    console.warn(`[CSV-COMPLETO] Arquivo n\xE3o encontrado: ${cachePath}`);
+    return resultado;
+  }
+  if (targets.length === 0) return resultado;
+  const indiceBusca = /* @__PURE__ */ new Map();
+  for (const t of targets) {
+    const chave = `${t.numAcordao}-${normalizarColegiado(t.colegiado)}`;
+    indiceBusca.set(chave, t);
+  }
+  console.log(`[CSV-COMPLETO] Iniciando parse de ${import_path3.default.basename(cachePath)} para ${targets.length} alvos...`);
+  const { createReadStream } = await import("fs");
+  const readline = await import("readline");
+  const fileStream = createReadStream(cachePath, { encoding: "utf8" });
+  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+  let cabecalhoProcessado = false;
+  let colIndices = {};
+  let colKey = -1, colNum = -1, colAno = -1, colColegiado = -1;
+  let linhaAtual = "";
+  let totalProcessadas = 0;
+  let encontrados = 0;
+  const processarLinhaAcumulada = (linhaCompleta) => {
+    if (!cabecalhoProcessado) {
+      const headers = parsearLinhaCsvRobusta(linhaCompleta, "|");
+      const normHeaders = headers.map(normalizarNomeColuna);
+      colKey = normHeaders.indexOf("key");
+      colNum = normHeaders.findIndex((h) => h === "numacordao" || h === "numero");
+      colAno = normHeaders.findIndex((h) => h === "anoacordao" || h === "ano");
+      colColegiado = normHeaders.indexOf("colegiado");
+      colIndices = {
+        acordao: normHeaders.indexOf("acordao"),
+        relatorio: normHeaders.indexOf("relatorio"),
+        voto: normHeaders.indexOf("voto"),
+        num_ata: normHeaders.indexOf("numata"),
+        situacao: normHeaders.indexOf("situacao"),
+        proc: normHeaders.findIndex((h) => h === "proc" || h === "processo"),
+        acordaos_relacionados: normHeaders.indexOf("acordaosrelacionados"),
+        interessados: normHeaders.indexOf("interessados"),
+        entidade: normHeaders.indexOf("entidade"),
+        unidade_tecnica: normHeaders.indexOf("unidadetecnica"),
+        assunto: normHeaders.indexOf("assunto"),
+        sumario: normHeaders.indexOf("sumario"),
+        decisao: normHeaders.indexOf("decisao"),
+        relator: normHeaders.indexOf("relator")
+      };
+      cabecalhoProcessado = true;
+      console.log(`[CSV-COMPLETO] Cabe\xE7alho processado. Colunas mapeadas: ${Object.keys(colIndices).length}`);
+      return false;
+    }
+    if (!linhaCompleta.trim()) return false;
+    const partes = parsearLinhaCsvRobusta(linhaCompleta, "|");
+    if (partes.length <= Math.max(colNum, colAno, colColegiado)) return false;
+    const rowNum = partes[colNum] ?? "";
+    const rowColegiado = normalizarColegiado(partes[colColegiado] ?? "");
+    const chaveRow = `${rowNum}-${rowColegiado}`;
+    const target = indiceBusca.get(chaveRow);
+    if (!target) return false;
+    totalProcessadas++;
+    const getParte = (idx) => idx !== -1 && partes[idx] ? partes[idx].trim() : "";
+    const txtAcordao = getParte(colIndices.acordao);
+    const txtRelatorio = getParte(colIndices.relatorio);
+    const txtVoto = getParte(colIndices.voto);
+    const txtDecisao = getParte(colIndices.decisao);
+    let inteiroteor = "";
+    if (txtRelatorio) inteiroteor += "RELAT\xD3RIO:\n" + txtRelatorio + "\n\n";
+    if (txtVoto) inteiroteor += "VOTO:\n" + txtVoto + "\n\n";
+    if (txtAcordao) inteiroteor += "AC\xD3RD\xC3O:\n" + txtAcordao + "\n\n";
+    if (txtDecisao && txtDecisao !== txtAcordao)
+      inteiroteor += "DECIS\xC3O:\n" + txtDecisao + "\n\n";
+    const teorFinal = inteiroteor.trim() || txtAcordao;
+    const existing = resultado.get(chaveRow);
+    if (!existing || teorFinal.length > (existing.acordao?.length ?? 0)) {
+      resultado.set(chaveRow, {
+        key: getParte(colKey),
+        numAcordao: rowNum,
+        anoAcordao: partes[colAno] ?? "",
+        colegiado: partes[colColegiado] ?? "",
+        acordao: teorFinal,
+        num_ata: getParte(colIndices.num_ata),
+        situacao: getParte(colIndices.situacao) || "OFICIALIZADO",
+        proc: getParte(colIndices.proc),
+        acordaos_relacionados: getParte(colIndices.acordaos_relacionados),
+        interessados: getParte(colIndices.interessados),
+        entidade: getParte(colIndices.entidade),
+        unidade_tecnica: getParte(colIndices.unidade_tecnica),
+        assunto: getParte(colIndices.assunto),
+        sumario: getParte(colIndices.sumario),
+        decisao: txtDecisao,
+        relator: getParte(colIndices.relator)
+      });
+      encontrados++;
+    }
+    return encontrados >= indiceBusca.size;
+  };
+  for await (const linha of rl) {
+    const isNovoRegistro = linha.startsWith('"ACORDAO-COMPLETO-') || linha.startsWith('"KEY"|"TIPO"');
+    if (isNovoRegistro) {
+      if (linhaAtual) {
+        const parar = processarLinhaAcumulada(linhaAtual);
+        if (parar) {
           rl.close();
           break;
         }
-        continue;
       }
-      if (!line.trim()) continue;
-      const parts = parseCSVLine(line, "|");
-      if (parts.length > colNum && parts.length > colAno) {
-        if (parts[colNum] == String(numAcordao) && parts[colAno] == String(anoAcordao)) {
-          console.log(`[getInteiroTeor] Found Inteiro Teor for ${numAcordao}/${anoAcordao}!`);
-          foundInteiro = parts[colInteiro] || null;
-          rl.close();
-          break;
-        }
+      linhaAtual = linha;
+    } else {
+      if (linhaAtual) {
+        linhaAtual += "\n" + linha;
       }
     }
-    return foundInteiro;
-  } catch (err) {
-    console.error(`[getInteiroTeor] Error:`, err);
-    return null;
   }
-}
-async function getComplementaryDataBulk(anoAcordao, numsToFind) {
-  const result = /* @__PURE__ */ new Map();
-  try {
-    const cachePath = await fetchAcordaoCompleto(anoAcordao);
-    if (!import_fs4.default.existsSync(cachePath)) return result;
-    console.log(`[getInteiroTeorBulk] Parsing ${cachePath} to find ${numsToFind.size} ac\xF3rd\xE3os...`);
-    const fileStream = import_fs4.default.createReadStream(cachePath, { encoding: "utf8" });
-    const rl = import_readline.default.createInterface({ input: fileStream, crlfDelay: Infinity });
-    let headers = [];
-    let normHeaders = [];
-    let colNum = -1;
-    let colAno = -1;
-    let colIndices = {};
-    let isFirstLine = true;
-    let currentLine = "";
-    for await (const line of rl) {
-      if (currentLine) {
-        currentLine += "\n" + line;
-      } else {
-        currentLine = line;
-      }
-      const quoteCount = (currentLine.match(/"/g) || []).length;
-      if (quoteCount % 2 !== 0) {
-        continue;
-      }
-      const fullLine = currentLine;
-      currentLine = "";
-      if (isFirstLine) {
-        headers = parseCSVLine(fullLine, "|");
-        normHeaders = headers.map(normalizeHeaderName);
-        colNum = normHeaders.indexOf("numacordao") !== -1 ? normHeaders.indexOf("numacordao") : normHeaders.indexOf("numero");
-        colAno = normHeaders.indexOf("anoacordao") !== -1 ? normHeaders.indexOf("anoacordao") : normHeaders.indexOf("ano");
-        colIndices = {
-          acordao: normHeaders.indexOf("inteiroteor") !== -1 ? normHeaders.indexOf("inteiroteor") : normHeaders.indexOf("acordao"),
-          num_ata: normHeaders.indexOf("numata"),
-          situacao: normHeaders.indexOf("situacao"),
-          proc: normHeaders.indexOf("proc") !== -1 ? normHeaders.indexOf("proc") : normHeaders.indexOf("processo"),
-          acordaos_relacionados: normHeaders.indexOf("acordaosrelacionados"),
-          interessados: normHeaders.indexOf("interessados"),
-          entidade: normHeaders.indexOf("entidade"),
-          unidade_tecnica: normHeaders.indexOf("unidadetecnica"),
-          assunto: normHeaders.indexOf("assunto"),
-          sumario: normHeaders.indexOf("sumario"),
-          decisao: normHeaders.indexOf("decisao")
-        };
-        isFirstLine = false;
-        continue;
-      }
-      if (!fullLine.trim()) continue;
-      const parts = parseCSVLine(fullLine, "|");
-      if (parts.length > colNum && parts.length > colAno) {
-        if (parts[colAno] == String(anoAcordao) && numsToFind.has(parts[colNum])) {
-          const getPart = (idx) => idx !== -1 && parts[idx] ? parts[idx] : "";
-          result.set(parts[colNum], {
-            acordao: getPart(colIndices.acordao),
-            num_ata: getPart(colIndices.num_ata),
-            situacao: getPart(colIndices.situacao) || "OFICIALIZADO",
-            proc: getPart(colIndices.proc),
-            acordaos_relacionados: getPart(colIndices.acordaos_relacionados),
-            interessados: getPart(colIndices.interessados),
-            entidade: getPart(colIndices.entidade),
-            unidade_tecnica: getPart(colIndices.unidade_tecnica),
-            assunto: getPart(colIndices.assunto),
-            sumario: getPart(colIndices.sumario),
-            decisao: getPart(colIndices.decisao)
-          });
-          if (result.size === numsToFind.size) {
-            console.log(`[getComplementaryDataBulk] Found all requested ac\xF3rd\xE3os para o ano ${anoAcordao}!`);
-            rl.close();
-            break;
-          }
-        }
-      }
-    }
-  } catch (err) {
-    console.error(`[getComplementaryDataBulk] Error:`, err);
+  if (linhaAtual) {
+    processarLinhaAcumulada(linhaAtual);
   }
-  return result;
+  console.log(
+    `[CSV-COMPLETO] Parse conclu\xEDdo. Alvos: ${targets.length} | Encontrados: ${resultado.size} | Linhas processadas: ${totalProcessadas}`
+  );
+  return resultado;
 }
-var import_fs4, import_readline;
+var import_fs3, import_path3, TCU_DIR2;
 var init_tcuCsvParser = __esm({
   "src/backend/utils/tcuCsvParser.ts"() {
-    import_fs4 = __toESM(require("fs"), 1);
-    import_readline = __toESM(require("readline"), 1);
-    init_tcuApi();
+    import_fs3 = __toESM(require("fs"), 1);
+    import_path3 = __toESM(require("path"), 1);
+    TCU_DIR2 = import_path3.default.resolve(process.cwd(), "data", "tcu", "acordaos");
+  }
+});
+
+// src/backend/utils/importControl.ts
+var importControl_exports = {};
+__export(importControl_exports, {
+  anoHistoricoJaImportado: () => anoHistoricoJaImportado,
+  atualizarStatusImportacao: () => atualizarStatusImportacao,
+  calcularHashArquivo: () => calcularHashArquivo,
+  getAnoParaImportacaoAutomatica: () => getAnoParaImportacaoAutomatica,
+  getAnoStatus: () => getAnoStatus,
+  getStatusImportacoes: () => getStatusImportacoes,
+  getUltimaImportacao: () => getUltimaImportacao,
+  iniciarImportacao: () => iniciarImportacao,
+  registrarErroImportacao: () => registrarErroImportacao
+});
+function getAnoStatus(ano, hoje = /* @__PURE__ */ new Date()) {
+  const anoCorrente = hoje.getFullYear();
+  if (ano > anoCorrente) {
+    return "futuro";
+  }
+  const dataFechamento = new Date(ano + 1, 1, 1);
+  if (hoje >= dataFechamento) {
+    return "historico";
+  }
+  return "corrente";
+}
+function getAnoParaImportacaoAutomatica(hoje = /* @__PURE__ */ new Date()) {
+  return hoje.getFullYear();
+}
+function calcularHashArquivo(filePath) {
+  const buffer = import_fs5.default.readFileSync(filePath);
+  return import_crypto.default.createHash("sha256").update(buffer).digest("hex");
+}
+async function iniciarImportacao(params) {
+  const result = await pool.query(
+    `INSERT INTO tcu_import_control
+       (modulo, ano_referencia, tipo_arquivo, url_fonte, nome_arquivo,
+        status, forcado_por_usuario, data_inicio)
+     VALUES ($1, $2, $3, $4, $5, 'INICIADO', $6, NOW())
+     RETURNING id`,
+    [
+      params.modulo,
+      params.ano_referencia,
+      params.tipo_arquivo,
+      params.url_fonte ?? null,
+      params.nome_arquivo ?? null,
+      params.forcado_por_usuario ?? null
+    ]
+  );
+  return result.rows[0].id;
+}
+async function atualizarStatusImportacao(params) {
+  const isFinal = params.status === "CONCLUIDO" || params.status === "ERRO" || params.status === "PARCIAL";
+  await pool.query(
+    `UPDATE tcu_import_control SET
+       status                    = $2,
+       tamanho_bytes             = COALESCE($3, tamanho_bytes),
+       hash_arquivo              = COALESCE($4, hash_arquivo),
+       quantidade_linhas_csv     = COALESCE($5, quantidade_linhas_csv),
+       quantidade_inseridos      = COALESCE($6, quantidade_inseridos),
+       quantidade_atualizados    = COALESCE($7, quantidade_atualizados),
+       quantidade_ignorados      = COALESCE($8, quantidade_ignorados),
+       quantidade_erros          = COALESCE($9, quantidade_erros),
+       eh_historico              = COALESCE($10, eh_historico),
+       data_fechamento_historico = COALESCE($11, data_fechamento_historico),
+       erro_detalhe              = COALESCE($12, erro_detalhe),
+       observacoes               = COALESCE($13, observacoes),
+       data_fim                  = CASE WHEN $14 THEN NOW() ELSE data_fim END
+     WHERE id = $1`,
+    [
+      params.id,
+      params.status,
+      params.tamanho_bytes ?? null,
+      params.hash_arquivo ?? null,
+      params.quantidade_linhas_csv ?? null,
+      params.quantidade_inseridos ?? null,
+      params.quantidade_atualizados ?? null,
+      params.quantidade_ignorados ?? null,
+      params.quantidade_erros ?? null,
+      params.eh_historico ?? null,
+      params.data_fechamento_historico ?? null,
+      params.erro_detalhe ?? null,
+      params.observacoes ?? null,
+      isFinal
+    ]
+  );
+}
+async function registrarErroImportacao(id, erro) {
+  const detalhe = typeof erro === "string" ? erro : `${erro.message}
+${erro.stack ?? ""}`;
+  await atualizarStatusImportacao({
+    id,
+    status: "ERRO",
+    erro_detalhe: detalhe.substring(0, 5e3)
+    // limita tamanho
+  });
+}
+async function getStatusImportacoes() {
+  const result = await pool.query(`SELECT * FROM vw_import_status`);
+  return result.rows;
+}
+async function getUltimaImportacao(modulo, ano_referencia) {
+  const result = await pool.query(
+    `SELECT * FROM tcu_import_control
+     WHERE modulo = $1 AND ano_referencia = $2
+     ORDER BY id DESC LIMIT 1`,
+    [modulo, ano_referencia]
+  );
+  return result.rows[0] ?? null;
+}
+async function anoHistoricoJaImportado(modulo, ano_referencia) {
+  const ultima = await getUltimaImportacao(modulo, ano_referencia);
+  if (!ultima) return false;
+  return ultima.status === "CONCLUIDO" && ultima.eh_historico === true;
+}
+var import_crypto, import_fs5;
+var init_importControl = __esm({
+  "src/backend/utils/importControl.ts"() {
+    init_db();
+    import_crypto = __toESM(require("crypto"), 1);
+    import_fs5 = __toESM(require("fs"), 1);
   }
 });
 
 // server.ts
 var import_express13 = __toESM(require("express"), 1);
-var import_path6 = __toESM(require("path"), 1);
-var import_fs7 = __toESM(require("fs"), 1);
+var import_path8 = __toESM(require("path"), 1);
+var import_fs9 = __toESM(require("fs"), 1);
 var import_vite = require("vite");
-var import_dotenv3 = __toESM(require("dotenv"), 1);
+var import_dotenv4 = __toESM(require("dotenv"), 1);
 var import_express_session = __toESM(require("express-session"), 1);
 var import_compression = __toESM(require("compression"), 1);
 var import_pg2 = __toESM(require("pg"), 1);
 
 // src/backend/routes/comunicacoesRoutes.ts
 var import_express = require("express");
-
-// src/backend/db.ts
-var import_fs = __toESM(require("fs"), 1);
-var import_path = __toESM(require("path"), 1);
-var import_pg = __toESM(require("pg"), 1);
-var import_dotenv = __toESM(require("dotenv"), 1);
-
-// src/data/seed_db.ts
-var SEED_PROFILES = [
-  {
-    id: "alessandro",
-    name: "Alessandro Barbosa",
-    cpf: "416.526.491-15",
-    phone: "(61) 2031-6261",
-    unidade: "AECI",
-    role: "Analista de Controle Interno Especial",
-    email: "alessandro@trabalho.gov.br",
-    register: "Matr\xEDcula: 1792381",
-    clearance: "ADMIN",
-    avatarColor: "bg-[#1351b4] text-white border-blue-400 ring-blue-500/30",
-    pin: "Cmnsg@102030",
-    password: "Cmnsg@102030",
-    requiresPasswordChange: false,
-    status: "ACTIVE",
-    badgeText: "AECI - ADMIN"
-  }
-];
-
-// src/backend/db.ts
-import_dotenv.default.config();
-var pool = new import_pg.default.Pool({
-  connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://postgres:postgres@localhost:5432/postgres",
-  max: 10,
-  idleTimeoutMillis: 3e4,
-  connectionTimeoutMillis: 2e3
-});
-var DATA_DIR = import_path.default.join(process.cwd(), "data");
-var DB_PATH = import_path.default.join(DATA_DIR, "orbita_db.json");
-var TCU_DIR = import_path.default.join(DATA_DIR, "tcu");
-if (!import_fs.default.existsSync(DATA_DIR)) {
-  import_fs.default.mkdirSync(DATA_DIR, { recursive: true });
-}
-if (!import_fs.default.existsSync(TCU_DIR)) {
-  import_fs.default.mkdirSync(TCU_DIR, { recursive: true });
-}
-
-// src/backend/routes/comunicacoesRoutes.ts
+init_db();
 var import_fs2 = __toESM(require("fs"), 1);
 var import_path2 = __toESM(require("path"), 1);
 var router = (0, import_express.Router)();
@@ -496,23 +632,23 @@ function cleanEncoding(text) {
 router.get("/comunicacoes", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM tcu_comunicacoes");
-    const mapped = result.rows.map((row) => ({
-      KEY: row.key,
-      COMUNICACAO: cleanEncoding(row.comunicacao),
-      DESTINATARIO: cleanEncoding(row.destinatario),
-      CONTATO: cleanEncoding(row.contato),
-      UNIDADE_EMITENTE: cleanEncoding(row.unidade_emitente),
-      PROCESSO: cleanEncoding(row.processo),
-      DATA_EXPEDICAO: row.data_expedicao,
-      DATA_RESPOSTA: row.data_resposta,
-      ANO: row.ano,
-      CARECE_RESPOSTA: row.carece_resposta,
-      PRAZO_DIAS: row.prazo_dias,
-      RESPOSTA_ENVIADA_INTERNAMENTE: row.resposta_enviada_internamente,
-      UNIDADE_EXECUTORA: cleanEncoding(row.unidade_executora),
-      PROCESSO_SEI: cleanEncoding(row.processo_sei),
-      DESTINACAO: cleanEncoding(row.destinacao),
-      ULTIMA_ATUALIZACAO: row.ultima_atualizacao
+    const mapped = result.rows.map((row2) => ({
+      KEY: row2.key,
+      COMUNICACAO: cleanEncoding(row2.comunicacao),
+      DESTINATARIO: cleanEncoding(row2.destinatario),
+      CONTATO: cleanEncoding(row2.contato),
+      UNIDADE_EMITENTE: cleanEncoding(row2.unidade_emitente),
+      PROCESSO: cleanEncoding(row2.processo),
+      DATA_EXPEDICAO: row2.data_expedicao,
+      DATA_RESPOSTA: row2.data_resposta,
+      ANO: row2.ano,
+      CARECE_RESPOSTA: row2.carece_resposta,
+      PRAZO_DIAS: row2.prazo_dias,
+      RESPOSTA_ENVIADA_INTERNAMENTE: row2.resposta_enviada_internamente,
+      UNIDADE_EXECUTORA: cleanEncoding(row2.unidade_executora),
+      PROCESSO_SEI: cleanEncoding(row2.processo_sei),
+      DESTINACAO: cleanEncoding(row2.destinacao),
+      ULTIMA_ATUALIZACAO: row2.ultima_atualizacao
     }));
     res.json(mapped);
   } catch (err) {
@@ -635,8 +771,8 @@ router.post("/comunicacoes/import", async (req, res) => {
           ultima_atualizacao = EXCLUDED.ultima_atualizacao
         RETURNING (xmax = 0) AS inserted;`;
       const result = await pool.query(query, params);
-      result.rows.forEach((row) => {
-        if (row.inserted) importedCount++;
+      result.rows.forEach((row2) => {
+        if (row2.inserted) importedCount++;
         else updatedCount++;
       });
     }
@@ -657,9 +793,10 @@ var comunicacoesRoutes_default = router;
 
 // src/backend/routes/rolRoutes.ts
 var import_express2 = __toESM(require("express"), 1);
+init_db();
 var router2 = import_express2.default.Router();
 async function getLegacyData() {
-  const result = await pool.query("SELECT * FROM rol_responsaveis_legado");
+  const result = await pool.query("SELECT * FROM rol_responsaveis_legado ORDER BY nome ASC");
   return result.rows;
 }
 router2.get("/pessoas", async (req, res) => {
@@ -667,7 +804,7 @@ router2.get("/pessoas", async (req, res) => {
 });
 router2.get("/unidades", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM rol_unidades ORDER BY sigla");
+    const result = await pool.query("SELECT nome as id_unidade, nome, sigla FROM rol_unidades ORDER BY sigla");
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch unidades." });
@@ -675,10 +812,8 @@ router2.get("/unidades", async (req, res) => {
 });
 router2.get("/cargos", async (req, res) => {
   try {
-    const legacy = await getLegacyData();
-    const cargosSet = new Set(legacy.map((r) => r.cargo).filter(Boolean));
-    const cargos = Array.from(cargosSet).map((c, i) => ({ id_cargo: i + 1, nome: c }));
-    res.json(cargos);
+    const result = await pool.query("SELECT nome as id_cargo, nome FROM rol_cargos ORDER BY nome");
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch cargos." });
   }
@@ -686,29 +821,48 @@ router2.get("/cargos", async (req, res) => {
 router2.get("/mandatos", async (req, res) => {
   try {
     const legacy = await getLegacyData();
-    const mandatos = legacy.map((r) => ({
-      id_registro: r.id,
-      is_substituto: false,
-      id_original: r.id,
-      data_inicio: r.inicio_exercicio,
-      data_fim: r.fim_exercicio,
-      ato_nomeacao: r.ato_nomeacao,
-      ato_exoneracao: null,
-      id_pessoa: r.id,
-      nome_completo: r.nome,
-      cpf: r.cpf,
-      email: "",
-      id_cargo: r.cargo,
-      nome_cargo: r.cargo,
-      id_unidade: r.unidade,
-      sigla_unidade: r.unidade,
-      nome_unidade: r.unidade,
-      tipo_responsabilidade: "Titular",
-      status: r.status
-    }));
+    const mandatos = legacy.map((r) => {
+      const isSub = r.is_substituto || r.cargo && r.cargo.toLowerCase().includes("substitut");
+      return {
+        id_registro: r.id,
+        is_substituto: isSub,
+        id_original: r.id,
+        data_inicio: r.inicio_exercicio,
+        data_fim: r.fim_exercicio,
+        ato_nomeacao: r.ato_nomeacao,
+        ato_exoneracao: null,
+        id_pessoa: r.id,
+        nome_completo: r.nome,
+        cpf: r.cpf,
+        email: "",
+        id_cargo: r.cargo,
+        nome_cargo: r.cargo,
+        id_unidade: r.unidade,
+        sigla_unidade: r.unidade,
+        // We can leave this as the name for now, frontend displays it
+        nome_unidade: r.unidade,
+        tipo_responsabilidade: isSub ? "Substituto" : "Titular",
+        status: !r.fim_exercicio || r.fim_exercicio.trim() === "" ? "Vigente" : "Hist\xF3rico"
+      };
+    });
     res.json(mandatos);
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch mandatos." });
+  }
+});
+router2.put("/dirigentes/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nome_completo, cpf, id_cargo, id_unidade, data_inicio, data_fim, ato_nomeacao, ato_exoneracao, is_substituto } = req.body;
+    await pool.query(
+      `UPDATE rol_responsaveis_legado SET 
+        nome = $1, cpf = $2, cargo = $3, unidade = $4, inicio_exercicio = $5, fim_exercicio = $6, ato_nomeacao = $7, is_substituto = $8 
+       WHERE id = $9`,
+      [nome_completo, cpf, id_cargo, id_unidade, data_inicio, data_fim, ato_nomeacao, is_substituto, id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to update dirigente." });
   }
 });
 router2.get("/afastamentos", async (req, res) => {
@@ -718,9 +872,91 @@ var rolRoutes_default = router2;
 
 // src/backend/routes/acordaoRoutes.ts
 var import_express3 = __toESM(require("express"), 1);
-var import_fs5 = __toESM(require("fs"), 1);
-var import_path4 = __toESM(require("path"), 1);
+init_db();
+var import_fs6 = __toESM(require("fs"), 1);
+var import_path5 = __toESM(require("path"), 1);
 init_tcuCsvParser();
+
+// src/backend/utils/tcuApi.ts
+var import_fs4 = __toESM(require("fs"), 1);
+var import_path4 = __toESM(require("path"), 1);
+var TCU_DIR3 = import_path4.default.resolve(process.cwd(), "data", "tcu", "acordaos");
+var CACHE_TTL_MS = 24 * 60 * 60 * 1e3;
+function garantirDiretorio() {
+  if (!import_fs4.default.existsSync(TCU_DIR3)) {
+    import_fs4.default.mkdirSync(TCU_DIR3, { recursive: true });
+  }
+}
+async function fetchAcordaoCompleto(year, ehHistorico = false) {
+  garantirDiretorio();
+  const tempPath = import_path4.default.join(TCU_DIR3, `cache-acordao-completo-${year}.csv`);
+  const inProgressPath = tempPath + ".tmp";
+  if (import_fs4.default.existsSync(tempPath)) {
+    if (ehHistorico) {
+      console.log(`[TCU-CSV] Cache hist\xF3rico encontrado para ${year}. Reutilizando.`);
+      return tempPath;
+    }
+    const stats = import_fs4.default.statSync(tempPath);
+    const idadeMs = Date.now() - stats.mtimeMs;
+    if (idadeMs < CACHE_TTL_MS) {
+      const horas = Math.round(idadeMs / 36e5 * 10) / 10;
+      console.log(`[TCU-CSV] Cache v\xE1lido para ${year} (${horas}h). Reutilizando.`);
+      return tempPath;
+    }
+    console.log(`[TCU-CSV] Cache expirado para ${year} (>${CACHE_TTL_MS / 36e5}h). Re-baixando...`);
+  }
+  const url = `https://sites.tcu.gov.br/dados-abertos/jurisprudencia/arquivos/acordao-completo/acordao-completo-${year}.csv`;
+  console.log(`[TCU-CSV] Baixando: ${url}`);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "text/csv,application/csv,text/plain,*/*"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+    if (!response.body) {
+      throw new Error("Response body est\xE1 vazio.");
+    }
+    const { Readable } = await import("stream");
+    const fileStream = import_fs4.default.createWriteStream(inProgressPath);
+    await new Promise((resolve, reject) => {
+      Readable.fromWeb(response.body).pipe(fileStream).on("finish", () => {
+        fileStream.close();
+        resolve();
+      }).on("error", (err) => {
+        fileStream.close();
+        reject(err);
+      });
+    });
+    import_fs4.default.renameSync(inProgressPath, tempPath);
+    const stats = import_fs4.default.statSync(tempPath);
+    const tamanhoMB = (stats.size / 1024 / 1024).toFixed(1);
+    console.log(`[TCU-CSV] Download conclu\xEDdo: ${year} (${tamanhoMB} MB)`);
+    return tempPath;
+  } catch (err) {
+    console.error(`[TCU-CSV] Falha no download para ${year}:`, err.message);
+    if (import_fs4.default.existsSync(inProgressPath)) {
+      try {
+        import_fs4.default.unlinkSync(inProgressPath);
+      } catch {
+      }
+    }
+    if (import_fs4.default.existsSync(tempPath)) {
+      console.warn(`[TCU-CSV] Usando cache expirado como fallback para ${year}.`);
+      return tempPath;
+    }
+    throw err;
+  }
+}
+
+// src/backend/routes/acordaoRoutes.ts
+init_importControl();
+
+// src/backend/utils/backgroundProcessor.ts
+init_db();
 
 // src/backend/utils/aiUtils.ts
 var import_genai = require("@google/genai");
@@ -784,44 +1020,6 @@ Retorne APENAS um JSON v\xE1lido. Exemplo de estrutura esperada:
 }
 
 // src/backend/utils/backgroundProcessor.ts
-var queue = [];
-var isProcessing = false;
-function enqueueAcordaosForAnalysis(keys) {
-  const newKeys = keys.filter((k) => !queue.includes(k));
-  queue.push(...newKeys);
-  if (!isProcessing && queue.length > 0) {
-    processQueue();
-  }
-}
-async function processQueue() {
-  isProcessing = true;
-  while (queue.length > 0) {
-    const key = queue[0];
-    console.log(`[Background] Processando Ac\xF3rd\xE3o: ${key} (${queue.length} restantes)`);
-    let retryWait = 1e4;
-    let success = false;
-    try {
-      await processSingleAcordao(key);
-      success = true;
-    } catch (err) {
-      console.error(`[Background] Erro ao processar ${key}:`, err.message);
-      if (err.message && err.message.includes("429")) {
-        console.log(`[Background] Rate limit (429) detectado. Aguardando 60 segundos antes de tentar novamente.`);
-        retryWait = 6e4;
-      } else {
-        success = true;
-      }
-    }
-    if (success) {
-      queue.shift();
-    }
-    if (queue.length > 0) {
-      await new Promise((resolve) => setTimeout(resolve, retryWait));
-    }
-  }
-  isProcessing = false;
-  console.log(`[Background] Processamento conclu\xEDdo. Fila vazia.`);
-}
 async function processSingleAcordao(key) {
   const acResult = await pool.query("SELECT * FROM tcu_acordaos WHERE key = $1", [key]);
   if (acResult.rows.length === 0) {
@@ -831,8 +1029,8 @@ async function processSingleAcordao(key) {
   let acordaoTeor = acordao.acordao;
   if (!acordaoTeor || acordaoTeor.trim() === "") {
     console.log(`[Background] Ac\xF3rd\xE3o ${acordao.num_acordao}/${acordao.ano_acordao} n\xE3o possui Inteiro Teor no banco. Tentando buscar no cache da API TCU...`);
-    const { getInteiroTeorFromCache: getInteiroTeorFromCache3 } = (init_tcuCsvParser(), __toCommonJS(tcuCsvParser_exports));
-    const fetchedTeor = await getInteiroTeorFromCache3(acordao.num_acordao, acordao.ano_acordao);
+    const { getInteiroTeorFromCache } = await Promise.resolve().then(() => (init_tcuCsvParser(), tcuCsvParser_exports));
+    const fetchedTeor = await getInteiroTeorFromCache(acordao.num_acordao, acordao.ano_acordao);
     if (fetchedTeor) {
       console.log(`[Background] Atualizando Inteiro Teor no banco para ${key}...`);
       await pool.query("UPDATE tcu_acordaos SET acordao = $1 WHERE key = $2", [fetchedTeor, key]);
@@ -867,265 +1065,408 @@ async function processSingleAcordao(key) {
 
 // src/backend/routes/acordaoRoutes.ts
 var import_genai2 = require("@google/genai");
-var DATA_DIR2 = import_path4.default.join(process.cwd(), "data");
+var DATA_DIR2 = import_path5.default.join(process.cwd(), "data");
+var TCU_DIR4 = import_path5.default.join(DATA_DIR2, "tcu", "acordaos");
+var MODULO = "TCU_ACORDAOS";
 var router3 = import_express3.default.Router();
+function isTeorMissing(teorVal) {
+  if (!teorVal) return true;
+  const str = String(teorVal).trim();
+  return str === "" || str === "null" || str === "undefined" || str === "[]" || str === "{}";
+}
+function normalizarColegiado2(str) {
+  if (!str) return "";
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "").toUpperCase();
+}
 router3.post("/acordaos/sync-local", async (req, res) => {
-  const TCU_DIR4 = import_path4.default.join(process.cwd(), "data", "tcu", "acordaos");
-  if (!import_fs5.default.existsSync(TCU_DIR4)) {
-    return res.status(400).json({ success: false, message: "Diret\xF3rio data/tcu/acordaos n\xE3o encontrado." });
-  }
-  const files = import_fs5.default.readdirSync(TCU_DIR4);
-  const csvFiles = files.filter((f) => f.toLowerCase().endsWith(".csv") && !f.toLowerCase().includes("cache"));
-  if (csvFiles.length === 0) {
-    return res.json({ success: false, message: "Nenhum arquivo .csv encontrado na pasta data/tcu/acordaos/." });
-  }
-  try {
-    let imported = 0;
-    let updated = 0;
-    for (const file of csvFiles) {
-      console.log(`[SYNC-LOCAL-ACORDAOS] Iniciando processamento do arquivo: ${file}`);
-      console.time(`Processamento ${file}`);
-      const filePath = import_path4.default.join(TCU_DIR4, file);
-      const content = import_fs5.default.readFileSync(filePath, "latin1");
-      const lines = content.split("\n");
-      console.log(`[SYNC-LOCAL-ACORDAOS] Encontradas ${lines.length} linhas em ${file}`);
-      let skippedLines = 0;
-      const parsedRows = [];
-      const missingByYear = /* @__PURE__ */ new Map();
-      const seenKeysInFile = /* @__PURE__ */ new Set();
-      for (let i = 2; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) {
-          skippedLines++;
-          continue;
-        }
-        const parts = line.split('""').map((p) => p.replace(/"/g, ""));
-        if (parts.length < 5) continue;
-        const acordaoStr = parts[0];
-        const match = acordaoStr.match(/(\d+)\/(\d{4})/);
-        if (!match) continue;
-        const numAcordao = Number(match[1]);
-        const anoAcordao = Number(match[2]);
-        const key = `AC-${numAcordao}-${anoAcordao}`;
-        if (seenKeysInFile.has(key)) {
-          skippedLines++;
-          continue;
-        }
-        seenKeysInFile.add(key);
-        const check = await pool.query("SELECT key, acordao FROM tcu_acordaos WHERE num_acordao = $1 AND ano_acordao = $2", [numAcordao, anoAcordao]);
-        let teor = check.rows.length > 0 ? check.rows[0].acordao : null;
-        parsedRows.push({
-          numAcordao,
-          anoAcordao,
-          key,
-          parts,
-          hasDb: check.rows.length > 0,
-          dbKey: check.rows.length > 0 ? check.rows[0].key : null,
-          teor
-        });
-        if (!teor) {
-          if (!missingByYear.has(anoAcordao)) missingByYear.set(anoAcordao, /* @__PURE__ */ new Set());
-          missingByYear.get(anoAcordao).add(String(numAcordao));
-        }
-      }
-      const fetchedTeores = /* @__PURE__ */ new Map();
-      for (const [ano, numsSet] of missingByYear.entries()) {
-        const mapForYear = await getComplementaryDataBulk(ano, numsSet);
-        fetchedTeores.set(ano, mapForYear);
-      }
-      for (const row of parsedRows) {
-        const updatedAt = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
-        let compData = null;
-        if (!row.teor && fetchedTeores.has(row.anoAcordao)) {
-          compData = fetchedTeores.get(row.anoAcordao).get(String(row.numAcordao)) || null;
-        }
-        if (row.hasDb) {
-          if (compData) {
-            await pool.query(`
-              UPDATE tcu_acordaos SET
-                colegiado = $2, data_sessao = $3,
-                tipo_processo = $4, relator = $5,
-                ultima_atualizacao = $6, acordao = $7,
-                num_ata = $8, situacao = $9, proc = $10,
-                acordaos_relacionados = $11, interessados = $12,
-                entidade = $13, unidade_tecnica = $14,
-                assunto = $15, sumario = $16, decisao = $17
-              WHERE key = $1
-            `, [
-              row.dbKey,
-              row.parts[2],
-              row.parts[1],
-              row.parts[4],
-              row.parts[5],
-              updatedAt,
-              compData.acordao,
-              compData.num_ata,
-              compData.situacao,
-              compData.proc,
-              compData.acordaos_relacionados,
-              compData.interessados,
-              compData.entidade,
-              compData.unidade_tecnica,
-              compData.assunto,
-              compData.sumario,
-              compData.decisao
-            ]);
-          } else {
-            await pool.query(`
-              UPDATE tcu_acordaos SET
-                colegiado = $2, data_sessao = $3,
-                tipo_processo = $4, relator = $5,
-                ultima_atualizacao = $6
-              WHERE key = $1
-            `, [
-              row.dbKey,
-              row.parts[2],
-              row.parts[1],
-              row.parts[4],
-              row.parts[5],
-              updatedAt
-            ]);
-          }
-          updated++;
-        } else {
-          const fallbackTeor = compData?.acordao || row.teor || null;
-          await pool.query(`
-            INSERT INTO tcu_acordaos (
-              key, titulo, num_acordao, ano_acordao, colegiado, data_sessao,
-              situacao, tipo_processo, relator, status_monitoramento, ultima_atualizacao, 
-              acordao, num_ata, proc, acordaos_relacionados, interessados, 
-              entidade, unidade_tecnica, assunto, sumario, decisao
-            ) VALUES (
-              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 
-              $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
-            )
-          `, [
-            row.key,
-            `AC\xD3RD\xC3O ${row.numAcordao}/${row.anoAcordao} - ${row.parts[2].toUpperCase()}`,
-            row.numAcordao,
-            row.anoAcordao,
-            row.parts[2],
-            row.parts[1],
-            compData?.situacao || "OFICIALIZADO",
-            row.parts[4],
-            row.parts[5],
-            "Pendente",
-            updatedAt,
-            fallbackTeor,
-            compData?.num_ata || null,
-            compData?.proc || null,
-            compData?.acordaos_relacionados || null,
-            compData?.interessados || null,
-            compData?.entidade || null,
-            compData?.unidade_tecnica || row.parts[6] || null,
-            compData?.assunto || null,
-            compData?.sumario || null,
-            compData?.decisao || null
-          ]);
-          imported++;
-        }
-      }
-      console.log(`[SYNC-LOCAL-ACORDAOS] Conclu\xEDdo processamento de ${file}. Linhas puladas: ${skippedLines}`);
-      console.timeEnd(`Processamento ${file}`);
-    }
-    console.log(`[SYNC-LOCAL-ACORDAOS] Sincroniza\xE7\xE3o finalizada. Importados: ${imported}, Atualizados: ${updated}`);
-    const currentYear = (/* @__PURE__ */ new Date()).getFullYear();
-    try {
-      const pendingRes = await pool.query(
-        "SELECT key FROM tcu_acordaos WHERE ano_acordao = $1 AND status_monitoramento = 'Pendente' AND (ai_analysis_data IS NULL OR ai_analysis_data::text = '{}' OR ai_analysis_data::text = 'null')",
-        [currentYear]
-      );
-      if (pendingRes.rows.length > 0) {
-        const keysToProcess = pendingRes.rows.map((r) => r.key);
-        enqueueAcordaosForAnalysis(keysToProcess);
-        console.log(`[Sync] Enfileirados ${keysToProcess.length} ac\xF3rd\xE3os de ${currentYear} para processamento de IA em background.`);
-      }
-    } catch (bgErr) {
-      console.error("Erro ao enfileirar ac\xF3rd\xE3os para IA:", bgErr);
-    }
-    res.json({
-      success: true,
-      message: `Sincroniza\xE7\xE3o conclu\xEDda: ${imported} novos, ${updated} atualizados.`,
-      report: [{ file: "Geral", imported, updated, skipped: 0 }]
+  const forcarReprocessamento = req.body?.forcarAno ? parseInt(req.body.forcarAno, 10) : null;
+  const usuarioId = req.session?.user?.id ?? "SISTEMA";
+  if (!import_fs6.default.existsSync(TCU_DIR4)) {
+    return res.status(400).json({
+      success: false,
+      message: "Diret\xF3rio data/tcu/acordaos n\xE3o encontrado."
     });
+  }
+  const hoje = /* @__PURE__ */ new Date();
+  const anoCorrente = getAnoParaImportacaoAutomatica(hoje);
+  const arquivos = import_fs6.default.readdirSync(TCU_DIR4).filter((f) => {
+    return f.toLowerCase().endsWith(".csv") && !f.toLowerCase().includes("cache") && !f.toLowerCase().endsWith(".tmp");
+  });
+  if (arquivos.length === 0) {
+    return res.json({
+      success: false,
+      message: "Nenhum arquivo .csv filtrado encontrado em data/tcu/acordaos/."
+    });
+  }
+  const countResult = await pool.query("SELECT COUNT(*) FROM tcu_acordaos");
+  const estaVazia = parseInt(countResult.rows[0].count, 10) === 0;
+  const arquivosParaProcessar = arquivos.filter((arquivo) => {
+    const matchAno = arquivo.match(/(\d{4})/);
+    if (!matchAno) return false;
+    const anoArquivo = parseInt(matchAno[1], 10);
+    if (forcarReprocessamento && anoArquivo === forcarReprocessamento) {
+      return true;
+    }
+    const status = getAnoStatus(anoArquivo, hoje);
+    if (status === "futuro") {
+      console.log(`[SYNC] Arquivo ${arquivo} ignorado: ano futuro.`);
+      return false;
+    }
+    if (status === "historico" && !estaVazia) {
+      console.log(
+        `[SYNC] Arquivo ${arquivo} ignorado: ano hist\xF3rico (j\xE1 importado anteriormente).`
+      );
+      return false;
+    }
+    if (status === "corrente") {
+      return true;
+    }
+    return estaVazia;
+  });
+  if (arquivosParaProcessar.length === 0) {
+    return res.json({
+      success: true,
+      message: `Nenhum arquivo eleg\xEDvel para processamento. O ano corrente (${anoCorrente}) ainda n\xE3o possui arquivo dispon\xEDvel ou todos os hist\xF3ricos j\xE1 foram importados.`,
+      report: []
+    });
+  }
+  const reportGeral = [];
+  let totalImportados = 0;
+  let totalAtualizados = 0;
+  const pendingTasks = [];
+  for (const arquivo of arquivosParaProcessar) {
+    const matchAno = arquivo.match(/(\d{4})/);
+    if (!matchAno) continue;
+    const anoArquivo = parseInt(matchAno[1], 10);
+    const statusAno2 = getAnoStatus(anoArquivo, hoje);
+    const ehHistorico = statusAno2 === "historico";
+    const importControlId = await iniciarImportacao({
+      modulo: MODULO,
+      ano_referencia: anoArquivo,
+      tipo_arquivo: "FILTRADO_LOCAL",
+      nome_arquivo: arquivo,
+      forcado_por_usuario: forcarReprocessamento ? usuarioId : void 0
+    });
+    pendingTasks.push({ arquivo, anoArquivo, ehHistorico, importControlId });
+  }
+  res.json({
+    success: true,
+    message: `Sincroniza\xE7\xE3o iniciada em background para ${arquivosParaProcessar.length} arquivo(s). Consulte /api/acordaos/import-status para acompanhar.`,
+    arquivos: arquivosParaProcessar
+  });
+  (async () => {
+    for (const task of pendingTasks) {
+      const { arquivo, anoArquivo, ehHistorico, importControlId } = task;
+      try {
+        const filePath = import_path5.default.join(TCU_DIR4, arquivo);
+        await atualizarStatusImportacao({
+          id: importControlId,
+          status: "PROCESSANDO"
+        });
+        console.log(`
+[SYNC] \u2550\u2550\u2550 Iniciando: ${arquivo} (ano ${anoArquivo}) \u2550\u2550\u2550`);
+        console.time(`[SYNC] Tempo total ${arquivo}`);
+        const acordaosFiltrados = parsearCsvFiltrado(filePath);
+        const hash = calcularHashArquivo(filePath);
+        await atualizarStatusImportacao({
+          id: importControlId,
+          status: "PROCESSANDO",
+          hash_arquivo: hash,
+          quantidade_linhas_csv: acordaosFiltrados.length
+        });
+        const numerosDoArquivo = acordaosFiltrados.map((a) => a.numAcordao);
+        const existentesResult = await pool.query(
+          `SELECT key, num_acordao, ano_acordao, colegiado, acordao
+           FROM tcu_acordaos
+           WHERE num_acordao = ANY($1) AND ano_acordao = $2`,
+          [numerosDoArquivo, anoArquivo]
+        );
+        const existentesMap = /* @__PURE__ */ new Map();
+        for (const row2 of existentesResult.rows) {
+          const chave = `${row2.num_acordao}-${normalizarColegiado2(row2.colegiado)}`;
+          existentesMap.set(chave, row2);
+        }
+        const seenKeys = /* @__PURE__ */ new Set();
+        const linhasValidas = [];
+        const alvosParaBuscarTeor = [];
+        for (const ac of acordaosFiltrados) {
+          const chave = `${ac.numAcordao}-${normalizarColegiado2(ac.colegiado)}`;
+          if (seenKeys.has(chave)) continue;
+          seenKeys.add(chave);
+          linhasValidas.push(ac);
+          const existente = existentesMap.get(chave);
+          if (!existente || isTeorMissing(existente.acordao)) {
+            alvosParaBuscarTeor.push({
+              numAcordao: String(ac.numAcordao),
+              anoAcordao: String(ac.anoAcordao),
+              colegiado: ac.colegiado
+            });
+          }
+        }
+        let teoresMap = /* @__PURE__ */ new Map();
+        if (alvosParaBuscarTeor.length > 0) {
+          console.log(`[SYNC] Buscando teores: ${alvosParaBuscarTeor.length} ac\xF3rd\xE3os sem inteiro teor...`);
+          await atualizarStatusImportacao({
+            id: importControlId,
+            status: "BAIXANDO"
+          });
+          const cachePath = await fetchAcordaoCompleto(anoArquivo, ehHistorico);
+          await atualizarStatusImportacao({
+            id: importControlId,
+            status: "PROCESSANDO"
+          });
+          teoresMap = await getComplementaryDataBulk(cachePath, alvosParaBuscarTeor);
+        }
+        let inseridos = 0;
+        let atualizados = 0;
+        let ignorados = 0;
+        let erros = 0;
+        const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+        const client = await pool.connect();
+        try {
+          await client.query("BEGIN");
+          for (const ac of linhasValidas) {
+            try {
+              const chave = `${ac.numAcordao}-${normalizarColegiado2(ac.colegiado)}`;
+              const existente = existentesMap.get(chave);
+              const compData = teoresMap.get(chave) ?? null;
+              if (existente) {
+                if (compData) {
+                  await client.query(
+                    `UPDATE tcu_acordaos SET
+                       colegiado             = $2,
+                       data_sessao           = $3,
+                       tipo_processo         = $4,
+                       relator               = $5,
+                       ultima_atualizacao    = $6,
+                       acordao               = $7,
+                       num_ata               = $8,
+                       situacao              = $9,
+                       proc                  = $10,
+                       acordaos_relacionados = $11,
+                       interessados          = $12,
+                       entidade              = $13,
+                       unidade_tecnica       = $14,
+                       assunto               = $15,
+                       sumario               = $16,
+                       decisao               = $17
+                     WHERE key = $1`,
+                    [
+                      existente.key,
+                      ac.colegiado,
+                      ac.dataSessao,
+                      ac.tipoProcesso,
+                      ac.relator,
+                      updatedAt,
+                      compData.acordao,
+                      compData.num_ata,
+                      compData.situacao,
+                      compData.proc,
+                      compData.acordaos_relacionados,
+                      compData.interessados,
+                      compData.entidade,
+                      compData.unidade_tecnica || ac.unidadeTecnica,
+                      compData.assunto,
+                      compData.sumario,
+                      compData.decisao
+                    ]
+                  );
+                } else {
+                  await client.query(
+                    `UPDATE tcu_acordaos SET
+                       colegiado          = $2,
+                       data_sessao        = $3,
+                       tipo_processo      = $4,
+                       relator            = $5,
+                       ultima_atualizacao = $6
+                     WHERE key = $1`,
+                    [
+                      existente.key,
+                      ac.colegiado,
+                      ac.dataSessao,
+                      ac.tipoProcesso,
+                      ac.relator,
+                      updatedAt
+                    ]
+                  );
+                }
+                atualizados++;
+              } else {
+                const finalKey = compData?.key || `AC-${ac.numAcordao}-${ac.anoAcordao}-${normalizarColegiado2(ac.colegiado)}`;
+                await client.query(
+                  `INSERT INTO tcu_acordaos (
+                     key, titulo, num_acordao, ano_acordao, colegiado, data_sessao,
+                     situacao, tipo_processo, relator, status_monitoramento, ultima_atualizacao,
+                     acordao, num_ata, proc, acordaos_relacionados, interessados,
+                     entidade, unidade_tecnica, assunto, sumario, decisao
+                   ) VALUES (
+                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+                     $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+                   )
+                   ON CONFLICT (key) DO UPDATE SET
+                     colegiado          = EXCLUDED.colegiado,
+                     data_sessao        = EXCLUDED.data_sessao,
+                     tipo_processo      = EXCLUDED.tipo_processo,
+                     relator            = EXCLUDED.relator,
+                     acordao            = COALESCE(EXCLUDED.acordao, tcu_acordaos.acordao),
+                     num_ata            = COALESCE(EXCLUDED.num_ata, tcu_acordaos.num_ata),
+                     proc               = COALESCE(EXCLUDED.proc, tcu_acordaos.proc),
+                     interessados       = COALESCE(EXCLUDED.interessados, tcu_acordaos.interessados),
+                     assunto            = COALESCE(EXCLUDED.assunto, tcu_acordaos.assunto),
+                     sumario            = COALESCE(EXCLUDED.sumario, tcu_acordaos.sumario),
+                     decisao            = COALESCE(EXCLUDED.decisao, tcu_acordaos.decisao),
+                     ultima_atualizacao = EXCLUDED.ultima_atualizacao`,
+                  [
+                    finalKey,
+                    `AC\xD3RD\xC3O ${ac.numAcordao}/${ac.anoAcordao} - ${(ac.colegiado || "").toUpperCase()}`,
+                    ac.numAcordao,
+                    ac.anoAcordao,
+                    ac.colegiado,
+                    ac.dataSessao,
+                    compData?.situacao || "OFICIALIZADO",
+                    ac.tipoProcesso,
+                    compData?.relator || ac.relator,
+                    "Pendente",
+                    updatedAt,
+                    compData?.acordao ?? null,
+                    compData?.num_ata ?? null,
+                    compData?.proc ?? ac.processo ?? null,
+                    compData?.acordaos_relacionados ?? null,
+                    compData?.interessados ?? null,
+                    compData?.entidade ?? null,
+                    compData?.unidade_tecnica ?? ac.unidadeTecnica ?? null,
+                    compData?.assunto ?? null,
+                    compData?.sumario ?? null,
+                    compData?.decisao ?? null
+                  ]
+                );
+                inseridos++;
+              }
+            } catch (errItem) {
+              console.error(
+                `[SYNC] Erro ao processar ac\xF3rd\xE3o ${ac.numAcordao}/${ac.anoAcordao}:`,
+                errItem.message
+              );
+              erros++;
+            }
+          }
+          await client.query("COMMIT");
+        } catch (errTx) {
+          await client.query("ROLLBACK");
+          throw errTx;
+        } finally {
+          client.release();
+        }
+        totalImportados += inseridos;
+        totalAtualizados += atualizados;
+        await atualizarStatusImportacao({
+          id: importControlId,
+          status: erros > 0 && inseridos + atualizados === 0 ? "ERRO" : erros > 0 ? "PARCIAL" : "CONCLUIDO",
+          quantidade_inseridos: inseridos,
+          quantidade_atualizados: atualizados,
+          quantidade_ignorados: ignorados,
+          quantidade_erros: erros,
+          eh_historico: ehHistorico,
+          observacoes: `Arquivo: ${arquivo}. Encoding detectado automaticamente.`
+        });
+        console.timeEnd(`[SYNC] Tempo total ${arquivo}`);
+        console.log(
+          `[SYNC] ${arquivo}: inseridos=${inseridos}, atualizados=${atualizados}, erros=${erros}`
+        );
+        reportGeral.push({
+          arquivo,
+          ano: anoArquivo,
+          status: statusAno,
+          inseridos,
+          atualizados,
+          erros
+        });
+      } catch (errArquivo) {
+        console.error(`[SYNC] Erro fatal no arquivo ${arquivo}:`, errArquivo);
+        if (importControlId) {
+          await registrarErroImportacao(importControlId, errArquivo);
+        }
+        reportGeral.push({
+          arquivo,
+          erro: errArquivo.message
+        });
+      }
+    }
+    console.log(
+      `
+[SYNC] \u2550\u2550\u2550 Sincroniza\xE7\xE3o conclu\xEDda. Total: ${totalImportados} inseridos, ${totalAtualizados} atualizados \u2550\u2550\u2550`
+    );
+  })().catch((err) => {
+    console.error("[SYNC] Erro cr\xEDtico no processamento em background:", err);
+  });
+});
+router3.get("/acordaos/import-status", async (req, res) => {
+  try {
+    const status = await getStatusImportacoes();
+    res.json({ success: true, data: status });
   } catch (err) {
-    console.error("Erro na sincronizacao local:", err);
-    res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });
+    console.error("[IMPORT-STATUS] Erro:", err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
-function cleanEncoding2(text) {
-  if (!text) return "";
-  let decoded = text;
-  if (decoded.includes("\xC3\xA2") || decoded.includes("\xC3\xA7") || decoded.includes("\xC3\xA3") || decoded.includes("\xC3\xB3")) {
-    try {
-      decoded = Buffer.from(decoded, "binary").toString("utf8");
-    } catch (e) {
-    }
-  }
-  return decoded;
-}
 router3.get("/acordaos", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        key, titulo, num_acordao, ano_acordao, num_ata, colegiado, data_sessao, 
-        situacao, proc, acordaos_relacionados, tipo_processo, interessados, 
-        entidade, unidade_tecnica, relator, assunto, sumario, decisao, 
-        recomendacoes, determinacoes, recomendacoes_determinacoes_unificado, 
-        status_monitoramento, responsavel_interno, prazo_limite, observacoes, 
+      SELECT
+        key, titulo, num_acordao, ano_acordao, num_ata, colegiado, data_sessao,
+        situacao, proc, acordaos_relacionados, tipo_processo, interessados,
+        entidade, unidade_tecnica, relator, assunto, sumario, decisao,
+        recomendacoes, determinacoes, recomendacoes_determinacoes_unificado,
+        status_monitoramento, responsavel_interno, prazo_limite, observacoes,
         ultima_atualizacao, ai_analysis_data
       FROM tcu_acordaos
+      ORDER BY ano_acordao DESC, num_acordao DESC
     `);
-    const mapped = result.rows.map((row) => ({
-      KEY: row.key,
-      TITULO: cleanEncoding2(row.titulo),
-      NUMACORDAO: row.num_acordao,
-      ANOACORDAO: row.ano_acordao,
-      NUMATA: row.num_ata,
-      COLEGIADO: cleanEncoding2(row.colegiado),
-      DATASESSAO: row.data_sessao,
-      SITUACAO: row.situacao,
-      PROC: row.proc,
-      ACORDAOSRELACIONADOS: row.acordaos_relacionados,
-      TIPOPROCESSO: row.tipo_processo,
-      INTERESSADOS: cleanEncoding2(row.interessados),
-      ENTIDADE: cleanEncoding2(row.entidade),
-      UNIDADETECNICA: cleanEncoding2(row.unidade_tecnica),
-      RELATOR: cleanEncoding2(row.relator),
-      ASSUNTO: cleanEncoding2(row.assunto),
-      SUMARIO: cleanEncoding2(row.sumario),
+    const mapped = result.rows.map((row2) => ({
+      KEY: row2.key,
+      TITULO: row2.titulo,
+      NUMACORDAO: row2.num_acordao,
+      ANOACORDAO: row2.ano_acordao,
+      NUMATA: row2.num_ata,
+      COLEGIADO: row2.colegiado,
+      DATASESSAO: row2.data_sessao,
+      SITUACAO: row2.situacao,
+      PROC: row2.proc,
+      ACORDAOSRELACIONADOS: row2.acordaos_relacionados,
+      TIPOPROCESSO: row2.tipo_processo,
+      INTERESSADOS: row2.interessados,
+      ENTIDADE: row2.entidade,
+      UNIDADETECNICA: row2.unidade_tecnica,
+      RELATOR: row2.relator,
+      ASSUNTO: row2.assunto,
+      SUMARIO: row2.sumario,
       ACORDAO: "",
-      // Omitted to save bandwidth and memory
-      DECISAO: cleanEncoding2(row.decisao),
-      RECOMENDACOES: cleanEncoding2(row.recomendacoes),
-      DETERMINACOES: cleanEncoding2(row.determinacoes),
-      RECOMENDACOES_DETERMINACOES_UNIFICADO: cleanEncoding2(row.recomendacoes_determinacoes_unificado),
-      STATUS_MONITORAMENTO: row.status_monitoramento,
-      RESPONSAVEL_INTERNO: row.responsavel_interno,
-      PRAZO_LIMITE: row.prazo_limite,
-      OBSERVACOES: cleanEncoding2(row.observacoes),
-      ULTIMA_ATUALIZACAO: row.ultima_atualizacao,
-      aiAnalysisData: row.ai_analysis_data
+      // Omitido intencionalmente para economizar banda — use GET /acordaos/:key/teor
+      DECISAO: row2.decisao,
+      RECOMENDACOES: row2.recomendacoes,
+      DETERMINACOES: row2.determinacoes,
+      RECOMENDACOES_DETERMINACOES_UNIFICADO: row2.recomendacoes_determinacoes_unificado,
+      STATUS_MONITORAMENTO: row2.status_monitoramento,
+      RESPONSAVEL_INTERNO: row2.responsavel_interno,
+      PRAZO_LIMITE: row2.prazo_limite,
+      OBSERVACOES: row2.observacoes,
+      ULTIMA_ATUALIZACAO: row2.ultima_atualizacao,
+      aiAnalysisData: row2.ai_analysis_data
     }));
     res.json(mapped);
   } catch (err) {
-    console.error("Error fetching Ac\xF3rd\xE3os from Postgres:", err);
-    res.status(500).json({ error: "Failed to fetch Ac\xF3rd\xE3os." });
+    console.error("Erro ao buscar Ac\xF3rd\xE3os:", err);
+    res.status(500).json({ error: "Falha ao buscar Ac\xF3rd\xE3os." });
   }
 });
-function cleanTeor(rawTeor) {
+function limparTeor(rawTeor) {
   if (!rawTeor) return "";
   let text = rawTeor;
-  if (text.includes("\xC3\xA2") || text.includes("\xC3\xA7") || text.includes("\xC3\xA3") || text.includes("\xC3\xB3")) {
-    try {
-      text = Buffer.from(text, "binary").toString("utf8");
-    } catch (e) {
-    }
-  }
   text = text.replace(/<br\s*[\/]?>/gi, "\n");
   text = text.replace(/<p[^>]*>/gi, "\n\n");
   text = text.replace(/<\/p>/gi, "");
-  text = text.replace(/<[^>]*>?/gm, "");
+  text = text.replace(/<[^>]*>?/gm, "\n");
+  text = text.replace(/\n{3,}/g, "\n\n");
   text = text.replace(/&nbsp;/g, " ");
   text = text.replace(/&amp;/g, "&");
   text = text.replace(/&lt;/g, "<");
@@ -1137,32 +1478,37 @@ function cleanTeor(rawTeor) {
 router3.get("/acordaos/:key/teor", async (req, res) => {
   try {
     const { key } = req.params;
-    const result = await pool.query("SELECT acordao FROM tcu_acordaos WHERE key = $1", [key]);
+    const result = await pool.query(
+      "SELECT acordao FROM tcu_acordaos WHERE key = $1",
+      [key]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado." });
     }
-    const cleanText = cleanTeor(result.rows[0].acordao || "");
+    const cleanText = limparTeor(result.rows[0].acordao || "");
     res.json({ acordao: cleanText });
   } catch (err) {
-    console.error("Error fetching teor from Postgres:", err);
-    res.status(500).json({ error: "Failed to fetch teor." });
+    console.error("Erro ao buscar inteiro teor:", err);
+    res.status(500).json({ error: "Falha ao buscar inteiro teor." });
   }
 });
 router3.post("/acordaos/update", async (req, res) => {
   try {
     const updated = req.body;
-    const updatedAt = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     const query = `
       UPDATE tcu_acordaos SET
         titulo = $2, num_acordao = $3, ano_acordao = $4, num_ata = $5,
         colegiado = $6, data_sessao = $7, situacao = $8, proc = $9,
         acordaos_relacionados = $10, tipo_processo = $11, interessados = $12,
         entidade = $13, unidade_tecnica = $14, relator = $15, assunto = $16,
-        sumario = $17, acordao = $18, decisao = $19, recomendacoes = $20,
-        determinacoes = $21, recomendacoes_determinacoes_unificado = $22, status_monitoramento = $23,
-        responsavel_interno = $24, prazo_limite = $25, observacoes = $26,
-        ultima_atualizacao = $27, ai_analysis_data = $28
-      WHERE key = $1 RETURNING *
+        sumario = $17, decisao = $18, recomendacoes = $19,
+        determinacoes = $20, recomendacoes_determinacoes_unificado = $21,
+        status_monitoramento = $22, responsavel_interno = $23,
+        prazo_limite = $24, observacoes = $25,
+        ultima_atualizacao = $26, ai_analysis_data = $27
+      WHERE key = $1
+      RETURNING key
     `;
     const values = [
       updated.KEY,
@@ -1198,11 +1544,11 @@ router3.post("/acordaos/update", async (req, res) => {
     if (result.rowCount && result.rowCount > 0) {
       res.json({ success: true, item: updated });
     } else {
-      res.status(404).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado no Postgres." });
+      res.status(404).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado." });
     }
   } catch (err) {
-    console.error("Error updating Ac\xF3rd\xE3o in Postgres:", err);
-    res.status(500).json({ error: "Failed to update Ac\xF3rd\xE3o." });
+    console.error("Erro ao atualizar Ac\xF3rd\xE3o:", err);
+    res.status(500).json({ error: "Falha ao atualizar Ac\xF3rd\xE3o." });
   }
 });
 router3.delete("/acordaos/:key", async (req, res) => {
@@ -1211,8 +1557,8 @@ router3.delete("/acordaos/:key", async (req, res) => {
     await pool.query("DELETE FROM tcu_acordaos WHERE key = $1", [key]);
     res.json({ success: true });
   } catch (err) {
-    console.error("Error deleting Ac\xF3rd\xE3o from Postgres:", err);
-    res.status(500).json({ error: "Failed to delete Ac\xF3rd\xE3o." });
+    console.error("Erro ao excluir Ac\xF3rd\xE3o:", err);
+    res.status(500).json({ error: "Falha ao excluir Ac\xF3rd\xE3o." });
   }
 });
 router3.post("/acordaos/:key/analisar-ressarcimento", async (req, res) => {
@@ -1221,46 +1567,23 @@ router3.post("/acordaos/:key/analisar-ressarcimento", async (req, res) => {
     const result = await processSingleAcordao(key);
     res.json({ success: true, ...result });
   } catch (err) {
-    console.error("[AI Dossie API] Erro:", err.message);
+    console.error("[AI] Erro na an\xE1lise de ressarcimento:", err.message);
     res.status(500).json({ error: err.message });
-  }
-});
-router3.post("/acordaos/aprender", (req, res) => {
-  const { tipo, palavra } = req.body;
-  if (!tipo || !palavra) {
-    return res.status(400).json({ error: "Faltam par\xE2metros tipo ou palavra." });
-  }
-  const DICT_PATH = import_path4.default.join(DATA_DIR2, "orbita_dictionary.json");
-  try {
-    let dict = {};
-    if (import_fs5.default.existsSync(DICT_PATH)) {
-      dict = JSON.parse(import_fs5.default.readFileSync(DICT_PATH, "utf-8"));
-    }
-    const key = `keywords${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
-    if (!dict[key]) {
-      dict[key] = [];
-    }
-    const kw = palavra.toLowerCase().trim();
-    if (!dict[key].includes(kw)) {
-      dict[key].push(kw);
-      import_fs5.default.writeFileSync(DICT_PATH, JSON.stringify(dict, null, 2), "utf-8");
-    }
-    return res.json({ success: true, message: `Express\xE3o '${kw}' aprendida com sucesso para ${tipo}!` });
-  } catch (err) {
-    console.error("Erro ao aprender nova palavra:", err);
-    return res.status(500).json({ error: "Falha ao salvar no dicion\xE1rio." });
   }
 });
 router3.post("/acordaos/:key/auditoria-profunda", async (req, res) => {
   const { key } = req.params;
   try {
-    const acResult = await pool.query("SELECT * FROM tcu_acordaos WHERE key = $1", [key]);
+    const acResult = await pool.query(
+      "SELECT * FROM tcu_acordaos WHERE key = $1",
+      [key]
+    );
     if (acResult.rows.length === 0) {
       return res.status(404).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado." });
     }
     const acordao = acResult.rows[0];
     if (!acordao.acordao || acordao.acordao.trim() === "") {
-      return res.status(400).json({ error: "Ac\xF3rd\xE3o n\xE3o encontrado ou sem inteiro teor." });
+      return res.status(400).json({ error: "Ac\xF3rd\xE3o sem inteiro teor. Execute a sincroniza\xE7\xE3o primeiro." });
     }
     const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
@@ -1270,8 +1593,8 @@ router3.post("/acordaos/:key/auditoria-profunda", async (req, res) => {
     const textChunk = acordao.acordao.substring(0, 25e3);
     const prompt = `
 # ROLE E OBJETIVO
-Voc\xEA \xE9 o motor de extra\xE7\xE3o sem\xE2ntica e an\xE1lise de conformidade do sistema \xD3RBITA. 
-Responda \xE0s seguintes perguntas ou instru\xE7\xF5es do usu\xE1rio com base no texto abaixo.
+Voc\xEA \xE9 o motor de extra\xE7\xE3o sem\xE2ntica do sistema \xD3RBITA.
+Responda \xE0 pergunta do usu\xE1rio com base no texto do Ac\xF3rd\xE3o abaixo.
 
 Texto do Ac\xF3rd\xE3o:
 """
@@ -1289,22 +1612,78 @@ ${req.body.pergunta || "Fa\xE7a um resumo executivo deste Ac\xF3rd\xE3o."}
     return res.json({ success: true, analise: response.text });
   } catch (error) {
     console.error("[Auditoria Profunda] Erro:", error);
-    return res.status(500).json({ error: "Falha na an\xE1lise de intelig\xEAncia artificial profunda." });
+    return res.status(500).json({ error: "Falha na an\xE1lise de intelig\xEAncia artificial." });
+  }
+});
+router3.post("/acordaos/aprender", (req, res) => {
+  const { tipo, palavra } = req.body;
+  if (!tipo || !palavra) {
+    return res.status(400).json({ error: "Faltam par\xE2metros tipo ou palavra." });
+  }
+  const DICT_PATH = import_path5.default.join(DATA_DIR2, "orbita_dictionary.json");
+  try {
+    let dict = {};
+    if (import_fs6.default.existsSync(DICT_PATH)) {
+      dict = JSON.parse(import_fs6.default.readFileSync(DICT_PATH, "utf-8"));
+    }
+    const key = `keywords${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+    if (!dict[key]) dict[key] = [];
+    const kw = palavra.toLowerCase().trim();
+    if (!dict[key].includes(kw)) {
+      dict[key].push(kw);
+      import_fs6.default.writeFileSync(DICT_PATH, JSON.stringify(dict, null, 2), "utf-8");
+    }
+    return res.json({
+      success: true,
+      message: `Express\xE3o '${kw}' aprendida para ${tipo}!`
+    });
+  } catch (err) {
+    console.error("Erro ao aprender nova palavra:", err);
+    return res.status(500).json({ error: "Falha ao salvar no dicion\xE1rio." });
   }
 });
 var acordaoRoutes_default = router3;
 
 // src/backend/routes/tceRoutes.ts
 var import_express4 = __toESM(require("express"), 1);
-var import_fs6 = __toESM(require("fs"), 1);
-var import_path5 = __toESM(require("path"), 1);
+init_db();
+var import_fs7 = __toESM(require("fs"), 1);
+var import_path6 = __toESM(require("path"), 1);
 var router4 = import_express4.default.Router();
+router4.get("/files/last-updates", (req, res) => {
+  const getMostRecentDate = (dirPath) => {
+    try {
+      if (!import_fs7.default.existsSync(dirPath)) return null;
+      const files = import_fs7.default.readdirSync(dirPath).filter((f) => f.toLowerCase().endsWith(".csv"));
+      if (files.length === 0) return null;
+      let maxTime = 0;
+      for (const file of files) {
+        const stat = import_fs7.default.statSync(import_path6.default.join(dirPath, file));
+        if (stat.mtimeMs > maxTime) maxTime = stat.mtimeMs;
+      }
+      return maxTime > 0 ? new Date(maxTime).toLocaleString("pt-BR") : null;
+    } catch {
+      return null;
+    }
+  };
+  const tcuAcordaos = getMostRecentDate(import_path6.default.join(process.cwd(), "data", "tcu", "acordaos"));
+  const tcuTces = getMostRecentDate(import_path6.default.join(process.cwd(), "data", "tcu", "tces"));
+  const tcuComs = getMostRecentDate(import_path6.default.join(process.cwd(), "data", "tcu", "comunicacoes"));
+  res.json({
+    success: true,
+    data: {
+      acordaos: tcuAcordaos,
+      tces: tcuTces,
+      comunicacoes: tcuComs
+    }
+  });
+});
 router4.post("/tces/sync-local", async (req, res) => {
-  const TCE_DIR = import_path5.default.join(process.cwd(), "data", "tcu", "tces");
-  if (!import_fs6.default.existsSync(TCE_DIR)) {
+  const TCE_DIR = import_path6.default.join(process.cwd(), "data", "tcu", "tces");
+  if (!import_fs7.default.existsSync(TCE_DIR)) {
     return res.status(400).json({ success: false, message: "Diret\xF3rio data/tcu/tces n\xE3o encontrado." });
   }
-  const files = import_fs6.default.readdirSync(TCE_DIR);
+  const files = import_fs7.default.readdirSync(TCE_DIR);
   const csvFiles = files.filter((f) => f.toLowerCase().endsWith(".csv"));
   if (csvFiles.length === 0) {
     return res.json({ success: false, message: "Nenhum arquivo .csv encontrado na pasta data/tcu/tces/." });
@@ -1315,7 +1694,7 @@ router4.post("/tces/sync-local", async (req, res) => {
     let importedMap = 0;
     let updatedMap = 0;
     const updatedAt = (/* @__PURE__ */ new Date()).toLocaleString("pt-BR");
-    const parseCSVRobust = (csvText, delimiter) => {
+    const parseCSVRobust2 = (csvText, delimiter) => {
       const rows = [];
       let currentField = "";
       let currentRow = [];
@@ -1371,12 +1750,36 @@ router4.post("/tces/sync-local", async (req, res) => {
       if (match) return parseInt(match[0]);
       return 2026;
     };
+    const fixExcelDateTce = (str) => {
+      if (!str) return "";
+      const meses = {
+        jan: 1,
+        fev: 2,
+        mar: 3,
+        abr: 4,
+        mai: 5,
+        jun: 6,
+        jul: 7,
+        ago: 8,
+        set: 9,
+        out: 10,
+        nov: 11,
+        dez: 12
+      };
+      const match = str.trim().toLowerCase().match(/^(jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)\/(\d{2})$/);
+      if (match) {
+        const month = meses[match[1]];
+        const year = "20" + match[2];
+        return `${month}/${year}`;
+      }
+      return str.trim();
+    };
     for (const file of csvFiles) {
       console.log(`[SYNC-LOCAL-TCES] Iniciando processamento do arquivo: ${file}`);
       console.time(`Processamento ${file}`);
       const isMapping = file.toLowerCase().includes("acordao") || file.toLowerCase().includes("ac\xF3rd\xE3o") || file.toLowerCase().includes("mapping");
-      const filePath = import_path5.default.join(TCE_DIR, file);
-      let contentStr = import_fs6.default.readFileSync(filePath, "latin1");
+      const filePath = import_path6.default.join(TCE_DIR, file);
+      let contentStr = import_fs7.default.readFileSync(filePath, "latin1");
       if (!contentStr || contentStr.trim().length < 10) continue;
       const firstLineEnd = contentStr.indexOf("\n");
       const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
@@ -1386,7 +1789,7 @@ router4.post("/tces/sync-local", async (req, res) => {
       let delimiter = ",";
       if (semiCount > commaCount && semiCount > tabCount) delimiter = ";";
       else if (tabCount > commaCount && tabCount > semiCount) delimiter = "	";
-      const allRows = parseCSVRobust(contentStr, delimiter);
+      const allRows = parseCSVRobust2(contentStr, delimiter);
       if (allRows.length < 2) continue;
       if (isMapping) {
         let headerRowIdx = 0;
@@ -1413,7 +1816,8 @@ router4.post("/tces/sync-local", async (req, res) => {
           const fields = allRows[i];
           if (fields.length < 2) continue;
           let tceVal = fields[colTCE]?.trim();
-          let acordaoVal = fields[colAcordao]?.trim();
+          tceVal = fixExcelDateTce(tceVal);
+          const acordaoVal = fields[colAcordao]?.trim();
           if (tceVal && acordaoVal) {
             tceVal = tceVal.replace(/\|/g, "/");
             const checkResult = await pool.query("SELECT 1 FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2", [tceVal, acordaoVal]);
@@ -1464,7 +1868,8 @@ router4.post("/tces/sync-local", async (req, res) => {
           const fields = allRows[i];
           if (fields.length < 5) continue;
           const getFieldValue = (colIdx, fallback = "") => colIdx !== -1 && colIdx < fields.length ? fields[colIdx] || fallback : fallback;
-          const numeroAnoTce = getFieldValue(colNumeroAno !== -1 ? colNumeroAno : 0, `TCE ${i}`);
+          let numeroAnoTce = getFieldValue(colNumeroAno !== -1 ? colNumeroAno : 0, `TCE ${i}`);
+          numeroAnoTce = fixExcelDateTce(numeroAnoTce);
           const pa = getFieldValue(colPA !== -1 ? colPA : 6);
           const motivo = getFieldValue(colMotivo !== -1 ? colMotivo : 7);
           const submotivo = getFieldValue(colSubmotivo !== -1 ? colSubmotivo : 8);
@@ -1550,7 +1955,7 @@ router4.post("/tces/sync-local", async (req, res) => {
     res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });
   }
 });
-function cleanEncoding3(text) {
+function cleanEncoding2(text) {
   if (!text) return "";
   let decoded = text;
   if (decoded.includes("\xC3\xA2") || decoded.includes("\xC3\xA7") || decoded.includes("\xC3\xA3") || decoded.includes("\xC3\xB3") || decoded.includes("\xC3")) {
@@ -1564,25 +1969,25 @@ function cleanEncoding3(text) {
 router4.get("/tces", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM tcu_tce");
-    const mapped = result.rows.map((row) => ({
-      id: row.id,
-      NUMERO_ANO_TCE: cleanEncoding3(row.numero_ano_tce),
-      PROCESSO_ADMINISTRATIVO: cleanEncoding3(row.processo_administrativo),
-      MOTIVO_INSTAURACAO: cleanEncoding3(row.motivo_instauracao),
-      SUBMOTIVO_INSTAURACAO: cleanEncoding3(row.submotivo_instauracao),
-      DEBITO_ORIGINAL: cleanEncoding3(row.debito_original),
-      DEBITO_ATUALIZADO: cleanEncoding3(row.debito_atualizado),
-      DATA_ATUALIZACAO_DEBITO: cleanEncoding3(row.data_atualizacao_debito),
-      ULTIMO_POSICIONAMENTO: cleanEncoding3(row.ultimo_posicionamento),
-      TC: cleanEncoding3(row.tc),
-      ESTADO_PROCESSO: cleanEncoding3(row.estado_processo),
-      SITUACAO_PROCESSO: cleanEncoding3(row.situacao_processo),
-      PRIMEIRO_JULGAMENTO: cleanEncoding3(row.primeiro_julgamento),
-      ENCERRAMENTO: cleanEncoding3(row.encerramento),
-      NUMERO_SIAFI: cleanEncoding3(row.numero_siafi),
-      SIAFI_RESSARCIDO: cleanEncoding3(row.siafi_ressarcido),
-      ANO: row.ano,
-      ULTIMA_ATUALIZACAO: row.ultima_atualizacao
+    const mapped = result.rows.map((row2) => ({
+      id: row2.id,
+      NUMERO_ANO_TCE: cleanEncoding2(row2.numero_ano_tce),
+      PROCESSO_ADMINISTRATIVO: cleanEncoding2(row2.processo_administrativo),
+      MOTIVO_INSTAURACAO: cleanEncoding2(row2.motivo_instauracao),
+      SUBMOTIVO_INSTAURACAO: cleanEncoding2(row2.submotivo_instauracao),
+      DEBITO_ORIGINAL: cleanEncoding2(row2.debito_original),
+      DEBITO_ATUALIZADO: cleanEncoding2(row2.debito_atualizado),
+      DATA_ATUALIZACAO_DEBITO: cleanEncoding2(row2.data_atualizacao_debito),
+      ULTIMO_POSICIONAMENTO: cleanEncoding2(row2.ultimo_posicionamento),
+      TC: cleanEncoding2(row2.tc),
+      ESTADO_PROCESSO: cleanEncoding2(row2.estado_processo),
+      SITUACAO_PROCESSO: cleanEncoding2(row2.situacao_processo),
+      PRIMEIRO_JULGAMENTO: cleanEncoding2(row2.primeiro_julgamento),
+      ENCERRAMENTO: cleanEncoding2(row2.encerramento),
+      NUMERO_SIAFI: cleanEncoding2(row2.numero_siafi),
+      SIAFI_RESSARCIDO: cleanEncoding2(row2.siafi_ressarcido),
+      ANO: row2.ano,
+      ULTIMA_ATUALIZACAO: row2.ultima_atualizacao
     }));
     res.json(mapped);
   } catch (err) {
@@ -1737,9 +2142,9 @@ router4.post("/tces/import", async (req, res) => {
 router4.get("/tce-mappings", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM tcu_tce_acordao_mapping");
-    const mapped = result.rows.map((row) => ({
-      NUMERO_ANO_TCE: row.numero_ano_tce,
-      ACORDAO_KEY: row.acordao_key
+    const mapped = result.rows.map((row2) => ({
+      NUMERO_ANO_TCE: row2.numero_ano_tce,
+      ACORDAO_KEY: row2.acordao_key
     }));
     res.json(mapped);
   } catch (err) {
@@ -1781,10 +2186,43 @@ router4.post("/tce-mappings/import", async (req, res) => {
     res.status(500).json({ error: "Failed to import TCE mappings." });
   }
 });
+router4.post("/tce-mappings/add", async (req, res) => {
+  try {
+    const { NUMERO_ANO_TCE, ACORDAO_KEY } = req.body;
+    const checkResult = await pool.query(
+      "SELECT 1 FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2",
+      [NUMERO_ANO_TCE, ACORDAO_KEY]
+    );
+    if (checkResult.rows.length === 0) {
+      await pool.query(
+        "INSERT INTO tcu_tce_acordao_mapping (numero_ano_tce, acordao_key) VALUES ($1, $2)",
+        [NUMERO_ANO_TCE, ACORDAO_KEY]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error adding TCE mapping:", err);
+    res.status(500).json({ error: "Failed to add TCE mapping." });
+  }
+});
+router4.post("/tce-mappings/delete", async (req, res) => {
+  try {
+    const { NUMERO_ANO_TCE, ACORDAO_KEY } = req.body;
+    await pool.query(
+      "DELETE FROM tcu_tce_acordao_mapping WHERE numero_ano_tce = $1 AND acordao_key = $2",
+      [NUMERO_ANO_TCE, ACORDAO_KEY]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Error deleting TCE mapping:", err);
+    res.status(500).json({ error: "Failed to delete TCE mapping." });
+  }
+});
 var tceRoutes_default = router4;
 
 // src/backend/routes/eticaRoutes.ts
 var import_express5 = __toESM(require("express"), 1);
+init_db();
 var router5 = import_express5.default.Router();
 router5.get("/comissao-etica", (req, res) => res.json([]));
 router5.get("/etica/membros", async (req, res) => {
@@ -1943,6 +2381,7 @@ var eticaRoutes_default = router5;
 
 // src/backend/routes/scdpRoutes.ts
 var import_express6 = __toESM(require("express"), 1);
+init_db();
 var router6 = import_express6.default.Router();
 router6.get("/scdp/viagens", async (req, res) => {
   try {
@@ -2006,48 +2445,512 @@ router6.post("/scdp/viagens/:id/confirm-gru", async (req, res) => {
     res.status(500).json({ error: "Erro interno" });
   }
 });
+router6.post("/scdp/import-local-files", async (req, res) => {
+  try {
+    const { iniciarImportacao: iniciarImportacao2, atualizarStatusImportacao: atualizarStatusImportacao2, registrarErroImportacao: registrarErroImportacao2 } = await Promise.resolve().then(() => (init_importControl(), importControl_exports));
+    const { items } = req.body ?? {};
+    const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const usuarioId = req.session?.user?.id ?? "SISTEMA";
+    const importControlId = await iniciarImportacao2({
+      modulo: "SCDP_VIAGENS",
+      ano_referencia: (/* @__PURE__ */ new Date()).getFullYear(),
+      tipo_arquivo: "JSON_UPLOAD",
+      forcado_por_usuario: usuarioId
+    });
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      await atualizarStatusImportacao2({
+        id: importControlId,
+        status: "CONCLUIDO",
+        quantidade_inseridos: 0,
+        observacoes: "Nenhum item recebido. Retornando dados existentes."
+      });
+      const result = await pool.query(
+        "SELECT * FROM scdp_viagens ORDER BY data_inicio DESC"
+      );
+      return res.json({
+        success: true,
+        recordsUpdated: 0,
+        message: "Nenhum dado novo para importar.",
+        data: result.rows
+      });
+    }
+    await atualizarStatusImportacao2({
+      id: importControlId,
+      status: "PROCESSANDO",
+      quantidade_linhas_csv: items.length
+    });
+    let recordsUpdated = 0;
+    let erros = 0;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const item of items) {
+        try {
+          await client.query(
+            `INSERT INTO scdp_viagens (
+               id, nome_viajante, cpf_viajante, siape_viajante, email_viajante,
+               data_inicio, data_fim, destino, motivo_viagem,
+               valor_passagem, valor_diarias,
+               siafi_gru_devolucao_confirmada, siafi_detalhes_status,
+               siafi_confirmado, siafi_scdp_divergencia, ultima_atualizacao
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+             ON CONFLICT (id) DO UPDATE SET
+               nome_viajante               = EXCLUDED.nome_viajante,
+               data_inicio                 = EXCLUDED.data_inicio,
+               data_fim                    = EXCLUDED.data_fim,
+               destino                     = EXCLUDED.destino,
+               motivo_viagem               = EXCLUDED.motivo_viagem,
+               valor_passagem              = EXCLUDED.valor_passagem,
+               valor_diarias               = EXCLUDED.valor_diarias,
+               siafi_scdp_divergencia      = EXCLUDED.siafi_scdp_divergencia,
+               ultima_atualizacao          = EXCLUDED.ultima_atualizacao`,
+            [
+              item.id,
+              item.nomeViajante ?? null,
+              item.cpfViajante ?? null,
+              item.siapeViajante ?? null,
+              item.emailViajante ?? null,
+              item.dataInicio ?? null,
+              item.dataFim ?? null,
+              item.destino ?? null,
+              item.motivoViagem ?? null,
+              item.valorPassagem ?? 0,
+              item.valorDiarias ?? 0,
+              item.siafiGruDevolucaoConfirmada ?? false,
+              item.siafiDetalhesStatus ?? null,
+              item.siafiConfirmado ?? false,
+              item.siafiScdpDivergencia ?? false,
+              updatedAt
+            ]
+          );
+          recordsUpdated++;
+        } catch (errItem) {
+          console.error(`[SCDP-IMPORT] Erro no item ${item.id}:`, errItem.message);
+          erros++;
+        }
+      }
+      await client.query("COMMIT");
+    } catch (errTx) {
+      await client.query("ROLLBACK");
+      throw errTx;
+    } finally {
+      client.release();
+    }
+    await atualizarStatusImportacao2({
+      id: importControlId,
+      status: erros > 0 && recordsUpdated === 0 ? "ERRO" : erros > 0 ? "PARCIAL" : "CONCLUIDO",
+      quantidade_inseridos: recordsUpdated,
+      quantidade_erros: erros,
+      observacoes: `Importa\xE7\xE3o manual pelo usu\xE1rio ${usuarioId}.`
+    });
+    return res.json({
+      success: true,
+      recordsUpdated,
+      message: `${recordsUpdated} viagem(ns) importada(s) com sucesso.`
+    });
+  } catch (err) {
+    console.error("[SCDP-IMPORT] Erro fatal:", err);
+    return res.status(500).json({ error: "Erro interno ao importar viagens SCDP." });
+  }
+});
+router6.get("/scdp/import-status", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT * FROM tcu_import_control
+       WHERE modulo = 'SCDP_VIAGENS'
+       ORDER BY created_at DESC
+       LIMIT 20`
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 var scdpRoutes_default = router6;
 
 // src/backend/routes/cguRoutes.ts
 var import_express7 = __toESM(require("express"), 1);
+init_db();
+var import_fs8 = __toESM(require("fs"), 1);
+var import_path7 = __toESM(require("path"), 1);
+init_importControl();
 var router7 = import_express7.default.Router();
+var MODULO_CGU = "CGU_DEMANDAS";
+var MODULO_CGU_REPORTS = "CGU_REPORTS";
+var parseCSVRobust = (csvText, delimiter) => {
+  const rows = [];
+  let currentField = "";
+  let currentRow = [];
+  let inQuotes = false;
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+    if (inQuotes) {
+      if (char === '"' && nextChar === '"') {
+        currentField += '"';
+        i++;
+      } else if (char === '"') {
+        const isEndOfField = nextChar === delimiter || nextChar === "\r" || nextChar === "\n" || nextChar === void 0;
+        if (isEndOfField) inQuotes = false;
+        else currentField += '"';
+      } else {
+        currentField += char;
+      }
+    } else {
+      if (char === '"') inQuotes = true;
+      else if (char === delimiter) {
+        currentRow.push(currentField.trim());
+        currentField = "";
+      } else if (char === "\r" && nextChar === "\n") {
+        currentRow.push(currentField.trim());
+        if (currentRow.length > 0) rows.push(currentRow);
+        currentRow = [];
+        currentField = "";
+        i++;
+      } else if (char === "\n") {
+        currentRow.push(currentField.trim());
+        if (currentRow.length > 0) rows.push(currentRow);
+        currentRow = [];
+        currentField = "";
+      } else {
+        currentField += char;
+      }
+    }
+  }
+  if (currentRow.length > 0 || currentField !== "") {
+    currentRow.push(currentField.trim());
+    rows.push(currentRow);
+  }
+  return rows;
+};
+var normalizeHeaderName = (str) => {
+  if (!str) return "";
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, "");
+};
+router7.get("/cgu/files/last-updates", (req, res) => {
+  const getMostRecentDate = (dirPath) => {
+    try {
+      if (!import_fs8.default.existsSync(dirPath)) return null;
+      const files = import_fs8.default.readdirSync(dirPath).filter((f) => f.toLowerCase().endsWith(".csv"));
+      if (files.length === 0) return null;
+      let maxTime = 0;
+      for (const file of files) {
+        const stat = import_fs8.default.statSync(import_path7.default.join(dirPath, file));
+        if (stat.mtimeMs > maxTime) maxTime = stat.mtimeMs;
+      }
+      return maxTime > 0 ? new Date(maxTime).toLocaleString("pt-BR") : null;
+    } catch {
+      return null;
+    }
+  };
+  const mon = getMostRecentDate(import_path7.default.join(process.cwd(), "data", "cgu", "monitoramentos"));
+  const rel = getMostRecentDate(import_path7.default.join(process.cwd(), "data", "cgu", "relatorios"));
+  res.json({
+    success: true,
+    data: {
+      monitoramentos: mon,
+      relatorios: rel
+    }
+  });
+});
 router7.get("/cgu", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM cgu_demands");
-    const mapped = result.rows.map((row) => ({
-      idTarefa: row.id_tarefa,
-      situacao: row.situacao,
-      estado: row.estado,
-      tituloTarefa: row.titulo_tarefa,
-      dataInicio: row.data_inicio,
-      dataFim: row.data_fim,
-      dataLimite: row.data_limite,
-      unidadeAuditada: row.unidade_auditada,
-      unidadesAuditoria: row.unidades_auditoria,
-      textoMonitoramento: row.texto_monitoramento,
-      providencia: row.providencia,
-      tipoUltimaManifestacao: row.tipo_ultima_manifestacao,
-      textoUltimaManifestacao: row.texto_ultima_manifestacao,
-      dataUltimaManifestacao: row.data_ultima_manifestacao,
-      tipoUltimoPosicionamento: row.tipo_ultimo_posicionamento,
-      textoUltimoPosicionamento: row.texto_ultimo_posicionamento,
-      dataUltimoPosicionamento: row.data_ultimo_posicionamento,
-      categoria: row.categoria,
-      dataLimiteInicial: row.data_limite_inicial,
-      ano: row.ano,
-      ultimaAtualizacao: row.ultima_atualizacao
+    const result = await pool.query("SELECT * FROM cgu_demands ORDER BY ano DESC, id_tarefa DESC");
+    const mapped = result.rows.map((row2) => ({
+      idTarefa: row2.id_tarefa,
+      situacao: row2.situacao,
+      estado: row2.estado,
+      tituloTarefa: row2.titulo_tarefa,
+      dataInicio: row2.data_inicio,
+      dataFim: row2.data_fim,
+      dataLimite: row2.data_limite,
+      unidadeAuditada: row2.unidade_auditada,
+      unidadesAuditoria: row2.unidades_auditoria,
+      textoMonitoramento: row2.texto_monitoramento,
+      providencia: row2.providencia,
+      tipoUltimaManifestacao: row2.tipo_ultima_manifestacao,
+      textoUltimaManifestacao: row2.texto_ultima_manifestacao,
+      dataUltimaManifestacao: row2.data_ultima_manifestacao,
+      tipoUltimoPosicionamento: row2.tipo_ultimo_posicionamento,
+      textoUltimoPosicionamento: row2.texto_ultimo_posicionamento,
+      dataUltimoPosicionamento: row2.data_ultimo_posicionamento,
+      categoria: row2.categoria,
+      dataLimiteInicial: row2.data_limite_inicial,
+      ano: row2.ano,
+      ultimaAtualizacao: row2.ultima_atualizacao
     }));
     res.json(mapped);
   } catch (error) {
-    console.error("Error fetching cgu demands:", error);
-    res.status(500).json({ error: "Erro interno" });
+    console.error("Erro ao buscar demandas CGU:", error);
+    res.status(500).json({ error: "Erro interno ao buscar demandas CGU." });
+  }
+});
+router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
+  const MON_DIR = import_path7.default.join(process.cwd(), "data", "cgu", "monitoramentos");
+  if (!import_fs8.default.existsSync(MON_DIR)) {
+    return res.status(404).json({ error: `Diret\xF3rio n\xE3o encontrado: ${MON_DIR}` });
+  }
+  const csvFiles = import_fs8.default.readdirSync(MON_DIR).filter((f) => f.toLowerCase().endsWith(".csv"));
+  if (csvFiles.length === 0) {
+    return res.status(404).json({ error: "Nenhum arquivo CSV encontrado em data/cgu/monitoramentos." });
+  }
+  const usuarioId = req.session?.user?.id ?? "SISTEMA";
+  const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  let importControlId = null;
+  let totalProcessado = 0;
+  let erros = 0;
+  let inseridos = 0;
+  try {
+    importControlId = await iniciarImportacao({
+      modulo: MODULO_CGU,
+      ano_referencia: (/* @__PURE__ */ new Date()).getFullYear(),
+      tipo_arquivo: "CSV_LOCAL",
+      forcado_por_usuario: usuarioId
+    });
+    await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
+    for (const file of csvFiles) {
+      const filePath = import_path7.default.join(MON_DIR, file);
+      let contentStr = import_fs8.default.readFileSync(filePath, "latin1");
+      if (!contentStr || contentStr.trim().length < 10) continue;
+      const firstLineEnd = contentStr.indexOf("\n");
+      const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
+      let delimiter = ";";
+      if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) {
+        delimiter = ",";
+      }
+      const allRows = parseCSVRobust(contentStr, delimiter);
+      if (allRows.length < 2) continue;
+      const headers = allRows[0].map(normalizeHeaderName);
+      const getIndex = (names) => {
+        for (const n of names) {
+          const i = headers.findIndex((h) => h.includes(n));
+          if (i !== -1) return i;
+        }
+        return -1;
+      };
+      const idxIdTarefa = getIndex(["idtarefa", "tarefa", "id"]);
+      const idxSituacao = getIndex(["situacao"]);
+      const idxEstado = getIndex(["estado"]);
+      const idxTitulo = getIndex(["titulo"]);
+      const idxInicio = getIndex(["datainicio", "inicio"]);
+      const idxFim = getIndex(["datafim", "fim"]);
+      const idxLimite = getIndex(["datalimite", "limite"]);
+      const idxUnidadeAuditada = getIndex(["unidadeauditada", "auditada"]);
+      const idxUnidadesAuditoria = getIndex(["unidadesauditoria", "auditoria"]);
+      const idxTextoMon = getIndex(["textomonitoramento", "monitoramento"]);
+      const idxProv = getIndex(["providencia"]);
+      const idxCat = getIndex(["categoria"]);
+      const idxAno = getIndex(["ano"]);
+      if (idxIdTarefa === -1) {
+        console.warn("Arquivo sem ID de Tarefa ignorado:", file);
+        continue;
+      }
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        for (let i = 1; i < allRows.length; i++) {
+          const row2 = allRows[i];
+          if (!row2 || row2.length < headers.length * 0.5) continue;
+          const id = row2[idxIdTarefa]?.trim();
+          if (!id) continue;
+          totalProcessado++;
+          const situacao = idxSituacao !== -1 ? row2[idxSituacao]?.trim() : null;
+          const estado = idxEstado !== -1 ? row2[idxEstado]?.trim() : null;
+          const titulo = idxTitulo !== -1 ? row2[idxTitulo]?.trim() : null;
+          const dtInicio = idxInicio !== -1 ? row2[idxInicio]?.trim() : null;
+          const dtFim = idxFim !== -1 ? row2[idxFim]?.trim() : null;
+          const dtLimite = idxLimite !== -1 ? row2[idxLimite]?.trim() : null;
+          const uniAuditada = idxUnidadeAuditada !== -1 ? row2[idxUnidadeAuditada]?.trim() : null;
+          const unisAuditoria = idxUnidadesAuditoria !== -1 ? row2[idxUnidadesAuditoria]?.trim() : null;
+          const txtMon = idxTextoMon !== -1 ? row2[idxTextoMon]?.trim() : null;
+          const prov = idxProv !== -1 ? row2[idxProv]?.trim() : null;
+          const cat = idxCat !== -1 ? row2[idxCat]?.trim() : null;
+          const anoStr = idxAno !== -1 ? row2[idxAno]?.trim() : null;
+          const anoVal = anoStr ? parseInt(anoStr.match(/\d{4}/)?.[0] || "0") : null;
+          try {
+            await client.query(`
+              INSERT INTO cgu_demands (
+                id_tarefa, situacao, estado, titulo_tarefa,
+                data_inicio, data_fim, data_limite, unidade_auditada,
+                unidades_auditoria, texto_monitoramento, providencia,
+                categoria, ano, ultima_atualizacao
+              ) VALUES (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+              )
+              ON CONFLICT (id_tarefa) DO UPDATE SET
+                situacao = EXCLUDED.situacao,
+                estado = EXCLUDED.estado,
+                titulo_tarefa = EXCLUDED.titulo_tarefa,
+                data_inicio = EXCLUDED.data_inicio,
+                data_fim = EXCLUDED.data_fim,
+                data_limite = EXCLUDED.data_limite,
+                unidade_auditada = EXCLUDED.unidade_auditada,
+                unidades_auditoria = EXCLUDED.unidades_auditoria,
+                texto_monitoramento = EXCLUDED.texto_monitoramento,
+                providencia = EXCLUDED.providencia,
+                categoria = EXCLUDED.categoria,
+                ano = EXCLUDED.ano,
+                ultima_atualizacao = EXCLUDED.ultima_atualizacao
+            `, [id, situacao, estado, titulo, dtInicio, dtFim, dtLimite, uniAuditada, unisAuditoria, txtMon, prov, cat, anoVal, updatedAt]);
+            inseridos++;
+          } catch (e) {
+            console.error("CGU Sync Error row:", id, e);
+            erros++;
+          }
+        }
+        await client.query("COMMIT");
+      } catch (errTx) {
+        await client.query("ROLLBACK");
+      } finally {
+        client.release();
+      }
+    }
+    await atualizarStatusImportacao({
+      id: importControlId,
+      status: erros > 0 && inseridos === 0 ? "ERRO" : erros > 0 ? "PARCIAL" : "CONCLUIDO",
+      quantidade_inseridos: inseridos,
+      quantidade_erros: erros
+    });
+    res.json({ success: true, importedCount: inseridos, erros });
+  } catch (err) {
+    if (importControlId) await registrarErroImportacao(importControlId, err);
+    res.status(500).json({ error: "Erro interno ao importar monitoramentos CGU." });
+  }
+});
+router7.get("/cgu/reports", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM cgu_reports ORDER BY ano DESC, data_publicacao DESC");
+    const mapped = result.rows.map((row2) => ({
+      idTarefa: row2.id_tarefa,
+      idAuditoria: row2.id_auditoria,
+      tituloAuditoria: row2.titulo_auditoria,
+      ano: row2.ano,
+      unidadeAuditada: row2.unidade_auditada,
+      categoria: row2.categoria,
+      link: row2.link,
+      dataPublicacao: row2.data_publicacao,
+      ultimaAtualizacao: row2.ultima_atualizacao
+    }));
+    res.json(mapped);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar relat\xF3rios da CGU." });
+  }
+});
+router7.post("/cgu/sync-local/relatorios", async (req, res) => {
+  const REL_DIR = import_path7.default.join(process.cwd(), "data", "cgu", "relatorios");
+  if (!import_fs8.default.existsSync(REL_DIR)) {
+    return res.status(404).json({ error: `Diret\xF3rio n\xE3o encontrado: ${REL_DIR}` });
+  }
+  const csvFiles = import_fs8.default.readdirSync(REL_DIR).filter((f) => f.toLowerCase().endsWith(".csv"));
+  if (csvFiles.length === 0) {
+    return res.status(404).json({ error: "Nenhum arquivo CSV encontrado em data/cgu/relatorios." });
+  }
+  const usuarioId = req.session?.user?.id ?? "SISTEMA";
+  const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  let importControlId = null;
+  let totalProcessado = 0;
+  let erros = 0;
+  let inseridos = 0;
+  try {
+    importControlId = await iniciarImportacao({
+      modulo: MODULO_CGU_REPORTS,
+      ano_referencia: (/* @__PURE__ */ new Date()).getFullYear(),
+      tipo_arquivo: "CSV_LOCAL",
+      forcado_por_usuario: usuarioId
+    });
+    await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
+    for (const file of csvFiles) {
+      const filePath = import_path7.default.join(REL_DIR, file);
+      let contentStr = import_fs8.default.readFileSync(filePath, "latin1");
+      if (!contentStr || contentStr.trim().length < 10) continue;
+      const firstLineEnd = contentStr.indexOf("\n");
+      const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
+      let delimiter = ";";
+      if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) delimiter = ",";
+      const allRows = parseCSVRobust(contentStr, delimiter);
+      if (allRows.length < 2) continue;
+      const headers = allRows[0].map(normalizeHeaderName);
+      const getIndex = (names) => {
+        for (const n of names) {
+          const i = headers.findIndex((h) => h.includes(n));
+          if (i !== -1) return i;
+        }
+        return -1;
+      };
+      const idxIdTarefa = getIndex(["idtarefa", "tarefa", "id"]);
+      const idxIdAuditoria = getIndex(["idauditoria", "auditoria"]);
+      const idxTitulo = getIndex(["titulo", "auditoria"]);
+      const idxAno = getIndex(["ano"]);
+      const idxUni = getIndex(["unidadeauditada", "auditada"]);
+      const idxCat = getIndex(["categoria"]);
+      const idxLink = getIndex(["link", "url"]);
+      const idxDataPub = getIndex(["datapublicacao", "publicacao"]);
+      if (idxIdTarefa === -1 && idxIdAuditoria === -1) {
+        continue;
+      }
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        for (let i = 1; i < allRows.length; i++) {
+          const row2 = allRows[i];
+          if (!row2 || row2.length < headers.length * 0.5) continue;
+          const id = (idxIdTarefa !== -1 ? row2[idxIdTarefa]?.trim() : null) || (idxIdAuditoria !== -1 ? row2[idxIdAuditoria]?.trim() : `REL-${Date.now()}-${i}`);
+          if (!id) continue;
+          totalProcessado++;
+          const idAud = idxIdAuditoria !== -1 ? row2[idxIdAuditoria]?.trim() : null;
+          const tit = idxTitulo !== -1 ? row2[idxTitulo]?.trim() : null;
+          const anoStr = idxAno !== -1 ? row2[idxAno]?.trim() : null;
+          const anoVal = anoStr ? parseInt(anoStr.match(/\d{4}/)?.[0] || "0") : null;
+          const uni = idxUni !== -1 ? row2[idxUni]?.trim() : null;
+          const cat = idxCat !== -1 ? row2[idxCat]?.trim() : null;
+          const lnk = idxLink !== -1 ? row2[idxLink]?.trim() : null;
+          const dtPub = idxDataPub !== -1 ? row2[idxDataPub]?.trim() : null;
+          try {
+            await client.query(`
+              INSERT INTO cgu_reports (
+                id_tarefa, id_auditoria, titulo_auditoria, ano,
+                unidade_auditada, categoria, link, data_publicacao, ultima_atualizacao
+              ) VALUES (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9
+              )
+              ON CONFLICT (id_tarefa) DO UPDATE SET
+                id_auditoria = EXCLUDED.id_auditoria,
+                titulo_auditoria = EXCLUDED.titulo_auditoria,
+                ano = EXCLUDED.ano,
+                unidade_auditada = EXCLUDED.unidade_auditada,
+                categoria = EXCLUDED.categoria,
+                link = EXCLUDED.link,
+                data_publicacao = EXCLUDED.data_publicacao,
+                ultima_atualizacao = EXCLUDED.ultima_atualizacao
+            `, [id, idAud, tit, anoVal, uni, cat, lnk, dtPub, updatedAt]);
+            inseridos++;
+          } catch (e) {
+            erros++;
+          }
+        }
+        await client.query("COMMIT");
+      } catch (errTx) {
+        await client.query("ROLLBACK");
+      } finally {
+        client.release();
+      }
+    }
+    await atualizarStatusImportacao({
+      id: importControlId,
+      status: erros > 0 && inseridos === 0 ? "ERRO" : erros > 0 ? "PARCIAL" : "CONCLUIDO",
+      quantidade_inseridos: inseridos,
+      quantidade_erros: erros
+    });
+    res.json({ success: true, importedCount: inseridos, erros });
+  } catch (err) {
+    if (importControlId) await registrarErroImportacao(importControlId, err);
+    res.status(500).json({ error: "Erro interno ao importar relat\xF3rios CGU." });
   }
 });
 router7.post("/cgu/update", async (req, res) => {
   try {
     res.json({ success: true });
   } catch (error) {
-    console.error("Error updating cgu:", error);
     res.status(500).json({ error: "Erro interno" });
   }
 });
@@ -2056,41 +2959,6 @@ router7.delete("/cgu/:id", async (req, res) => {
     await pool.query("DELETE FROM cgu_demands WHERE id_tarefa = $1", [req.params.id]);
     res.json({ success: true });
   } catch (error) {
-    console.error("Error deleting cgu:", error);
-    res.status(500).json({ error: "Erro interno" });
-  }
-});
-router7.get("/cgu/reports", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT * FROM cgu_reports");
-    const mapped = result.rows.map((row) => ({
-      idTarefa: row.id_tarefa,
-      idAuditoria: row.id_auditoria,
-      tituloAuditoria: row.titulo_auditoria,
-      ano: row.ano,
-      uf: row.uf,
-      municipio: row.municipio,
-      codigoMunicipio: row.codigo_municipio,
-      assunto: row.assunto,
-      dataPublicacao: row.data_publicacao,
-      linkRelatorio: row.link_relatorio,
-      localPdf: row.local_pdf,
-      sumarioExecutivo: row.sumario_executivo,
-      aiAbstract: row.ai_abstract,
-      ultimaAtualizacao: row.ultima_atualizacao
-    }));
-    res.json(mapped);
-  } catch (error) {
-    console.error("Error fetching cgu reports:", error);
-    res.status(500).json({ error: "Erro interno" });
-  }
-});
-router7.delete("/cgu/reports/:idTarefa", async (req, res) => {
-  try {
-    await pool.query("DELETE FROM cgu_reports WHERE id_tarefa = $1", [req.params.idTarefa]);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting cgu report:", error);
     res.status(500).json({ error: "Erro interno" });
   }
 });
@@ -2098,27 +2966,47 @@ var cguRoutes_default = router7;
 
 // src/backend/routes/superintendenciasRoutes.ts
 var import_express8 = __toESM(require("express"), 1);
+init_db();
 var router8 = import_express8.default.Router();
 router8.get("/superintendencias", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM superintendencias");
-    const mapped = result.rows.map((row) => ({
-      uf: row.uf,
-      capital: row.capital,
-      superintendente: row.superintendente,
-      cargo: row.cargo,
-      endereco: row.endereco,
-      contato: row.contato,
-      email: row.email,
-      substituto: row.substituto,
-      emailSubstituto: row.email_substituto,
-      cep: row.cep,
-      latitude: row.latitude,
-      longitude: row.longitude,
-      demandasTCU: row.demandas_tcu,
-      demandasCGU: row.demandas_cgu,
-      demandasEtica: row.demandas_etica,
-      statusGeral: row.status_geral
+    const result = await pool.query(`
+      SELECT 
+        s.*, 
+        v.demandas_tcu as view_tcu, 
+        v.demandas_cgu as view_cgu,
+        v.demandas_comunicacoes,
+        v.demandas_tces,
+        (SELECT json_agg(acordao_key) FROM srte_acordao WHERE uf = s.uf) as acordao_ids,
+        (SELECT json_agg(comunicacao_key) FROM srte_comunicacao WHERE uf = s.uf) as comunicacao_ids,
+        (SELECT json_agg(tce_id) FROM srte_tce WHERE uf = s.uf) as tce_ids,
+        (SELECT json_agg(cgu_id) FROM srte_cgu WHERE uf = s.uf) as cgu_ids
+      FROM superintendencias s
+      LEFT JOIN vw_srte_dashboard_metrics v ON s.uf = v.uf
+    `);
+    const mapped = result.rows.map((row2) => ({
+      uf: row2.uf,
+      capital: row2.capital,
+      superintendente: row2.superintendente,
+      cargo: row2.cargo,
+      endereco: row2.endereco,
+      contato: row2.contato,
+      email: row2.email,
+      substituto: row2.substituto,
+      emailSubstituto: row2.email_substituto,
+      cep: row2.cep,
+      latitude: row2.latitude,
+      longitude: row2.longitude,
+      demandasTCU: parseInt(row2.view_tcu) || 0,
+      demandasCGU: parseInt(row2.view_cgu) || 0,
+      demandasComunicacoes: parseInt(row2.demandas_comunicacoes) || 0,
+      demandasTces: parseInt(row2.demandas_tces) || 0,
+      demandasEtica: row2.demandas_etica,
+      statusGeral: row2.status_geral,
+      acordaoIds: row2.acordao_ids || [],
+      comunicacaoIds: row2.comunicacao_ids || [],
+      tceIds: row2.tce_ids || [],
+      cguIds: row2.cgu_ids || []
     }));
     res.json(mapped);
   } catch (error) {
@@ -2130,16 +3018,40 @@ router8.put("/superintendencias/:uf", async (req, res) => {
   try {
     const uf = req.params.uf.toUpperCase();
     const updateData = req.body;
-    res.json({ uf, ...updateData });
+    await pool.query(`
+      UPDATE superintendencias 
+      SET 
+        superintendente = $1,
+        endereco = $2,
+        contato = $3,
+        email = $4,
+        substituto = $5,
+        email_substituto = $6,
+        cep = $7,
+        status_geral = $8
+      WHERE uf = $9
+    `, [
+      updateData.superintendente,
+      updateData.endereco,
+      updateData.contato,
+      updateData.email,
+      updateData.substituto,
+      updateData.emailSubstituto,
+      updateData.cep,
+      updateData.statusGeral,
+      uf
+    ]);
+    res.json({ success: true, uf, ...updateData });
   } catch (error) {
     console.error("Error updating superintendencias:", error);
-    res.status(500).json({ error: "Erro interno" });
+    res.status(500).json({ error: "Erro interno ao atualizar a superintend\xEAncia" });
   }
 });
 var superintendenciasRoutes_default = router8;
 
 // src/backend/routes/contratosRoutes.ts
 var import_express9 = __toESM(require("express"), 1);
+init_db();
 var router9 = import_express9.default.Router();
 router9.get("/contratos", async (req, res) => {
   const result = await pool.query("SELECT * FROM contratos");
@@ -2180,6 +3092,7 @@ var contratosRoutes_default = router9;
 
 // src/backend/routes/viaturasRoutes.ts
 var import_express10 = __toESM(require("express"), 1);
+init_db();
 var router10 = import_express10.default.Router();
 router10.get("/viaturas", async (req, res) => {
   const result = await pool.query("SELECT * FROM viaturas");
@@ -2236,6 +3149,7 @@ var viaturasRoutes_default = router10;
 
 // src/backend/routes/rolLegacyRoutes.ts
 var import_express11 = __toESM(require("express"), 1);
+init_db();
 var router11 = import_express11.default.Router();
 router11.get("/", async (req, res) => {
   try {
@@ -2298,6 +3212,7 @@ var rolLegacyRoutes_default = router11;
 
 // src/backend/routes/dashboardRoutes.ts
 var import_express12 = __toESM(require("express"), 1);
+init_db();
 var router12 = import_express12.default.Router();
 router12.get("/dashboard-stats", async (req, res) => {
   try {
@@ -2326,8 +3241,569 @@ router12.get("/dashboard-stats", async (req, res) => {
 });
 var dashboardRoutes_default = router12;
 
-// server.ts
+// src/backend/userService.ts
+init_db();
+var import_bcrypt = __toESM(require("bcrypt"), 1);
+init_seed_db();
+var BCRYPT_ROUNDS = 12;
+var CREATE_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS orbita_users (
+    id                       VARCHAR(50)  PRIMARY KEY,
+    name                     VARCHAR(255) NOT NULL,
+    cpf                      VARCHAR(14),
+    siape                    VARCHAR(10),
+    phone                    VARCHAR(25),
+    email                    VARCHAR(255) UNIQUE NOT NULL,
+    role                     VARCHAR(255),
+    unidade                  VARCHAR(255),
+    unidade_sigla            VARCHAR(50),
+    clearance                VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    allowed_modules          TEXT[]       NOT NULL DEFAULT '{}',
+    avatar_color             VARCHAR(120) NOT NULL DEFAULT 'bg-slate-500 text-white',
+    password_hash            VARCHAR(255),
+    requires_password_change BOOLEAN      NOT NULL DEFAULT TRUE,
+    status                   VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    badge_text               VARCHAR(100) NOT NULL DEFAULT 'PENDENTE',
+    justificativa            TEXT,
+    requested_at             TIMESTAMPTZ  DEFAULT NOW(),
+    approved_at              TIMESTAMPTZ,
+    approved_by              VARCHAR(50),
+    last_password_change     TIMESTAMPTZ,
+    created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_orbita_users_cpf    ON orbita_users (cpf);
+  CREATE INDEX IF NOT EXISTS idx_orbita_users_siape  ON orbita_users (siape);
+  CREATE INDEX IF NOT EXISTS idx_orbita_users_email  ON orbita_users (email);
+  CREATE INDEX IF NOT EXISTS idx_orbita_users_status ON orbita_users (status);
+`;
+async function initUsersTable() {
+  try {
+    await pool.query(CREATE_TABLE_SQL);
+    console.log("[UserService] Tabela orbita_users pronta.");
+    await migrateAdminSeed();
+  } catch (err) {
+    console.error("[UserService] Erro ao inicializar tabela de usu\xE1rios:", err);
+    throw err;
+  }
+}
+async function migrateAdminSeed() {
+  for (const seed of SEED_PROFILES) {
+    const exists = await pool.query(
+      "SELECT id FROM orbita_users WHERE id = $1",
+      [seed.id]
+    );
+    if (exists.rows.length === 0) {
+      const rawPassword = seed.password || seed.pin || "Orbita@2026";
+      const hash = await import_bcrypt.default.hash(rawPassword, BCRYPT_ROUNDS);
+      await pool.query(
+        `INSERT INTO orbita_users
+          (id, name, cpf, siape, phone, email, role, unidade, clearance, allowed_modules,
+           avatar_color, password_hash, requires_password_change, status, badge_text,
+           requested_at, approved_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW(),NOW())`,
+        [
+          seed.id,
+          seed.name,
+          seed.cpf || null,
+          seed.siape || null,
+          seed.phone || null,
+          seed.email,
+          seed.role,
+          seed.unidade || "AECI",
+          seed.clearance,
+          seed.allowedModules || [],
+          seed.avatarColor,
+          hash,
+          false,
+          seed.status || "ACTIVE",
+          seed.badgeText
+        ]
+      );
+      console.log(`[UserService] Admin seed migrado para PostgreSQL: ${seed.id}`);
+    }
+  }
+}
+function rowToUser(row2) {
+  return {
+    id: row2.id,
+    name: row2.name,
+    cpf: row2.cpf,
+    siape: row2.siape,
+    phone: row2.phone,
+    email: row2.email,
+    role: row2.role,
+    unidade: row2.unidade,
+    unidade_sigla: row2.unidade_sigla,
+    clearance: row2.clearance,
+    allowed_modules: row2.allowed_modules || [],
+    avatar_color: row2.avatar_color,
+    password_hash: row2.password_hash,
+    requires_password_change: row2.requires_password_change,
+    status: row2.status,
+    badge_text: row2.badge_text,
+    justificativa: row2.justificativa,
+    requested_at: row2.requested_at,
+    approved_at: row2.approved_at,
+    approved_by: row2.approved_by,
+    last_password_change: row2.last_password_change,
+    created_at: row2.created_at,
+    updated_at: row2.updated_at
+  };
+}
+async function findUserByIdentifier(identifier) {
+  const cleanId = identifier.replace(/\D/g, "");
+  const result = await pool.query(
+    `SELECT * FROM orbita_users
+     WHERE id = $1
+        OR email = $1
+        OR REGEXP_REPLACE(cpf, '[^0-9]', '', 'g') = $2
+     LIMIT 1`,
+    [identifier, cleanId]
+  );
+  return result.rows.length > 0 ? rowToUser(result.rows[0]) : null;
+}
+async function findUserBySiapeAndCpf(siape, cpf) {
+  const cleanCpf = cpf.replace(/\D/g, "");
+  const result = await pool.query(
+    `SELECT * FROM orbita_users
+     WHERE siape = $1
+       AND REGEXP_REPLACE(cpf, '[^0-9]', '', 'g') = $2
+       AND status = 'ACTIVE'
+     LIMIT 1`,
+    [siape.trim(), cleanCpf]
+  );
+  return result.rows.length > 0 ? rowToUser(result.rows[0]) : null;
+}
+async function userExistsByEmailOrCpf(email, cpf) {
+  const cleanCpf = cpf.replace(/\D/g, "");
+  const result = await pool.query(
+    `SELECT id FROM orbita_users
+     WHERE email = $1
+        OR REGEXP_REPLACE(cpf, '[^0-9]', '', 'g') = $2
+     LIMIT 1`,
+    [email, cleanCpf]
+  );
+  return result.rows.length > 0;
+}
+async function listAllUsers() {
+  const result = await pool.query(
+    `SELECT * FROM orbita_users ORDER BY
+       CASE status WHEN 'PENDING' THEN 0 WHEN 'ACTIVE' THEN 1 ELSE 2 END,
+       created_at DESC`
+  );
+  return result.rows.map(rowToUser);
+}
+async function createPendingUser(data) {
+  const id = "usr_" + Math.random().toString(36).substring(2, 11);
+  const result = await pool.query(
+    `INSERT INTO orbita_users
+      (id, name, cpf, siape, phone, email, role, unidade, unidade_sigla,
+       justificativa, clearance, status, badge_text, avatar_color,
+       password_hash, requires_password_change, requested_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'PENDING','PENDING','PENDENTE',
+             'bg-slate-400 text-white', NULL, TRUE, NOW())
+     RETURNING *`,
+    [
+      id,
+      data.name,
+      data.cpf,
+      data.siape || null,
+      data.phone || null,
+      data.email,
+      data.role || "N\xE3o informado",
+      data.unidade || null,
+      data.unidadeSigla || null,
+      data.justificativa || null
+    ]
+  );
+  return rowToUser(result.rows[0]);
+}
+async function approveUser(id, payload, approvedById, tempPassword) {
+  const hash = await import_bcrypt.default.hash(tempPassword, BCRYPT_ROUNDS);
+  const result = await pool.query(
+    `UPDATE orbita_users SET
+       status = 'ACTIVE',
+       clearance = $1,
+       role = COALESCE($2, role),
+       badge_text = COALESCE($3, badge_text),
+       allowed_modules = $4,
+       password_hash = $5,
+       requires_password_change = TRUE,
+       approved_at = NOW(),
+       approved_by = $6,
+       updated_at = NOW()
+     WHERE id = $7
+     RETURNING *`,
+    [
+      payload.clearance || "PUBLIC",
+      payload.role || null,
+      payload.badgeText || null,
+      payload.allowedModules || [],
+      hash,
+      approvedById,
+      id
+    ]
+  );
+  return rowToUser(result.rows[0]);
+}
+async function updateUser(id, payload) {
+  const result = await pool.query(
+    `UPDATE orbita_users SET
+       name = COALESCE($1, name),
+       email = COALESCE($2, email),
+       siape = COALESCE($3, siape),
+       role = COALESCE($4, role),
+       unidade = COALESCE($5, unidade),
+       clearance = COALESCE($6, clearance),
+       badge_text = COALESCE($7, badge_text),
+       allowed_modules = COALESCE($8, allowed_modules),
+       updated_at = NOW()
+     WHERE id = $9
+     RETURNING *`,
+    [
+      payload.name || null,
+      payload.email || null,
+      payload.siape || null,
+      payload.role || null,
+      payload.unidade || null,
+      payload.clearance || null,
+      payload.badgeText || null,
+      payload.allowedModules || null,
+      id
+    ]
+  );
+  return rowToUser(result.rows[0]);
+}
+async function inactivateUser(id) {
+  await pool.query(
+    "UPDATE orbita_users SET status = 'INACTIVE', updated_at = NOW() WHERE id = $1",
+    [id]
+  );
+}
+async function reactivateUser(id) {
+  await pool.query(
+    "UPDATE orbita_users SET status = 'ACTIVE', updated_at = NOW() WHERE id = $1",
+    [id]
+  );
+}
+async function updatePassword(id, newPasswordPlain) {
+  const hash = await import_bcrypt.default.hash(newPasswordPlain, BCRYPT_ROUNDS);
+  await pool.query(
+    `UPDATE orbita_users SET
+       password_hash = $1,
+       requires_password_change = FALSE,
+       last_password_change = NOW(),
+       updated_at = NOW()
+     WHERE id = $2`,
+    [hash, id]
+  );
+}
+async function setProvisionalPassword(id, tempPasswordPlain) {
+  const hash = await import_bcrypt.default.hash(tempPasswordPlain, BCRYPT_ROUNDS);
+  await pool.query(
+    `UPDATE orbita_users SET
+       password_hash = $1,
+       requires_password_change = TRUE,
+       updated_at = NOW()
+     WHERE id = $2`,
+    [hash, id]
+  );
+}
+async function verifyPassword(user, plainPassword) {
+  if (!user.password_hash) return false;
+  return import_bcrypt.default.compare(plainPassword, user.password_hash);
+}
+function generateTempPassword() {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghjkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "@#$!%&";
+  const all = upper + lower + digits + symbols;
+  const rand = (chars) => chars[Math.floor(Math.random() * chars.length)];
+  const password = [
+    rand(upper),
+    rand(upper),
+    rand(lower),
+    rand(lower),
+    rand(digits),
+    rand(digits),
+    rand(symbols),
+    ...Array.from({ length: 5 }, () => rand(all))
+  ];
+  for (let i = password.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [password[i], password[j]] = [password[j], password[i]];
+  }
+  return password.join("");
+}
+function userToSessionFormat(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    role: user.role,
+    email: user.email,
+    register: user.siape ? `SIAPE: ${user.siape}` : user.unidade || "",
+    clearance: user.clearance,
+    avatarColor: user.avatar_color,
+    badgeText: user.badge_text,
+    allowedModules: user.allowed_modules
+  };
+}
+
+// src/backend/emailService.ts
+var import_nodemailer = __toESM(require("nodemailer"), 1);
+var import_dotenv3 = __toESM(require("dotenv"), 1);
 import_dotenv3.default.config();
+var ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || "alessandro.lourenco@trabalho.gov.br";
+var SMTP_FROM = process.env.SMTP_FROM || '"\xD3RBITA.AECI" <noreply@trabalho.gov.br>';
+var APP_URL = process.env.APP_URL || "http://localhost:3000";
+function createTransporter() {
+  if (!process.env.SMTP_HOST) {
+    return null;
+  }
+  return import_nodemailer.default.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    },
+    tls: { rejectUnauthorized: false }
+    // necessário para alguns exchanges gov
+  });
+}
+async function sendEmail(to, subject, html) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.log("\n" + "\u2550".repeat(70));
+    console.log(`\u{1F4E7}  EMAIL SIMULADO (configure SMTP_HOST no .env para envio real)`);
+    console.log("\u2550".repeat(70));
+    console.log(`Para:     ${to}`);
+    console.log(`Assunto:  ${subject}`);
+    console.log(`Remetente: ${SMTP_FROM}`);
+    console.log("\u2500".repeat(70));
+    const text = html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, "").replace(/\n{3,}/g, "\n\n").trim();
+    console.log(text);
+    console.log("\u2550".repeat(70) + "\n");
+    return;
+  }
+  await transporter.sendMail({
+    from: SMTP_FROM,
+    to,
+    subject,
+    html
+  });
+  console.log(`[Email] Enviado para: ${to} | Assunto: ${subject}`);
+}
+function baseTemplate(title, content) {
+  return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        
+        <!-- Header gov.br -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#1351b4 0%,#003366 100%);padding:24px 32px;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td>
+                  <div style="font-size:22px;font-weight:900;color:#ffffff;letter-spacing:-0.5px;">
+                    \xD3RBITA<span style="color:#fbbf24;">.</span>AECI
+                  </div>
+                  <div style="font-size:10px;color:#93c5fd;font-weight:700;letter-spacing:2px;margin-top:2px;text-transform:uppercase;">
+                    Assessoria Especial de Controle Interno \u2014 MTE
+                  </div>
+                </td>
+                <td align="right">
+                  <div style="background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 14px;display:inline-block;">
+                    <div style="font-size:18px;font-weight:900;color:#ffffff;">gov<span style="color:#00c010;">.</span>br</div>
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- T\xEDtulo -->
+        <tr>
+          <td style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:20px 32px;">
+            <h1 style="margin:0;font-size:16px;font-weight:800;color:#1e293b;letter-spacing:-0.3px;">${title}</h1>
+          </td>
+        </tr>
+
+        <!-- Conte\xFAdo -->
+        <tr>
+          <td style="padding:28px 32px;color:#334155;font-size:14px;line-height:1.7;">
+            ${content}
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#94a3b8;">
+              Este \xE9 um e-mail autom\xE1tico do sistema \xD3RBITA.AECI \u2014 Minist\xE9rio do Trabalho e Emprego.<br>
+              N\xE3o responda a este e-mail. Em caso de d\xFAvidas, entre em contato com a AECI.
+            </p>
+            <p style="margin:8px 0 0;font-size:10px;color:#cbd5e1;">
+              \xA9 2026 Rep\xFAblica Federativa do Brasil
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+async function sendAccessRequestNotification(user) {
+  const content = `
+    <p>Uma nova solicita\xE7\xE3o de acesso ao <strong>\xD3RBITA.AECI</strong> foi recebida e aguarda sua an\xE1lise.</p>
+    
+    <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin:16px 0;">
+      <tr style="background:#f8fafc;">
+        <td colspan="2" style="padding:12px 16px;font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e2e8f0;">
+          Dados do Solicitante
+        </td>
+      </tr>
+      ${row("Nome Completo", user.name)}
+      ${row("E-mail", user.email)}
+      ${row("CPF", user.cpf || "\u2014")}
+      ${row("SIAPE", user.siape || "\u2014")}
+      ${row("Cargo/Fun\xE7\xE3o", user.role || "\u2014")}
+      ${row("Unidade", user.unidade || "\u2014")}
+    </table>
+
+    ${user.justificativa ? `
+    <div style="background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:14px 16px;margin:16px 0;">
+      <div style="font-size:11px;font-weight:800;color:#78350f;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">
+        Justificativa de Acesso
+      </div>
+      <p style="margin:0;font-size:13px;color:#451a03;">${user.justificativa}</p>
+    </div>` : ""}
+
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${APP_URL}" 
+         style="background:#1351b4;color:#ffffff;font-weight:800;font-size:13px;padding:12px 28px;border-radius:8px;text-decoration:none;display:inline-block;letter-spacing:0.3px;">
+        Abrir Painel do Administrador
+      </a>
+    </div>
+
+    <p style="font-size:12px;color:#64748b;margin-top:16px;">
+      Acesse o painel, v\xE1 em <strong>Administra\xE7\xE3o e Usu\xE1rios</strong> e aprove ou recuse a solicita\xE7\xE3o.
+    </p>
+  `;
+  await sendEmail(
+    ADMIN_EMAIL,
+    `[\xD3RBITA.AECI] Nova Solicita\xE7\xE3o de Acesso \u2014 ${user.name}`,
+    baseTemplate("Nova Solicita\xE7\xE3o de Acesso", content)
+  );
+}
+async function sendAccessApprovedEmail(user, tempPassword) {
+  const content = `
+    <p>Ol\xE1, <strong>${user.name}</strong>!</p>
+    <p>Sua solicita\xE7\xE3o de acesso ao sistema <strong>\xD3RBITA.AECI</strong> foi <strong style="color:#16a34a;">aprovada</strong>.</p>
+
+    <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:20px 24px;margin:20px 0;text-align:center;">
+      <div style="font-size:11px;font-weight:800;color:#14532d;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+        Senha Provis\xF3ria de Acesso
+      </div>
+      <div style="font-family:'Courier New',monospace;font-size:22px;font-weight:900;color:#1351b4;letter-spacing:3px;background:#ffffff;border:1px solid #bfdbfe;border-radius:6px;padding:10px 20px;display:inline-block;">
+        ${tempPassword}
+      </div>
+      <p style="margin:10px 0 0;font-size:12px;color:#166534;">
+        \u26A0\uFE0F Esta senha \xE9 <strong>provis\xF3ria</strong> e dever\xE1 ser trocada no primeiro acesso.
+      </p>
+    </div>
+
+    <table cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin:16px 0;">
+      <tr style="background:#f8fafc;">
+        <td colspan="2" style="padding:12px 16px;font-size:11px;font-weight:800;color:#475569;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid #e2e8f0;">
+          Seus Dados de Acesso
+        </td>
+      </tr>
+      ${row("Identificador de Login", user.cpf ? user.cpf.replace(/\D/g, "") : user.email)}
+      ${row("N\xEDvel de Acesso", user.badgeText || "\u2014")}
+      ${row("Unidade", user.unidade || "\u2014")}
+    </table>
+
+    <p><strong>Como acessar:</strong></p>
+    <ol style="margin:0;padding-left:20px;color:#334155;font-size:13px;line-height:2;">
+      <li>Acesse o sistema em <a href="${APP_URL}" style="color:#1351b4;">${APP_URL}</a></li>
+      <li>Informe seu CPF no campo de identifica\xE7\xE3o</li>
+      <li>Use a senha provis\xF3ria acima</li>
+      <li>Voc\xEA ser\xE1 solicitado a criar uma nova senha permanente</li>
+    </ol>
+
+    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px 16px;margin:20px 0;">
+      <p style="margin:0;font-size:12px;color:#78350f;">
+        \u{1F512} <strong>Seguran\xE7a:</strong> Nunca compartilhe sua senha. O \xD3RBITA.AECI e a AECI jamais solicitar\xE3o sua senha por e-mail ou telefone.
+      </p>
+    </div>
+  `;
+  await sendEmail(
+    user.email,
+    "[\xD3RBITA.AECI] Seu acesso foi aprovado \u2014 Senha Provis\xF3ria",
+    baseTemplate("Acesso ao \xD3RBITA.AECI Aprovado", content)
+  );
+}
+async function sendPasswordResetEmail(user, tempPassword) {
+  const content = `
+    <p>Ol\xE1, <strong>${user.name}</strong>!</p>
+    <p>Recebemos uma solicita\xE7\xE3o de recupera\xE7\xE3o de senha para sua conta no <strong>\xD3RBITA.AECI</strong>.</p>
+
+    <div style="background:#fff7ed;border:2px solid #fb923c;border-radius:10px;padding:20px 24px;margin:20px 0;text-align:center;">
+      <div style="font-size:11px;font-weight:800;color:#7c2d12;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+        Nova Senha Provis\xF3ria
+      </div>
+      <div style="font-family:'Courier New',monospace;font-size:22px;font-weight:900;color:#1351b4;letter-spacing:3px;background:#ffffff;border:1px solid #fed7aa;border-radius:6px;padding:10px 20px;display:inline-block;">
+        ${tempPassword}
+      </div>
+      <p style="margin:10px 0 0;font-size:12px;color:#9a3412;">
+        \u26A0\uFE0F Esta senha \xE9 <strong>provis\xF3ria</strong> e dever\xE1 ser trocada no pr\xF3ximo acesso.
+      </p>
+    </div>
+
+    <p style="font-size:13px;color:#475569;">
+      Se voc\xEA <strong>n\xE3o solicitou</strong> a recupera\xE7\xE3o de senha, ignore este e-mail e sua senha anterior permanecer\xE1 ativa. Em caso de suspeita de acesso indevido, entre em contato com a AECI imediatamente.
+    </p>
+
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${APP_URL}" 
+         style="background:#1351b4;color:#ffffff;font-weight:800;font-size:13px;padding:12px 28px;border-radius:8px;text-decoration:none;display:inline-block;">
+        Acessar o Sistema
+      </a>
+    </div>
+  `;
+  await sendEmail(
+    user.email,
+    "[\xD3RBITA.AECI] Recupera\xE7\xE3o de Senha \u2014 Senha Provis\xF3ria",
+    baseTemplate("Recupera\xE7\xE3o de Senha", content)
+  );
+}
+function row(label, value) {
+  return `
+    <tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:10px 16px;font-size:12px;font-weight:700;color:#475569;width:40%;white-space:nowrap;">${label}</td>
+      <td style="padding:10px 16px;font-size:13px;color:#1e293b;font-weight:500;">${value}</td>
+    </tr>`;
+}
+
+// server.ts
+init_seed_db();
+import_dotenv4.default.config();
 var govHubPool = new import_pg2.default.Pool({
   connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://airflow:airflow@localhost:5432/postgres",
   max: 5,
@@ -2335,18 +3811,22 @@ var govHubPool = new import_pg2.default.Pool({
   connectionTimeoutMillis: 2e3
   // Fast timeout so it fails quickly if GovHub docker is not running
 });
-var DATA_DIR3 = import_path6.default.join(process.cwd(), "data");
-var DB_PATH2 = import_path6.default.join(DATA_DIR3, "orbita_db.json");
-var TCU_DIR3 = import_path6.default.join(DATA_DIR3, "tcu");
-if (!import_fs7.default.existsSync(DATA_DIR3)) {
-  import_fs7.default.mkdirSync(DATA_DIR3, { recursive: true });
+var DATA_DIR3 = import_path8.default.join(process.cwd(), "data");
+var DB_PATH2 = import_path8.default.join(DATA_DIR3, "orbita_db.json");
+var TCU_DIR5 = import_path8.default.join(DATA_DIR3, "tcu");
+if (!import_fs9.default.existsSync(DATA_DIR3)) {
+  import_fs9.default.mkdirSync(DATA_DIR3, { recursive: true });
 }
-if (!import_fs7.default.existsSync(TCU_DIR3)) {
-  import_fs7.default.mkdirSync(TCU_DIR3, { recursive: true });
+if (!import_fs9.default.existsSync(TCU_DIR5)) {
+  import_fs9.default.mkdirSync(TCU_DIR5, { recursive: true });
 }
-var mockUsers = [...SEED_PROFILES];
 async function startServer() {
   const app = (0, import_express13.default)();
+  try {
+    await initUsersTable();
+  } catch (err) {
+    console.error("[Server] Falha ao inicializar tabela de usu\xE1rios. O servidor continuar\xE1, mas o login pode n\xE3o funcionar.", err);
+  }
   app.use((0, import_compression.default)());
   app.use((0, import_express_session.default)({
     store: new import_express_session.default.MemoryStore(),
@@ -2386,22 +3866,20 @@ async function startServer() {
   });
   app.use(import_express13.default.json({ limit: "50mb" }));
   app.use(import_express13.default.urlencoded({ limit: "50mb", extended: true }));
-  app.get("/api/auth/session", (req, res) => {
+  const requireAdmin = (req, res, next) => {
+    if (!req.session?.user || req.session.user.clearance !== "ADMIN") {
+      return res.status(403).json({ error: "Acesso restrito a administradores." });
+    }
+    next();
+  };
+  app.get("/api/auth/session", async (req, res) => {
     if (req.session && req.session.user) {
-      const data = { users: mockUsers };
-      const freshUser = (data.users || []).find((u) => u.id === req.session.user.id);
-      if (freshUser) {
-        req.session.user = {
-          id: freshUser.id,
-          name: freshUser.name,
-          role: freshUser.role,
-          email: freshUser.email,
-          register: freshUser.register,
-          clearance: freshUser.clearance,
-          avatarColor: freshUser.avatarColor,
-          badgeText: freshUser.badgeText,
-          allowedModules: freshUser.allowedModules
-        };
+      try {
+        const freshUser = await findUserByIdentifier(req.session.user.id);
+        if (freshUser && freshUser.status === "ACTIVE") {
+          req.session.user = userToSessionFormat(freshUser);
+        }
+      } catch (e) {
       }
       return res.json({ authenticated: true, user: req.session.user });
     }
@@ -2435,179 +3913,171 @@ async function startServer() {
         badgeText: matchedProfile.badgeText
       };
       return res.json({ success: true, user: req.session.user });
-    } else {
-      return res.status(401).json({ error: "C\xF3digo PIN de assinatura inv\xE1lido para este perfil." });
     }
+    return res.status(401).json({ error: "C\xF3digo PIN de assinatura inv\xE1lido para este perfil." });
   });
-  app.post("/api/auth/login-local", (req, res) => {
+  app.post("/api/auth/login-local", async (req, res) => {
     const { identifier, password } = req.body;
     if (!identifier || !password) {
       return res.status(400).json({ error: "Identificador e senha s\xE3o obrigat\xF3rios." });
     }
-    const data = { users: mockUsers };
-    const users = data.users || [];
-    const cleanId = String(identifier || "").replace(/\D/g, "");
-    console.log(`[Login Info] Incoming identifier: "${identifier}", cleanId: "${cleanId}", password: "${password}"`);
-    const matchedProfile = users.find(
-      (p) => p.email === identifier || p.id === identifier || p.cpf && p.cpf.replace(/\D/g, "") === cleanId
-    );
-    if (!matchedProfile) {
-      console.log(`[Login Error] No matched profile for identifier: "${identifier}"`);
-      return res.status(404).json({ error: `Credenciais inv\xE1lidas. CPF/Login n\xE3o localizado no banco: ${cleanId}` });
-    }
-    console.log(`[Login Info] Matched user: "${matchedProfile.id}" (CPF: "${matchedProfile.cpf}", status: "${matchedProfile.status}")`);
-    if (matchedProfile.status && matchedProfile.status !== "ACTIVE") {
-      return res.status(403).json({ error: "Usu\xE1rio n\xE3o est\xE1 ativo (status: " + matchedProfile.status + ")." });
-    }
-    const validPassword = matchedProfile.password || matchedProfile.pin;
-    if (validPassword === password || matchedProfile.clearance === "PUBLIC") {
-      req.session.user = {
-        id: matchedProfile.id,
-        name: matchedProfile.name,
-        role: matchedProfile.role,
-        email: matchedProfile.email,
-        register: matchedProfile.register,
-        clearance: matchedProfile.clearance,
-        avatarColor: matchedProfile.avatarColor,
-        badgeText: matchedProfile.badgeText,
-        allowedModules: matchedProfile.allowedModules
-      };
+    const cleanId = String(identifier).replace(/\D/g, "");
+    const maskedId = cleanId.length >= 6 ? `${cleanId.substring(0, 3)}***${cleanId.slice(-2)}` : "***";
+    console.log(`[Auth] Login attempt \u2014 identifier: ${maskedId}`);
+    try {
+      const user = await findUserByIdentifier(identifier);
+      if (!user) {
+        console.log(`[Auth] Login failed \u2014 user not found: ${maskedId}`);
+        return res.status(401).json({ error: "Credenciais inv\xE1lidas. Verifique o CPF e a senha informados." });
+      }
+      if (user.status !== "ACTIVE") {
+        return res.status(403).json({ error: "Usu\xE1rio n\xE3o est\xE1 ativo (status: " + user.status + ")." });
+      }
+      const valid = await verifyPassword(user, password);
+      if (!valid) {
+        console.log(`[Auth] Login failed \u2014 wrong password for user: ${user.id}`);
+        return res.status(401).json({ error: "Credenciais inv\xE1lidas. Senha incorreta." });
+      }
+      console.log(`[Auth] Login OK \u2014 user: ${user.id}`);
+      req.session.user = userToSessionFormat(user);
       return res.json({
         success: true,
         user: req.session.user,
-        requiresPasswordChange: matchedProfile.requiresPasswordChange || false
+        requiresPasswordChange: user.requires_password_change
       });
-    } else {
-      return res.status(401).json({ error: `Credenciais inv\xE1lidas. Senha incorreta para o usu\xE1rio: ${matchedProfile.id}` });
+    } catch (err) {
+      console.error("[Auth] Erro no login:", err);
+      return res.status(500).json({ error: "Erro interno ao processar login." });
     }
   });
-  app.post("/api/auth/request-access", (req, res) => {
-    const { name, cpf, phone, email, unidade } = req.body;
+  app.post("/api/auth/request-access", async (req, res) => {
+    const { name, cpf, siape, phone, email, role, unidade, unidadeSigla, justificativa } = req.body;
     if (!name || !cpf || !email) {
       return res.status(400).json({ error: "Nome, CPF e E-mail s\xE3o obrigat\xF3rios." });
     }
-    const data = { users: mockUsers };
-    data.users = data.users || [];
-    const cleanCpf = cpf.replace(/\D/g, "");
-    const exists = data.users.find((p) => p.email === email || p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf);
-    if (exists) {
-      return res.status(400).json({ error: "Usu\xE1rio com este E-mail ou CPF j\xE1 est\xE1 cadastrado." });
+    try {
+      const exists = await userExistsByEmailOrCpf(email, cpf);
+      if (exists) {
+        return res.status(400).json({ error: "J\xE1 existe um cadastro com este E-mail ou CPF." });
+      }
+      const newUser = await createPendingUser({ name, cpf, siape, phone, email, role, unidade, unidadeSigla, justificativa });
+      sendAccessRequestNotification({ name, email, cpf, siape, role, unidade, justificativa }).catch(
+        (e) => console.error("[Email] Falha ao notificar admin:", e)
+      );
+      return res.json({ success: true, message: "Solicita\xE7\xE3o enviada com sucesso. O administrador ser\xE1 notificado." });
+    } catch (err) {
+      console.error("[Auth] Erro ao solicitar acesso:", err);
+      return res.status(500).json({ error: "Erro ao registrar solicita\xE7\xE3o de acesso." });
     }
-    const newUser = {
-      id: "usr_" + Math.random().toString(36).substr(2, 9),
-      name,
-      cpf,
-      phone,
-      unidade,
-      email,
-      role: "Acesso Solicitado",
-      register: "Pendente",
-      clearance: "PENDING",
-      avatarColor: "bg-slate-300 text-slate-700 border-slate-300",
-      pin: "0000",
-      password: "",
-      requiresPasswordChange: true,
-      status: "PENDING",
-      badgeText: "PENDENTE"
-    };
-    data.users.push(newUser);
-    if (data.users) mockUsers = data.users;
-    console.log(`[EMAIL SIMULATION] To: admins | Subject: Nova Solicita\xE7\xE3o de Acesso | Body: O usu\xE1rio ${name} (${email}) solicitou acesso.`);
-    return res.json({ success: true, message: "Solicita\xE7\xE3o enviada com sucesso." });
   });
-  app.post("/api/auth/forgot-password", (req, res) => {
-    const { email, cpf } = req.body;
-    const data = { users: mockUsers };
-    const users = data.users || [];
-    const cleanCpf = cpf ? cpf.replace(/\D/g, "") : "";
-    const userIndex = users.findIndex((p) => p.email === email && p.cpf && p.cpf.replace(/\D/g, "") === cleanCpf);
-    if (userIndex === -1) {
-      return res.json({ success: true, message: "Se os dados estiverem corretos, um e-mail foi enviado." });
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const { cpf, siape } = req.body;
+    const genericMsg = "Se os dados estiverem corretos, um e-mail ser\xE1 enviado em instantes.";
+    if (!cpf || !siape) {
+      return res.json({ success: true, message: genericMsg });
     }
-    const provPass = Math.floor(1e5 + Math.random() * 9e5).toString();
-    data.users[userIndex].password = provPass;
-    data.users[userIndex].requiresPasswordChange = true;
-    if (data.users) mockUsers = data.users;
-    console.log(`[EMAIL SIMULATION] To: ${email} | Subject: Recupera\xE7\xE3o de Senha | Body: Sua nova senha provis\xF3ria \xE9 ${provPass}. Voc\xEA dever\xE1 troc\xE1-la no pr\xF3ximo acesso.`);
-    return res.json({ success: true, message: "E-mail de recupera\xE7\xE3o enviado." });
+    try {
+      const user = await findUserBySiapeAndCpf(siape, cpf);
+      if (!user) {
+        return res.json({ success: true, message: genericMsg });
+      }
+      const tempPass = generateTempPassword();
+      await setProvisionalPassword(user.id, tempPass);
+      sendPasswordResetEmail({ name: user.name, email: user.email }, tempPass).catch(
+        (e) => console.error("[Email] Falha ao enviar e-mail de recupera\xE7\xE3o:", e)
+      );
+      return res.json({ success: true, message: genericMsg });
+    } catch (err) {
+      console.error("[Auth] Erro ao recuperar senha:", err);
+      return res.json({ success: true, message: genericMsg });
+    }
   });
-  app.post("/api/auth/reset-password", (req, res) => {
+  app.post("/api/auth/reset-password", async (req, res) => {
+    if (!req.session?.user) return res.status(401).json({ error: "N\xE3o autenticado." });
     const { userId, oldPassword, newPassword } = req.body;
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p) => p.id === userId);
-    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
-    const user = data.users[userIndex];
-    if (user.password !== oldPassword && user.pin !== oldPassword) {
-      return res.status(403).json({ error: "Senha atual incorreta." });
+    if (req.session.user.id !== userId) {
+      return res.status(403).json({ error: "Acesso negado." });
     }
-    data.users[userIndex].password = newPassword;
-    data.users[userIndex].requiresPasswordChange = false;
-    data.users[userIndex].pin = newPassword;
-    if (data.users) mockUsers = data.users;
-    return res.json({ success: true, message: "Senha atualizada com sucesso." });
+    try {
+      const user = await findUserByIdentifier(userId);
+      if (!user) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
+      const valid = await verifyPassword(user, oldPassword);
+      if (!valid) return res.status(403).json({ error: "Senha atual incorreta." });
+      await updatePassword(userId, newPassword);
+      return res.json({ success: true, message: "Senha atualizada com sucesso." });
+    } catch (err) {
+      console.error("[Auth] Erro ao resetar senha:", err);
+      return res.status(500).json({ error: "Erro interno ao atualizar senha." });
+    }
   });
-  app.get("/api/admin/users", (req, res) => {
-    const data = { users: mockUsers };
-    return res.json(data.users || []);
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const users = await listAllUsers();
+      return res.json(users.map((u) => {
+        const { password_hash, ...safe } = u;
+        return safe;
+      }));
+    } catch (err) {
+      return res.status(500).json({ error: "Erro ao listar usu\xE1rios." });
+    }
   });
-  app.post("/api/admin/users/:id/approve", (req, res) => {
+  app.post("/api/admin/users/:id/approve", requireAdmin, async (req, res) => {
     const { role, clearance, badgeText, allowedModules } = req.body;
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p) => p.id === req.params.id);
-    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
-    const isNewApproval = data.users[userIndex].status === "PENDING";
-    let provPass = data.users[userIndex].password;
-    if (isNewApproval) {
-      provPass = Math.floor(1e5 + Math.random() * 9e5).toString();
-      data.users[userIndex].password = provPass;
-      data.users[userIndex].pin = provPass;
-      data.users[userIndex].requiresPasswordChange = true;
+    const adminId = req.session.user.id;
+    try {
+      const tempPass = generateTempPassword();
+      const updated = await approveUser(
+        req.params.id,
+        { role, clearance: clearance || "PUBLIC", badgeText, allowedModules },
+        adminId,
+        tempPass
+      );
+      sendAccessApprovedEmail(
+        { name: updated.name, email: updated.email, cpf: updated.cpf, unidade: updated.unidade, badgeText: updated.badge_text },
+        tempPass
+      ).catch((e) => console.error("[Email] Falha ao enviar aprova\xE7\xE3o:", e));
+      const { password_hash, ...safe } = updated;
+      return res.json({ success: true, user: safe });
+    } catch (err) {
+      console.error("[Admin] Erro ao aprovar usu\xE1rio:", err);
+      return res.status(500).json({ error: "Erro ao aprovar usu\xE1rio." });
     }
-    data.users[userIndex].status = "ACTIVE";
-    data.users[userIndex].role = role || data.users[userIndex].role;
-    data.users[userIndex].clearance = clearance || "PUBLIC";
-    data.users[userIndex].badgeText = badgeText || "AUTORIZADO";
-    if (allowedModules) {
-      data.users[userIndex].allowedModules = allowedModules;
-    }
-    if (data.users) mockUsers = data.users;
-    if (isNewApproval) {
-      console.log(`
-
-=== SIMULA\xC7\xC3O DE ENVIO DE E-MAIL ===
-Para: ${data.users[userIndex].email}
-Assunto: Acesso Aprovado
-Mensagem: Seu acesso ao \xD3RBITA.AECI foi aprovado.
-Sua senha provis\xF3ria \xE9: ${provPass}
-====================================
-
-`);
-    }
-    return res.json({ success: true, user: data.users[userIndex] });
   });
-  app.post("/api/admin/users/:id", (req, res) => {
-    const { badgeText, allowedModules } = req.body;
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p) => p.id === req.params.id);
-    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
-    if (badgeText) data.users[userIndex].badgeText = badgeText;
-    if (allowedModules) data.users[userIndex].allowedModules = allowedModules;
-    if (data.users) mockUsers = data.users;
-    return res.json({ success: true, user: data.users[userIndex] });
+  app.post("/api/admin/users/:id", requireAdmin, async (req, res) => {
+    const { badgeText, allowedModules, clearance, role, name, email, siape, unidade } = req.body;
+    try {
+      const user = await findUserByIdentifier(req.params.id);
+      if (!user) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
+      const updated = await updateUser(
+        req.params.id,
+        { role, clearance, badgeText, allowedModules, name, email, siape, unidade }
+      );
+      const { password_hash, ...safe } = updated;
+      return res.json({ success: true, user: safe });
+    } catch (err) {
+      console.error("[Admin] Erro ao atualizar usu\xE1rio:", err);
+      return res.status(500).json({ error: "Erro ao atualizar usu\xE1rio." });
+    }
   });
-  app.post("/api/admin/users/:id/inactivate", (req, res) => {
-    const data = { users: mockUsers };
-    const userIndex = (data.users || []).findIndex((p) => p.id === req.params.id);
-    if (userIndex === -1) return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado." });
-    data.users[userIndex].status = "INACTIVE";
-    if (data.users) mockUsers = data.users;
-    return res.json({ success: true, user: data.users[userIndex] });
+  app.post("/api/admin/users/:id/inactivate", requireAdmin, async (req, res) => {
+    try {
+      await inactivateUser(req.params.id);
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: "Erro ao inativar usu\xE1rio." });
+    }
+  });
+  app.post("/api/admin/users/:id/reactivate", requireAdmin, async (req, res) => {
+    try {
+      await reactivateUser(req.params.id);
+      return res.json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: "Erro ao reativar usu\xE1rio." });
+    }
   });
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Erro ao encerrar sess\xE3o." });
-      }
+      if (err) return res.status(500).json({ error: "Erro ao encerrar sess\xE3o." });
       res.clearCookie("connect.sid");
       return res.json({ success: true });
     });
@@ -2789,10 +4259,10 @@ Sua senha provis\xF3ria \xE9: ${provPass}
     app.use(vite.middlewares);
   } else {
     console.log("Starting server in PRODUCTION mode with compiled assets...");
-    const distPath = import_path6.default.join(process.cwd(), "dist");
+    const distPath = import_path8.default.join(process.cwd(), "dist");
     app.use(import_express13.default.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(import_path6.default.join(distPath, "index.html"));
+      res.sendFile(import_path8.default.join(distPath, "index.html"));
     });
   }
   const PORT = 3e3;
