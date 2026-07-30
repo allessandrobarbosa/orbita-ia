@@ -2573,6 +2573,7 @@ var import_express7 = __toESM(require("express"), 1);
 init_db();
 var import_fs8 = __toESM(require("fs"), 1);
 var import_path7 = __toESM(require("path"), 1);
+var XLSX = __toESM(require("xlsx"), 1);
 init_importControl();
 var router7 = import_express7.default.Router();
 var MODULO_CGU = "CGU_DEMANDAS";
@@ -2627,11 +2628,36 @@ var normalizeHeaderName = (str) => {
   if (!str) return "";
   return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, "");
 };
+var parseFileContents = (filePath) => {
+  const ext = import_path7.default.extname(filePath).toLowerCase();
+  if (ext === ".xlsx" || ext === ".xls") {
+    const buffer = import_fs8.default.readFileSync(filePath);
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    return rawData.map((row2) => row2.map((cell) => cell != null ? String(cell).trim() : ""));
+  } else if (ext === ".csv") {
+    let contentStr = import_fs8.default.readFileSync(filePath, "latin1");
+    if (!contentStr || contentStr.trim().length < 10) return [];
+    const firstLineEnd = contentStr.indexOf("\n");
+    const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
+    let delimiter = ";";
+    if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) {
+      delimiter = ",";
+    }
+    return parseCSVRobust(contentStr, delimiter);
+  }
+  return [];
+};
 router7.get("/cgu/files/last-updates", (req, res) => {
   const getMostRecentDate = (dirPath) => {
     try {
       if (!import_fs8.default.existsSync(dirPath)) return null;
-      const files = import_fs8.default.readdirSync(dirPath).filter((f) => f.toLowerCase().endsWith(".csv"));
+      const files = import_fs8.default.readdirSync(dirPath).filter((f) => {
+        const ext = f.toLowerCase();
+        return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
+      });
       if (files.length === 0) return null;
       let maxTime = 0;
       for (const file of files) {
@@ -2690,9 +2716,12 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
   if (!import_fs8.default.existsSync(MON_DIR)) {
     return res.status(404).json({ error: `Diret\xF3rio n\xE3o encontrado: ${MON_DIR}` });
   }
-  const csvFiles = import_fs8.default.readdirSync(MON_DIR).filter((f) => f.toLowerCase().endsWith(".csv"));
-  if (csvFiles.length === 0) {
-    return res.status(404).json({ error: "Nenhum arquivo CSV encontrado em data/cgu/monitoramentos." });
+  const validFiles = import_fs8.default.readdirSync(MON_DIR).filter((f) => {
+    const ext = f.toLowerCase();
+    return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
+  });
+  if (validFiles.length === 0) {
+    return res.status(404).json({ error: "Nenhum arquivo CSV ou XLSX encontrado em data/cgu/monitoramentos." });
   }
   const usuarioId = req.session?.user?.id ?? "SISTEMA";
   const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -2708,19 +2737,11 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
       forcado_por_usuario: usuarioId
     });
     await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
-    for (const file of csvFiles) {
+    for (const file of validFiles) {
       const filePath = import_path7.default.join(MON_DIR, file);
-      let contentStr = import_fs8.default.readFileSync(filePath, "latin1");
-      if (!contentStr || contentStr.trim().length < 10) continue;
-      const firstLineEnd = contentStr.indexOf("\n");
-      const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
-      let delimiter = ";";
-      if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) {
-        delimiter = ",";
-      }
-      const allRows = parseCSVRobust(contentStr, delimiter);
+      const allRows = parseFileContents(filePath);
       if (allRows.length < 2) continue;
-      const headers = allRows[0].map(normalizeHeaderName);
+      const headers = allRows[0].map((h) => normalizeHeaderName(h || ""));
       const getIndex = (names) => {
         for (const n of names) {
           const i = headers.findIndex((h) => h.includes(n));
@@ -2768,6 +2789,7 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
           const anoStr = idxAno !== -1 ? row2[idxAno]?.trim() : null;
           const anoVal = anoStr ? parseInt(anoStr.match(/\d{4}/)?.[0] || "0") : null;
           try {
+            await client.query("SAVEPOINT import_row");
             await client.query(`
               INSERT INTO cgu_demands (
                 id_tarefa, situacao, estado, titulo_tarefa,
@@ -2792,9 +2814,11 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
                 ano = EXCLUDED.ano,
                 ultima_atualizacao = EXCLUDED.ultima_atualizacao
             `, [id, situacao, estado, titulo, dtInicio, dtFim, dtLimite, uniAuditada, unisAuditoria, txtMon, prov, cat, anoVal, updatedAt]);
+            await client.query("RELEASE SAVEPOINT import_row");
             inseridos++;
           } catch (e) {
-            console.error("CGU Sync Error row:", id, e);
+            await client.query("ROLLBACK TO SAVEPOINT import_row");
+            console.error("CGU Sync Error row:", id, "error:", e.message);
             erros++;
           }
         }
@@ -2814,7 +2838,8 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
     res.json({ success: true, importedCount: inseridos, erros });
   } catch (err) {
     if (importControlId) await registrarErroImportacao(importControlId, err);
-    res.status(500).json({ error: "Erro interno ao importar monitoramentos CGU." });
+    console.error("Erro no processamento de monitoramentos CGU", err);
+    res.status(500).json({ error: "Erro interno ao importar monitoramentos CGU. Detalhes: " + String(err) + " - " + String(err?.stack) });
   }
 });
 router7.get("/cgu/reports", async (req, res) => {
@@ -2841,9 +2866,12 @@ router7.post("/cgu/sync-local/relatorios", async (req, res) => {
   if (!import_fs8.default.existsSync(REL_DIR)) {
     return res.status(404).json({ error: `Diret\xF3rio n\xE3o encontrado: ${REL_DIR}` });
   }
-  const csvFiles = import_fs8.default.readdirSync(REL_DIR).filter((f) => f.toLowerCase().endsWith(".csv"));
-  if (csvFiles.length === 0) {
-    return res.status(404).json({ error: "Nenhum arquivo CSV encontrado em data/cgu/relatorios." });
+  const validFiles = import_fs8.default.readdirSync(REL_DIR).filter((f) => {
+    const ext = f.toLowerCase();
+    return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
+  });
+  if (validFiles.length === 0) {
+    return res.status(404).json({ error: "Nenhum arquivo CSV ou XLSX encontrado em data/cgu/relatorios." });
   }
   const usuarioId = req.session?.user?.id ?? "SISTEMA";
   const updatedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -2859,17 +2887,11 @@ router7.post("/cgu/sync-local/relatorios", async (req, res) => {
       forcado_por_usuario: usuarioId
     });
     await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
-    for (const file of csvFiles) {
+    for (const file of validFiles) {
       const filePath = import_path7.default.join(REL_DIR, file);
-      let contentStr = import_fs8.default.readFileSync(filePath, "latin1");
-      if (!contentStr || contentStr.trim().length < 10) continue;
-      const firstLineEnd = contentStr.indexOf("\n");
-      const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
-      let delimiter = ";";
-      if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) delimiter = ",";
-      const allRows = parseCSVRobust(contentStr, delimiter);
+      const allRows = parseFileContents(filePath);
       if (allRows.length < 2) continue;
-      const headers = allRows[0].map(normalizeHeaderName);
+      const headers = allRows[0].map((h) => normalizeHeaderName(h || ""));
       const getIndex = (names) => {
         for (const n of names) {
           const i = headers.findIndex((h) => h.includes(n));
@@ -2906,6 +2928,7 @@ router7.post("/cgu/sync-local/relatorios", async (req, res) => {
           const lnk = idxLink !== -1 ? row2[idxLink]?.trim() : null;
           const dtPub = idxDataPub !== -1 ? row2[idxDataPub]?.trim() : null;
           try {
+            await client.query("SAVEPOINT import_row_rel");
             await client.query(`
               INSERT INTO cgu_reports (
                 id_tarefa, id_auditoria, titulo_auditoria, ano,
@@ -2923,8 +2946,11 @@ router7.post("/cgu/sync-local/relatorios", async (req, res) => {
                 data_publicacao = EXCLUDED.data_publicacao,
                 ultima_atualizacao = EXCLUDED.ultima_atualizacao
             `, [id, idAud, tit, anoVal, uni, cat, lnk, dtPub, updatedAt]);
+            await client.query("RELEASE SAVEPOINT import_row_rel");
             inseridos++;
           } catch (e) {
+            await client.query("ROLLBACK TO SAVEPOINT import_row_rel");
+            console.error("CGU Sync Report Error row:", id, "error:", e.message);
             erros++;
           }
         }
@@ -2944,7 +2970,8 @@ router7.post("/cgu/sync-local/relatorios", async (req, res) => {
     res.json({ success: true, importedCount: inseridos, erros });
   } catch (err) {
     if (importControlId) await registrarErroImportacao(importControlId, err);
-    res.status(500).json({ error: "Erro interno ao importar relat\xF3rios CGU." });
+    console.error("Erro no processamento de relat\xF3rios CGU", err);
+    res.status(500).json({ error: "Erro interno ao importar relat\xF3rios CGU. Detalhes: " + String(err) + " - " + String(err?.stack) });
   }
 });
 router7.post("/cgu/update", async (req, res) => {

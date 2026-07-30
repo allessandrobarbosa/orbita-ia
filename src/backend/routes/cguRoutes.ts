@@ -2,6 +2,7 @@ import express from "express";
 import { pool } from "../db.js";
 import fs from "fs";
 import path from "path";
+import * as XLSX from "xlsx";
 import {
   iniciarImportacao,
   atualizarStatusImportacao,
@@ -54,13 +55,46 @@ const normalizeHeaderName = (str: string) => {
 };
 
 // =========================================================================
+// Helper para ler e dar parse em arquivos (CSV ou XLSX)
+// =========================================================================
+const parseFileContents = (filePath: string): string[][] => {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === ".xlsx" || ext === ".xls") {
+    const buffer = fs.readFileSync(filePath);
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    // XLSX returns an array of arrays when { header: 1 } is used.
+    const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+    // Convert everything to string
+    return rawData.map(row => row.map(cell => (cell != null ? String(cell).trim() : "")));
+  } else if (ext === ".csv") {
+    let contentStr = fs.readFileSync(filePath, 'latin1');
+    if (!contentStr || contentStr.trim().length < 10) return [];
+
+    const firstLineEnd = contentStr.indexOf('\n');
+    const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
+    let delimiter = ";";
+    if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) {
+      delimiter = ",";
+    }
+
+    return parseCSVRobust(contentStr, delimiter);
+  }
+  return [];
+};
+
+// =========================================================================
 // GET /cgu/files/last-updates
 // =========================================================================
 router.get("/cgu/files/last-updates", (req, res) => {
   const getMostRecentDate = (dirPath: string): string | null => {
     try {
       if (!fs.existsSync(dirPath)) return null;
-      const files = fs.readdirSync(dirPath).filter(f => f.toLowerCase().endsWith(".csv"));
+      const files = fs.readdirSync(dirPath).filter(f => {
+        const ext = f.toLowerCase();
+        return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
+      });
       if (files.length === 0) return null;
       
       let maxTime = 0;
@@ -131,9 +165,13 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
     return res.status(404).json({ error: `Diretório não encontrado: ${MON_DIR}` });
   }
 
-  const csvFiles = fs.readdirSync(MON_DIR).filter(f => f.toLowerCase().endsWith(".csv"));
-  if (csvFiles.length === 0) {
-    return res.status(404).json({ error: "Nenhum arquivo CSV encontrado em data/cgu/monitoramentos." });
+  const validFiles = fs.readdirSync(MON_DIR).filter(f => {
+    const ext = f.toLowerCase();
+    return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
+  });
+  
+  if (validFiles.length === 0) {
+    return res.status(404).json({ error: "Nenhum arquivo CSV ou XLSX encontrado em data/cgu/monitoramentos." });
   }
 
   const usuarioId = (req as any).session?.user?.id ?? "SISTEMA";
@@ -153,22 +191,13 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
 
     await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
 
-    for (const file of csvFiles) {
+    for (const file of validFiles) {
       const filePath = path.join(MON_DIR, file);
-      let contentStr = fs.readFileSync(filePath, 'latin1');
-      if (!contentStr || contentStr.trim().length < 10) continue;
-
-      const firstLineEnd = contentStr.indexOf('\n');
-      const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
-      let delimiter = ";";
-      if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) {
-        delimiter = ",";
-      }
-
-      const allRows = parseCSVRobust(contentStr, delimiter);
+      
+      const allRows = parseFileContents(filePath);
       if (allRows.length < 2) continue;
 
-      const headers = allRows[0].map(normalizeHeaderName);
+      const headers = allRows[0].map(h => normalizeHeaderName(h || ""));
       
       const getIndex = (names: string[]) => {
         for (const n of names) {
@@ -191,6 +220,14 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
       const idxProv = getIndex(["providencia"]);
       const idxCat = getIndex(["categoria"]);
       const idxAno = getIndex(["ano"]);
+      
+      const idxTipoManif = getIndex(["tipoultimamanifestacao", "tipomanifestacao"]);
+      const idxTextoManif = getIndex(["textoultimamanifestacao", "textomanifestacao"]);
+      const idxDataManif = getIndex(["dataultimamanifestacao", "datamanifestacao"]);
+      const idxTipoPos = getIndex(["tipoultimoposicionamento", "tipoposicionamento"]);
+      const idxTextoPos = getIndex(["textoultimoposicionamento", "textoposicionamento"]);
+      const idxDataPos = getIndex(["dataultimoposicionamento", "dataposicionamento"]);
+      const idxLimiteIni = getIndex(["datalimiteinicial", "limiteinicial"]);
 
       if (idxIdTarefa === -1) {
         console.warn("Arquivo sem ID de Tarefa ignorado:", file);
@@ -203,7 +240,7 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
         
         for (let i = 1; i < allRows.length; i++) {
           const row = allRows[i];
-          if (!row || row.length < headers.length * 0.5) continue;
+          if (!row || row.length < headers.length * 0.5) continue; // Skip empty rows
           
           const id = row[idxIdTarefa]?.trim();
           if (!id) continue;
@@ -223,15 +260,28 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
           const anoStr = idxAno !== -1 ? row[idxAno]?.trim() : null;
           const anoVal = anoStr ? parseInt(anoStr.match(/\d{4}/)?.[0] || "0") : null;
 
+          const tipoManif = idxTipoManif !== -1 ? row[idxTipoManif]?.trim() : null;
+          const txtManif = idxTextoManif !== -1 ? row[idxTextoManif]?.trim() : null;
+          const dtManif = idxDataManif !== -1 ? row[idxDataManif]?.trim() : null;
+          const tipoPos = idxTipoPos !== -1 ? row[idxTipoPos]?.trim() : null;
+          const txtPos = idxTextoPos !== -1 ? row[idxTextoPos]?.trim() : null;
+          const dtPos = idxDataPos !== -1 ? row[idxDataPos]?.trim() : null;
+          const dtLimiteIni = idxLimiteIni !== -1 ? row[idxLimiteIni]?.trim() : null;
+
           try {
+            await client.query("SAVEPOINT import_row");
             await client.query(`
               INSERT INTO cgu_demands (
                 id_tarefa, situacao, estado, titulo_tarefa,
                 data_inicio, data_fim, data_limite, unidade_auditada,
                 unidades_auditoria, texto_monitoramento, providencia,
-                categoria, ano, ultima_atualizacao
+                categoria, ano, ultima_atualizacao,
+                tipo_ultima_manifestacao, texto_ultima_manifestacao, data_ultima_manifestacao,
+                tipo_ultimo_posicionamento, texto_ultimo_posicionamento, data_ultimo_posicionamento,
+                data_limite_inicial
               ) VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+                $15,$16,$17,$18,$19,$20,$21
               )
               ON CONFLICT (id_tarefa) DO UPDATE SET
                 situacao = EXCLUDED.situacao,
@@ -246,11 +296,20 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
                 providencia = EXCLUDED.providencia,
                 categoria = EXCLUDED.categoria,
                 ano = EXCLUDED.ano,
-                ultima_atualizacao = EXCLUDED.ultima_atualizacao
-            `, [id, situacao, estado, titulo, dtInicio, dtFim, dtLimite, uniAuditada, unisAuditoria, txtMon, prov, cat, anoVal, updatedAt]);
+                ultima_atualizacao = EXCLUDED.ultima_atualizacao,
+                tipo_ultima_manifestacao = EXCLUDED.tipo_ultima_manifestacao,
+                texto_ultima_manifestacao = EXCLUDED.texto_ultima_manifestacao,
+                data_ultima_manifestacao = EXCLUDED.data_ultima_manifestacao,
+                tipo_ultimo_posicionamento = EXCLUDED.tipo_ultimo_posicionamento,
+                texto_ultimo_posicionamento = EXCLUDED.texto_ultimo_posicionamento,
+                data_ultimo_posicionamento = EXCLUDED.data_ultimo_posicionamento,
+                data_limite_inicial = EXCLUDED.data_limite_inicial
+            `, [id, situacao, estado, titulo, dtInicio, dtFim, dtLimite, uniAuditada, unisAuditoria, txtMon, prov, cat, anoVal, updatedAt, tipoManif, txtManif, dtManif, tipoPos, txtPos, dtPos, dtLimiteIni]);
+            await client.query("RELEASE SAVEPOINT import_row");
             inseridos++;
-          } catch(e) {
-            console.error("CGU Sync Error row:", id, e);
+          } catch(e: any) {
+            await client.query("ROLLBACK TO SAVEPOINT import_row");
+            console.error("CGU Sync Error row:", id, "error:", e.message);
             erros++;
           }
         }
@@ -272,7 +331,8 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
     res.json({ success: true, importedCount: inseridos, erros });
   } catch (err: any) {
     if (importControlId) await registrarErroImportacao(importControlId, err);
-    res.status(500).json({ error: "Erro interno ao importar monitoramentos CGU." });
+    console.error("Erro no processamento de monitoramentos CGU", err);
+    res.status(500).json({ error: "Erro interno ao importar monitoramentos CGU. Detalhes: " + String(err) + " - " + String(err?.stack) });
   }
 });
 
@@ -308,9 +368,13 @@ router.post("/cgu/sync-local/relatorios", async (req, res) => {
     return res.status(404).json({ error: `Diretório não encontrado: ${REL_DIR}` });
   }
 
-  const csvFiles = fs.readdirSync(REL_DIR).filter(f => f.toLowerCase().endsWith(".csv"));
-  if (csvFiles.length === 0) {
-    return res.status(404).json({ error: "Nenhum arquivo CSV encontrado em data/cgu/relatorios." });
+  const validFiles = fs.readdirSync(REL_DIR).filter(f => {
+    const ext = f.toLowerCase();
+    return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
+  });
+
+  if (validFiles.length === 0) {
+    return res.status(404).json({ error: "Nenhum arquivo CSV ou XLSX encontrado em data/cgu/relatorios." });
   }
 
   const usuarioId = (req as any).session?.user?.id ?? "SISTEMA";
@@ -330,20 +394,13 @@ router.post("/cgu/sync-local/relatorios", async (req, res) => {
 
     await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
 
-    for (const file of csvFiles) {
+    for (const file of validFiles) {
       const filePath = path.join(REL_DIR, file);
-      let contentStr = fs.readFileSync(filePath, 'latin1');
-      if (!contentStr || contentStr.trim().length < 10) continue;
-
-      const firstLineEnd = contentStr.indexOf('\n');
-      const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
-      let delimiter = ";";
-      if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) delimiter = ",";
-
-      const allRows = parseCSVRobust(contentStr, delimiter);
+      
+      const allRows = parseFileContents(filePath);
       if (allRows.length < 2) continue;
 
-      const headers = allRows[0].map(normalizeHeaderName);
+      const headers = allRows[0].map(h => normalizeHeaderName(h || ""));
       const getIndex = (names: string[]) => {
         for (const n of names) {
           const i = headers.findIndex(h => h.includes(n));
@@ -387,6 +444,7 @@ router.post("/cgu/sync-local/relatorios", async (req, res) => {
           const dtPub = idxDataPub !== -1 ? row[idxDataPub]?.trim() : null;
 
           try {
+            await client.query("SAVEPOINT import_row_rel");
             await client.query(`
               INSERT INTO cgu_reports (
                 id_tarefa, id_auditoria, titulo_auditoria, ano,
@@ -404,8 +462,11 @@ router.post("/cgu/sync-local/relatorios", async (req, res) => {
                 data_publicacao = EXCLUDED.data_publicacao,
                 ultima_atualizacao = EXCLUDED.ultima_atualizacao
             `, [id, idAud, tit, anoVal, uni, cat, lnk, dtPub, updatedAt]);
+            await client.query("RELEASE SAVEPOINT import_row_rel");
             inseridos++;
-          } catch(e) {
+          } catch(e: any) {
+            await client.query("ROLLBACK TO SAVEPOINT import_row_rel");
+            console.error("CGU Sync Report Error row:", id, "error:", e.message);
             erros++;
           }
         }
@@ -427,7 +488,8 @@ router.post("/cgu/sync-local/relatorios", async (req, res) => {
     res.json({ success: true, importedCount: inseridos, erros });
   } catch (err: any) {
     if (importControlId) await registrarErroImportacao(importControlId, err);
-    res.status(500).json({ error: "Erro interno ao importar relatórios CGU." });
+    console.error("Erro no processamento de relatórios CGU", err);
+    res.status(500).json({ error: "Erro interno ao importar relatórios CGU. Detalhes: " + String(err) + " - " + String(err?.stack) });
   }
 });
 

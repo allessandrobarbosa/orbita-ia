@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import {
-  Search, RefreshCw, FileText, FileSpreadsheet, Eye, Trash2, Edit, X, Save, CheckCircle2, AlertTriangle, ArrowRightLeft, Filter
+  Search, RefreshCw, FileText, FileSpreadsheet, Eye, Trash2, Edit, X, Save, CheckCircle2, AlertTriangle, ArrowRightLeft, Filter, ShieldCheck, Database
 } from "lucide-react";
 import { CguDemand, CguPublishedReport } from "../types";
+import CguDossieModal from "./CguDossieModal";
+import CguDemandsTable from "./CguDemandsTable";
 
 interface CguModuleProps {
   cguDemands: CguDemand[];
@@ -29,11 +31,11 @@ export default function CguModule({
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [anoFilter, setAnoFilter] = useState("TODOS");
-  const [statusFilter, setStatusFilter] = useState("TODOS");
+  const [anoFilter, setAnoFilter] = useState("TODOS OS ANOS");
 
   // Edit Modal
   const [editingItem, setEditingItem] = useState<CguDemand | null>(null);
+  const [viewingItem, setViewingItem] = useState<CguDemand | null>(null);
   const [editSituacao, setEditSituacao] = useState("");
   const [editEstado, setEditEstado] = useState("");
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -41,18 +43,6 @@ export default function CguModule({
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
-  const [lastUpdates, setLastUpdates] = useState<{monitoramentos: string | null, relatorios: string | null}>({ monitoramentos: null, relatorios: null });
-
-  useEffect(() => {
-    fetch("/api/cgu/files/last-updates")
-      .then(res => res.json())
-      .then(res => {
-        if (res.success && res.data) {
-          setLastUpdates(res.data);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const handleSyncDemands = async () => {
     if (!onSyncCguMonitoramentos) return;
@@ -60,23 +50,6 @@ export default function CguModule({
     setSyncMessage(null);
     try {
       const res = await onSyncCguMonitoramentos();
-      if (res?.success) {
-        setSyncMessage({ type: 'success', text: `Sincronizado com sucesso! ${res.importedCount} registros processados.` });
-      } else {
-        setSyncMessage({ type: 'error', text: res?.error || "Erro ao sincronizar." });
-      }
-    } finally {
-      setIsSyncing(false);
-      setTimeout(() => setSyncMessage(null), 5000);
-    }
-  };
-
-  const handleSyncReports = async () => {
-    if (!onSyncCguReports) return;
-    setIsSyncing(true);
-    setSyncMessage(null);
-    try {
-      const res = await onSyncCguReports();
       if (res?.success) {
         setSyncMessage({ type: 'success', text: `Sincronizado com sucesso! ${res.importedCount} registros processados.` });
       } else {
@@ -100,12 +73,10 @@ export default function CguModule({
     if (success) setEditingItem(null);
   };
 
-  const availableYears = Array.from(new Set(cguDemands.map(d => d.ano).filter(Boolean))).sort((a: any, b: any) => b - a);
-  const availableStatus = Array.from(new Set(cguDemands.map(d => d.situacao).filter(Boolean))).sort();
+  const availableYears = ["TODOS OS ANOS", ...Array.from(new Set(cguDemands.map(d => d.ano).filter(Boolean))).sort((a: any, b: any) => b - a).map(y => `ANO ${y}`)];
 
   const filteredDemands = cguDemands.filter(d => {
-    if (anoFilter !== "TODOS" && String(d.ano) !== anoFilter) return false;
-    if (statusFilter !== "TODOS" && d.situacao !== statusFilter) return false;
+    if (anoFilter !== "TODOS OS ANOS" && `ANO ${d.ano}` !== anoFilter) return false;
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
@@ -122,211 +93,236 @@ export default function CguModule({
       const term = searchTerm.toLowerCase();
       return (
         r.idTarefa?.toLowerCase().includes(term) ||
-        r.tituloAuditoria?.toLowerCase().includes(term) ||
-        r.unidadeAuditada?.toLowerCase().includes(term)
+        r.idAuditoria?.toLowerCase().includes(term) ||
+        r.nomeUnidadeAuditada?.toLowerCase().includes(term)
       );
     }
     return true;
   });
 
+  // Volumetry counts
+  const counts = {
+    pendentes: filteredDemands.filter(d => d.situacao?.toLowerCase().includes('pendente')).length,
+    analise: filteredDemands.filter(d => d.situacao?.toLowerCase().includes('análise') || d.situacao?.toLowerCase().includes('analise')).length,
+    concluidas: filteredDemands.filter(d => d.situacao?.toLowerCase().includes('concluíd') || d.situacao?.toLowerCase().includes('concluid') || d.situacao?.toLowerCase().includes('cumprid')).length,
+    outros: filteredDemands.filter(d => {
+      const s = d.situacao?.toLowerCase() || '';
+      return !s.includes('pendente') && !s.includes('análise') && !s.includes('analise') && !s.includes('conclu') && !s.includes('cumprid');
+    }).length,
+  };
+
+  const statsCards = [
+    { id: 'pendentes', label: 'Pendentes', short: 'PEND', count: counts.pendentes, icon: AlertTriangle, colorClass: 'text-amber-600 bg-amber-50', textClass: 'border-amber-200 hover:border-amber-300 shadow-sm shadow-amber-900/5' },
+    { id: 'analise', label: 'Em Análise', short: 'ANALISE', count: counts.analise, icon: Search, colorClass: 'text-blue-600 bg-blue-50', textClass: 'border-blue-200 hover:border-blue-300 shadow-sm shadow-blue-900/5' },
+    { id: 'concluidas', label: 'Concluídas', short: 'CONC', count: counts.concluidas, icon: CheckCircle2, colorClass: 'text-emerald-600 bg-emerald-50', textClass: 'border-emerald-200 hover:border-emerald-300 shadow-sm shadow-emerald-900/5' },
+    { id: 'outros', label: 'Outros Status', short: 'OUTROS', count: counts.outros, icon: ArrowRightLeft, colorClass: 'text-slate-600 bg-slate-50', textClass: 'border-slate-200 hover:border-slate-300 shadow-sm' },
+  ];
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[calc(100vh-140px)]">
-      {/* Header */}
-      <div className="bg-slate-800 p-4 shrink-0">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-            Demandas CGU (Controladoria-Geral da União)
-          </h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveSubTab("demands")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeSubTab === "demands" ? "bg-emerald-500 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600"}`}
-            >
-              Monitoramentos
-            </button>
-            <button
-              onClick={() => setActiveSubTab("published")}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeSubTab === "published" ? "bg-emerald-500 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600"}`}
-            >
-              Relatórios Publicados
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row gap-4 justify-between items-center shrink-0">
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Buscar por ID, Título, Unidade..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 pr-4 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 w-full md:w-64"
-            />
-          </div>
-          {activeSubTab === "demands" && (
-            <>
-              <select
-                value={anoFilter}
-                onChange={(e) => setAnoFilter(e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-emerald-500 bg-white"
-              >
-                <option value="TODOS">Todos os Anos</option>
-                {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-slate-300 rounded-md text-sm focus:outline-none focus:border-emerald-500 bg-white max-w-[200px]"
-              >
-                <option value="TODOS">Todos os Status</option>
-                {availableStatus.map(s => <option key={String(s)} value={String(s)}>{s}</option>)}
-              </select>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-          <div className="text-xs text-slate-500 flex flex-col items-end">
-            {activeSubTab === "demands" ? (
-              <>
-                <span className="font-medium">{filteredDemands.length} registros</span>
-                {lastUpdates.monitoramentos && <span>Atualizado: {lastUpdates.monitoramentos}</span>}
-              </>
-            ) : (
-              <>
-                <span className="font-medium">{filteredReports.length} registros</span>
-                {lastUpdates.relatorios && <span>Atualizado: {lastUpdates.relatorios}</span>}
-              </>
-            )}
+    <div className="space-y-6 font-sans">
+      {/* Header Sticky */}
+      <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg shadow-blue-900/20 text-white shrink-0">
+                <ShieldCheck size={20} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Controladoria-Geral da União — CGU</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Monitoramento de Recomendações e Relatórios de Auditoria</p>
+              </div>
+            </div>
           </div>
           
-          <button
-            onClick={activeSubTab === "demands" ? handleSyncDemands : handleSyncReports}
-            disabled={isSyncing}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Sincronizando...' : `Sincronizar ${activeSubTab === 'demands' ? 'Monitoramentos' : 'Relatórios'}`}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleSyncDemands}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              Sincronizar
+            </button>
+          </div>
         </div>
       </div>
 
-      {syncMessage && (
-        <div className={`p-3 text-sm ${syncMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border-b border-emerald-100' : 'bg-red-50 text-red-700 border-b border-red-100'}`}>
-          {syncMessage.text}
+      {/* Submodules Navigation */}
+      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
+        {[
+          { id: "demands", label: "Monitoramento", desc: "Acompanhamento de Recomendações", icon: Database },
+          { id: "published", label: "Relatórios Publicados", desc: "Base de Relatórios da CGU", icon: FileText }
+        ].map((sub) => {
+          const SubIcon = sub.icon;
+          const isActive = activeSubTab === sub.id;
+          return (
+            <button
+              key={sub.id}
+              onClick={() => setActiveSubTab(sub.id as any)}
+              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${
+                isActive
+                  ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
+                  : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <span className="block text-xs font-black uppercase tracking-wide leading-none">{sub.label}</span>
+                  <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{sub.desc}</span>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Year Tabs Filters */}
+      <div className="flex items-center gap-1 border-b border-slate-200 mb-6 overflow-x-auto pb-px no-scrollbar">
+        {availableYears.map(year => (
+          <button
+            key={year}
+            onClick={() => setAnoFilter(year)}
+            className={`px-4 py-2.5 text-xs font-black tracking-wide whitespace-nowrap uppercase transition-all border-b-2 ${
+              anoFilter === year
+                ? "border-[#003366] text-[#003366]"
+                : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300"
+            }`}
+          >
+            {year === "TODOS OS ANOS" ? year : `${year} ATIVO`}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Content Area */}
+      {activeSubTab === "demands" ? (
+        <div className="space-y-6">
+          {/* Volumetry Cards */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Volumetria por Situação ({anoFilter.replace(' ATIVO', '')})</span>
+              <span className="text-xs text-slate-500 font-semibold">{filteredDemands.length} Demandas Filtradas</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 no-print">
+              {statsCards.map((cat) => {
+                const Icon = cat.icon;
+                return (
+                  <div 
+                    key={cat.id} 
+                    className={`bg-white border rounded-xl p-3 flex flex-col justify-between hover:-translate-y-0.5 transition-all duration-200 group relative overflow-hidden ${cat.textClass}`}
+                  >
+                    <div className="flex items-start justify-between gap-1.5 mb-1.5">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[10px] font-bold text-slate-500 truncate group-hover:text-slate-800 transition-colors">
+                          {cat.label}
+                        </span>
+                        <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
+                          {cat.short}
+                        </span>
+                      </div>
+                      <div className={`p-1.5 rounded-lg shrink-0 transition-transform group-hover:scale-105 duration-200 ${cat.colorClass}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-baseline justify-between mt-auto">
+                      <h4 className="text-xl font-black text-slate-900">
+                        {cat.count}
+                      </h4>
+                      <span className="text-[9px] text-slate-400 font-bold">
+                        {filteredDemands.length > 0 ? `${((cat.count / filteredDemands.length) * 100).toFixed(0)}%` : "0%"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Search bar */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Buscar recomendações por relatório, título ou unidade..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm"
+              />
+            </div>
+          </div>
+
+          {/* Table */}
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500 gap-3">
+              <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
+              <p>Carregando dados...</p>
+            </div>
+          ) : (
+            <div className="w-full">
+              <CguDemandsTable 
+                demands={filteredDemands} 
+                onView={setViewingItem} 
+                onEdit={(d) => {
+                  setEditingItem(d);
+                  setEditSituacao(d.situacao || "");
+                  setEditEstado(d.estado || "");
+                }} 
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+             <h3 className="font-bold text-slate-700">Relatórios Publicados CGU</h3>
+          </div>
+          <table className="w-full text-left border-collapse text-slate-700 text-sm">
+            <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs uppercase">
+              <tr>
+                <th className="p-3 font-semibold">Relatório</th>
+                <th className="p-3 font-semibold">Auditoria</th>
+                <th className="p-3 font-semibold">Data</th>
+                <th className="p-3 font-semibold">Unidade</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredReports.map((r, i) => (
+                <tr key={`rep-${r.idTarefa}-${i}`} className="hover:bg-slate-50 transition-colors">
+                  <td className="p-3 font-medium text-slate-800">{r.tituloRelatorio}</td>
+                  <td className="p-3">{r.idAuditoria}</td>
+                  <td className="p-3">{r.dataPublicacao}</td>
+                  <td className="p-3">{r.nomeUnidadeAuditada}</td>
+                </tr>
+              ))}
+              {filteredReports.length === 0 && (
+                <tr><td colSpan={4} className="p-8 text-center text-slate-500">Nenhum relatório encontrado.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-auto bg-slate-50 p-4">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-3">
-            <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
-            <p>Carregando dados...</p>
-          </div>
-        ) : activeSubTab === "demands" ? (
-          <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-            <table className="w-full text-left border-collapse text-slate-700 text-sm">
-              <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs uppercase">
-                <tr>
-                  <th className="p-3 font-semibold">ID Tarefa</th>
-                  <th className="p-3 font-semibold">Título</th>
-                  <th className="p-3 font-semibold">Unidade Auditada</th>
-                  <th className="p-3 font-semibold">Situação</th>
-                  <th className="p-3 font-semibold">Ano</th>
-                  <th className="p-3 font-semibold text-center">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredDemands.map((d, i) => (
-                  <tr key={`dem-${d.idTarefa}-${i}`} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 whitespace-nowrap font-medium text-slate-800">{d.idTarefa}</td>
-                    <td className="p-3"><div className="line-clamp-2" title={d.tituloTarefa}>{d.tituloTarefa}</div></td>
-                    <td className="p-3"><div className="line-clamp-2">{d.unidadeAuditada}</div></td>
-                    <td className="p-3">
-                      <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">
-                        {d.situacao || "-"}
-                      </span>
-                    </td>
-                    <td className="p-3">{d.ano}</td>
-                    <td className="p-3 text-center">
-                      <button onClick={() => {
-                        setEditingItem(d);
-                        setEditSituacao(d.situacao || "");
-                        setEditEstado(d.estado || "");
-                      }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md" title="Editar">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {filteredDemands.length === 0 && (
-                  <tr><td colSpan={6} className="p-8 text-center text-slate-500">Nenhuma demanda encontrada.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-            <table className="w-full text-left border-collapse text-slate-700 text-sm">
-              <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs uppercase">
-                <tr>
-                  <th className="p-3 font-semibold">ID / Relatório</th>
-                  <th className="p-3 font-semibold">Título Auditoria</th>
-                  <th className="p-3 font-semibold">Unidade Auditada</th>
-                  <th className="p-3 font-semibold">Data Pub.</th>
-                  <th className="p-3 font-semibold text-center">Link</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredReports.map((r, i) => (
-                  <tr key={`rep-${r.idTarefa}-${i}`} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3 font-medium text-slate-800">{r.idTarefa || r.idAuditoria}</td>
-                    <td className="p-3"><div className="line-clamp-2" title={r.tituloAuditoria}>{r.tituloAuditoria}</div></td>
-                    <td className="p-3"><div className="line-clamp-2">{r.unidadeAuditada}</div></td>
-                    <td className="p-3 whitespace-nowrap">{r.dataPublicacao}</td>
-                    <td className="p-3 text-center">
-                      {r.link && (
-                        <a href={r.link} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline text-xs font-medium">Acessar</a>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {filteredReports.length === 0 && (
-                  <tr><td colSpan={5} className="p-8 text-center text-slate-500">Nenhum relatório encontrado.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
       {/* Edit Modal */}
       {editingItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
-                <Edit className="w-5 h-5 text-blue-600" />
-                Editar Demanda {editingItem.idTarefa}
-              </h3>
-              <button onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-800">Editar Demanda</h3>
+              <button onClick={() => setEditingItem(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6 flex flex-col gap-4">
+            <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Situação</label>
                 <input
                   type="text"
                   value={editSituacao}
                   onChange={(e) => setEditSituacao(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
                 />
               </div>
               <div>
@@ -335,21 +331,21 @@ export default function CguModule({
                   type="text"
                   value={editEstado}
                   onChange={(e) => setEditEstado(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
                 />
               </div>
             </div>
             <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
               <button
                 onClick={() => setEditingItem(null)}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-md text-sm font-medium transition-colors"
+                className="px-4 py-2 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-bold transition-colors"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSaveEdit}
                 disabled={isSavingEdit}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-bold transition-colors"
               >
                 <Save className="w-4 h-4" />
                 {isSavingEdit ? "Salvando..." : "Salvar Alterações"}
@@ -357,6 +353,11 @@ export default function CguModule({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Dossier Modal */}
+      {viewingItem && (
+        <CguDossieModal demand={viewingItem} onClose={() => setViewingItem(null)} />
       )}
     </div>
   );

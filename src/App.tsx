@@ -745,8 +745,10 @@ export default function App() {
         const data = await res.json();
         await fetchAllData();
         return data;
+      } else {
+        const errData = await res.json().catch(() => null);
+        return { success: false, error: errData?.error || "Erro ao sincronizar monitoramentos" };
       }
-      return { success: false, error: "Erro ao sincronizar monitoramentos" };
     } catch (err) {
       console.error("Falha ao sincronizar monitoramentos CGU:", err);
       return { success: false, error: "Falha de conexão" };
@@ -761,8 +763,10 @@ export default function App() {
         const data = await res.json();
         await fetchAllData();
         return data;
+      } else {
+        const errData = await res.json().catch(() => null);
+        return { success: false, error: errData?.error || "Erro ao sincronizar relatórios" };
       }
-      return { success: false, error: "Erro ao sincronizar relatórios" };
     } catch (err) {
       console.error("Falha ao sincronizar relatórios CGU:", err);
       return { success: false, error: "Falha de conexão" };
@@ -1439,7 +1443,7 @@ export default function App() {
                   cguDemands={cguDemands}
                   onUpdateCgu={handleUpdateCgu}
                   onDeleteCgu={handleDeleteCgu}
-                  cguPublishedReports={cguReports}
+                  cguPublishedReports={cguPublishedReports}
                   onSyncCguMonitoramentos={handleSyncCguMonitoramentos}
                   onSyncCguReports={handleSyncCguReports}
                   onDeleteCguReport={handleDeleteCguReport}
