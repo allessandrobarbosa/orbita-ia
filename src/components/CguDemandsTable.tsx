@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Eye, Edit, ShieldAlert, AlertTriangle } from "lucide-react";
+import { ChevronDown, ChevronRight, Eye } from "lucide-react";
 import { CguDemand } from "../types";
 
 interface Props {
   demands: CguDemand[];
   onView: (demand: CguDemand) => void;
-  onEdit: (demand: CguDemand) => void;
 }
 
 interface GroupedReport {
@@ -15,7 +14,7 @@ interface GroupedReport {
   demands: CguDemand[];
 }
 
-export default function CguDemandsTable({ demands, onView, onEdit }: Props) {
+export default function CguDemandsTable({ demands, onView }: Props) {
   const [expandedReport, setExpandedReport] = useState<string | null>(null);
 
   const parseReportAndRec = (titulo: string) => {
@@ -89,12 +88,11 @@ export default function CguDemandsTable({ demands, onView, onEdit }: Props) {
       <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
         <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
           <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
-            <th className="p-4 w-8 no-print bg-slate-100"></th>
-            <th className="p-4 bg-slate-100">Relatório Vinculado</th>
-            <th className="p-4 bg-slate-100 font-sans">Unidade Principal</th>
-            <th className="p-4 bg-slate-100">Status / Categoria</th>
-            <th className="p-4 bg-slate-100">Vencimento</th>
-            <th className="p-4 text-center bg-slate-100 w-28">Ações</th>
+            <th className="p-4 bg-slate-100 no-print"></th>
+            <th className="p-4 bg-slate-100">Relatório de Auditoria</th>
+            <th className="p-4 bg-slate-100">Unidade Auditada</th>
+            <th className="p-4 bg-slate-100">Situação das Recomendações</th>
+            <th className="p-4 bg-slate-100 text-center no-print">Ações</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 text-xs">
@@ -138,12 +136,6 @@ export default function CguDemandsTable({ demands, onView, onEdit }: Props) {
                   </td>
 
                   <td className="p-4">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                      {g.categoria}
-                    </span>
-                  </td>
-
-                  <td className="p-4">
                     <div className="flex gap-1 items-center">
                       {countAtrasado > 0 && (
                         <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold text-[10px]" title={`${countAtrasado} atrasadas`}>
@@ -176,7 +168,7 @@ export default function CguDemandsTable({ demands, onView, onEdit }: Props) {
 
                 {isExpanded && (
                   <tr>
-                    <td colSpan={6} className="bg-slate-50/50 p-0 border-b border-slate-200">
+                    <td colSpan={5} className="bg-slate-50/50 p-0 border-b border-slate-200">
                       <div className="px-10 py-5 bg-slate-50/40 border-l-4 border-[#003366] space-y-3">
                         <span className="text-[10px] font-black uppercase text-[#003366] tracking-widest block">
                           Recomendações e Plano de Trabalho Vinculados
@@ -191,7 +183,7 @@ export default function CguDemandsTable({ demands, onView, onEdit }: Props) {
                                 <th className="px-4 py-2">Prazo Limite</th>
                                 <th className="px-4 py-2">Situação</th>
                                 <th className="px-4 py-2">Estado</th>
-                                <th className="px-4 py-2 text-center no-print w-28">Ações</th>
+                                <th className="px-4 py-2 text-center no-print w-20">Ações</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -227,13 +219,10 @@ export default function CguDemandsTable({ demands, onView, onEdit }: Props) {
                                     </td>
                                     <td className="px-4 py-3 text-slate-700 font-medium text-[11px]">{d.situacao || "—"}</td>
                                     <td className="px-4 py-3 text-slate-700 font-medium text-[11px]">{d.estado || "—"}</td>
-                                    <td className="px-4 py-3 text-center no-print w-28">
+                                    <td className="px-4 py-3 text-center no-print w-20">
                                       <div className="flex items-center justify-center gap-1.5">
-                                        <button onClick={() => onView(d)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors">
+                                        <button onClick={() => onView(d)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Visualizar Dossiê">
                                           <Eye className="w-4 h-4" />
-                                        </button>
-                                        <button onClick={() => onEdit(d)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors">
-                                          <Edit className="w-4 h-4" />
                                         </button>
                                       </div>
                                     </td>

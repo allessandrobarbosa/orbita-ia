@@ -236,6 +236,7 @@ export interface CguDemand {
   dataLimiteInicial: string; // Data Limite Inicial
   ano: number; // Parsed from Data de Início
   ultimaAtualizacao?: string; // YYYY-MM-DD HH:MM
+  processoSei?: string; // Processo SEI vinculado
 }
 
 // CGU Published Report Item

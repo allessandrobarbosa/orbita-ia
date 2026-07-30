@@ -2679,6 +2679,20 @@ router7.get("/cgu/files/last-updates", (req, res) => {
     }
   });
 });
+router7.patch("/cgu/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { processoSei } = req.body;
+    await pool.query(
+      "UPDATE cgu_demands SET processo_sei = $1, ultima_atualizacao = $2 WHERE id_tarefa = $3",
+      [processoSei, (/* @__PURE__ */ new Date()).toISOString(), id]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Erro ao atualizar processo SEI da demanda CGU:", error);
+    res.status(500).json({ error: "Erro interno ao atualizar processo SEI." });
+  }
+});
 router7.get("/cgu", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM cgu_demands ORDER BY ano DESC, id_tarefa DESC");
@@ -2703,7 +2717,8 @@ router7.get("/cgu", async (req, res) => {
       categoria: row2.categoria,
       dataLimiteInicial: row2.data_limite_inicial,
       ano: row2.ano,
-      ultimaAtualizacao: row2.ultima_atualizacao
+      ultimaAtualizacao: row2.ultima_atualizacao,
+      processoSei: row2.processo_sei
     }));
     res.json(mapped);
   } catch (error) {
@@ -2762,6 +2777,13 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
       const idxProv = getIndex(["providencia"]);
       const idxCat = getIndex(["categoria"]);
       const idxAno = getIndex(["ano"]);
+      const idxTipoManif = getIndex(["tipoultimamanifestacao", "tipodaultimamanifestacao", "tipomanifestacao"]);
+      const idxTextoManif = getIndex(["textoultimamanifestacao", "textodaultimamanifestacao", "textomanifestacao"]);
+      const idxDataManif = getIndex(["dataultimamanifestacao", "datadaultimamanifestacao", "datamanifestacao"]);
+      const idxTipoPos = getIndex(["tipoultimoposicionamento", "tipodoultimoposicionamento", "tipoposicionamento"]);
+      const idxTextoPos = getIndex(["textoultimoposicionamento", "textodoultimoposicionamento", "textoposicionamento"]);
+      const idxDataPos = getIndex(["dataultimoposicionamento", "datadoultimoposicionamento", "dataposicionamento"]);
+      const idxLimiteIni = getIndex(["datalimiteinicial", "limiteinicial"]);
       if (idxIdTarefa === -1) {
         console.warn("Arquivo sem ID de Tarefa ignorado:", file);
         continue;
@@ -2788,6 +2810,13 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
           const cat = idxCat !== -1 ? row2[idxCat]?.trim() : null;
           const anoStr = idxAno !== -1 ? row2[idxAno]?.trim() : null;
           const anoVal = anoStr ? parseInt(anoStr.match(/\d{4}/)?.[0] || "0") : null;
+          const tipoManif = idxTipoManif !== -1 ? row2[idxTipoManif]?.trim() : null;
+          const txtManif = idxTextoManif !== -1 ? row2[idxTextoManif]?.trim() : null;
+          const dtManif = idxDataManif !== -1 ? row2[idxDataManif]?.trim() : null;
+          const tipoPos = idxTipoPos !== -1 ? row2[idxTipoPos]?.trim() : null;
+          const txtPos = idxTextoPos !== -1 ? row2[idxTextoPos]?.trim() : null;
+          const dtPos = idxDataPos !== -1 ? row2[idxDataPos]?.trim() : null;
+          const dtLimiteIni = idxLimiteIni !== -1 ? row2[idxLimiteIni]?.trim() : null;
           try {
             await client.query("SAVEPOINT import_row");
             await client.query(`
@@ -2795,9 +2824,13 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
                 id_tarefa, situacao, estado, titulo_tarefa,
                 data_inicio, data_fim, data_limite, unidade_auditada,
                 unidades_auditoria, texto_monitoramento, providencia,
-                categoria, ano, ultima_atualizacao
+                categoria, ano, ultima_atualizacao,
+                tipo_ultima_manifestacao, texto_ultima_manifestacao, data_ultima_manifestacao,
+                tipo_ultimo_posicionamento, texto_ultimo_posicionamento, data_ultimo_posicionamento,
+                data_limite_inicial
               ) VALUES (
-                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,
+                $15,$16,$17,$18,$19,$20,$21
               )
               ON CONFLICT (id_tarefa) DO UPDATE SET
                 situacao = EXCLUDED.situacao,
@@ -2812,8 +2845,15 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
                 providencia = EXCLUDED.providencia,
                 categoria = EXCLUDED.categoria,
                 ano = EXCLUDED.ano,
-                ultima_atualizacao = EXCLUDED.ultima_atualizacao
-            `, [id, situacao, estado, titulo, dtInicio, dtFim, dtLimite, uniAuditada, unisAuditoria, txtMon, prov, cat, anoVal, updatedAt]);
+                ultima_atualizacao = EXCLUDED.ultima_atualizacao,
+                tipo_ultima_manifestacao = EXCLUDED.tipo_ultima_manifestacao,
+                texto_ultima_manifestacao = EXCLUDED.texto_ultima_manifestacao,
+                data_ultima_manifestacao = EXCLUDED.data_ultima_manifestacao,
+                tipo_ultimo_posicionamento = EXCLUDED.tipo_ultimo_posicionamento,
+                texto_ultimo_posicionamento = EXCLUDED.texto_ultimo_posicionamento,
+                data_ultimo_posicionamento = EXCLUDED.data_ultimo_posicionamento,
+                data_limite_inicial = EXCLUDED.data_limite_inicial
+            `, [id, situacao, estado, titulo, dtInicio, dtFim, dtLimite, uniAuditada, unisAuditoria, txtMon, prov, cat, anoVal, updatedAt, tipoManif, txtManif, dtManif, tipoPos, txtPos, dtPos, dtLimiteIni]);
             await client.query("RELEASE SAVEPOINT import_row");
             inseridos++;
           } catch (e) {
@@ -2976,8 +3016,16 @@ router7.post("/cgu/sync-local/relatorios", async (req, res) => {
 });
 router7.post("/cgu/update", async (req, res) => {
   try {
+    const { idTarefa, processoSei } = req.body;
+    if (idTarefa) {
+      await pool.query(
+        "UPDATE cgu_demands SET processo_sei = $1, ultima_atualizacao = $2 WHERE id_tarefa = $3",
+        [processoSei, (/* @__PURE__ */ new Date()).toISOString(), idTarefa]
+      );
+    }
     res.json({ success: true });
   } catch (error) {
+    console.error("Erro no update CGU:", error);
     res.status(500).json({ error: "Erro interno" });
   }
 });

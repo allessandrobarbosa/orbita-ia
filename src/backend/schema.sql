@@ -174,7 +174,8 @@ CREATE TABLE IF NOT EXISTS cgu_demands (
   categoria VARCHAR(255),
   data_limite_inicial VARCHAR(50),
   ano INTEGER,
-  ultima_atualizacao VARCHAR(50)
+  ultima_atualizacao VARCHAR(50),
+  processo_sei VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS cgu_reports (

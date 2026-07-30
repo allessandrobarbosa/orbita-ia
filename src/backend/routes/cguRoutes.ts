@@ -121,6 +121,24 @@ router.get("/cgu/files/last-updates", (req, res) => {
 });
 
 // =========================================================================
+// PATCH /cgu/:id — Atualiza o Processo SEI de uma demanda
+// =========================================================================
+router.patch("/cgu/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { processoSei } = req.body;
+    await pool.query(
+      "UPDATE cgu_demands SET processo_sei = $1, ultima_atualizacao = $2 WHERE id_tarefa = $3",
+      [processoSei, new Date().toISOString(), id]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Erro ao atualizar processo SEI da demanda CGU:", error);
+    res.status(500).json({ error: "Erro interno ao atualizar processo SEI." });
+  }
+});
+
+// =========================================================================
 // GET /cgu — Lista todas as demandas CGU
 // =========================================================================
 router.get("/cgu", async (req, res) => {
@@ -148,6 +166,7 @@ router.get("/cgu", async (req, res) => {
       dataLimiteInicial:         row.data_limite_inicial,
       ano:                       row.ano,
       ultimaAtualizacao:         row.ultima_atualizacao,
+      processoSei:               row.processo_sei,
     }));
     res.json(mapped);
   } catch (error) {
@@ -221,12 +240,12 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
       const idxCat = getIndex(["categoria"]);
       const idxAno = getIndex(["ano"]);
       
-      const idxTipoManif = getIndex(["tipoultimamanifestacao", "tipomanifestacao"]);
-      const idxTextoManif = getIndex(["textoultimamanifestacao", "textomanifestacao"]);
-      const idxDataManif = getIndex(["dataultimamanifestacao", "datamanifestacao"]);
-      const idxTipoPos = getIndex(["tipoultimoposicionamento", "tipoposicionamento"]);
-      const idxTextoPos = getIndex(["textoultimoposicionamento", "textoposicionamento"]);
-      const idxDataPos = getIndex(["dataultimoposicionamento", "dataposicionamento"]);
+      const idxTipoManif = getIndex(["tipoultimamanifestacao", "tipodaultimamanifestacao", "tipomanifestacao"]);
+      const idxTextoManif = getIndex(["textoultimamanifestacao", "textodaultimamanifestacao", "textomanifestacao"]);
+      const idxDataManif = getIndex(["dataultimamanifestacao", "datadaultimamanifestacao", "datamanifestacao"]);
+      const idxTipoPos = getIndex(["tipoultimoposicionamento", "tipodoultimoposicionamento", "tipoposicionamento"]);
+      const idxTextoPos = getIndex(["textoultimoposicionamento", "textodoultimoposicionamento", "textoposicionamento"]);
+      const idxDataPos = getIndex(["dataultimoposicionamento", "datadoultimoposicionamento", "dataposicionamento"]);
       const idxLimiteIni = getIndex(["datalimiteinicial", "limiteinicial"]);
 
       if (idxIdTarefa === -1) {
@@ -498,9 +517,16 @@ router.post("/cgu/sync-local/relatorios", async (req, res) => {
 // =========================================================================
 router.post("/cgu/update", async (req, res) => {
   try {
-    // Mantido para compatibilidade
+    const { idTarefa, processoSei } = req.body;
+    if (idTarefa) {
+      await pool.query(
+        "UPDATE cgu_demands SET processo_sei = $1, ultima_atualizacao = $2 WHERE id_tarefa = $3",
+        [processoSei, new Date().toISOString(), idTarefa]
+      );
+    }
     res.json({ success: true });
   } catch (error) {
+    console.error("Erro no update CGU:", error);
     res.status(500).json({ error: "Erro interno" });
   }
 });

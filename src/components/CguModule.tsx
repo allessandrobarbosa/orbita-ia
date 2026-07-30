@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
-  Search, RefreshCw, FileText, FileSpreadsheet, Eye, Trash2, Edit, X, Save, CheckCircle2, AlertTriangle, ArrowRightLeft, Filter, ShieldCheck, Database
+  Search, RefreshCw, FileText, FileSpreadsheet, Eye, Trash2, Edit, X, Save, CheckCircle2, AlertTriangle, ArrowRightLeft, Filter, ShieldCheck, Database, Download
 } from "lucide-react";
 import { CguDemand, CguPublishedReport } from "../types";
 import CguDossieModal from "./CguDossieModal";
@@ -118,6 +118,72 @@ export default function CguModule({
     { id: 'outros', label: 'Outros Status', short: 'OUTROS', count: counts.outros, icon: ArrowRightLeft, colorClass: 'text-slate-600 bg-slate-50', textClass: 'border-slate-200 hover:border-slate-300 shadow-sm' },
   ];
 
+  const lastUpdateDate = React.useMemo(() => {
+    if (!cguDemands || cguDemands.length === 0) return null;
+    let latest = cguDemands[0]?.ultimaAtualizacao || "";
+    for (const d of cguDemands) {
+      if (d.ultimaAtualizacao && d.ultimaAtualizacao > latest) {
+        latest = d.ultimaAtualizacao;
+      }
+    }
+    if (!latest) return null;
+    return new Date(latest).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  }, [cguDemands]);
+
+  const handleExportExcel = () => {
+    let excelTemplate = `
+      <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          table { border-collapse: collapse; font-family: 'Segoe UI', Arial, sans-serif; }
+          th { background-color: #003366; color: #ffffff; font-weight: bold; border: 1px solid #cbd5e1; padding: 10px; font-size: 11px; text-align: left; }
+          td { border: 1px solid #cbd5e1; padding: 8px 10px; font-size: 11px; vertical-align: top; }
+        </style>
+      </head>
+      <body>
+        <div style="font-size: 16px; font-weight: bold; color: #0f172a;">ÓRBITA-AECI — CONTROLE INTERNO CGU</div>
+        <div style="font-size: 11px; color: #64748b; margin-bottom: 15px;">Relatório Geral — Gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+        <table>
+          <thead>
+            <tr>
+              <th>ID Tarefa</th>
+              <th>Status</th>
+              <th>Relatório de Auditoria</th>
+              <th>Recomendação</th>
+              <th>Situação MTE</th>
+              <th>Processo SEI</th>
+              <th>Vencimento</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    filteredDemands.forEach(d => {
+      excelTemplate += `
+        <tr>
+          <td>${d.idTarefa || ""}</td>
+          <td>${d.estado || ""}</td>
+          <td>${d.tituloTarefa?.split(/[-—]/)[0] || ""}</td>
+          <td>${d.tituloTarefa || ""}</td>
+          <td>${d.situacao || ""}</td>
+          <td>${d.processoSei || ""}</td>
+          <td>${d.dataLimite || ""}</td>
+        </tr>
+      `;
+    });
+    
+    excelTemplate += `</tbody></table></body></html>`;
+    const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `CGU_Demandas_${new Date().toISOString().slice(0,10)}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6 font-sans">
       {/* Header Sticky */}
@@ -135,7 +201,14 @@ export default function CguModule({
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleExportExcel}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold transition-all shadow-sm hover:bg-green-700 flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Excel
+            </button>
             <button
               onClick={handleSyncDemands}
               disabled={isSyncing}
@@ -144,6 +217,11 @@ export default function CguModule({
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
               Sincronizar
             </button>
+            {lastUpdateDate && (
+              <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
+                Atualizado em: {lastUpdateDate}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -265,11 +343,6 @@ export default function CguModule({
               <CguDemandsTable 
                 demands={filteredDemands} 
                 onView={setViewingItem} 
-                onEdit={(d) => {
-                  setEditingItem(d);
-                  setEditSituacao(d.situacao || "");
-                  setEditEstado(d.estado || "");
-                }} 
               />
             </div>
           )}
@@ -357,7 +430,7 @@ export default function CguModule({
 
       {/* Dossier Modal */}
       {viewingItem && (
-        <CguDossieModal demand={viewingItem} onClose={() => setViewingItem(null)} />
+        <CguDossieModal demand={viewingItem} onClose={() => setViewingItem(null)} onUpdateCgu={onUpdateCgu} />
       )}
     </div>
   );

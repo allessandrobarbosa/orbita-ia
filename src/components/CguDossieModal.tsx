@@ -1,13 +1,23 @@
-import React from "react";
-import { X, Building2 } from "lucide-react";
+import React, { useState } from "react";
+import { X, Building2, Printer } from "lucide-react";
 import { CguDemand } from "../types";
 
 interface CguDossieModalProps {
   demand: CguDemand;
   onClose: () => void;
+  onUpdateCgu?: (updated: CguDemand) => Promise<boolean>;
 }
 
-export default function CguDossieModal({ demand, onClose }: CguDossieModalProps) {
+export default function CguDossieModal({ demand, onClose, onUpdateCgu }: CguDossieModalProps) {
+  const [processoSei, setProcessoSei] = useState(demand.processoSei || "");
+  const [isSavingSei, setIsSavingSei] = useState(false);
+
+  const handleSaveProcessoSei = async () => {
+    if (!onUpdateCgu) return;
+    setIsSavingSei(true);
+    const success = await onUpdateCgu({ ...demand, processoSei });
+    setIsSavingSei(false);
+  };
   
   // Parse Title into Report Name and Recommendation Name
   const parseReportAndRec = (titulo: string) => {
@@ -74,12 +84,21 @@ export default function CguDossieModal({ demand, onClose }: CguDossieModalProps)
               <p className="text-[10px] text-slate-300 font-mono mt-0.5">Demanda: {demand.idTarefa}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-white transition p-2 rounded-full hover:bg-white/10"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.print()}
+              className="text-slate-300 hover:text-white transition p-2 rounded-full hover:bg-white/10"
+              title="Exportar para PDF (Imprimir)"
+            >
+              <Printer className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-white transition p-2 rounded-full hover:bg-white/10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6 space-y-5 flex-1 overflow-y-auto">
@@ -133,6 +152,29 @@ export default function CguDossieModal({ demand, onClose }: CguDossieModalProps)
             <div className="bg-white border p-3 rounded-xl shadow-sm">
               <span className="text-[9px] text-slate-400 block uppercase font-extrabold tracking-wider mb-0.5">Unidades de Auditoria (CGU)</span>
               <span className="text-xs text-slate-800 font-semibold">{demand.unidadesAuditoria || "CGU"}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="bg-white border border-blue-200 p-4 rounded-xl shadow-sm relative overflow-hidden">
+               <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+               <span className="text-[9px] text-blue-600 block uppercase font-extrabold tracking-wider mb-2">Processo SEI Vinculado</span>
+               <div className="flex gap-2">
+                 <input 
+                   type="text" 
+                   value={processoSei}
+                   onChange={e => setProcessoSei(e.target.value)}
+                   placeholder="Ex: 19999.123456/2026-00" 
+                   className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 />
+                 <button 
+                   onClick={handleSaveProcessoSei}
+                   disabled={isSavingSei || processoSei === (demand.processoSei || "") || !onUpdateCgu}
+                   className="px-4 py-2 bg-[#003366] text-white text-xs font-bold rounded-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2"
+                 >
+                   {isSavingSei ? "Salvando..." : "Salvar"}
+                 </button>
+               </div>
             </div>
           </div>
 
