@@ -3,7 +3,6 @@ import {
   ArrowLeft, FileText, Calendar, Building2, MapPin, 
   ExternalLink, Copy, CheckCircle2, AlertCircle, Clock
 } from "lucide-react";
-import { format } from "date-fns";
 import { CguAuditoria } from "../types";
 import { CguDemand } from "../types"; // As we use monitoramentos
 
@@ -20,7 +19,7 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
   useEffect(() => {
     const fetchDetail = async () => {
       try {
-        const res = await fetch(\`/api/cgu/auditorias/\${id_tarefa}\`);
+        const res = await fetch(`/api/cgu/auditorias/${id_tarefa}`);
         if (res.ok) {
           const json = await res.json();
           setData(json);
@@ -159,7 +158,7 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
             <div>
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Publicação</p>
               <p className="text-sm font-medium text-slate-800">
-                {auditoria.data_publicacao ? format(new Date(auditoria.data_publicacao), 'dd/MM/yyyy') : '-'}
+                {auditoria.data_publicacao ? new Date(auditoria.data_publicacao).toLocaleDateString('pt-BR') : '-'}
               </p>
             </div>
           </div>
@@ -198,7 +197,7 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex flex-col justify-center">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-1">Situação Geral</p>
-            <div className={\`inline-flex items-center w-max px-3 py-1 rounded-full text-sm font-semibold border \${situacaoColor}\`}>
+            <div className={`inline-flex items-center w-max px-3 py-1 rounded-full text-sm font-semibold border ${situacaoColor}`}>
               {situacaoGeral}
             </div>
           </div>
@@ -263,11 +262,11 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
                   {monitoramentos.map((m, idx) => (
                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                       <td className="p-4 align-top">
-                        <span className={\`inline-flex px-2 py-1 rounded text-xs font-medium border \${
+                        <span className={`inline-flex px-2 py-1 rounded text-xs font-medium border ${
                           m.estado?.toLowerCase().includes('concluído') || m.estado?.toLowerCase().includes('atendido') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                           m.estado?.toLowerCase().includes('pendente') || m.estado?.toLowerCase().includes('vencid') ? 'bg-rose-50 text-rose-700 border-rose-100' :
                           'bg-amber-50 text-amber-700 border-amber-100'
-                        }\`}>
+                        }`}>
                           {m.estado || m.situacao || 'Desconhecido'}
                         </span>
                       </td>

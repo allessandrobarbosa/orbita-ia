@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { CguAuditoria } from "../types";
-import { format } from "date-fns";
 
 interface CguAuditoriasListProps {
   onViewDetails: (id_tarefa: string) => void;
@@ -46,7 +45,7 @@ export default function CguAuditoriasList({ onViewDetails }: CguAuditoriasListPr
         order,
         ...filters
       });
-      const res = await fetch(\`/api/cgu/auditorias?\${query.toString()}\`);
+      const res = await fetch(`/api/cgu/auditorias?${query.toString()}`);
       const json = await res.json();
       setData(json.data || []);
       setTotal(json.total || 0);
@@ -87,7 +86,7 @@ export default function CguAuditoriasList({ onViewDetails }: CguAuditoriasListPr
 
   const exportToExcel = () => {
     const wsData = data.map(item => ({
-      "Data Publicação": item.data_publicacao ? format(new Date(item.data_publicacao), 'dd/MM/yyyy') : '',
+      "Data Publicação": item.data_publicacao ? new Date(item.data_publicacao).toLocaleDateString('pt-BR') : '',
       "Id Auditoria": item.id_auditoria,
       "Id Tarefa": item.id_tarefa,
       "Título": item.titulo_relatorio,
@@ -124,9 +123,9 @@ export default function CguAuditoriasList({ onViewDetails }: CguAuditoriasListPr
         <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={\`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 flex-1 sm:flex-none justify-center \${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 flex-1 sm:flex-none justify-center ${
               showFilters ? 'bg-slate-100 text-slate-700' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            }\`}
+            }`}
           >
             <Filter size={18} />
             Filtros
@@ -237,7 +236,7 @@ export default function CguAuditoriasList({ onViewDetails }: CguAuditoriasListPr
               data.map((item) => (
                 <tr key={item.id_tarefa} className="hover:bg-[#1351b4]/5 transition-colors group">
                   <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
-                    {item.data_publicacao ? format(new Date(item.data_publicacao), 'dd/MM/yyyy') : '-'}
+                    {item.data_publicacao ? new Date(item.data_publicacao).toLocaleDateString('pt-BR') : '-'}
                   </td>
                   <td className="p-4 text-sm font-medium text-slate-700">
                     {item.id_auditoria}

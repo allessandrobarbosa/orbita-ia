@@ -168,7 +168,7 @@ export default function CguAuditoriasDashboard() {
                     <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                       <div 
                         className="bg-[#1351b4] h-2.5 rounded-full transition-all duration-1000 ease-out" 
-                        style={{ width: \`\${percent}%\` }}
+                        style={{ width: `${percent}%` }}
                       ></div>
                     </div>
                   </div>
@@ -203,7 +203,7 @@ export default function CguAuditoriasDashboard() {
                       <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                         <div 
                           className="bg-sky-500 h-2.5 rounded-full transition-all duration-1000 ease-out" 
-                          style={{ width: \`\${percent}%\` }}
+                          style={{ width: `${percent}%` }}
                         ></div>
                       </div>
                     </div>

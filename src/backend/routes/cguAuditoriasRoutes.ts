@@ -122,7 +122,7 @@ router.get("/cgu/auditorias/:id_tarefa", async (req, res) => {
       SELECT * FROM cgu_demands 
       WHERE id_tarefa = $1 
          OR (titulo_tarefa IS NOT NULL AND titulo_tarefa ILIKE $2)
-    `, [id_tarefa, \`%\${auditoria.id_auditoria}%\`]);
+    `, [id_tarefa, `%${auditoria.id_auditoria}%`]);
 
     const monitoramentos = demRes.rows;
 
