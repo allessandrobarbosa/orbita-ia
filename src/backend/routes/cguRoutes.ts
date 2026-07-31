@@ -8,6 +8,8 @@ import {
   atualizarStatusImportacao,
   registrarErroImportacao,
 } from "../utils/importControl.js";
+import { extractCguDossieWithGemini } from "../utils/aiUtils.js";
+import { getCguPdfText } from "../utils/cguPdfService.js";
 
 const router = express.Router();
 const MODULO_CGU = "CGU_DEMANDAS";
@@ -537,6 +539,41 @@ router.delete("/cgu/:id", async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: "Erro interno" });
+  }
+});
+
+// =========================================================================
+// POST /cgu/auditorias/:id/dossie — Gera o Dossiê via IA a partir do PDF
+// =========================================================================
+router.post("/cgu/auditorias/:id/dossie", async (req, res) => {
+  const { id } = req.params;
+  try {
+    // 1. Verificar se a auditoria existe
+    const auditRes = await pool.query("SELECT * FROM cgu_auditorias WHERE id_auditoria = $1 LIMIT 1", [id]);
+    if (auditRes.rowCount === 0) {
+      return res.status(404).json({ error: "Auditoria não encontrada." });
+    }
+
+    const auditoria = auditRes.rows[0];
+
+    // Se já tiver dossiê, retorna
+    if (auditoria.dossie_ia) {
+      return res.json({ success: true, dossie: JSON.parse(auditoria.dossie_ia) });
+    }
+
+    // 2. Baixar e extrair texto do PDF
+    const pdfText = await getCguPdfText(id);
+
+    // 3. Passar pelo Gemini
+    const dossie = await extractCguDossieWithGemini(pdfText);
+
+    // 4. Salvar no banco
+    await pool.query("UPDATE cgu_auditorias SET dossie_ia = $1 WHERE id_auditoria = $2", [JSON.stringify(dossie), id]);
+
+    res.json({ success: true, dossie });
+  } catch (error: any) {
+    console.error(`Erro ao gerar dossiê para auditoria ${id}:`, error);
+    res.status(500).json({ error: "Erro ao processar PDF com a IA.", details: error.message });
   }
 });
 

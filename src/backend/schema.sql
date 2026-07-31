@@ -212,6 +212,7 @@ CREATE TABLE IF NOT EXISTS cgu_auditorias (
   grupo_atividade VARCHAR(255),
   edicao_programa_sorteio_fef VARCHAR(255),
   origem_cgu_url_relatorio VARCHAR(1000),
+  dossie_ia TEXT,
   data_importacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   hash_registro VARCHAR(255),
   ativo BOOLEAN DEFAULT TRUE,

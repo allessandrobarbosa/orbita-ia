@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { 
   ArrowLeft, FileText, Calendar, Building2, MapPin, 
-  ExternalLink, Copy, CheckCircle2, AlertCircle, Clock
+  ExternalLink, Copy, CheckCircle2, AlertCircle, Clock,
+  BrainCircuit, ShieldAlert
 } from "lucide-react";
 import { CguAuditoria } from "../types";
 import { CguDemand } from "../types"; // As we use monitoramentos
@@ -15,6 +16,8 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
   const [data, setData] = useState<{ auditoria: CguAuditoria, monitoramentos: CguDemand[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [generatingDossier, setGeneratingDossier] = useState(false);
+  const [dossierError, setDossierError] = useState("");
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -37,6 +40,27 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const generateDossier = async () => {
+    if (!data?.auditoria) return;
+    try {
+      setGeneratingDossier(true);
+      setDossierError("");
+      const res = await fetch(`/api/cgu/auditorias/${data.auditoria.id_auditoria}/dossie`, { method: "POST" });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || result.details || "Erro ao gerar dossiê");
+      
+      // Update local state to show the dossier
+      setData(prev => prev ? { 
+        ...prev, 
+        auditoria: { ...prev.auditoria, dossie_ia: JSON.stringify(result.dossie) } 
+      } : null);
+    } catch (err: any) {
+      setDossierError(err.message);
+    } finally {
+      setGeneratingDossier(false);
+    }
   };
 
   if (loading) {
@@ -133,7 +157,7 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
                 href={auditoria.origem_cgu_url_relatorio} target="_blank" rel="noreferrer"
                 className="px-3 py-1.5 bg-[#1351b4] hover:bg-blue-800 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
               >
-                <ExternalLink size={16} /> Ver Relatório
+                <ExternalLink size={16} /> Ver PDF Oficial
               </a>
             </div>
           )}
@@ -185,13 +209,86 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
             </div>
           </div>
         </div>
+        </div>
+      </div>
+
+      {/* Seção Dossiê Inteligente */}
+      <div className="mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <BrainCircuit className="text-purple-600" size={24} />
+            Análise Inteligente do Relatório
+          </h2>
+          {!auditoria.dossie_ia && (
+            <button
+              onClick={generateDossier}
+              disabled={generatingDossier}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors disabled:opacity-50"
+            >
+              <BrainCircuit size={16} />
+              {generatingDossier ? "Analisando PDF..." : "Extrair Dossiê via IA"}
+            </button>
+          )}
+        </div>
+
+        {dossierError && (
+          <div className="p-4 mb-4 bg-red-50 text-red-600 rounded-lg border border-red-100 text-sm flex items-center gap-2">
+            <AlertCircle size={16} />
+            {dossierError}
+          </div>
+        )}
+
+        {auditoria.dossie_ia ? (
+          <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden mb-8">
+            <div className="p-6 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800 mb-2">Resumo Executivo</h3>
+              <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                {JSON.parse(auditoria.dossie_ia).resumo}
+              </p>
+            </div>
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+              <h3 className="font-bold text-slate-800 mb-2">Escopo da Auditoria</h3>
+              <p className="text-slate-600 text-sm leading-relaxed">
+                {JSON.parse(auditoria.dossie_ia).escopo}
+              </p>
+            </div>
+            {JSON.parse(auditoria.dossie_ia).constatacoes?.length > 0 && (
+              <div className="p-6">
+                <h3 className="font-bold text-slate-800 mb-4">Principais Constatações (Achados)</h3>
+                <div className="space-y-4">
+                  {JSON.parse(auditoria.dossie_ia).constatacoes.map((c: any, i: number) => (
+                    <div key={i} className="p-4 rounded-lg border border-slate-100 bg-slate-50">
+                      <div className="flex items-start justify-between gap-4 mb-2">
+                        <h4 className="font-bold text-slate-700">{c.titulo}</h4>
+                        {c.risco_impacto && (
+                          <span className="px-2 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded">
+                            {c.risco_impacto}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-slate-600">{c.descricao}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center text-slate-500 mb-8">
+            <BrainCircuit size={32} className="text-slate-300 mb-3" />
+            <p className="font-medium text-slate-600">Dossiê não gerado</p>
+            <p className="text-sm mt-1 max-w-md">
+              Clique no botão acima para que a Inteligência Artificial baixe o relatório original (PDF), leia o conteúdo e extraia as principais constatações.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Dossiê de Monitoramento */}
       <div>
         <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <ShieldAlert className="text-[#1351b4]" size={24} /> // Will use CheckCircle or Alert depending on icon import, I'll stick to what's available
-          Dossiê de Monitoramento
+          <ShieldAlert className="text-[#1351b4]" size={24} /> 
+          Monitoramento das Recomendações
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
