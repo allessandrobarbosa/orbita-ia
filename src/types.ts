@@ -366,3 +366,24 @@ export interface DirigenteEvento {
 
 
 
+
+export interface CguAuditoria {
+  id?: string;
+  id_tarefa: string;
+  titulo_relatorio: string;
+  data_publicacao: string;
+  id_auditoria: string;
+  sigla_unidade_auditada: string;
+  nome_unidade_auditada: string;
+  sigla_orgao_superior: string;
+  nome_orgao_superior: string;
+  uf: string;
+  municipio: string;
+  tipo_servico: string;
+  linha_acao: string;
+  grupo_atividade: string;
+  edicao_programa_sorteio_fef: string;
+  origem_cgu_url_relatorio: string;
+  data_importacao: string;
+  ativo: boolean;
+}

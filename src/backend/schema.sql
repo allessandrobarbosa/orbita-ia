@@ -195,6 +195,34 @@ CREATE TABLE IF NOT EXISTS cgu_reports (
   ultima_atualizacao VARCHAR(50)
 );
 
+CREATE TABLE IF NOT EXISTS cgu_auditorias (
+  id VARCHAR(255) DEFAULT gen_random_uuid() PRIMARY KEY,
+  id_tarefa VARCHAR(255),
+  titulo_relatorio TEXT,
+  data_publicacao TIMESTAMP,
+  id_auditoria VARCHAR(255),
+  sigla_unidade_auditada VARCHAR(255),
+  nome_unidade_auditada TEXT,
+  sigla_orgao_superior VARCHAR(255),
+  nome_orgao_superior TEXT,
+  uf VARCHAR(10),
+  municipio VARCHAR(255),
+  tipo_servico VARCHAR(255),
+  linha_acao VARCHAR(255),
+  grupo_atividade VARCHAR(255),
+  edicao_programa_sorteio_fef VARCHAR(255),
+  origem_cgu_url_relatorio VARCHAR(1000),
+  data_importacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  hash_registro VARCHAR(255),
+  ativo BOOLEAN DEFAULT TRUE,
+  observacoes TEXT,
+  UNIQUE(id_auditoria, id_tarefa)
+);
+
+CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_idauditoria ON cgu_auditorias(id_auditoria);
+CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_datapublicacao ON cgu_auditorias(data_publicacao);
+CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_siglaunidade ON cgu_auditorias(sigla_unidade_auditada);
+
 -- MÓDULO SUPERINTENDÊNCIAS
 CREATE TABLE IF NOT EXISTS superintendencias (
   uf VARCHAR(5) PRIMARY KEY,

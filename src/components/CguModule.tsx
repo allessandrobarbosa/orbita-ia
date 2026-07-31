@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
-  Search, RefreshCw, FileText, FileSpreadsheet, Eye, Trash2, Edit, X, Save, CheckCircle2, AlertTriangle, ArrowRightLeft, Filter, ShieldCheck, Database, Download
+  Search, RefreshCw, FileText, FileSpreadsheet, Eye, Trash2, Edit, X, Save, CheckCircle2, AlertTriangle, ArrowRightLeft, Filter, ShieldCheck, Database, Download, LayoutDashboard
 } from "lucide-react";
 import { CguDemand, CguPublishedReport } from "../types";
 import CguDossieModal from "./CguDossieModal";
 import CguDemandsTable from "./CguDemandsTable";
+import CguAuditoriasDashboard from "./CguAuditoriasDashboard";
+import CguAuditoriasList from "./CguAuditoriasList";
+import CguAuditoriaDetail from "./CguAuditoriaDetail";
 
 interface CguModuleProps {
   cguDemands: CguDemand[];
@@ -27,7 +30,8 @@ export default function CguModule({
   onSyncCguReports,
   onDeleteCguReport
 }: CguModuleProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"demands" | "published">("demands");
+  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "auditorias" | "demands" | "published">("dashboard");
+  const [selectedAuditoriaId, setSelectedAuditoriaId] = useState<string | null>(null);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -229,8 +233,10 @@ export default function CguModule({
       {/* Submodules Navigation */}
       <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
         {[
+          { id: "dashboard", label: "Painel Gerencial", desc: "Indicadores e Evolução", icon: LayoutDashboard },
+          { id: "auditorias", label: "Auditorias", desc: "Base de Relatórios da CGU", icon: FileText },
           { id: "demands", label: "Monitoramento", desc: "Acompanhamento de Recomendações", icon: Database },
-          { id: "published", label: "Relatórios Publicados", desc: "Base de Relatórios da CGU", icon: FileText }
+          { id: "published", label: "Relatórios Antigos", desc: "Base de Relatórios Importados", icon: FileSpreadsheet }
         ].map((sub) => {
           const SubIcon = sub.icon;
           const isActive = activeSubTab === sub.id;
@@ -274,7 +280,15 @@ export default function CguModule({
       </div>
 
       {/* Main Content Area */}
-      {activeSubTab === "demands" ? (
+      {activeSubTab === "dashboard" ? (
+        <CguAuditoriasDashboard />
+      ) : activeSubTab === "auditorias" ? (
+        selectedAuditoriaId ? (
+          <CguAuditoriaDetail id_tarefa={selectedAuditoriaId} onBack={() => setSelectedAuditoriaId(null)} />
+        ) : (
+          <CguAuditoriasList onViewDetails={setSelectedAuditoriaId} />
+        )
+      ) : activeSubTab === "demands" ? (
         <div className="space-y-6">
           {/* Volumetry Cards */}
           <div className="space-y-2">

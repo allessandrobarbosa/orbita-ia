@@ -21,6 +21,7 @@ import tceRoutes from "./src/backend/routes/tceRoutes.js";
 import eticaRoutes from "./src/backend/routes/eticaRoutes.js";
 import scdpRoutes from "./src/backend/routes/scdpRoutes.js";
 import cguRoutes from "./src/backend/routes/cguRoutes.js";
+import cguAuditoriasRoutes from "./src/backend/routes/cguAuditoriasRoutes.js";
 import superintendenciasRoutes from "./src/backend/routes/superintendenciasRoutes.js";
 import contratosRoutes from "./src/backend/routes/contratosRoutes.js";
 import viaturasRoutes from "./src/backend/routes/viaturasRoutes.js";
@@ -37,6 +38,7 @@ import {
 import {
   sendAccessRequestNotification, sendAccessApprovedEmail, sendPasswordResetEmail,
 } from "./src/backend/emailService.js";
+import { runImportCguAuditorias } from "./src/backend/utils/importCguAuditorias.js";
 // Load environment variables
 dotenv.config();
 
@@ -609,6 +611,7 @@ async function startServer() {
 app.use("/api", eticaRoutes);
 app.use("/api", scdpRoutes);
   app.use("/api", cguRoutes);
+  app.use("/api", cguAuditoriasRoutes);
   app.use("/api", superintendenciasRoutes);
   app.use("/api", contratosRoutes);
   app.use("/api", viaturasRoutes);
@@ -737,6 +740,11 @@ app.use("/api", scdpRoutes);
   
 
   
+  // Agendamento Semanal (7 dias = 604800000 ms) para importar Auditorias CGU
+  setInterval(() => {
+    runImportCguAuditorias("SISTEMA_AGENDADO").catch(console.error);
+  }, 604800000);
+
   if (process.env.NODE_ENV !== "production") {
     console.log("Starting server in DEVELOPMENT mode with Vite Middleware...");
     const vite = await createViteServer({
