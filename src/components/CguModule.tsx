@@ -30,9 +30,9 @@ export default function CguModule({
   onSyncCguReports,
   onDeleteCguReport
 }: CguModuleProps) {
-  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "auditorias" | "demands" | "published">("dashboard");
+  const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "auditorias" | "demands" | "published">("auditorias");
   const [selectedAuditoriaId, setSelectedAuditoriaId] = useState<string | null>(null);
-  
+
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [anoFilter, setAnoFilter] = useState("TODOS OS ANOS");
@@ -46,18 +46,52 @@ export default function CguModule({
 
   // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  const handleSyncDemands = async () => {
-    if (!onSyncCguMonitoramentos) return;
+  const handleSyncAll = async () => {
     setIsSyncing(true);
     setSyncMessage(null);
     try {
-      const res = await onSyncCguMonitoramentos();
-      if (res?.success) {
-        setSyncMessage({ type: 'success', text: `Sincronizado com sucesso! ${res.importedCount} registros processados.` });
+      let successCount = 0;
+      let errors = [];
+
+      // 1. Sincronizar Monitoramentos
+      if (onSyncCguMonitoramentos) {
+        const resMon = await onSyncCguMonitoramentos();
+        if (resMon?.success) successCount++;
+        else errors.push("Monitoramentos: " + (resMon?.error || "Erro"));
+      }
+
+      // 2. Sincronizar Relatórios Publicados
+      if (onSyncCguReports) {
+        const resRep = await onSyncCguReports();
+        if (resRep?.success) successCount++;
+        else errors.push("Relatórios: " + (resRep?.error || "Erro"));
+      }
+
+      // 3. Sincronizar Auditorias (Endpoint Direto)
+      try {
+        const resAud = await fetch("/api/cgu/auditorias/sync", { method: "POST" });
+        if (resAud.ok) successCount++;
+        else {
+          const json = await resAud.json();
+          errors.push("Auditorias: " + (json.error || "Erro"));
+        }
+      } catch (e) {
+        errors.push("Auditorias: Falha de conexão");
+      }
+
+      if (errors.length === 0 && successCount > 0) {
+        setSyncMessage({ type: 'success', text: 'Toda a base da CGU foi sincronizada com sucesso!' });
+      } else if (successCount > 0) {
+        setSyncMessage({ type: 'success', text: `Sincronização parcial com alertas: ${errors.join(' | ')}` });
       } else {
-        setSyncMessage({ type: 'error', text: res?.error || "Erro ao sincronizar." });
+        setSyncMessage({ type: 'error', text: "Erro ao sincronizar: " + errors.join(' | ') });
+      }
+
+      // Recarrega a página para atualizar os dados em todos os subcomponentes de forma simples
+      if (successCount > 0) {
+        setTimeout(() => window.dispatchEvent(new Event('cgu_sync_completed')), 2000);
       }
     } finally {
       setIsSyncing(false);
@@ -175,13 +209,13 @@ export default function CguModule({
         </tr>
       `;
     });
-    
+
     excelTemplate += `</tbody></table></body></html>`;
     const blob = new Blob([excelTemplate], { type: 'application/vnd.ms-excel' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `CGU_Demandas_${new Date().toISOString().slice(0,10)}.xls`;
+    link.download = `CGU_Demandas_${new Date().toISOString().slice(0, 10)}.xls`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -204,9 +238,9 @@ export default function CguModule({
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={handleExportExcel}
               className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold transition-all shadow-sm hover:bg-green-700 flex items-center gap-2"
             >
@@ -214,12 +248,12 @@ export default function CguModule({
               Excel
             </button>
             <button
-              onClick={handleSyncDemands}
+              onClick={handleSyncAll}
               disabled={isSyncing}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-              Sincronizar
+              {isSyncing ? "Sincronizando..." : "Sincronizar Tudo"}
             </button>
             {lastUpdateDate && (
               <span className="text-[10px] text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
@@ -233,10 +267,10 @@ export default function CguModule({
       {/* Submodules Navigation */}
       <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
         {[
-          { id: "dashboard", label: "Painel Gerencial", desc: "Indicadores e Evolução", icon: LayoutDashboard },
           { id: "auditorias", label: "Auditorias", desc: "Base de Relatórios da CGU", icon: FileText },
           { id: "demands", label: "Monitoramento", desc: "Acompanhamento de Recomendações", icon: Database },
-          { id: "published", label: "Relatórios Antigos", desc: "Base de Relatórios Importados", icon: FileSpreadsheet }
+          { id: "published", label: "Relatórios Antigos", desc: "Base de Relatórios Importados", icon: FileSpreadsheet },
+          { id: "dashboard", label: "Painel Gerencial", desc: "Indicadores e Evolução", icon: LayoutDashboard }
         ].map((sub) => {
           const SubIcon = sub.icon;
           const isActive = activeSubTab === sub.id;
@@ -244,11 +278,10 @@ export default function CguModule({
             <button
               key={sub.id}
               onClick={() => setActiveSubTab(sub.id as any)}
-              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${
-                isActive
-                  ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
-                  : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
-              }`}
+              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${isActive
+                ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
+                : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+                }`}
             >
               <div className="flex items-center gap-2.5">
                 <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
@@ -268,11 +301,10 @@ export default function CguModule({
           <button
             key={year}
             onClick={() => setAnoFilter(year)}
-            className={`px-4 py-2.5 text-xs font-black tracking-wide whitespace-nowrap uppercase transition-all border-b-2 ${
-              anoFilter === year
-                ? "border-[#003366] text-[#003366]"
-                : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300"
-            }`}
+            className={`px-4 py-2.5 text-xs font-black tracking-wide whitespace-nowrap uppercase transition-all border-b-2 ${anoFilter === year
+              ? "border-[#003366] text-[#003366]"
+              : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300"
+              }`}
           >
             {year === "TODOS OS ANOS" ? year : `${year} ATIVO`}
           </button>
@@ -300,8 +332,8 @@ export default function CguModule({
               {statsCards.map((cat) => {
                 const Icon = cat.icon;
                 return (
-                  <div 
-                    key={cat.id} 
+                  <div
+                    key={cat.id}
                     className={`bg-white border rounded-xl p-3 flex flex-col justify-between hover:-translate-y-0.5 transition-all duration-200 group relative overflow-hidden ${cat.textClass}`}
                   >
                     <div className="flex items-start justify-between gap-1.5 mb-1.5">
@@ -317,7 +349,7 @@ export default function CguModule({
                         <Icon className="w-4 h-4" />
                       </div>
                     </div>
-                    
+
                     <div className="flex items-baseline justify-between mt-auto">
                       <h4 className="text-xl font-black text-slate-900">
                         {cat.count}
@@ -354,9 +386,9 @@ export default function CguModule({
             </div>
           ) : (
             <div className="w-full">
-              <CguDemandsTable 
-                demands={filteredDemands} 
-                onView={setViewingItem} 
+              <CguDemandsTable
+                demands={filteredDemands}
+                onView={setViewingItem}
               />
             </div>
           )}
@@ -364,7 +396,7 @@ export default function CguModule({
       ) : (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-             <h3 className="font-bold text-slate-700">Relatórios Publicados CGU</h3>
+            <h3 className="font-bold text-slate-700">Relatórios Publicados CGU</h3>
           </div>
           <table className="w-full text-left border-collapse text-slate-700 text-sm">
             <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs uppercase">

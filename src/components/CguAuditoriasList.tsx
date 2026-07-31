@@ -60,6 +60,12 @@ export default function CguAuditoriasList({ onViewDetails }: CguAuditoriasListPr
     fetchAuditorias();
   }, [fetchAuditorias]);
 
+  useEffect(() => {
+    const handleSyncCompleted = () => fetchAuditorias();
+    window.addEventListener('cgu_sync_completed', handleSyncCompleted);
+    return () => window.removeEventListener('cgu_sync_completed', handleSyncCompleted);
+  }, [fetchAuditorias]);
+
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));

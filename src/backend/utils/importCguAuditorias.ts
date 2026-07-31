@@ -71,11 +71,8 @@ const downloadFile = (url: string): Promise<string> => {
 
 export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
   console.log("[CGU] Iniciando rotina de importação de Auditorias...");
-  const unidadeAlvo = process.env.CGU_SIGLA_UNIDADE_AUDITADA;
-  if (!unidadeAlvo) {
-    console.error("[CGU] A variável de ambiente CGU_SIGLA_UNIDADE_AUDITADA não está configurada.");
-    return { error: "Variável CGU_SIGLA_UNIDADE_AUDITADA não configurada." };
-  }
+  const unidadeAlvoSigla = process.env.CGU_SIGLA_UNIDADE_AUDITADA || "MTE";
+  const unidadeAlvoNome = "MINISTÉRIO DO TRABALHO E EMPREGO";
 
   let importControlId: number | null = null;
   let t0 = performance.now();
@@ -120,19 +117,19 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
     };
 
     const idxIdTarefa = getIndex(["idtarefa", "tarefa"]);
-    const idxTituloRelatorio = getIndex(["titulorelatorio", "titulo"]);
+    const idxTituloRelatorio = getIndex(["titulo", "titulorelatorio"]);
     const idxDataPublicacao = getIndex(["datapublicacao", "data"]);
     const idxIdAuditoria = getIndex(["idauditoria", "auditoria"]);
-    const idxSiglaUnidade = getIndex(["siglaunidadeauditada", "siglaunidade"]);
-    const idxNomeUnidade = getIndex(["nomeunidadeauditada", "nomeunidade"]);
-    const idxSiglaOrgaoSup = getIndex(["siglaorgaosuperior"]);
-    const idxNomeOrgaoSup = getIndex(["nomeorgaosuperior"]);
-    const idxUf = getIndex(["uf", "estado"]);
-    const idxMunicipio = getIndex(["municipio"]);
+    const idxSiglaUnidade = getIndex(["siglasunidadesauditadas", "siglaunidadeauditada", "siglaunidade"]);
+    const idxNomeUnidade = getIndex(["unidadesauditadas", "nomeunidadeauditada", "nomeunidade"]);
+    const idxSiglaOrgaoSup = getIndex(["siglasorgaos", "siglaorgaosuperior"]);
+    const idxNomeOrgaoSup = getIndex(["orgaos", "nomeorgaosuperior"]);
+    const idxUf = getIndex(["ufs", "uf", "estado"]);
+    const idxMunicipio = getIndex(["municipios", "municipio"]);
     const idxTipoServico = getIndex(["tiposervico"]);
     const idxLinhaAcao = getIndex(["linhaacao"]);
     const idxGrupoAtividade = getIndex(["grupoatividade"]);
-    const idxEdicaoFef = getIndex(["edicaoprogramasorteiofef", "fef"]);
+    const idxEdicaoFef = getIndex(["fef", "edicaoprogramasorteiofef"]);
     const idxUrl = getIndex(["origemcguurlrelatorio", "url"]);
 
     if (idxIdTarefa === -1 || idxIdAuditoria === -1) {
@@ -148,24 +145,44 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
     let ignorados = 0;
 
     try {
+      // 1. Obter a Lista de Auditorias Alvo da tabela de demandas (extraindo o número do relatório do título)
+      const targetQuery = await client.query("SELECT DISTINCT titulo_tarefa FROM cgu_demands WHERE titulo_tarefa IS NOT NULL AND titulo_tarefa != ''");
+      const targetIds = new Set<string>();
+      for (const r of targetQuery.rows) {
+        const match = r.titulo_tarefa.match(/\b\d{5,}\b/);
+        if (match) targetIds.add(match[0]);
+      }
+      console.log(`[CGU] Encontrados ${targetIds.size} números de relatório alvo baseados nas demandas cadastradas.`);
+
       await client.query("BEGIN");
 
       for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
         if (!row || row.length < headers.length * 0.5) continue;
 
-        const siglaUnidade = idxSiglaUnidade !== -1 ? row[idxSiglaUnidade]?.trim() : "";
         lidos++;
-
-        if (siglaUnidade.toUpperCase() !== unidadeAlvo.toUpperCase()) {
-          ignorados++;
-          continue;
-        }
 
         const idTarefa = row[idxIdTarefa]?.trim();
         const idAuditoria = row[idxIdAuditoria]?.trim();
         
         if (!idTarefa || !idAuditoria) {
+          ignorados++;
+          continue;
+        }
+
+        const siglaUnidadeCheck = idxSiglaUnidade !== -1 ? row[idxSiglaUnidade]?.trim() || "" : "";
+        const nomeUnidadeCheck = idxNomeUnidade !== -1 ? row[idxNomeUnidade]?.trim() || "" : "";
+
+        // 2. Filtro: Verifica se está na nossa lista OU se a sigla/nome bate com o MTE
+        const isInTargetList = targetIds.has(idAuditoria);
+        
+        // Normaliza o nome para ignorar acentos e case
+        const nomeNorm = nomeUnidadeCheck.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const nomeAlvoNorm = unidadeAlvoNome.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        
+        const isTargetUnidade = (siglaUnidadeCheck.toUpperCase() === unidadeAlvoSigla.toUpperCase()) || (nomeNorm.includes(nomeAlvoNorm));
+
+        if (!isInTargetList && !isTargetUnidade) {
           ignorados++;
           continue;
         }
@@ -181,6 +198,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
 
         const titulo = idxTituloRelatorio !== -1 ? row[idxTituloRelatorio]?.trim() : null;
         const dtPub = idxDataPublicacao !== -1 ? parseDate(row[idxDataPublicacao]?.trim()) : null;
+        const siglaUnidade = idxSiglaUnidade !== -1 ? row[idxSiglaUnidade]?.trim() : null;
         const nomeUnidade = idxNomeUnidade !== -1 ? row[idxNomeUnidade]?.trim() : null;
         const siglaOrgSup = idxSiglaOrgaoSup !== -1 ? row[idxSiglaOrgaoSup]?.trim() : null;
         const nomeOrgSup = idxNomeOrgaoSup !== -1 ? row[idxNomeOrgaoSup]?.trim() : null;
