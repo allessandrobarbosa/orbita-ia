@@ -2,11 +2,12 @@ import React, { useState, useEffect } from "react";
 import { 
   ArrowLeft, FileText, Calendar, Building2, MapPin, 
   ExternalLink, Copy, CheckCircle2, AlertCircle, Clock,
-  BrainCircuit, ShieldAlert
+  BrainCircuit, ShieldAlert, Eye, Printer, ChevronDown, ChevronUp
 } from "lucide-react";
+import { jsPDF } from "jspdf";
 import { CguAuditoria } from "../types";
 import { CguDemand } from "../types"; // As we use monitoramentos
-
+import CguDossieModal from "./CguDossieModal";
 interface CguAuditoriaDetailProps {
   id_tarefa: string;
   onBack: () => void;
@@ -18,6 +19,8 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
   const [copied, setCopied] = useState(false);
   const [generatingDossier, setGeneratingDossier] = useState(false);
   const [dossierError, setDossierError] = useState("");
+  const [selectedDemand, setSelectedDemand] = useState<CguDemand | null>(null);
+  const [isAiExpanded, setIsAiExpanded] = useState(true);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -28,13 +31,25 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
           setData(json);
         }
       } catch (err) {
-        console.error("Erro ao buscar detalhes", err);
+        console.error("Erro ao buscar detalhes:", err);
       } finally {
         setLoading(false);
       }
     };
     fetchDetail();
   }, [id_tarefa]);
+
+  // Safe parsing for AI dossier
+  const getParsedDossier = () => {
+    if (!data?.auditoria?.dossie_ia) return null;
+    try {
+      return JSON.parse(data.auditoria.dossie_ia);
+    } catch (e) {
+      console.error("Failed to parse dossie_ia", e);
+      return null;
+    }
+  };
+  const parsedDossie = getParsedDossier();
 
   const copyUrl = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -56,11 +71,105 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
         ...prev, 
         auditoria: { ...prev.auditoria, dossie_ia: JSON.stringify(result.dossie) } 
       } : null);
+      setIsAiExpanded(true);
     } catch (err: any) {
       setDossierError(err.message);
     } finally {
       setGeneratingDossier(false);
     }
+  };
+
+  const handleExportAIDossierPdf = () => {
+    if (!data?.auditoria?.dossie_ia) return;
+    const dossie = JSON.parse(data.auditoria.dossie_ia);
+    
+    const doc = new jsPDF('p', 'pt', 'a4');
+    
+    // Add title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(0, 51, 102); // #003366
+    doc.text(`Dossiê de Auditoria CGU - ${data.auditoria.id_auditoria}`, 40, 60);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(71, 85, 105);
+    
+    let y = 80;
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório:", 40, y);
+    doc.setFont("helvetica", "normal");
+    const relText = doc.splitTextToSize(data.auditoria.titulo_relatorio, 450);
+    doc.text(relText, 100, y);
+    y += relText.length * 15;
+    
+    doc.setFont("helvetica", "bold");
+    doc.text("Unidade Auditada:", 40, y);
+    doc.setFont("helvetica", "normal");
+    const unText = doc.splitTextToSize(data.auditoria.nome_unidade_auditada || "", 400);
+    doc.text(unText, 140, y);
+    y += unText.length * 15;
+    
+    doc.setFont("helvetica", "bold");
+    doc.text("Data de Publicação:", 40, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(data.auditoria.data_publicacao ? new Date(data.auditoria.data_publicacao).toLocaleDateString('pt-BR') : '-', 150, y);
+    y += 30;
+
+    const addSection = (title: string, text: string) => {
+      if (y > 750) { doc.addPage(); y = 60; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(51, 65, 85);
+      doc.text(title, 40, y);
+      y += 20;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      const splitText = doc.splitTextToSize(text || "Não informado.", 515);
+      doc.text(splitText, 40, y);
+      y += splitText.length * 15 + 10;
+    };
+
+    addSection("Resumo Executivo", dossie.resumo);
+    addSection("Escopo da Auditoria", dossie.escopo);
+
+    if (dossie.constatacoes?.length > 0) {
+      if (y > 750) { doc.addPage(); y = 60; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(51, 65, 85);
+      doc.text("Principais Constatações (Achados)", 40, y);
+      y += 20;
+
+      dossie.constatacoes.forEach((c: any) => {
+        if (y > 750) { doc.addPage(); y = 60; }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        
+        let titleLine = c.titulo;
+        if (c.risco_impacto) titleLine += ` (Risco: ${c.risco_impacto})`;
+        const tSplit = doc.splitTextToSize(titleLine, 515);
+        doc.text(tSplit, 40, y);
+        y += tSplit.length * 15 + 5;
+
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(71, 85, 105);
+        const dSplit = doc.splitTextToSize(c.descricao || "", 515);
+        doc.text(dSplit, 40, y);
+        y += dSplit.length * 15 + 15;
+      });
+    }
+
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text("Dossiê extraído automaticamente a partir do relatório original. Análise feita com uso de Inteligência Artificial.", 40, 810);
+
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
   };
 
   if (loading) {
@@ -117,50 +226,43 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
   }, "");
 
   return (
-    <div className="bg-slate-50/50 rounded-xl space-y-6 animate-fade-in">
+    <div className="bg-slate-50/50 rounded-xl space-y-6 animate-fade-in p-4 border-2 border-blue-100 mt-2 mb-6">
       
-      <button 
-        onClick={onBack}
-        className="flex items-center gap-2 text-slate-500 hover:text-[#1351b4] font-medium transition-colors"
-      >
-        <ArrowLeft size={18} /> Voltar para Auditorias Publicadas
-      </button>
-
       {/* Cabeçalho da Auditoria */}
       <div className="bg-white p-6 rounded-xl border border-slate-200/60 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-1 h-full bg-[#1351b4]"></div>
         
         <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded text-xs font-semibold tracking-wider">
+          <div className="w-full">
+            <div className="flex flex-wrap items-center gap-3 mb-3">
+              <span className="px-2.5 py-1.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold tracking-wider border border-slate-200">
                 ID Auditoria: {auditoria.id_auditoria}
               </span>
-              <span className="px-2.5 py-1 bg-slate-100 text-slate-600 rounded text-xs font-semibold tracking-wider">
+              <span className="px-2.5 py-1.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold tracking-wider border border-slate-200">
                 ID Tarefa: {auditoria.id_tarefa}
               </span>
+              
+              {auditoria.origem_cgu_url_relatorio && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <button 
+                    onClick={() => copyUrl(auditoria.origem_cgu_url_relatorio)}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md text-xs font-bold transition-colors flex items-center gap-2 border border-slate-200 shadow-sm"
+                  >
+                    <Copy size={14} /> {copied ? 'COPIADO!' : 'COPIAR URL'}
+                  </button>
+                  <a 
+                    href={`/api/cgu/pdf/view/${auditoria.origem_cgu_url_relatorio.split('/').pop()}`} target="_blank" rel="noreferrer"
+                    className="px-2.5 py-1.5 bg-[#1351b4] hover:bg-blue-800 text-white rounded-md text-xs font-bold transition-colors flex items-center gap-2 shadow-sm border border-[#1351b4]"
+                  >
+                    <ExternalLink size={14} /> VER PDF OFICIAL
+                  </a>
+                </div>
+              )}
             </div>
-            <h1 className="text-2xl font-bold text-slate-800 leading-tight">
+            <h1 className="text-2xl font-bold text-slate-800 leading-tight pr-4">
               {auditoria.titulo_relatorio}
             </h1>
           </div>
-          
-          {auditoria.origem_cgu_url_relatorio && (
-            <div className="flex gap-2">
-              <button 
-                onClick={() => copyUrl(auditoria.origem_cgu_url_relatorio)}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                <Copy size={16} /> {copied ? 'Copiado!' : 'Copiar URL'}
-              </button>
-              <a 
-                href={auditoria.origem_cgu_url_relatorio} target="_blank" rel="noreferrer"
-                className="px-3 py-1.5 bg-[#1351b4] hover:bg-blue-800 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <ExternalLink size={16} /> Ver PDF Oficial
-              </a>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -209,7 +311,6 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
             </div>
           </div>
         </div>
-        </div>
       </div>
 
       {/* Seção Dossiê Inteligente */}
@@ -219,16 +320,35 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
             <BrainCircuit className="text-purple-600" size={24} />
             Análise Inteligente do Relatório
           </h2>
-          {!auditoria.dossie_ia && (
-            <button
-              onClick={generateDossier}
-              disabled={generatingDossier}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors disabled:opacity-50"
-            >
-              <BrainCircuit size={16} />
-              {generatingDossier ? "Analisando PDF..." : "Extrair Dossiê via IA"}
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {!auditoria.dossie_ia ? (
+              <button
+                onClick={generateDossier}
+                disabled={generatingDossier}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-sm shadow-sm transition-colors disabled:opacity-50"
+              >
+                <BrainCircuit size={16} />
+                {generatingDossier ? "Analisando PDF..." : "Extrair Dossiê via IA"}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportAIDossierPdf}
+                  className="px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-red-600 text-white hover:bg-red-700 transition shadow-sm cursor-pointer"
+                  title="Exportar Análise IA para PDF"
+                >
+                  <FileText size={16} /> PDF
+                </button>
+                <button
+                  onClick={() => setIsAiExpanded(!isAiExpanded)}
+                  className="px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 bg-purple-100 text-purple-700 hover:bg-purple-200 transition shadow-sm cursor-pointer"
+                  title={isAiExpanded ? "Recolher Análise" : "Expandir Análise"}
+                >
+                  {isAiExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {dossierError && (
@@ -238,25 +358,27 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
           </div>
         )}
 
-        {auditoria.dossie_ia ? (
-          <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden mb-8">
+        {parsedDossie ? (
+          <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden mb-8 transition-all duration-300">
+            {isAiExpanded && (
+              <>
             <div className="p-6 border-b border-slate-100">
               <h3 className="font-bold text-slate-800 mb-2">Resumo Executivo</h3>
               <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
-                {JSON.parse(auditoria.dossie_ia).resumo}
+                {parsedDossie.resumo || "Não disponível"}
               </p>
             </div>
             <div className="p-6 border-b border-slate-100 bg-slate-50/50">
               <h3 className="font-bold text-slate-800 mb-2">Escopo da Auditoria</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                {JSON.parse(auditoria.dossie_ia).escopo}
+                {parsedDossie.escopo || "Não disponível"}
               </p>
             </div>
-            {JSON.parse(auditoria.dossie_ia).constatacoes?.length > 0 && (
+            {parsedDossie.constatacoes?.length > 0 && (
               <div className="p-6">
                 <h3 className="font-bold text-slate-800 mb-4">Principais Constatações (Achados)</h3>
                 <div className="space-y-4">
-                  {JSON.parse(auditoria.dossie_ia).constatacoes.map((c: any, i: number) => (
+                  {parsedDossie.constatacoes.map((c: any, i: number) => (
                     <div key={i} className="p-4 rounded-lg border border-slate-100 bg-slate-50">
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <h4 className="font-bold text-slate-700">{c.titulo}</h4>
@@ -272,6 +394,18 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
                 </div>
               </div>
             )}
+            <div className="p-6 bg-emerald-50/30">
+              <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                Recomendações Chave
+              </h3>
+              <ul className="list-disc pl-5 space-y-1 text-slate-600 text-sm">
+                {(parsedDossie.recomendacoes || []).map((item: string, i: number) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            </>
+          )}
           </div>
         ) : (
           <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center text-center text-slate-500 mb-8">
@@ -346,18 +480,18 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
           <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
-                    <th className="p-4">Situação</th>
-                    <th className="p-4">Recomendação / Monitoramento</th>
-                    <th className="p-4">Providência Esperada</th>
-                    <th className="p-4">Prazo Limite</th>
-                    <th className="p-4">Atualização</th>
+                <thead className="sticky top-0 z-10">
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Situação</th>
+                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Recomendação / Monitoramento</th>
+                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Prazo Limite</th>
+                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Atualização</th>
+                    <th className="p-4 text-center cursor-pointer hover:bg-slate-100 transition-colors"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {monitoramentos.map((m, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                    <tr key={idx} className="hover:bg-[#1351b4]/5 transition-colors group">
                       <td className="p-4 align-top">
                         <span className={`inline-flex px-2 py-1 rounded text-xs font-medium border ${
                           m.estado?.toLowerCase().includes('concluído') || m.estado?.toLowerCase().includes('atendido') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
@@ -375,16 +509,20 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
                           Cat: {m.categoria || '-'}
                         </div>
                       </td>
-                      <td className="p-4 align-top">
-                        <div className="text-sm text-slate-600 line-clamp-3" title={m.providencia}>
-                          {m.providencia || '-'}
-                        </div>
-                      </td>
                       <td className="p-4 align-top whitespace-nowrap text-sm text-slate-700 font-medium">
                         {m.dataLimite || '-'}
                       </td>
                       <td className="p-4 align-top whitespace-nowrap text-sm text-slate-500">
                         {m.ultimaAtualizacao || '-'}
+                      </td>
+                      <td className="p-4 align-top text-center">
+                        <button
+                          onClick={() => setSelectedDemand(m)}
+                          className="px-3 py-1.5 text-xs font-semibold text-[#1351b4] bg-blue-50 border border-blue-100 hover:bg-[#1351b4] hover:text-white rounded-md transition-colors whitespace-nowrap"
+                          title="Ver Dossiê da Recomendação"
+                        >
+                          Detalhamento
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -395,6 +533,9 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
         )}
       </div>
 
+      {selectedDemand && (
+        <CguDossieModal demand={selectedDemand} onClose={() => setSelectedDemand(null)} />
+      )}
     </div>
   );
 }

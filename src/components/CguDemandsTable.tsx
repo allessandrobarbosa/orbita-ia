@@ -87,7 +87,7 @@ export default function CguDemandsTable({ demands, onView }: Props) {
     <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-com-scroll-container bg-slate-50/20 rounded-2xl border border-slate-200">
       <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
         <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
-          <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+          <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
             <th className="p-4 bg-slate-100 no-print"></th>
             <th className="p-4 bg-slate-100">Relatório de Auditoria</th>
             <th className="p-4 bg-slate-100">Unidade Auditada</th>

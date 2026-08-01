@@ -1564,15 +1564,15 @@ export default function EticaModule({
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
             <table className="w-full text-xs text-left border-collapse">
               <thead className="sticky top-0 z-10">
-                <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
-                  <th className="p-4 bg-slate-50">Processo SEI</th>
-                  <th className="p-4 bg-slate-50">Início</th>
-                  {processoTipoSubTab === "SECI" && <th className="p-4 bg-slate-50">SLA (20 dias)</th>}
-                  {processoTipoSubTab === "Consulta" && <th className="p-4 bg-slate-50">Solicitante</th>}
-                  <th className="p-4 bg-slate-50">
+                <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Processo SEI</th>
+                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Início</th>
+                  {processoTipoSubTab === "SECI" && <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">SLA (20 dias)</th>}
+                  {processoTipoSubTab === "Consulta" && <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Solicitante</th>}
+                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">
                     {processoTipoSubTab === "SECI" ? "Responsável/Relator" : "Assunto / Resumo"}
                   </th>
-                  <th className="p-4 bg-slate-50">Situação</th>
+                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Situação</th>
                   <th className="p-4 text-center bg-slate-50">Ações</th>
                 </tr>
               </thead>

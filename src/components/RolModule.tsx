@@ -314,7 +314,7 @@ export default function RolModule() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                      <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
                         <th className="p-4">Responsável (Dirigente)</th><th className="p-4">Cargo / Função</th><th className="p-4">Unidade</th><th className="p-4">Início Exercício</th><th className="p-4">Fim Exercício</th><th className="p-4">Status</th>
                       </tr>
                     </thead>
@@ -361,7 +361,7 @@ export default function RolModule() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                      <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
                         <th className="p-4">Dados Pessoais</th><th className="p-4">Lotação / Cargo Atual</th><th className="p-4 text-center">Ações</th>
                       </tr>
                     </thead>
@@ -414,7 +414,7 @@ export default function RolModule() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                      <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
                         <th className="p-4">Titular Afastado</th><th className="p-4">Substituto que Assumiu</th><th className="p-4">Motivo / Tipo</th><th className="p-4">Data Início</th><th className="p-4">Data Final</th><th className="p-4 text-center">Ações</th>
                       </tr>
                     </thead>
@@ -452,7 +452,7 @@ export default function RolModule() {
               <Card>
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
                       <th className="p-4">Sigla</th><th className="p-4">Nome da Unidade</th><th className="p-4 text-center">Ações</th>
                     </tr>
                   </thead>
@@ -478,7 +478,7 @@ export default function RolModule() {
               <Card>
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
+                    <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
                       <th className="p-4">Nomenclatura do Cargo</th><th className="p-4 text-center">Ações</th>
                     </tr>
                   </thead>

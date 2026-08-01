@@ -511,16 +511,16 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                         </a>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-x-2 text-[10px] text-slate-500 ml-5">
+                      <div className="grid grid-cols-2 gap-x-2 text-xs text-slate-700 font-medium ml-5">
                         {sr.cep && <span>CEP: {sr.cep}</span>}
                       </div>
 
-                      <p className="text-slate-600 flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <p className="text-slate-700 font-medium text-xs flex items-center gap-1.5 mt-1">
+                        <Phone className="w-4 h-4 text-slate-400 shrink-0" />
                         <span>{sr.contato}</span>
                       </p>
-                      <p className="text-slate-600 flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <p className="text-slate-700 font-medium text-xs flex items-center gap-1.5 mt-1">
+                        <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                         <span className="truncate text-blue-800 underline">{sr.email}</span>
                       </p>
                     </div>
@@ -535,10 +535,10 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                           className="bg-slate-50 hover:bg-blue-50/50 p-2 border border-slate-200 rounded-xl flex flex-col items-center justify-center transition cursor-pointer text-center"
                           title="Clique para ver os Acórdãos do TCU vinculados"
                         >
-                          <span className="text-slate-500 font-sans block text-[9px]">TCU (Acórdãos)</span>
-                          <span className="text-xs font-extrabold font-mono text-slate-800 mt-0.5 flex items-center gap-1">
+                          <span className="text-slate-500 font-sans block text-[10px]">TCU (Acórdãos)</span>
+                          <span className="text-sm font-bold text-slate-800 mt-0.5 flex items-center gap-1">
                             {sr.demandasTCU}
-                            <ExternalLink className="w-2.5 h-2.5 text-blue-600" />
+                            <ExternalLink className="w-3 h-3 text-blue-600" />
                           </span>
                         </button>
 
@@ -547,10 +547,10 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                           className="bg-slate-50 hover:bg-blue-50/50 p-2 border border-slate-200 rounded-xl flex flex-col items-center justify-center transition cursor-pointer text-center"
                           title="Clique para ver as Recomendações da CGU vinculadas"
                         >
-                          <span className="text-slate-500 font-sans block text-[9px]">CGU (Recomendações)</span>
-                          <span className="text-xs font-extrabold font-mono text-slate-800 mt-0.5 flex items-center gap-1">
+                          <span className="text-slate-500 font-sans block text-[10px]">CGU (Recomendações)</span>
+                          <span className="text-sm font-bold text-slate-800 mt-0.5 flex items-center gap-1">
                             {sr.demandasCGU}
-                            <ExternalLink className="w-2.5 h-2.5 text-blue-600" />
+                            <ExternalLink className="w-3 h-3 text-blue-600" />
                           </span>
                         </button>
 
@@ -559,22 +559,22 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                           className="bg-slate-50 hover:bg-blue-50/50 p-2 border border-slate-200 rounded-xl flex flex-col items-center justify-center transition cursor-pointer text-center"
                           title="Clique para ver as Comunicações oficiais (Ofícios) vinculadas"
                         >
-                          <span className="text-slate-500 font-sans block text-[9px]">Comunicações (Ofícios)</span>
-                          <span className="text-xs font-extrabold font-mono text-slate-800 mt-0.5 flex items-center gap-1">
+                          <span className="text-slate-500 block text-xs">Comunicações (Ofícios)</span>
+                          <span className="text-sm font-bold text-slate-800 mt-0.5 flex items-center gap-1">
                             {sr.demandasComunicacoes}
-                            <ExternalLink className="w-2.5 h-2.5 text-blue-600" />
+                            <ExternalLink className="w-3 h-3 text-blue-600" />
                           </span>
                         </button>
 
                         <button
-                          onClick={() => setDetailsModal({ sr, type: 'tces' })}
+                          onClick={() => setDetailsModal({ sr, type: 'tce' })}
                           className="bg-slate-50 hover:bg-blue-50/50 p-2 border border-slate-200 rounded-xl flex flex-col items-center justify-center transition cursor-pointer text-center"
-                          title="Clique para ver as Tomadas de Contas Especiais vinculadas"
+                          title="Clique para ver as TCEs vinculadas"
                         >
-                          <span className="text-slate-500 font-sans block text-[9px]">TCEs Regionais</span>
-                          <span className="text-xs font-extrabold font-mono text-slate-800 mt-0.5 flex items-center gap-1">
+                          <span className="text-slate-500 block text-xs">TCEs Regionais</span>
+                          <span className="text-sm font-bold text-slate-800 mt-0.5 flex items-center gap-1">
                             {sr.demandasTces}
-                            <ExternalLink className="w-2.5 h-2.5 text-blue-600" />
+                            <ExternalLink className="w-3 h-3 text-blue-600" />
                           </span>
                         </button>
                       </div>
@@ -774,9 +774,9 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-slate-700 text-xs">
                 <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
-                    <th className="p-4 w-1/4 bg-slate-50">Processo / Acórdão</th>
-                    <th className="p-4 w-1/4 bg-slate-50">Relator</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Processo / Acórdão</th>
+                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Relator</th>
                     <th className="p-4 w-2/5 bg-slate-50">Sumário / Objeto</th>
                     <th className="p-4 text-right bg-slate-50">Ações</th>
                   </tr>
@@ -814,11 +814,11 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-slate-700 text-xs">
                 <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
-                    <th className="p-4 w-1/4 bg-slate-50">Recomendação</th>
-                    <th className="p-4 w-1/4 bg-slate-50">Unidade / Categoria</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Recomendação</th>
+                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Unidade / Categoria</th>
                     <th className="p-4 w-2/5 bg-slate-50">Descrição do Monitoramento</th>
-                    <th className="p-4 bg-slate-50">Prazo Limite</th>
+                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Prazo Limite</th>
                     <th className="p-4 text-right bg-slate-50">Status</th>
                   </tr>
                 </thead>
@@ -861,11 +861,11 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-slate-700 text-xs">
                 <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-black tracking-wider text-slate-500">
-                    <th className="p-4 w-1/4 bg-slate-50">Ofício</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Ofício</th>
                     <th className="p-4 w-1/3 bg-slate-50">Destinatário / Contato</th>
-                    <th className="p-4 w-1/4 bg-slate-50">Processo TCU</th>
-                    <th className="p-4 bg-slate-50">Expedição</th>
+                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Processo TCU</th>
+                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Expedição</th>
                     <th className="p-4 text-right bg-slate-50">Resposta</th>
                   </tr>
                 </thead>
@@ -905,8 +905,8 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-slate-700 text-xs">
                 <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold">
-                    <th className="p-3 w-1/6">Número TCE</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
+                    <th className="p-3 w-1/6 cursor-pointer hover:bg-slate-100 transition-colors">Número TCE</th>
                     <th className="p-3 w-1/4">Processo Adm. / TC</th>
                     <th className="p-3 w-1/3">Motivo / Instauração</th>
                     <th className="p-3 text-right">Valores (Orig / Atual)</th>

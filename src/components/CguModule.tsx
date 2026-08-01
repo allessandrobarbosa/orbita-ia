@@ -35,7 +35,6 @@ export default function CguModule({
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
-  const [anoFilter, setAnoFilter] = useState("TODOS OS ANOS");
 
   // Edit Modal
   const [editingItem, setEditingItem] = useState<CguDemand | null>(null);
@@ -111,10 +110,8 @@ export default function CguModule({
     if (success) setEditingItem(null);
   };
 
-  const availableYears = ["TODOS OS ANOS", ...Array.from(new Set(cguDemands.map(d => d.ano).filter(Boolean))).sort((a: any, b: any) => b - a).map(y => `ANO ${y}`)];
-
   const filteredDemands = cguDemands.filter(d => {
-    if (anoFilter !== "TODOS OS ANOS" && `ANO ${d.ano}` !== anoFilter) return false;
+    // Para demandas, mantemos o filtro apenas de texto
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       return (
@@ -241,13 +238,6 @@ export default function CguModule({
 
           <div className="flex items-center gap-2">
             <button
-              onClick={handleExportExcel}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-bold transition-all shadow-sm hover:bg-green-700 flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Excel
-            </button>
-            <button
               onClick={handleSyncAll}
               disabled={isSyncing}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg text-sm font-bold transition-all shadow-sm disabled:opacity-50"
@@ -268,8 +258,6 @@ export default function CguModule({
       <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
         {[
           { id: "auditorias", label: "Auditorias", desc: "Base de Relatórios da CGU", icon: FileText },
-          { id: "demands", label: "Monitoramento", desc: "Acompanhamento de Recomendações", icon: Database },
-          { id: "published", label: "Relatórios Antigos", desc: "Base de Relatórios Importados", icon: FileSpreadsheet },
           { id: "dashboard", label: "Painel Gerencial", desc: "Indicadores e Evolução", icon: LayoutDashboard }
         ].map((sub) => {
           const SubIcon = sub.icon;
@@ -295,133 +283,20 @@ export default function CguModule({
         })}
       </div>
 
-      {/* Year Tabs Filters */}
-      <div className="flex items-center gap-1 border-b border-slate-200 mb-6 overflow-x-auto pb-px no-scrollbar">
-        {availableYears.map(year => (
-          <button
-            key={year}
-            onClick={() => setAnoFilter(year)}
-            className={`px-4 py-2.5 text-xs font-black tracking-wide whitespace-nowrap uppercase transition-all border-b-2 ${anoFilter === year
-              ? "border-[#003366] text-[#003366]"
-              : "border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-300"
-              }`}
-          >
-            {year === "TODOS OS ANOS" ? year : `${year} ATIVO`}
-          </button>
-        ))}
-      </div>
-
       {/* Main Content Area */}
       {activeSubTab === "dashboard" ? (
         <CguAuditoriasDashboard />
-      ) : activeSubTab === "auditorias" ? (
-        selectedAuditoriaId ? (
-          <CguAuditoriaDetail id_tarefa={selectedAuditoriaId} onBack={() => setSelectedAuditoriaId(null)} />
-        ) : (
-          <CguAuditoriasList onViewDetails={setSelectedAuditoriaId} />
-        )
-      ) : activeSubTab === "demands" ? (
-        <div className="space-y-6">
-          {/* Volumetry Cards */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Volumetria por Situação ({anoFilter.replace(' ATIVO', '')})</span>
-              <span className="text-xs text-slate-500 font-semibold">{filteredDemands.length} Demandas Filtradas</span>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 no-print">
-              {statsCards.map((cat) => {
-                const Icon = cat.icon;
-                return (
-                  <div
-                    key={cat.id}
-                    className={`bg-white border rounded-xl p-3 flex flex-col justify-between hover:-translate-y-0.5 transition-all duration-200 group relative overflow-hidden ${cat.textClass}`}
-                  >
-                    <div className="flex items-start justify-between gap-1.5 mb-1.5">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-bold text-slate-500 truncate group-hover:text-slate-800 transition-colors">
-                          {cat.label}
-                        </span>
-                        <span className="text-[9px] font-black tracking-wider text-slate-400 uppercase">
-                          {cat.short}
-                        </span>
-                      </div>
-                      <div className={`p-1.5 rounded-lg shrink-0 transition-transform group-hover:scale-105 duration-200 ${cat.colorClass}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                    </div>
-
-                    <div className="flex items-baseline justify-between mt-auto">
-                      <h4 className="text-xl font-black text-slate-900">
-                        {cat.count}
-                      </h4>
-                      <span className="text-[9px] text-slate-400 font-bold">
-                        {filteredDemands.length > 0 ? `${((cat.count / filteredDemands.length) * 100).toFixed(0)}%` : "0%"}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Search bar */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar recomendações por relatório, título ou unidade..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm"
-              />
-            </div>
-          </div>
-
-          {/* Table */}
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-500 gap-3">
-              <RefreshCw className="w-8 h-8 animate-spin text-blue-500" />
-              <p>Carregando dados...</p>
-            </div>
-          ) : (
-            <div className="w-full">
-              <CguDemandsTable
-                demands={filteredDemands}
-                onView={setViewingItem}
-              />
-            </div>
-          )}
-        </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-            <h3 className="font-bold text-slate-700">Relatórios Publicados CGU</h3>
-          </div>
-          <table className="w-full text-left border-collapse text-slate-700 text-sm">
-            <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 text-xs uppercase">
-              <tr>
-                <th className="p-3 font-semibold">Relatório</th>
-                <th className="p-3 font-semibold">Auditoria</th>
-                <th className="p-3 font-semibold">Data</th>
-                <th className="p-3 font-semibold">Unidade</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredReports.map((r, i) => (
-                <tr key={`rep-${r.idTarefa}-${i}`} className="hover:bg-slate-50 transition-colors">
-                  <td className="p-3 font-medium text-slate-800">{r.tituloRelatorio}</td>
-                  <td className="p-3">{r.idAuditoria}</td>
-                  <td className="p-3">{r.dataPublicacao}</td>
-                  <td className="p-3">{r.nomeUnidadeAuditada}</td>
-                </tr>
-              ))}
-              {filteredReports.length === 0 && (
-                <tr><td colSpan={4} className="p-8 text-center text-slate-500">Nenhum relatório encontrado.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        activeSubTab === "auditorias" && (
+          selectedAuditoriaId ? (
+            <CguAuditoriaDetail 
+              id_tarefa={selectedAuditoriaId} 
+              onBack={() => setSelectedAuditoriaId(null)}
+            />
+          ) : (
+            <CguAuditoriasList cguDemands={cguDemands} />
+          )
+        )
       )}
 
       {/* Edit Modal */}

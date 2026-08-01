@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { X, Building2, Printer } from "lucide-react";
+import { X, Building2, Printer, FileText } from "lucide-react";
+import { jsPDF } from "jspdf";
 import { CguDemand } from "../types";
 
 interface CguDossieModalProps {
@@ -71,9 +72,74 @@ export default function CguDossieModal({ demand, onClose, onUpdateCgu }: CguDoss
 
   const { reportName, recName } = getCguReportAndRec(demand);
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF('p', 'pt', 'a4');
+    
+    // Add title
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(0, 51, 102); // #003366
+    doc.text(`Dossiê Técnico CGU - Demanda ${demand.idTarefa}`, 40, 60);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(71, 85, 105);
+    
+    let y = 90;
+
+    const addSection = (title: string, text: string) => {
+      if (y > 750) { doc.addPage(); y = 60; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(51, 65, 85);
+      doc.text(title, 40, y);
+      y += 20;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(71, 85, 105);
+      const splitText = doc.splitTextToSize(text || "Sem registro.", 515);
+      doc.text(splitText, 40, y);
+      y += splitText.length * 15 + 15;
+    };
+
+    const addKeyValue = (key: string, value: string) => {
+      if (y > 770) { doc.addPage(); y = 60; }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(51, 65, 85);
+      doc.text(`${key}:`, 40, y);
+      doc.setFont("helvetica", "normal");
+      doc.text(String(value || "N/A"), 160, y);
+      y += 15;
+    };
+
+    addKeyValue("Categoria", demand.categoria || "");
+    addKeyValue("Ano", demand.ano || "");
+    addKeyValue("Situação", demand.situacao || "");
+    addKeyValue("Estado", demand.estado || "");
+    addKeyValue("Data Início", demand.dataInicio || "");
+    addKeyValue("Data Limite", demand.dataLimite || "");
+    addKeyValue("Unidade Auditada", demand.unidadeAuditada || "");
+    addKeyValue("Unidades CGU", demand.unidadesAuditoria || "");
+    addKeyValue("Processo SEI", demand.processoSei || "");
+    y += 15;
+
+    addSection("Relatório Relacionado", reportName);
+    addSection("Recomendação", recName);
+    addSection("Texto do Monitoramento / Encaminhamento da CGU", demand.textoMonitoramento || "");
+    addSection("Plano de Providências / Status de Cumprimento MTE", demand.providencia || "");
+    
+    addSection("Última Manifestação MTE", `[${demand.tipoUltimaManifestacao || "Ofício"} - ${demand.dataUltimaManifestacao || "—"}]\n${demand.textoUltimaManifestacao || ""}`);
+    addSection("Último Posicionamento CGU", `[${demand.tipoUltimoPosicionamento || "Nota Técnica"} - ${demand.dataUltimoPosicionamento || "—"}]\n${demand.textoUltimoPosicionamento || ""}`);
+
+    const pdfBlob = doc.output('blob');
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    window.open(pdfUrl, '_blank');
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900/65 backdrop-blur-sm flex items-center justify-center z-50 p-4 no-print animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-3xl overflow-hidden font-sans flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-5xl overflow-hidden font-sans flex flex-col max-h-[90vh]">
         <div className="bg-[#003366] text-white p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-lg">
@@ -84,13 +150,13 @@ export default function CguDossieModal({ demand, onClose, onUpdateCgu }: CguDoss
               <p className="text-[10px] text-slate-300 font-mono mt-0.5">Demanda: {demand.idTarefa}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => window.print()}
-              className="text-slate-300 hover:text-white transition p-2 rounded-full hover:bg-white/10"
-              title="Exportar para PDF (Imprimir)"
+              onClick={handleExportPDF}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold text-xs shadow-sm transition flex items-center gap-2"
+              title="Exportar para PDF"
             >
-              <Printer className="w-5 h-5" />
+              <FileText size={16} /> PDF
             </button>
             <button
               onClick={onClose}

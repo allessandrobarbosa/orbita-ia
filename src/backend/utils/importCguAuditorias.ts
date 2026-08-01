@@ -1,78 +1,40 @@
-import https from "https";
+import fetch from "node-fetch";
 import { pool } from "../db.js";
 import { 
   iniciarImportacao, 
   atualizarStatusImportacao, 
   registrarErroImportacao 
 } from "./importControl.js";
-import dotenv from "dotenv";
 
-dotenv.config();
-
-const CGU_URL = "https://dadosabertos-download.cgu.gov.br/Auditorias/Auditorias.csv";
+const CGU_API_BASE = "https://eaud.cgu.gov.br/api/relatorios/pesquisa";
 const MODULO_AUDITORIAS = "CGU_AUDITORIAS_PUB";
 
-const parseCSVRobust = (csvText: string, delimiter: string): string[][] => {
-  const rows: string[][] = [];
-  let currentField = "";
-  let currentRow: string[] = [];
-  let inQuotes = false;
-  for (let i = 0; i < csvText.length; i++) {
-    const char = csvText[i];
-    const nextChar = csvText[i + 1];
-    if (inQuotes) {
-      if (char === '"' && nextChar === '"') { currentField += '"'; i++; }
-      else if (char === '"') {
-        const isEndOfField = nextChar === delimiter || nextChar === '\r' || nextChar === '\n' || nextChar === undefined;
-        if (isEndOfField) inQuotes = false;
-        else currentField += '"';
-      } else { currentField += char; }
-    } else {
-      if (char === '"') inQuotes = true;
-      else if (char === delimiter) { currentRow.push(currentField.trim()); currentField = ""; }
-      else if (char === '\r' && nextChar === '\n') {
-        currentRow.push(currentField.trim());
-        if (currentRow.length > 0) rows.push(currentRow);
-        currentRow = []; currentField = ""; i++;
-      } else if (char === '\n') {
-        currentRow.push(currentField.trim());
-        if (currentRow.length > 0) rows.push(currentRow);
-        currentRow = []; currentField = "";
-      } else { currentField += char; }
-    }
+// Converte DD/MM/YYYY para YYYY-MM-DDT00:00:00Z
+const parseDataPub = (dStr: string) => {
+  if (!dStr) return null;
+  const parts = dStr.split("/");
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`;
   }
-  if (currentRow.length > 0 || currentField !== "") {
-    currentRow.push(currentField.trim());
-    rows.push(currentRow);
-  }
-  return rows;
-};
-
-const normalizeHeaderName = (str: string) => {
-  if (!str) return "";
-  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, "");
-};
-
-const downloadFile = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`Falha no download. Status: ${res.statusCode}`));
-        return;
-      }
-      
-      let data = '';
-      res.setEncoding('latin1');
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => resolve(data));
-    }).on('error', (err) => reject(err));
-  });
+  return null;
 };
 
 export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
-  console.log("[CGU] Iniciando rotina de importação de Auditorias...");
-  const unidadeAlvoSigla = process.env.CGU_SIGLA_UNIDADE_AUDITADA || "MTE";
-  const unidadeAlvoNome = "MINISTÉRIO DO TRABALHO E EMPREGO";
+  console.log("[CGU] Iniciando sincronização via API do e-Aud...");
+  const hoje = new Date();
+  const dataFim = `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}/${hoje.getFullYear()}`;
+  
+  const queryParams = new URLSearchParams({
+    colunaOrdenacao: "dataPublicacao",
+    direcaoOrdenacao: "DESC",
+    tamanhoPagina: "1000",
+    offset: "0",
+    dataPublicacaoInicio: "01/01/2022",
+    dataPublicacaoFim: dataFim,
+    idsUnidadesOrgao: "868"
+  });
+
+  const url = `${CGU_API_BASE}?${queryParams.toString()}`;
 
   let importControlId: number | null = null;
   let t0 = performance.now();
@@ -80,135 +42,66 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
   try {
     importControlId = await iniciarImportacao({
       modulo: MODULO_AUDITORIAS,
-      ano_referencia: new Date().getFullYear(),
-      tipo_arquivo: "CSV_REMOTO",
-      url_fonte: CGU_URL,
-      nome_arquivo: "Auditorias.csv",
+      ano_referencia: hoje.getFullYear(),
+      tipo_arquivo: "API_JSON",
+      url_fonte: url,
+      nome_arquivo: "eaud_api.json",
       forcado_por_usuario: usuarioId,
     });
 
     await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
 
-    const csvData = await downloadFile(CGU_URL);
-    if (!csvData || csvData.trim().length === 0) {
-      throw new Error("Arquivo CSV baixado está vazio.");
+    console.log(`[CGU] Buscando relatórios na API: ${url}`);
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Falha na API da CGU. Status: ${res.status}`);
     }
 
-    const firstLineEnd = csvData.indexOf('\n');
-    const headerLine = firstLineEnd > 0 ? csvData.substring(0, firstLineEnd) : csvData;
-    let delimiter = ";";
-    if ((headerLine.match(/,/g) || []).length > (headerLine.match(/;/g) || []).length) {
-      delimiter = ",";
-    }
-
-    const rows = parseCSVRobust(csvData, delimiter);
-    if (rows.length < 2) {
-      throw new Error("O arquivo não contém linhas de dados válidas.");
-    }
-
-    const headers = rows[0].map(h => normalizeHeaderName(h || ""));
-
-    const getIndex = (names: string[]) => {
-      for (const n of names) {
-        const i = headers.findIndex(h => h.includes(n));
-        if (i !== -1) return i;
-      }
-      return -1;
-    };
-
-    const idxIdTarefa = getIndex(["idtarefa", "tarefa"]);
-    const idxTituloRelatorio = getIndex(["titulo", "titulorelatorio"]);
-    const idxDataPublicacao = getIndex(["datapublicacao", "data"]);
-    const idxIdAuditoria = getIndex(["idauditoria", "auditoria"]);
-    const idxSiglaUnidade = getIndex(["siglasunidadesauditadas", "siglaunidadeauditada", "siglaunidade"]);
-    const idxNomeUnidade = getIndex(["unidadesauditadas", "nomeunidadeauditada", "nomeunidade"]);
-    const idxSiglaOrgaoSup = getIndex(["siglasorgaos", "siglaorgaosuperior"]);
-    const idxNomeOrgaoSup = getIndex(["orgaos", "nomeorgaosuperior"]);
-    const idxUf = getIndex(["ufs", "uf", "estado"]);
-    const idxMunicipio = getIndex(["municipios", "municipio"]);
-    const idxTipoServico = getIndex(["tiposervico"]);
-    const idxLinhaAcao = getIndex(["linhaacao"]);
-    const idxGrupoAtividade = getIndex(["grupoatividade"]);
-    const idxEdicaoFef = getIndex(["fef", "edicaoprogramasorteiofef"]);
-    const idxUrl = getIndex(["origemcguurlrelatorio", "url"]);
-
-    if (idxIdTarefa === -1 || idxIdAuditoria === -1) {
-      throw new Error("Colunas obrigatórias (IdTarefa, IdAuditoria) não encontradas no CSV.");
-    }
+    const data = await res.json();
+    const relatorios = data.data || [];
+    
+    console.log(`[CGU] Recebidos ${relatorios.length} relatórios da API.`);
 
     const client = await pool.connect();
     
-    let lidos = 0;
+    let lidos = relatorios.length;
     let inseridos = 0;
     let atualizados = 0;
     let errosCount = 0;
     let ignorados = 0;
 
     try {
-      // 1. Obter a Lista de Auditorias Alvo da tabela de demandas (extraindo o número do relatório do título)
-      const targetQuery = await client.query("SELECT DISTINCT titulo_tarefa FROM cgu_demands WHERE titulo_tarefa IS NOT NULL AND titulo_tarefa != ''");
-      const targetIds = new Set<string>();
-      for (const r of targetQuery.rows) {
-        const match = r.titulo_tarefa.match(/\b\d{5,}\b/);
-        if (match) targetIds.add(match[0]);
-      }
-      console.log(`[CGU] Encontrados ${targetIds.size} números de relatório alvo baseados nas demandas cadastradas.`);
-
       await client.query("BEGIN");
 
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length < headers.length * 0.5) continue;
-
-        lidos++;
-
-        const idTarefa = row[idxIdTarefa]?.trim();
-        const idAuditoria = row[idxIdAuditoria]?.trim();
+      for (const item of relatorios) {
+        const idTarefa = String(item.id);
+        const idAuditoria = String(item.numRelatorioPesquisaExterna);
         
         if (!idTarefa || !idAuditoria) {
           ignorados++;
           continue;
         }
 
-        const siglaUnidadeCheck = idxSiglaUnidade !== -1 ? row[idxSiglaUnidade]?.trim() || "" : "";
-        const nomeUnidadeCheck = idxNomeUnidade !== -1 ? row[idxNomeUnidade]?.trim() || "" : "";
-
-        // 2. Filtro: Verifica se está na nossa lista OU se a sigla/nome bate com o MTE
-        const isInTargetList = targetIds.has(idAuditoria);
+        const titulo = item.titulo || null;
+        const dtPub = parseDataPub(item.dataPublicacao) || null;
+        const siglaUnidade = item.unidadesAuditadas || null; 
+        const nomeUnidade = null;
+        const siglaOrgSup = "MTE";
+        const nomeOrgSup = "Ministério do Trabalho e Emprego";
         
-        // Normaliza o nome para ignorar acentos e case
-        const nomeNorm = nomeUnidadeCheck.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const nomeAlvoNorm = unidadeAlvoNome.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        
-        const isTargetUnidade = (siglaUnidadeCheck.toUpperCase() === unidadeAlvoSigla.toUpperCase()) || (nomeNorm.includes(nomeAlvoNorm));
-
-        if (!isInTargetList && !isTargetUnidade) {
-          ignorados++;
-          continue;
+        // As vezes localidades é Brasília/DF, DF, etc. Vamos jogar em municipio e UF
+        let uf = null;
+        let municipio = item.localidades || null;
+        if (municipio && municipio.includes("/")) {
+          const parts = municipio.split("/");
+          uf = parts[parts.length - 1].trim();
         }
 
-        const parseDate = (dStr: string) => {
-          if (!dStr) return null;
-          const parts = dStr.split("/");
-          if (parts.length === 3) {
-            return `${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`;
-          }
-          return null;
-        };
-
-        const titulo = idxTituloRelatorio !== -1 ? row[idxTituloRelatorio]?.trim() : null;
-        const dtPub = idxDataPublicacao !== -1 ? parseDate(row[idxDataPublicacao]?.trim()) : null;
-        const siglaUnidade = idxSiglaUnidade !== -1 ? row[idxSiglaUnidade]?.trim() : null;
-        const nomeUnidade = idxNomeUnidade !== -1 ? row[idxNomeUnidade]?.trim() : null;
-        const siglaOrgSup = idxSiglaOrgaoSup !== -1 ? row[idxSiglaOrgaoSup]?.trim() : null;
-        const nomeOrgSup = idxNomeOrgaoSup !== -1 ? row[idxNomeOrgaoSup]?.trim() : null;
-        const uf = idxUf !== -1 ? row[idxUf]?.trim() : null;
-        const municipio = idxMunicipio !== -1 ? row[idxMunicipio]?.trim() : null;
-        const tipoServico = idxTipoServico !== -1 ? row[idxTipoServico]?.trim() : null;
-        const linhaAcao = idxLinhaAcao !== -1 ? row[idxLinhaAcao]?.trim() : null;
-        const grupoAtividade = idxGrupoAtividade !== -1 ? row[idxGrupoAtividade]?.trim() : null;
-        const edicaoFef = idxEdicaoFef !== -1 ? row[idxEdicaoFef]?.trim() : null;
-        const urlRel = idxUrl !== -1 ? row[idxUrl]?.trim() : null;
+        const tipoServico = item.tipoServico || null;
+        const linhaAcao = item.linhaAcao || null;
+        const grupoAtividade = item.grupoAtividade || null;
+        const edicaoFef = null; // API não traz, mas podemos deixar nulo
+        const urlRel = `https://eaud.cgu.gov.br/relatorios/download/${idTarefa}`;
 
         try {
           await client.query("SAVEPOINT import_auditoria");
@@ -225,6 +118,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
             ON CONFLICT (id_auditoria, id_tarefa) DO UPDATE SET
               titulo_relatorio = EXCLUDED.titulo_relatorio,
               data_publicacao = EXCLUDED.data_publicacao,
+              sigla_unidade_auditada = EXCLUDED.sigla_unidade_auditada,
               nome_unidade_auditada = EXCLUDED.nome_unidade_auditada,
               sigla_orgao_superior = EXCLUDED.sigla_orgao_superior,
               nome_orgao_superior = EXCLUDED.nome_orgao_superior,
@@ -233,7 +127,6 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
               tipo_servico = EXCLUDED.tipo_servico,
               linha_acao = EXCLUDED.linha_acao,
               grupo_atividade = EXCLUDED.grupo_atividade,
-              edicao_programa_sorteio_fef = EXCLUDED.edicao_programa_sorteio_fef,
               origem_cgu_url_relatorio = EXCLUDED.origem_cgu_url_relatorio,
               data_importacao = CURRENT_TIMESTAMP
             RETURNING xmax;
@@ -268,7 +161,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
     await atualizarStatusImportacao({
       id: importControlId,
       status: "CONCLUIDO",
-      tamanho_bytes: csvData.length,
+      tamanho_bytes: 0,
       quantidade_linhas_csv: lidos,
       quantidade_inseridos: inseridos,
       quantidade_atualizados: atualizados,
@@ -276,7 +169,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
       quantidade_erros: errosCount,
     });
     
-    console.log(`[CGU] Importação concluída. Lidos: ${lidos}, Inseridos: ${inseridos}, Atualizados: ${atualizados}, Ignorados: ${ignorados}, Erros: ${errosCount}. Tempo: ${((t1-t0)/1000).toFixed(1)}s`);
+    console.log(`[CGU] Importação concluída via API. Lidos: ${lidos}, Inseridos: ${inseridos}, Atualizados: ${atualizados}, Erros: ${errosCount}. Tempo: ${((t1-t0)/1000).toFixed(1)}s`);
 
     return { 
       success: true, 
@@ -288,7 +181,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
     if (importControlId) {
       await registrarErroImportacao(importControlId, err.message, err.stack);
     }
-    console.error("[CGU] Erro fatal na importação de auditorias", err);
+    console.error("[CGU] Erro fatal na sincronia de auditorias via API", err);
     return { error: err.message };
   }
 };

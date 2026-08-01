@@ -1,8 +1,12 @@
 import fetch from "node-fetch";
-import pdfParse from "pdf-parse";
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 import fs from "fs";
 import path from "path";
 
+// Function implementation starts here
+// ...
 export async function getCguPdfText(reportId: string): Promise<string> {
   const url = `https://eaud.cgu.gov.br/relatorios/download/${reportId}`;
   

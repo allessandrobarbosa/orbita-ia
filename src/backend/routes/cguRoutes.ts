@@ -562,7 +562,7 @@ router.post("/cgu/auditorias/:id/dossie", async (req, res) => {
     }
 
     // 2. Baixar e extrair texto do PDF
-    const pdfText = await getCguPdfText(id);
+    const pdfText = await getCguPdfText(auditoria.id_tarefa);
 
     // 3. Passar pelo Gemini
     const dossie = await extractCguDossieWithGemini(pdfText);

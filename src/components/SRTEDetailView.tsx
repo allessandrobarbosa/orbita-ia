@@ -840,10 +840,10 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                     <table className="w-full text-left border-collapse text-xs text-slate-700">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                          <th className="p-3">Contrato</th>
-                          <th className="p-3">Tipo</th>
-                          <th className="p-3">Fornecedor</th>
-                          <th className="p-3">Vencimento</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Contrato</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Tipo</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Fornecedor</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Vencimento</th>
                           <th className="p-3 text-right">Dias Restantes</th>
                           <th className="p-3 text-right">Ações Recomendadas</th>
                         </tr>
@@ -887,8 +887,8 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                       <table className="w-full text-left border-collapse text-xs text-slate-700">
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                            <th className="p-3">Contrato</th>
-                            <th className="p-3">Mês/Ano</th>
+                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Contrato</th>
+                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Mês/Ano</th>
                             <th className="p-3 text-right">Valor</th>
                             <th className="p-3 text-right">Variação vs. Mês Anterior</th>
                             <th className="p-3 text-right">Ação</th>
@@ -1025,13 +1025,13 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                     <table className="w-full text-left border-collapse text-xs text-slate-700">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                          <th className="p-3">Número</th>
-                          <th className="p-3">Tipo</th>
-                          <th className="p-3">Fornecedor</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Número</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Tipo</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Fornecedor</th>
                           <th className="p-3 text-right">Mensal</th>
                           <th className="p-3 text-right">Total</th>
-                          <th className="p-3">Vigência</th>
-                          <th className="p-3">Status</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Vigência</th>
+                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Status</th>
                           <th className="p-3 text-right">Ações</th>
                         </tr>
                       </thead>
@@ -1123,12 +1123,12 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                       <table className="w-full text-left border-collapse text-xs text-slate-700">
                         <thead>
                           <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                            <th className="p-3">Placa</th>
-                            <th className="p-3">Marca/Modelo</th>
-                            <th className="p-3">Alocação</th>
+                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Placa</th>
+                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Marca/Modelo</th>
+                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Alocação</th>
                             <th className="p-3 text-right">Km Atual</th>
                             <th className="p-3 text-right">Revisão (km)</th>
-                            <th className="p-3">Status</th>
+                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Status</th>
                             <th className="p-3 text-right">Ações</th>
                           </tr>
                         </thead>

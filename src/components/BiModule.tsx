@@ -1031,10 +1031,10 @@ export default function BiModule({
                 <table className="w-full text-left text-xs text-slate-800 border-collapse">
                   <thead className="bg-[#f8fafc] text-slate-500 font-black uppercase text-[8px] tracking-wider border-b border-slate-200">
                     <tr>
-                      <th className="p-3">Ref. ID / Tipo</th>
-                      <th className="p-3">Objeto / Assunto</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3">Cruzamentos TCU Mapped</th>
+                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Ref. ID / Tipo</th>
+                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Objeto / Assunto</th>
+                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Status</th>
+                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Cruzamentos TCU Mapped</th>
                       <th className="p-3 text-right">Ação</th>
                     </tr>
                   </thead>

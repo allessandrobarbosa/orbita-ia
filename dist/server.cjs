@@ -451,9 +451,9 @@ var init_importControl = __esm({
 });
 
 // server.ts
-var import_express13 = __toESM(require("express"), 1);
-var import_path8 = __toESM(require("path"), 1);
-var import_fs9 = __toESM(require("fs"), 1);
+var import_express14 = __toESM(require("express"), 1);
+var import_path9 = __toESM(require("path"), 1);
+var import_fs10 = __toESM(require("fs"), 1);
 var import_vite = require("vite");
 var import_dotenv4 = __toESM(require("dotenv"), 1);
 var import_express_session = __toESM(require("express-session"), 1);
@@ -1013,9 +1013,60 @@ Retorne APENAS um JSON v\xE1lido. Exemplo de estrutura esperada:
     }
     const cleanText = text.replace(/^```json\s*/, "").replace(/\s*```$/, "").trim();
     return JSON.parse(cleanText);
-  } catch (err) {
-    console.error("Erro na extra\xE7\xE3o com Gemini SDK:", err);
-    throw new Error("Falha ao comunicar com Google Gemini: " + err.message);
+  } catch (error) {
+    console.error("Erro na extra\xE7\xE3o via Gemini (TCU):", error);
+    throw error;
+  }
+}
+async function extractCguDossieWithGemini(pdfText) {
+  const prompt = `
+Voc\xEA \xE9 um especialista em auditoria governamental da CGU (Controladoria-Geral da Uni\xE3o).
+Sua tarefa \xE9 analisar o Relat\xF3rio de Auditoria fornecido e extrair um Dossi\xEA Estruturado.
+
+Como as recomenda\xE7\xF5es/determina\xE7\xF5es j\xE1 s\xE3o acompanhadas por outro sistema, seu objetivo principal \xE9 focar em extrair as constata\xE7\xF5es (achados de auditoria), as conclus\xF5es gerais e o escopo.
+
+Extraia as seguintes informa\xE7\xF5es em formato JSON ESTRITO:
+1. "resumo": Um resumo executivo de 1 a 2 par\xE1grafos sobre o que foi auditado e a conclus\xE3o geral.
+2. "escopo": O que foi o alvo da auditoria (ex: avalia\xE7\xE3o de pol\xEDticas p\xFAblicas, folhas de pagamento, contratos, etc).
+3. "constatacoes": Lista de objetos, onde cada um representa um achado (problema/irregularidade) apontado pela CGU. Cada objeto deve ter:
+   - "titulo": T\xEDtulo ou descri\xE7\xE3o curta do achado.
+   - "descricao": Explica\xE7\xE3o detalhada do que ocorreu.
+   - "risco_impacto": Qual o risco ou impacto gerado (se mencionado, ex: "Alto", "R$ 1.000,00 de preju\xEDzo", "Risco \xE0 seguran\xE7a").
+
+Texto do Relat\xF3rio:
+"""
+${pdfText.substring(0, 6e4)}
+"""
+
+Retorne APENAS um JSON v\xE1lido. Exemplo de estrutura esperada:
+{
+  "resumo": "A auditoria avaliou o programa X e concluiu que...",
+  "escopo": "Contratos de presta\xE7\xE3o de servi\xE7o do programa X no exerc\xEDcio de 2023.",
+  "constatacoes": [
+    {
+      "titulo": "Pagamentos indevidos a fornecedores",
+      "descricao": "Foram identificados pagamentos em duplicidade...",
+      "risco_impacto": "Preju\xEDzo financeiro de R$ 50.000,00"
+    }
+  ]
+}
+`;
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        temperature: 0.1
+      }
+    });
+    const text = response.text;
+    if (!text) throw new Error("Resposta vazia da IA.");
+    const cleanText = text.replace(/^```json\s*/, "").replace(/\s*```$/, "").trim();
+    return JSON.parse(cleanText);
+  } catch (error) {
+    console.error("Erro na extra\xE7\xE3o via Gemini (CGU):", error);
+    throw error;
   }
 }
 
@@ -2571,10 +2622,48 @@ var scdpRoutes_default = router6;
 // src/backend/routes/cguRoutes.ts
 var import_express7 = __toESM(require("express"), 1);
 init_db();
-var import_fs8 = __toESM(require("fs"), 1);
-var import_path7 = __toESM(require("path"), 1);
+var import_fs9 = __toESM(require("fs"), 1);
+var import_path8 = __toESM(require("path"), 1);
 var XLSX = __toESM(require("xlsx"), 1);
 init_importControl();
+
+// src/backend/utils/cguPdfService.ts
+var import_node_fetch = __toESM(require("node-fetch"), 1);
+var import_module = require("module");
+var import_fs8 = __toESM(require("fs"), 1);
+var import_path7 = __toESM(require("path"), 1);
+var import_meta = {};
+var require2 = (0, import_module.createRequire)(import_meta.url);
+var pdfParse = require2("pdf-parse");
+async function getCguPdfText(reportId) {
+  const url = `https://eaud.cgu.gov.br/relatorios/download/${reportId}`;
+  console.log(`[CGU PDF Service] Baixando PDF de: ${url}`);
+  try {
+    const response = await (0, import_node_fetch.default)(url);
+    if (!response.ok) {
+      throw new Error(`Falha no download. Status: ${response.status} ${response.statusText}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const cacheDir = import_path7.default.resolve(process.cwd(), "data", "cgu", "pdfs");
+    if (!import_fs8.default.existsSync(cacheDir)) {
+      import_fs8.default.mkdirSync(cacheDir, { recursive: true });
+    }
+    const cachePath = import_path7.default.join(cacheDir, `${reportId}.pdf`);
+    import_fs8.default.writeFileSync(cachePath, buffer);
+    console.log(`[CGU PDF Service] Extraindo texto do PDF (${buffer.length} bytes)...`);
+    const pdfData = await pdfParse(buffer);
+    if (!pdfData.text || pdfData.text.trim().length === 0) {
+      throw new Error("O PDF extra\xEDdo parece estar vazio ou ser uma imagem (scaneado).");
+    }
+    return pdfData.text;
+  } catch (error) {
+    console.error(`[CGU PDF Service] Erro ao obter texto do relat\xF3rio ${reportId}:`, error.message);
+    throw error;
+  }
+}
+
+// src/backend/routes/cguRoutes.ts
 var router7 = import_express7.default.Router();
 var MODULO_CGU = "CGU_DEMANDAS";
 var MODULO_CGU_REPORTS = "CGU_REPORTS";
@@ -2629,16 +2718,16 @@ var normalizeHeaderName = (str) => {
   return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_]/g, "");
 };
 var parseFileContents = (filePath) => {
-  const ext = import_path7.default.extname(filePath).toLowerCase();
+  const ext = import_path8.default.extname(filePath).toLowerCase();
   if (ext === ".xlsx" || ext === ".xls") {
-    const buffer = import_fs8.default.readFileSync(filePath);
+    const buffer = import_fs9.default.readFileSync(filePath);
     const workbook = XLSX.read(buffer, { type: "buffer" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
     return rawData.map((row2) => row2.map((cell) => cell != null ? String(cell).trim() : ""));
   } else if (ext === ".csv") {
-    let contentStr = import_fs8.default.readFileSync(filePath, "latin1");
+    let contentStr = import_fs9.default.readFileSync(filePath, "latin1");
     if (!contentStr || contentStr.trim().length < 10) return [];
     const firstLineEnd = contentStr.indexOf("\n");
     const headerLine = firstLineEnd > 0 ? contentStr.substring(0, firstLineEnd) : contentStr;
@@ -2653,15 +2742,15 @@ var parseFileContents = (filePath) => {
 router7.get("/cgu/files/last-updates", (req, res) => {
   const getMostRecentDate = (dirPath) => {
     try {
-      if (!import_fs8.default.existsSync(dirPath)) return null;
-      const files = import_fs8.default.readdirSync(dirPath).filter((f) => {
+      if (!import_fs9.default.existsSync(dirPath)) return null;
+      const files = import_fs9.default.readdirSync(dirPath).filter((f) => {
         const ext = f.toLowerCase();
         return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
       });
       if (files.length === 0) return null;
       let maxTime = 0;
       for (const file of files) {
-        const stat = import_fs8.default.statSync(import_path7.default.join(dirPath, file));
+        const stat = import_fs9.default.statSync(import_path8.default.join(dirPath, file));
         if (stat.mtimeMs > maxTime) maxTime = stat.mtimeMs;
       }
       return maxTime > 0 ? new Date(maxTime).toLocaleString("pt-BR") : null;
@@ -2669,8 +2758,8 @@ router7.get("/cgu/files/last-updates", (req, res) => {
       return null;
     }
   };
-  const mon = getMostRecentDate(import_path7.default.join(process.cwd(), "data", "cgu", "monitoramentos"));
-  const rel = getMostRecentDate(import_path7.default.join(process.cwd(), "data", "cgu", "relatorios"));
+  const mon = getMostRecentDate(import_path8.default.join(process.cwd(), "data", "cgu", "monitoramentos"));
+  const rel = getMostRecentDate(import_path8.default.join(process.cwd(), "data", "cgu", "relatorios"));
   res.json({
     success: true,
     data: {
@@ -2727,11 +2816,11 @@ router7.get("/cgu", async (req, res) => {
   }
 });
 router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
-  const MON_DIR = import_path7.default.join(process.cwd(), "data", "cgu", "monitoramentos");
-  if (!import_fs8.default.existsSync(MON_DIR)) {
+  const MON_DIR = import_path8.default.join(process.cwd(), "data", "cgu", "monitoramentos");
+  if (!import_fs9.default.existsSync(MON_DIR)) {
     return res.status(404).json({ error: `Diret\xF3rio n\xE3o encontrado: ${MON_DIR}` });
   }
-  const validFiles = import_fs8.default.readdirSync(MON_DIR).filter((f) => {
+  const validFiles = import_fs9.default.readdirSync(MON_DIR).filter((f) => {
     const ext = f.toLowerCase();
     return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
   });
@@ -2753,7 +2842,7 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
     });
     await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
     for (const file of validFiles) {
-      const filePath = import_path7.default.join(MON_DIR, file);
+      const filePath = import_path8.default.join(MON_DIR, file);
       const allRows = parseFileContents(filePath);
       if (allRows.length < 2) continue;
       const headers = allRows[0].map((h) => normalizeHeaderName(h || ""));
@@ -2902,11 +2991,11 @@ router7.get("/cgu/reports", async (req, res) => {
   }
 });
 router7.post("/cgu/sync-local/relatorios", async (req, res) => {
-  const REL_DIR = import_path7.default.join(process.cwd(), "data", "cgu", "relatorios");
-  if (!import_fs8.default.existsSync(REL_DIR)) {
+  const REL_DIR = import_path8.default.join(process.cwd(), "data", "cgu", "relatorios");
+  if (!import_fs9.default.existsSync(REL_DIR)) {
     return res.status(404).json({ error: `Diret\xF3rio n\xE3o encontrado: ${REL_DIR}` });
   }
-  const validFiles = import_fs8.default.readdirSync(REL_DIR).filter((f) => {
+  const validFiles = import_fs9.default.readdirSync(REL_DIR).filter((f) => {
     const ext = f.toLowerCase();
     return ext.endsWith(".csv") || ext.endsWith(".xlsx") || ext.endsWith(".xls");
   });
@@ -2928,7 +3017,7 @@ router7.post("/cgu/sync-local/relatorios", async (req, res) => {
     });
     await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
     for (const file of validFiles) {
-      const filePath = import_path7.default.join(REL_DIR, file);
+      const filePath = import_path8.default.join(REL_DIR, file);
       const allRows = parseFileContents(filePath);
       if (allRows.length < 2) continue;
       const headers = allRows[0].map((h) => normalizeHeaderName(h || ""));
@@ -3037,13 +3126,409 @@ router7.delete("/cgu/:id", async (req, res) => {
     res.status(500).json({ error: "Erro interno" });
   }
 });
+router7.post("/cgu/auditorias/:id/dossie", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const auditRes = await pool.query("SELECT * FROM cgu_auditorias WHERE id_auditoria = $1 LIMIT 1", [id]);
+    if (auditRes.rowCount === 0) {
+      return res.status(404).json({ error: "Auditoria n\xE3o encontrada." });
+    }
+    const auditoria = auditRes.rows[0];
+    if (auditoria.dossie_ia) {
+      return res.json({ success: true, dossie: JSON.parse(auditoria.dossie_ia) });
+    }
+    const pdfText = await getCguPdfText(auditoria.id_tarefa);
+    const dossie = await extractCguDossieWithGemini(pdfText);
+    await pool.query("UPDATE cgu_auditorias SET dossie_ia = $1 WHERE id_auditoria = $2", [JSON.stringify(dossie), id]);
+    res.json({ success: true, dossie });
+  } catch (error) {
+    console.error(`Erro ao gerar dossi\xEA para auditoria ${id}:`, error);
+    res.status(500).json({ error: "Erro ao processar PDF com a IA.", details: error.message });
+  }
+});
 var cguRoutes_default = router7;
 
-// src/backend/routes/superintendenciasRoutes.ts
+// src/backend/routes/cguAuditoriasRoutes.ts
 var import_express8 = __toESM(require("express"), 1);
+var import_node_fetch3 = __toESM(require("node-fetch"), 1);
 init_db();
+
+// src/backend/utils/importCguAuditorias.ts
+var import_node_fetch2 = __toESM(require("node-fetch"), 1);
+init_db();
+init_importControl();
+var CGU_API_BASE = "https://eaud.cgu.gov.br/api/relatorios/pesquisa";
+var MODULO_AUDITORIAS = "CGU_AUDITORIAS_PUB";
+var parseDataPub = (dStr) => {
+  if (!dStr) return null;
+  const parts = dStr.split("/");
+  if (parts.length === 3) {
+    return `${parts[2]}-${parts[1]}-${parts[0]}T00:00:00Z`;
+  }
+  return null;
+};
+var runImportCguAuditorias = async (usuarioId = "SISTEMA") => {
+  console.log("[CGU] Iniciando sincroniza\xE7\xE3o via API do e-Aud...");
+  const hoje = /* @__PURE__ */ new Date();
+  const dataFim = `${String(hoje.getDate()).padStart(2, "0")}/${String(hoje.getMonth() + 1).padStart(2, "0")}/${hoje.getFullYear()}`;
+  const queryParams = new URLSearchParams({
+    colunaOrdenacao: "dataPublicacao",
+    direcaoOrdenacao: "DESC",
+    tamanhoPagina: "1000",
+    offset: "0",
+    dataPublicacaoInicio: "01/01/2022",
+    dataPublicacaoFim: dataFim,
+    idsUnidadesOrgao: "868"
+  });
+  const url = `${CGU_API_BASE}?${queryParams.toString()}`;
+  let importControlId = null;
+  let t0 = performance.now();
+  try {
+    importControlId = await iniciarImportacao({
+      modulo: MODULO_AUDITORIAS,
+      ano_referencia: hoje.getFullYear(),
+      tipo_arquivo: "API_JSON",
+      url_fonte: url,
+      nome_arquivo: "eaud_api.json",
+      forcado_por_usuario: usuarioId
+    });
+    await atualizarStatusImportacao({ id: importControlId, status: "PROCESSANDO" });
+    console.log(`[CGU] Buscando relat\xF3rios na API: ${url}`);
+    const res = await (0, import_node_fetch2.default)(url);
+    if (!res.ok) {
+      throw new Error(`Falha na API da CGU. Status: ${res.status}`);
+    }
+    const data = await res.json();
+    const relatorios = data.data || [];
+    console.log(`[CGU] Recebidos ${relatorios.length} relat\xF3rios da API.`);
+    const client = await pool.connect();
+    let lidos = relatorios.length;
+    let inseridos = 0;
+    let atualizados = 0;
+    let errosCount = 0;
+    let ignorados = 0;
+    try {
+      await client.query("BEGIN");
+      for (const item of relatorios) {
+        const idTarefa = String(item.id);
+        const idAuditoria = String(item.numRelatorioPesquisaExterna);
+        if (!idTarefa || !idAuditoria) {
+          ignorados++;
+          continue;
+        }
+        const titulo = item.titulo || null;
+        const dtPub = parseDataPub(item.dataPublicacao) || null;
+        const siglaUnidade = item.unidadesAuditadas || null;
+        const nomeUnidade = null;
+        const siglaOrgSup = "MTE";
+        const nomeOrgSup = "Minist\xE9rio do Trabalho e Emprego";
+        let uf = null;
+        let municipio = item.localidades || null;
+        if (municipio && municipio.includes("/")) {
+          const parts = municipio.split("/");
+          uf = parts[parts.length - 1].trim();
+        }
+        const tipoServico = item.tipoServico || null;
+        const linhaAcao = item.linhaAcao || null;
+        const grupoAtividade = item.grupoAtividade || null;
+        const edicaoFef = null;
+        const urlRel = `https://eaud.cgu.gov.br/relatorios/download/${idTarefa}`;
+        try {
+          await client.query("SAVEPOINT import_auditoria");
+          const result = await client.query(`
+            INSERT INTO cgu_auditorias (
+              id_tarefa, titulo_relatorio, data_publicacao, id_auditoria,
+              sigla_unidade_auditada, nome_unidade_auditada, sigla_orgao_superior, nome_orgao_superior,
+              uf, municipio, tipo_servico, linha_acao, grupo_atividade, edicao_programa_sorteio_fef,
+              origem_cgu_url_relatorio, data_importacao
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, CURRENT_TIMESTAMP
+            )
+            ON CONFLICT (id_auditoria, id_tarefa) DO UPDATE SET
+              titulo_relatorio = EXCLUDED.titulo_relatorio,
+              data_publicacao = EXCLUDED.data_publicacao,
+              sigla_unidade_auditada = EXCLUDED.sigla_unidade_auditada,
+              nome_unidade_auditada = EXCLUDED.nome_unidade_auditada,
+              sigla_orgao_superior = EXCLUDED.sigla_orgao_superior,
+              nome_orgao_superior = EXCLUDED.nome_orgao_superior,
+              uf = EXCLUDED.uf,
+              municipio = EXCLUDED.municipio,
+              tipo_servico = EXCLUDED.tipo_servico,
+              linha_acao = EXCLUDED.linha_acao,
+              grupo_atividade = EXCLUDED.grupo_atividade,
+              origem_cgu_url_relatorio = EXCLUDED.origem_cgu_url_relatorio,
+              data_importacao = CURRENT_TIMESTAMP
+            RETURNING xmax;
+          `, [
+            idTarefa,
+            titulo,
+            dtPub,
+            idAuditoria,
+            siglaUnidade,
+            nomeUnidade,
+            siglaOrgSup,
+            nomeOrgSup,
+            uf,
+            municipio,
+            tipoServico,
+            linhaAcao,
+            grupoAtividade,
+            edicaoFef,
+            urlRel
+          ]);
+          if (result.rows[0].xmax === 0) {
+            inseridos++;
+          } else {
+            atualizados++;
+          }
+          await client.query("RELEASE SAVEPOINT import_auditoria");
+        } catch (dbErr) {
+          await client.query("ROLLBACK TO SAVEPOINT import_auditoria");
+          errosCount++;
+          console.error(`Erro inserindo auditoria ${idAuditoria}-${idTarefa}:`, dbErr.message);
+        }
+      }
+      await client.query("COMMIT");
+    } catch (txErr) {
+      await client.query("ROLLBACK");
+      throw txErr;
+    } finally {
+      client.release();
+    }
+    let t1 = performance.now();
+    await atualizarStatusImportacao({
+      id: importControlId,
+      status: "CONCLUIDO",
+      tamanho_bytes: 0,
+      quantidade_linhas_csv: lidos,
+      quantidade_inseridos: inseridos,
+      quantidade_atualizados: atualizados,
+      quantidade_ignorados: ignorados,
+      quantidade_erros: errosCount
+    });
+    console.log(`[CGU] Importa\xE7\xE3o conclu\xEDda via API. Lidos: ${lidos}, Inseridos: ${inseridos}, Atualizados: ${atualizados}, Erros: ${errosCount}. Tempo: ${((t1 - t0) / 1e3).toFixed(1)}s`);
+    return {
+      success: true,
+      lidos,
+      inseridos,
+      atualizados,
+      ignorados,
+      erros: errosCount,
+      tempo_segundos: ((t1 - t0) / 1e3).toFixed(1)
+    };
+  } catch (err) {
+    if (importControlId) {
+      await registrarErroImportacao(importControlId, err.message, err.stack);
+    }
+    console.error("[CGU] Erro fatal na sincronia de auditorias via API", err);
+    return { error: err.message };
+  }
+};
+
+// src/backend/routes/cguAuditoriasRoutes.ts
 var router8 = import_express8.default.Router();
-router8.get("/superintendencias", async (req, res) => {
+router8.get("/cgu/auditorias", async (req, res) => {
+  try {
+    const {
+      page = "1",
+      limit = "10",
+      sort = "data_publicacao",
+      order = "DESC",
+      periodoInicio,
+      periodoFim,
+      idAuditoria,
+      tituloRelatorio,
+      tipoServico,
+      uf,
+      municipio,
+      grupoAtividade,
+      ano
+    } = req.query;
+    let q = "SELECT * FROM cgu_auditorias WHERE 1=1";
+    let params = [];
+    let paramIdx = 1;
+    if (idAuditoria) {
+      q += ` AND id_auditoria ILIKE $${paramIdx++}`;
+      params.push(`%${idAuditoria}%`);
+    }
+    if (tituloRelatorio) {
+      q += ` AND titulo_relatorio ILIKE $${paramIdx++}`;
+      params.push(`%${tituloRelatorio}%`);
+    }
+    if (tipoServico) {
+      q += ` AND tipo_servico ILIKE $${paramIdx++}`;
+      params.push(`%${tipoServico}%`);
+    }
+    if (uf) {
+      q += ` AND uf = $${paramIdx++}`;
+      params.push(uf);
+    }
+    if (municipio) {
+      q += ` AND municipio ILIKE $${paramIdx++}`;
+      params.push(`%${municipio}%`);
+    }
+    if (grupoAtividade) {
+      q += ` AND grupo_atividade ILIKE $${paramIdx++}`;
+      params.push(`%${grupoAtividade}%`);
+    }
+    if (periodoInicio) {
+      q += ` AND data_publicacao >= $${paramIdx++}`;
+      params.push(periodoInicio);
+    }
+    if (periodoFim) {
+      q += ` AND data_publicacao <= $${paramIdx++}`;
+      params.push(periodoFim);
+    }
+    if (ano) {
+      q += ` AND EXTRACT(YEAR FROM data_publicacao) = $${paramIdx++}`;
+      params.push(ano);
+    }
+    const countRes = await pool.query(`SELECT COUNT(*) FROM (${q}) as sub`, params);
+    const total = parseInt(countRes.rows[0].count, 10);
+    const validSortCols = ["data_publicacao", "id_auditoria", "titulo_relatorio", "sigla_unidade_auditada", "tipo_servico", "linha_acao"];
+    const sortCol = validSortCols.includes(String(sort)) ? String(sort) : "data_publicacao";
+    const sortOrder = String(order).toUpperCase() === "ASC" ? "ASC" : "DESC";
+    q += ` ORDER BY ${sortCol} ${sortOrder}`;
+    const p = Math.max(1, parseInt(String(page), 10));
+    const l = Math.max(1, parseInt(String(limit), 10));
+    q += ` LIMIT $${paramIdx++} OFFSET $${paramIdx++}`;
+    params.push(l, (p - 1) * l);
+    const result = await pool.query(q, params);
+    res.json({
+      data: result.rows,
+      total,
+      page: p,
+      limit: l
+    });
+  } catch (error) {
+    console.error("Erro ao listar auditorias:", error);
+    res.status(500).json({ error: "Erro interno ao listar auditorias." });
+  }
+});
+router8.get("/cgu/auditorias-dashboard", async (req, res) => {
+  try {
+    const totalRes = await pool.query("SELECT COUNT(*) FROM cgu_auditorias");
+    const total = parseInt(totalRes.rows[0].count, 10);
+    const monitoramentoStats = await pool.query(`
+      SELECT 
+        SUM(CASE WHEN d.id_tarefa IS NOT NULL THEN 1 ELSE 0 END) as com_monitoramento,
+        SUM(CASE WHEN d.id_tarefa IS NULL THEN 1 ELSE 0 END) as sem_monitoramento
+      FROM cgu_auditorias a
+      LEFT JOIN (SELECT DISTINCT id_tarefa FROM cgu_demands) d ON a.id_tarefa = d.id_tarefa
+    `);
+    const { com_monitoramento, sem_monitoramento } = monitoramentoStats.rows[0];
+    const statsDemandas = await pool.query(`
+      SELECT 
+        COUNT(*) as total_recomendacoes,
+        SUM(CASE WHEN estado ILIKE '%Pendente%' OR estado ILIKE '%Manifesta\xE7\xE3o%' THEN 1 ELSE 0 END) as total_pendencias,
+        SUM(CASE WHEN estado ILIKE '%Conclu\xEDdo%' OR estado ILIKE '%Atendido%' THEN 1 ELSE 0 END) as total_concluidos,
+        SUM(CASE WHEN estado ILIKE '%Cancelada%' OR estado ILIKE '%Cancelado%' THEN 1 ELSE 0 END) as total_cancelados,
+        SUM(CASE WHEN estado ILIKE '%Em An\xE1lise pela Unidade Auditada%' THEN 1 ELSE 0 END) as total_analise_auditada,
+        SUM(CASE WHEN estado ILIKE '%Em An\xE1lise pela Unidade de Auditoria%' THEN 1 ELSE 0 END) as total_analise_auditoria
+      FROM cgu_demands
+    `);
+    const anoRes = await pool.query(`
+      SELECT EXTRACT(YEAR FROM data_publicacao) as ano, COUNT(*) as count 
+      FROM cgu_auditorias 
+      WHERE data_publicacao IS NOT NULL
+      GROUP BY ano ORDER BY ano ASC
+    `);
+    const tipoServicoRes = await pool.query(`
+      SELECT tipo_servico, COUNT(*) as count 
+      FROM cgu_auditorias 
+      WHERE tipo_servico IS NOT NULL
+      GROUP BY tipo_servico ORDER BY count DESC LIMIT 10
+    `);
+    res.json({
+      total,
+      comMonitoramento: parseInt(com_monitoramento || "0"),
+      semMonitoramento: parseInt(sem_monitoramento || "0"),
+      statsDemandas: statsDemandas.rows[0],
+      graficoAnos: anoRes.rows,
+      graficoTipos: tipoServicoRes.rows
+    });
+  } catch (error) {
+    console.error("Erro no dashboard CGU:", error);
+    res.status(500).json({ error: "Erro interno no dashboard." });
+  }
+});
+router8.get("/cgu/auditorias/:id_tarefa", async (req, res) => {
+  try {
+    const { id_tarefa } = req.params;
+    const audRes = await pool.query("SELECT * FROM cgu_auditorias WHERE id_tarefa = $1 LIMIT 1", [id_tarefa]);
+    if (audRes.rows.length === 0) {
+      return res.status(404).json({ error: "Auditoria n\xE3o encontrada." });
+    }
+    const auditoria = audRes.rows[0];
+    const demRes = await pool.query(`
+      SELECT * FROM cgu_demands 
+      WHERE id_tarefa = $1 
+         OR (titulo_tarefa IS NOT NULL AND titulo_tarefa ILIKE $2)
+    `, [id_tarefa, `%${auditoria.id_auditoria}%`]);
+    const monitoramentos = demRes.rows.map((row2) => ({
+      idTarefa: row2.id_tarefa,
+      situacao: row2.situacao,
+      estado: row2.estado,
+      tituloTarefa: row2.titulo_tarefa,
+      dataInicio: row2.data_inicio,
+      dataFim: row2.data_fim,
+      dataLimite: row2.data_limite,
+      unidadeAuditada: row2.unidade_auditada,
+      unidadesAuditoria: row2.unidades_auditoria,
+      textoMonitoramento: row2.texto_monitoramento,
+      providencia: row2.providencia,
+      tipoUltimaManifestacao: row2.tipo_ultima_manifestacao,
+      textoUltimaManifestacao: row2.texto_ultima_manifestacao,
+      dataUltimaManifestacao: row2.data_ultima_manifestacao,
+      tipoUltimoPosicionamento: row2.tipo_ultimo_posicionamento,
+      textoUltimoPosicionamento: row2.texto_ultimo_posicionamento,
+      dataUltimoPosicionamento: row2.data_ultimo_posicionamento,
+      categoria: row2.categoria,
+      dataLimiteInicial: row2.data_limite_inicial,
+      ano: row2.ano,
+      ultimaAtualizacao: row2.ultima_atualizacao,
+      processoSei: row2.processo_sei
+    }));
+    res.json({ auditoria, monitoramentos });
+  } catch (error) {
+    console.error("Erro ao obter detalhes da auditoria:", error);
+    res.status(500).json({ error: "Erro interno ao detalhar auditoria." });
+  }
+});
+router8.get("/cgu/pdf/view/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const url = `https://eaud.cgu.gov.br/relatorios/download/${id}`;
+    console.log(`[CGU PDF Proxy] Baixando PDF para visualiza\xE7\xE3o: ${url}`);
+    const response = await (0, import_node_fetch3.default)(url);
+    if (!response.ok) {
+      return res.status(response.status).send(`Falha ao obter PDF da CGU: ${response.statusText}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="Relatorio_CGU_${id}.pdf"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error("Erro no proxy de PDF:", error);
+    res.status(500).send("Erro interno ao carregar o PDF.");
+  }
+});
+router8.post("/cgu/auditorias/sync", async (req, res) => {
+  const usuarioId = req.session?.user?.id ?? "SISTEMA";
+  const result = await runImportCguAuditorias(usuarioId);
+  if (result.error) {
+    return res.status(500).json(result);
+  }
+  res.json(result);
+});
+var cguAuditoriasRoutes_default = router8;
+
+// src/backend/routes/superintendenciasRoutes.ts
+var import_express9 = __toESM(require("express"), 1);
+init_db();
+var router9 = import_express9.default.Router();
+router9.get("/superintendencias", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -3089,7 +3574,7 @@ router8.get("/superintendencias", async (req, res) => {
     res.status(500).json({ error: "Erro interno" });
   }
 });
-router8.put("/superintendencias/:uf", async (req, res) => {
+router9.put("/superintendencias/:uf", async (req, res) => {
   try {
     const uf = req.params.uf.toUpperCase();
     const updateData = req.body;
@@ -3122,13 +3607,13 @@ router8.put("/superintendencias/:uf", async (req, res) => {
     res.status(500).json({ error: "Erro interno ao atualizar a superintend\xEAncia" });
   }
 });
-var superintendenciasRoutes_default = router8;
+var superintendenciasRoutes_default = router9;
 
 // src/backend/routes/contratosRoutes.ts
-var import_express9 = __toESM(require("express"), 1);
+var import_express10 = __toESM(require("express"), 1);
 init_db();
-var router9 = import_express9.default.Router();
-router9.get("/contratos", async (req, res) => {
+var router10 = import_express10.default.Router();
+router10.get("/contratos", async (req, res) => {
   const result = await pool.query("SELECT * FROM contratos");
   const mapped = result.rows.map((r) => ({
     id: r.id,
@@ -3143,7 +3628,7 @@ router9.get("/contratos", async (req, res) => {
   }));
   res.json(mapped);
 });
-router9.post("/contratos", async (req, res) => {
+router10.post("/contratos", async (req, res) => {
   const c = req.body;
   c.id = "C-" + Date.now();
   await pool.query(
@@ -3152,7 +3637,7 @@ router9.post("/contratos", async (req, res) => {
   );
   res.status(201).json(c);
 });
-router9.get("/contratos/:id/consumo", async (req, res) => {
+router10.get("/contratos/:id/consumo", async (req, res) => {
   const result = await pool.query("SELECT * FROM contratos_consumo_mensal WHERE contrato_id = $1", [req.params.id]);
   const mapped = result.rows.map((r) => ({
     id: r.id,
@@ -3163,13 +3648,13 @@ router9.get("/contratos/:id/consumo", async (req, res) => {
   }));
   res.json(mapped);
 });
-var contratosRoutes_default = router9;
+var contratosRoutes_default = router10;
 
 // src/backend/routes/viaturasRoutes.ts
-var import_express10 = __toESM(require("express"), 1);
+var import_express11 = __toESM(require("express"), 1);
 init_db();
-var router10 = import_express10.default.Router();
-router10.get("/viaturas", async (req, res) => {
+var router11 = import_express11.default.Router();
+router11.get("/viaturas", async (req, res) => {
   const result = await pool.query("SELECT * FROM viaturas");
   const mapped = result.rows.map((r) => ({
     id: r.id,
@@ -3184,7 +3669,7 @@ router10.get("/viaturas", async (req, res) => {
   }));
   res.json(mapped);
 });
-router10.post("/viaturas", async (req, res) => {
+router11.post("/viaturas", async (req, res) => {
   const v = req.body;
   v.id = "V-" + Date.now();
   await pool.query(
@@ -3193,7 +3678,7 @@ router10.post("/viaturas", async (req, res) => {
   );
   res.status(201).json(v);
 });
-router10.get("/viaturas/:id/abastecimentos", async (req, res) => {
+router11.get("/viaturas/:id/abastecimentos", async (req, res) => {
   const result = await pool.query("SELECT * FROM viaturas_abastecimentos WHERE viatura_id = $1", [req.params.id]);
   const mapped = result.rows.map((r) => ({
     id: r.id,
@@ -3206,7 +3691,7 @@ router10.get("/viaturas/:id/abastecimentos", async (req, res) => {
   }));
   res.json(mapped);
 });
-router10.get("/viaturas/:id/manutencoes", async (req, res) => {
+router11.get("/viaturas/:id/manutencoes", async (req, res) => {
   const result = await pool.query("SELECT * FROM viaturas_manutencoes WHERE viatura_id = $1", [req.params.id]);
   const mapped = result.rows.map((r) => ({
     id: r.id,
@@ -3220,13 +3705,13 @@ router10.get("/viaturas/:id/manutencoes", async (req, res) => {
   }));
   res.json(mapped);
 });
-var viaturasRoutes_default = router10;
+var viaturasRoutes_default = router11;
 
 // src/backend/routes/rolLegacyRoutes.ts
-var import_express11 = __toESM(require("express"), 1);
+var import_express12 = __toESM(require("express"), 1);
 init_db();
-var router11 = import_express11.default.Router();
-router11.get("/", async (req, res) => {
+var router12 = import_express12.default.Router();
+router12.get("/", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM rol_responsaveis_legado");
     const mapped = result.rows.map((r) => ({
@@ -3247,7 +3732,7 @@ router11.get("/", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch" });
   }
 });
-router11.post("/", async (req, res) => {
+router12.post("/", async (req, res) => {
   try {
     const v = req.body;
     v.id = "rol_" + Date.now();
@@ -3261,7 +3746,7 @@ router11.post("/", async (req, res) => {
     res.status(500).json({ error: "Failed to create" });
   }
 });
-router11.put("/:id", async (req, res) => {
+router12.put("/:id", async (req, res) => {
   try {
     const v = req.body;
     await pool.query(
@@ -3274,7 +3759,7 @@ router11.put("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to update" });
   }
 });
-router11.delete("/:id", async (req, res) => {
+router12.delete("/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM rol_responsaveis_legado WHERE id=$1", [req.params.id]);
     res.json({ success: true });
@@ -3283,13 +3768,13 @@ router11.delete("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to delete" });
   }
 });
-var rolLegacyRoutes_default = router11;
+var rolLegacyRoutes_default = router12;
 
 // src/backend/routes/dashboardRoutes.ts
-var import_express12 = __toESM(require("express"), 1);
+var import_express13 = __toESM(require("express"), 1);
 init_db();
-var router12 = import_express12.default.Router();
-router12.get("/dashboard-stats", async (req, res) => {
+var router13 = import_express13.default.Router();
+router13.get("/dashboard-stats", async (req, res) => {
   try {
     const qAcordaos = await pool.query("SELECT COUNT(*) FROM tcu_acordaos");
     const qTces = await pool.query("SELECT COUNT(*) FROM tcu_tce");
@@ -3314,7 +3799,7 @@ router12.get("/dashboard-stats", async (req, res) => {
     });
   }
 });
-var dashboardRoutes_default = router12;
+var dashboardRoutes_default = router13;
 
 // src/backend/userService.ts
 init_db();
@@ -3886,17 +4371,17 @@ var govHubPool = new import_pg2.default.Pool({
   connectionTimeoutMillis: 2e3
   // Fast timeout so it fails quickly if GovHub docker is not running
 });
-var DATA_DIR3 = import_path8.default.join(process.cwd(), "data");
-var DB_PATH2 = import_path8.default.join(DATA_DIR3, "orbita_db.json");
-var TCU_DIR5 = import_path8.default.join(DATA_DIR3, "tcu");
-if (!import_fs9.default.existsSync(DATA_DIR3)) {
-  import_fs9.default.mkdirSync(DATA_DIR3, { recursive: true });
+var DATA_DIR3 = import_path9.default.join(process.cwd(), "data");
+var DB_PATH2 = import_path9.default.join(DATA_DIR3, "orbita_db.json");
+var TCU_DIR5 = import_path9.default.join(DATA_DIR3, "tcu");
+if (!import_fs10.default.existsSync(DATA_DIR3)) {
+  import_fs10.default.mkdirSync(DATA_DIR3, { recursive: true });
 }
-if (!import_fs9.default.existsSync(TCU_DIR5)) {
-  import_fs9.default.mkdirSync(TCU_DIR5, { recursive: true });
+if (!import_fs10.default.existsSync(TCU_DIR5)) {
+  import_fs10.default.mkdirSync(TCU_DIR5, { recursive: true });
 }
 async function startServer() {
-  const app = (0, import_express13.default)();
+  const app = (0, import_express14.default)();
   try {
     await initUsersTable();
   } catch (err) {
@@ -3939,8 +4424,8 @@ async function startServer() {
     }
     next();
   });
-  app.use(import_express13.default.json({ limit: "50mb" }));
-  app.use(import_express13.default.urlencoded({ limit: "50mb", extended: true }));
+  app.use(import_express14.default.json({ limit: "50mb" }));
+  app.use(import_express14.default.urlencoded({ limit: "50mb", extended: true }));
   const requireAdmin = (req, res, next) => {
     if (!req.session?.user || req.session.user.clearance !== "ADMIN") {
       return res.status(403).json({ error: "Acesso restrito a administradores." });
@@ -4319,12 +4804,16 @@ async function startServer() {
   app.use("/api", eticaRoutes_default);
   app.use("/api", scdpRoutes_default);
   app.use("/api", cguRoutes_default);
+  app.use("/api", cguAuditoriasRoutes_default);
   app.use("/api", superintendenciasRoutes_default);
   app.use("/api", contratosRoutes_default);
   app.use("/api", viaturasRoutes_default);
   app.use("/api/rol-responsaveis", rolLegacyRoutes_default);
   app.use("/api/rol", rolRoutes_default);
   app.use("/api", dashboardRoutes_default);
+  setInterval(() => {
+    runImportCguAuditorias("SISTEMA_AGENDADO").catch(console.error);
+  }, 6048e5);
   if (process.env.NODE_ENV !== "production") {
     console.log("Starting server in DEVELOPMENT mode with Vite Middleware...");
     const vite = await (0, import_vite.createServer)({
@@ -4334,10 +4823,10 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     console.log("Starting server in PRODUCTION mode with compiled assets...");
-    const distPath = import_path8.default.join(process.cwd(), "dist");
-    app.use(import_express13.default.static(distPath));
+    const distPath = import_path9.default.join(process.cwd(), "dist");
+    app.use(import_express14.default.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(import_path8.default.join(distPath, "index.html"));
+      res.sendFile(import_path9.default.join(distPath, "index.html"));
     });
   }
   const PORT = 3e3;

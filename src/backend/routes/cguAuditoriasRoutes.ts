@@ -1,4 +1,5 @@
 import express from "express";
+import fetch from "node-fetch";
 import { pool } from "../db.js";
 import { runImportCguAuditorias } from "../utils/importCguAuditorias.js";
 
@@ -9,7 +10,7 @@ router.get("/cgu/auditorias", async (req, res) => {
   try {
     const { 
       page = "1", limit = "10", sort = "data_publicacao", order = "DESC",
-      periodoInicio, periodoFim, idAuditoria, tituloRelatorio, tipoServico, uf, municipio, grupoAtividade
+      periodoInicio, periodoFim, idAuditoria, tituloRelatorio, tipoServico, uf, municipio, grupoAtividade, ano
     } = req.query;
 
     let q = "SELECT * FROM cgu_auditorias WHERE 1=1";
@@ -24,6 +25,7 @@ router.get("/cgu/auditorias", async (req, res) => {
     if (grupoAtividade) { q += ` AND grupo_atividade ILIKE $${paramIdx++}`; params.push(`%${grupoAtividade}%`); }
     if (periodoInicio) { q += ` AND data_publicacao >= $${paramIdx++}`; params.push(periodoInicio); }
     if (periodoFim) { q += ` AND data_publicacao <= $${paramIdx++}`; params.push(periodoFim); }
+    if (ano) { q += ` AND EXTRACT(YEAR FROM data_publicacao) = $${paramIdx++}`; params.push(ano); }
 
     const countRes = await pool.query(`SELECT COUNT(*) FROM (${q}) as sub`, params);
     const total = parseInt(countRes.rows[0].count, 10);
@@ -72,8 +74,11 @@ router.get("/cgu/auditorias-dashboard", async (req, res) => {
     const statsDemandas = await pool.query(`
       SELECT 
         COUNT(*) as total_recomendacoes,
-        SUM(CASE WHEN estado ILIKE '%Pendente%' THEN 1 ELSE 0 END) as total_pendencias,
-        SUM(CASE WHEN estado ILIKE '%Concluído%' OR estado ILIKE '%Atendido%' THEN 1 ELSE 0 END) as total_concluidos
+        SUM(CASE WHEN estado ILIKE '%Pendente%' OR estado ILIKE '%Manifestação%' THEN 1 ELSE 0 END) as total_pendencias,
+        SUM(CASE WHEN estado ILIKE '%Concluído%' OR estado ILIKE '%Atendido%' THEN 1 ELSE 0 END) as total_concluidos,
+        SUM(CASE WHEN estado ILIKE '%Cancelada%' OR estado ILIKE '%Cancelado%' THEN 1 ELSE 0 END) as total_cancelados,
+        SUM(CASE WHEN estado ILIKE '%Em Análise pela Unidade Auditada%' THEN 1 ELSE 0 END) as total_analise_auditada,
+        SUM(CASE WHEN estado ILIKE '%Em Análise pela Unidade de Auditoria%' THEN 1 ELSE 0 END) as total_analise_auditoria
       FROM cgu_demands
     `);
     
@@ -124,12 +129,60 @@ router.get("/cgu/auditorias/:id_tarefa", async (req, res) => {
          OR (titulo_tarefa IS NOT NULL AND titulo_tarefa ILIKE $2)
     `, [id_tarefa, `%${auditoria.id_auditoria}%`]);
 
-    const monitoramentos = demRes.rows;
+    const monitoramentos = demRes.rows.map((row) => ({
+      idTarefa:                  row.id_tarefa,
+      situacao:                  row.situacao,
+      estado:                    row.estado,
+      tituloTarefa:              row.titulo_tarefa,
+      dataInicio:                row.data_inicio,
+      dataFim:                   row.data_fim,
+      dataLimite:                row.data_limite,
+      unidadeAuditada:           row.unidade_auditada,
+      unidadesAuditoria:         row.unidades_auditoria,
+      textoMonitoramento:        row.texto_monitoramento,
+      providencia:               row.providencia,
+      tipoUltimaManifestacao:    row.tipo_ultima_manifestacao,
+      textoUltimaManifestacao:   row.texto_ultima_manifestacao,
+      dataUltimaManifestacao:    row.data_ultima_manifestacao,
+      tipoUltimoPosicionamento:  row.tipo_ultimo_posicionamento,
+      textoUltimoPosicionamento: row.texto_ultimo_posicionamento,
+      dataUltimoPosicionamento:  row.data_ultimo_posicionamento,
+      categoria:                 row.categoria,
+      dataLimiteInicial:         row.data_limite_inicial,
+      ano:                       row.ano,
+      ultimaAtualizacao:         row.ultima_atualizacao,
+      processoSei:               row.processo_sei
+    }));
 
     res.json({ auditoria, monitoramentos });
   } catch (error) {
     console.error("Erro ao obter detalhes da auditoria:", error);
     res.status(500).json({ error: "Erro interno ao detalhar auditoria." });
+  }
+});
+
+// GET /cgu/pdf/view/:id
+router.get("/cgu/pdf/view/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const url = `https://eaud.cgu.gov.br/relatorios/download/${id}`;
+    
+    console.log(`[CGU PDF Proxy] Baixando PDF para visualização: ${url}`);
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      return res.status(response.status).send(`Falha ao obter PDF da CGU: ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="Relatorio_CGU_${id}.pdf"`);
+    res.send(buffer);
+  } catch (error) {
+    console.error("Erro no proxy de PDF:", error);
+    res.status(500).send("Erro interno ao carregar o PDF.");
   }
 });
 
