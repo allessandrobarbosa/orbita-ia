@@ -323,7 +323,7 @@ export default function CguAuditoriasList({ cguDemands = [] }: { cguDemands?: Cg
                 Título
               </th>
               <th className="p-4 font-semibold whitespace-nowrap w-[120px]">
-                  Publica��o
+                  Publicação
                 </th>
               <th className="p-4 font-semibold text-center">
                 Recomendações
