@@ -417,8 +417,8 @@ export default function RolReportsModal({
             </h3>
             {reportData.length > 0 ? (
               <div className="flex-1 overflow-auto border border-slate-200 rounded-xl bg-white min-h-[300px] shadow-inner">
-                <table className="w-full text-left text-xs table-fixed">
-                  <thead className="bg-slate-100 sticky top-0 shadow-sm z-10">
+                <table className="w-full text-left border-collapse text-sm text-slate-800">
+                  <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244]">
                     <tr>
                       {Object.keys(reportData[0]).map((h, i) => (
                         <th key={h} className="p-3 font-bold text-slate-600 uppercase tracking-wider" style={{ width: [100, 150, 100, 150, 150, 250, 120][i] || 'auto' }}>

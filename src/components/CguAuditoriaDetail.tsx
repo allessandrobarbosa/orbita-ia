@@ -479,20 +479,20 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
         ) : (
           <div className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Situação</th>
-                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Recomendação / Monitoramento</th>
-                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Prazo Limite</th>
-                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Atualização</th>
-                    <th className="p-4 text-center cursor-pointer hover:bg-slate-100 transition-colors"></th>
+              <table className="w-full text-left border-collapse text-sm text-slate-800">
+                <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Situação</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Recomendação / Monitoramento</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Prazo Limite</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Atualização</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {monitoramentos.map((m, idx) => (
                     <tr key={idx} className="hover:bg-[#1351b4]/5 transition-colors group">
-                      <td className="p-4 align-top">
+                      <td className="p-4 align-middle align-top">
                         <span className={`inline-flex px-2 py-1 rounded text-xs font-medium border ${
                           m.estado?.toLowerCase().includes('concluído') || m.estado?.toLowerCase().includes('atendido') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                           m.estado?.toLowerCase().includes('pendente') || m.estado?.toLowerCase().includes('vencid') ? 'bg-rose-50 text-rose-700 border-rose-100' :
@@ -501,7 +501,7 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
                           {m.estado || m.situacao || 'Desconhecido'}
                         </span>
                       </td>
-                      <td className="p-4 align-top">
+                      <td className="p-4 align-middle align-top">
                         <div className="text-sm text-slate-800 line-clamp-3 mb-1" title={m.textoMonitoramento}>
                           {m.textoMonitoramento || m.tituloTarefa}
                         </div>
@@ -509,13 +509,13 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
                           Cat: {m.categoria || '-'}
                         </div>
                       </td>
-                      <td className="p-4 align-top whitespace-nowrap text-sm text-slate-700 font-medium">
+                      <td className="p-4 align-middle align-top whitespace-nowrap text-sm text-slate-700 font-medium">
                         {m.dataLimite || '-'}
                       </td>
-                      <td className="p-4 align-top whitespace-nowrap text-sm text-slate-500">
+                      <td className="p-4 align-middle align-top whitespace-nowrap text-sm text-slate-500">
                         {m.ultimaAtualizacao || '-'}
                       </td>
-                      <td className="p-4 align-top text-center">
+                      <td className="p-4 align-middle align-top text-center">
                         <button
                           onClick={() => setSelectedDemand(m)}
                           className="px-3 py-1.5 text-xs font-semibold text-[#1351b4] bg-blue-50 border border-blue-100 hover:bg-[#1351b4] hover:text-white rounded-md transition-colors whitespace-nowrap"

@@ -623,7 +623,6 @@ router.post("/acordaos/update", async (req, res) => {
       updated.RELATOR,
       updated.ASSUNTO,
       updated.SUMARIO,
-      updated.ACORDAO,
       updated.DECISAO,
       updated.RECOMENDACOES,
       updated.DETERMINACOES,

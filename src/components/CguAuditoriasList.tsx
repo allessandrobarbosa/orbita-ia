@@ -262,7 +262,7 @@ export default function CguAuditoriasList({ cguDemands = [] }: { cguDemands?: Cg
       {showFilters && (
         <div className="p-4 bg-slate-50 border-b border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-down">
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">ID Auditoria</label>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Auditoria</label>
             <input 
               type="text" name="idAuditoria" value={filters.idAuditoria} onChange={handleFilterChange}
               className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-[#1351b4]/20 focus:border-[#1351b4] outline-none"
@@ -313,25 +313,25 @@ export default function CguAuditoriasList({ cguDemands = [] }: { cguDemands?: Cg
       )}
 
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-left border-collapse min-w-[800px]">
-          <thead>
-            <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-              <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort("id_auditoria")}>
-                ID Auditoria {sort === "id_auditoria" && (order === "ASC" ? '↑' : '↓')}
+        <table className="w-full text-left border-collapse text-sm text-slate-800">
+          <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr>
+              <th className="p-4 font-semibold whitespace-nowrap w-[100px]">
+                  Auditoria
+                </th>
+              <th className="p-4 font-semibold">
+                Título
               </th>
-              <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort("titulo_relatorio")}>
-                Título {sort === "titulo_relatorio" && (order === "ASC" ? '↑' : '↓')}
-              </th>
-              <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => handleSort("data_publicacao")}>
-                PUBLICADO EM: {sort === "data_publicacao" && (order === "ASC" ? '↑' : '↓')}
-              </th>
-              <th className="p-4 text-center">
+              <th className="p-4 font-semibold whitespace-nowrap w-[120px]">
+                  Publica��o
+                </th>
+              <th className="p-4 font-semibold text-center">
                 Recomendações
               </th>
-              <th className="p-4 text-center">
+              <th className="p-4 font-semibold text-center">
                 Situação Geral
               </th>
-              <th className="p-4 text-center w-24"></th>
+              <th className="p-4 font-semibold w-24"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -354,23 +354,23 @@ export default function CguAuditoriasList({ cguDemands = [] }: { cguDemands?: Cg
               data.map((item) => (
                 <React.Fragment key={item.id_tarefa}>
                   <tr className={`hover:bg-[#1351b4]/5 transition-colors group ${expandedRowId === item.id_tarefa ? 'bg-blue-50/50' : ''}`}>
-                    <td className="p-4 text-sm font-medium text-slate-700">
+                    <td className="p-4 align-middle text-sm font-medium text-slate-700">
                       {item.id_auditoria}
                     </td>
-                    <td className="p-4 text-xs text-slate-700 font-medium">
+                    <td className="p-4 align-middle text-xs text-slate-700 font-medium">
                       <div className="min-w-[200px]" title={item.titulo_relatorio}>
                         {item.titulo_relatorio}
                       </div>
                     </td>
-                    <td className="p-4 text-sm text-slate-600 whitespace-nowrap">
+                    <td className="p-4 align-middle text-sm text-slate-600 whitespace-nowrap">
                       {item.data_publicacao ? new Date(item.data_publicacao).toLocaleDateString('pt-BR') : '-'}
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 align-middle text-center">
                       <span className="inline-flex items-center justify-center bg-blue-100 text-[#003366] font-black text-xs px-2.5 py-1 rounded-full border border-blue-200 shadow-sm min-w-[28px]">
                         {getRecomendacoesCount(item)}
                       </span>
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 align-middle text-center">
                       {(() => {
                         const sit = getSituacaoGeral(item);
                         return (
@@ -380,7 +380,7 @@ export default function CguAuditoriasList({ cguDemands = [] }: { cguDemands?: Cg
                         );
                       })()}
                     </td>
-                    <td className="p-4 text-center">
+                    <td className="p-4 align-middle text-center">
                       <button
                         onClick={() => setExpandedRowId(expandedRowId === item.id_tarefa ? null : item.id_tarefa)}
                         className={`px-3 py-1.5 text-xs font-semibold border rounded-md transition-colors whitespace-nowrap ${
@@ -395,7 +395,7 @@ export default function CguAuditoriasList({ cguDemands = [] }: { cguDemands?: Cg
                     </td>
                   </tr>
                   {expandedRowId === item.id_tarefa && (
-                    <tr className="bg-slate-50">
+                    <tr className=" border-b border-[#002244]">
                       <td colSpan={6} className="p-0 border-b-2 border-blue-200 shadow-inner">
                         <div className="px-6 py-4 animate-slide-down">
                           <CguAuditoriaDetail id_tarefa={item.id_tarefa} onBack={() => setExpandedRowId(null)} />

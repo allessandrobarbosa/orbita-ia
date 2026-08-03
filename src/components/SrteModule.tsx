@@ -772,25 +772,25 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhum processo do TCU localizado para esta unidade regional.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-slate-700 text-xs">
-                <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Processo / Acórdão</th>
-                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Relator</th>
-                    <th className="p-4 w-2/5 bg-slate-50">Sumário / Objeto</th>
-                    <th className="p-4 text-right bg-slate-50">Ações</th>
+              <table className="w-full text-left border-collapse text-sm text-slate-800">
+                <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Processo / Acórdão</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Relator</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-2/5">Sumário / Objeto</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {matched.map(ac => (
                     <tr key={ac.KEY} className="hover:bg-slate-50/50">
-                      <td className="p-4 font-semibold text-slate-900">
+                      <td className="p-4 align-middle font-semibold text-slate-900">
                         <div className="font-mono text-[11px]">{ac.PROC}</div>
                         <div className="text-[10px] text-blue-800 font-bold mt-0.5">{ac.TITULO}</div>
                       </td>
-                      <td className="p-4 text-slate-600 font-medium">{ac.RELATOR}</td>
-                      <td className="p-4 text-slate-500 leading-relaxed max-w-sm truncate" title={ac.SUMARIO}>{ac.SUMARIO}</td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 align-middle text-slate-600 font-medium">{ac.RELATOR}</td>
+                      <td className="p-4 align-middle text-slate-500 leading-relaxed max-w-sm truncate" title={ac.SUMARIO}>{ac.SUMARIO}</td>
+                      <td className="p-4 align-middle text-right">
                         <button
                           onClick={() => handleViewAcordao(ac)}
                           disabled={loadingAcordaoKey === ac.KEY}
@@ -812,32 +812,32 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma recomendação da CGU ativa para esta unidade regional.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-slate-700 text-xs">
-                <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Recomendação</th>
-                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Unidade / Categoria</th>
-                    <th className="p-4 w-2/5 bg-slate-50">Descrição do Monitoramento</th>
-                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Prazo Limite</th>
-                    <th className="p-4 text-right bg-slate-50">Status</th>
+              <table className="w-full text-left border-collapse text-sm text-slate-800">
+                <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Recomendação</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Unidade / Categoria</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-2/5">Descrição do Monitoramento</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Prazo Limite</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {matched.map(rec => (
                     <tr key={rec.idTarefa} className="hover:bg-slate-50/50">
-                      <td className="p-4 font-semibold text-slate-900">
+                      <td className="p-4 align-middle font-semibold text-slate-900">
                         <div className="text-[10px] text-slate-500 mb-0.5">ID: {rec.idTarefa}</div>
                         {rec.tituloTarefa}
                       </td>
-                      <td className="p-4 text-slate-600 font-mono text-[11px]">
+                      <td className="p-4 align-middle text-slate-600 font-mono">
                         <div>{rec.unidadeAuditada}</div>
                         <div className="text-[9px] text-slate-400 mt-1">{rec.categoria}</div>
                       </td>
-                      <td className="p-4 text-slate-500 leading-relaxed max-w-[300px] truncate" title={rec.textoMonitoramento}>
+                      <td className="p-4 align-middle text-slate-500 leading-relaxed max-w-[300px] truncate" title={rec.textoMonitoramento}>
                         {rec.textoMonitoramento}
                       </td>
-                      <td className="p-4 font-mono text-slate-600">{rec.dataLimite || "N/A"}</td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 align-middle font-mono text-slate-600">{rec.dataLimite || "N/A"}</td>
+                      <td className="p-4 align-middle text-right">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
                           rec.situacao.toLowerCase().includes("cumprido") ? "bg-emerald-100 text-emerald-800" :
                           rec.situacao.toLowerCase().includes("em análise") ? "bg-blue-100 text-blue-800" :
@@ -859,27 +859,27 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma comunicação ou ofício localizado para esta unidade regional.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-slate-700 text-xs">
-                <thead className="sticky top-0 z-10">
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Ofício</th>
-                    <th className="p-4 w-1/3 bg-slate-50">Destinatário / Contato</th>
-                    <th className="p-4 w-1/4 cursor-pointer hover:bg-slate-100 transition-colors">Processo TCU</th>
-                    <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Expedição</th>
-                    <th className="p-4 text-right bg-slate-50">Resposta</th>
+              <table className="w-full text-left border-collapse text-sm text-slate-800">
+                <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Ofício</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/3">Destinatário / Contato</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Processo TCU</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Expedição</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Resposta</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
                   {matched.map(com => (
                     <tr key={com.KEY} className="hover:bg-slate-50/50">
-                      <td className="p-4 font-semibold text-blue-900">{com.COMUNICACAO}</td>
-                      <td className="p-4">
+                      <td className="p-4 align-middle font-semibold text-blue-900">{com.COMUNICACAO}</td>
+                      <td className="p-4 align-middle">
                         <div className="text-slate-800 font-semibold text-[11px] truncate max-w-[200px]" title={com.DESTINATARIO}>{com.DESTINATARIO}</div>
                         <div className="text-[10px] text-slate-500 mt-0.5 truncate max-w-[200px]" title={com.CONTATO}>{com.CONTATO}</div>
                       </td>
-                      <td className="p-4 font-mono text-[11px] text-slate-600">{com.PROCESSO}</td>
-                      <td className="p-4 text-slate-600">{com.DATA_EXPEDICAO}</td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 align-middle font-mono text-slate-600">{com.PROCESSO}</td>
+                      <td className="p-4 align-middle text-slate-600">{com.DATA_EXPEDICAO}</td>
+                      <td className="p-4 align-middle text-right">
                         {com.DATA_RESPOSTA ? (
                           <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold" title={`Respondido em ${com.DATA_RESPOSTA}`}>
                             Resp. {com.DATA_RESPOSTA}
@@ -903,20 +903,20 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <p className="text-center py-8 text-slate-400 font-semibold">Nenhuma TCE regionalizada localizada para esta unidade.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-slate-700 text-xs">
+              <table className="w-full text-left border-collapse text-sm text-slate-800">
                 <thead>
-                  <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-                    <th className="p-3 w-1/6 cursor-pointer hover:bg-slate-100 transition-colors">Número TCE</th>
-                    <th className="p-3 w-1/4">Processo Adm. / TC</th>
-                    <th className="p-3 w-1/3">Motivo / Instauração</th>
-                    <th className="p-3 text-right">Valores (Orig / Atual)</th>
-                    <th className="p-3 text-right font-medium">Situação</th>
+                  <tr className="font-semibold sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/6 cursor-pointer hover: transition-colors">Número TCE</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4">Processo Adm. / TC</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/3">Motivo / Instauração</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Valores (Orig / Atual)</th>
+                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Situação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {matched.map(t => (
                     <tr key={t.id} className="hover:bg-slate-50/50">
-                      <td className="p-4 font-semibold text-rose-900">
+                      <td className="p-4 align-middle font-semibold text-rose-900">
                         <button 
                           onClick={() => setSelectedTce(t)}
                           className="hover:underline flex items-center gap-1.5 text-blue-800 transition cursor-pointer text-left"
@@ -926,19 +926,19 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                           <FileText className="w-3.5 h-3.5 text-blue-500" />
                         </button>
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 align-middle">
                         <div className="font-mono text-[10.5px] text-slate-900">{t.PROCESSO_ADMINISTRATIVO}</div>
                         {t.TC && <div className="text-[10px] font-semibold font-mono text-slate-500 mt-0.5">TC {t.TC}</div>}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 align-middle">
                         <div className="text-slate-800 font-semibold text-[11px] truncate max-w-[200px]" title={t.MOTIVO_INSTAURACAO}>{t.MOTIVO_INSTAURACAO}</div>
                         <div className="text-[10px] text-slate-500 truncate max-w-[200px]" title={t.SUBMOTIVO_INSTAURACAO}>{t.SUBMOTIVO_INSTAURACAO}</div>
                       </td>
-                      <td className="p-4 text-right font-mono text-[11px]">
+                      <td className="p-4 align-middle text-right font-mono">
                         <div className="text-slate-500">{formatCurrency(t.DEBITO_ORIGINAL)}</div>
                         <div className="font-bold text-slate-900 mt-0.5">{formatCurrency(t.DEBITO_ATUALIZADO)}</div>
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 align-middle text-right">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
                           (t.ESTADO_PROCESSO || "").toLowerCase().includes("irregular")
                             ? "bg-rose-100 text-rose-800"

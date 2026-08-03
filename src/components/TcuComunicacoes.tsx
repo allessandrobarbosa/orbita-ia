@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import TcuComunicacoesEditRow from "./TcuComunicacoesEditRow";
 import React, { useState } from "react";
 import { 
  Plus, 

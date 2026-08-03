@@ -837,26 +837,26 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                   <p className="text-xs text-slate-400 text-center py-8 font-medium">Nenhum contrato em estado de alerta crítico de expiração.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs text-slate-700">
+                    <table className="w-full text-left border-collapse text-sm text-slate-800">
                       <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Contrato</th>
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Tipo</th>
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Fornecedor</th>
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Vencimento</th>
-                          <th className="p-3 text-right">Dias Restantes</th>
-                          <th className="p-3 text-right">Ações Recomendadas</th>
+                        <tr className="font-bold border-b border-[#002244]">
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Contrato</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Tipo</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Fornecedor</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Vencimento</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Dias Restantes</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações Recomendadas</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium">
                         {contratosFiltradosAlerta.map(c => (
                           <tr key={c.id} className="hover:bg-slate-50/50">
-                            <td className="p-3 font-bold text-slate-900">{c.numero}</td>
-                            <td className="p-3">{c.tipo}</td>
-                            <td className="p-3 text-slate-500">{c.fornecedor}</td>
-                            <td className="p-3 font-mono">{formatDate(c.fimVigencia)}</td>
-                            <td className="p-3 text-right font-mono font-bold text-amber-600">{c.diasRestantes} dias</td>
-                            <td className="p-3 text-right">
+                            <td className="p-4 align-middle font-bold text-slate-900">{c.numero}</td>
+                            <td className="p-4 align-middle">{c.tipo}</td>
+                            <td className="p-4 align-middle text-slate-500">{c.fornecedor}</td>
+                            <td className="p-4 align-middle font-mono">{formatDate(c.fimVigencia)}</td>
+                            <td className="p-4 align-middle text-right font-mono font-bold text-amber-600">{c.diasRestantes} dias</td>
+                            <td className="p-4 align-middle text-right">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                                 c.badge.color === "red" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
                               }`}>
@@ -884,14 +884,14 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                     <p className="text-xs text-slate-400 text-center py-10 font-medium">Nenhum faturamento registrado até o momento.</p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs text-slate-700">
+                      <table className="w-full text-left border-collapse text-sm text-slate-800">
                         <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Contrato</th>
-                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Mês/Ano</th>
-                            <th className="p-3 text-right">Valor</th>
-                            <th className="p-3 text-right">Variação vs. Mês Anterior</th>
-                            <th className="p-3 text-right">Ação</th>
+                          <tr className="font-bold border-b border-[#002244]">
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Contrato</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Mês/Ano</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Valor</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Variação vs. Mês Anterior</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ação</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
@@ -905,10 +905,10 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                               const contract = contratos.find(c => c.id === item.contratoId);
                               return (
                                 <tr key={item.id} className="hover:bg-slate-50/50">
-                                  <td className="p-3 font-bold text-slate-900">{contract ? contract.numero : "Desconhecido"} ({contract?.tipo})</td>
-                                  <td className="p-3 font-mono">{item.mesAno}</td>
-                                  <td className="p-3 text-right font-mono">{formatCurrency(item.valor)}</td>
-                                  <td className="p-3 text-right font-mono">
+                                  <td className="p-4 align-middle font-bold text-slate-900">{contract ? contract.numero : "Desconhecido"} ({contract?.tipo})</td>
+                                  <td className="p-4 align-middle font-mono">{item.mesAno}</td>
+                                  <td className="p-4 align-middle text-right font-mono">{formatCurrency(item.valor)}</td>
+                                  <td className="p-4 align-middle text-right font-mono">
                                     {item.variacao === 0 ? (
                                       <span className="text-slate-400">-</span>
                                     ) : item.variacao > 0 ? (
@@ -921,7 +921,7 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                                       </span>
                                     )}
                                   </td>
-                                  <td className="p-3 text-right">
+                                  <td className="p-4 align-middle text-right">
                                     <button 
                                       onClick={() => handleDeleteConsumo(item.id)}
                                       className="text-slate-400 hover:text-rose-600 transition cursor-pointer p-1"
@@ -1022,29 +1022,29 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                   <p className="text-xs text-slate-400 text-center py-12 font-medium">Nenhum contrato cadastrado para esta regional.</p>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs text-slate-700">
+                    <table className="w-full text-left border-collapse text-sm text-slate-800">
                       <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Número</th>
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Tipo</th>
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Fornecedor</th>
-                          <th className="p-3 text-right">Mensal</th>
-                          <th className="p-3 text-right">Total</th>
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Vigência</th>
-                          <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Status</th>
-                          <th className="p-3 text-right">Ações</th>
+                        <tr className="font-bold border-b border-[#002244]">
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Número</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Tipo</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Fornecedor</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Mensal</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Total</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Vigência</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status</th>
+                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 font-medium">
                         {contratos.map(c => (
                           <tr key={c.id} className="hover:bg-slate-50/50">
-                            <td className="p-3 font-bold text-slate-900">{c.numero}</td>
-                            <td className="p-3">{c.tipo}</td>
-                            <td className="p-3 text-slate-500">{c.fornecedor}</td>
-                            <td className="p-3 text-right font-mono">{formatCurrency(c.valorMensal)}</td>
-                            <td className="p-3 text-right font-mono">{formatCurrency(c.valorTotal)}</td>
-                            <td className="p-3 font-mono">{formatDate(c.inicioVigencia)} a {formatDate(c.fimVigencia)}</td>
-                            <td className="p-3">
+                            <td className="p-4 align-middle font-bold text-slate-900">{c.numero}</td>
+                            <td className="p-4 align-middle">{c.tipo}</td>
+                            <td className="p-4 align-middle text-slate-500">{c.fornecedor}</td>
+                            <td className="p-4 align-middle text-right font-mono">{formatCurrency(c.valorMensal)}</td>
+                            <td className="p-4 align-middle text-right font-mono">{formatCurrency(c.valorTotal)}</td>
+                            <td className="p-4 align-middle font-mono">{formatDate(c.inicioVigencia)} a {formatDate(c.fimVigencia)}</td>
+                            <td className="p-4 align-middle">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                                 c.status === "Ativo" ? "bg-emerald-100 text-emerald-800" :
                                 c.status === "Suspenso" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
@@ -1052,7 +1052,7 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                                 {c.status}
                               </span>
                             </td>
-                            <td className="p-3 text-right flex justify-end gap-1.5">
+                            <td className="p-4 align-middle text-right flex justify-end ga">
                               <button 
                                 onClick={() => handleEditContract(c)}
                                 className="p-1 text-slate-400 hover:text-blue-800 transition cursor-pointer"
@@ -1120,16 +1120,16 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                     <p className="text-xs text-slate-400 text-center py-12 font-medium">Nenhum veículo cadastrado na frota desta regional.</p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse text-xs text-slate-700">
+                      <table className="w-full text-left border-collapse text-sm text-slate-800">
                         <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Placa</th>
-                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Marca/Modelo</th>
-                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Alocação</th>
-                            <th className="p-3 text-right">Km Atual</th>
-                            <th className="p-3 text-right">Revisão (km)</th>
-                            <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Status</th>
-                            <th className="p-3 text-right">Ações</th>
+                          <tr className="font-bold border-b border-[#002244]">
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Placa</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Marca/Modelo</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Alocação</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Km Atual</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Revisão (km)</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
@@ -1143,26 +1143,26 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                                 } ${isViaturaAlerta ? "bg-amber-50/30" : ""}`}
                                 onClick={() => setSelectedViatura(v)}
                               >
-                                <td className="p-3 font-mono font-bold text-slate-900">
+                                <td className="p-4 align-middle font-mono font-bold text-slate-900">
                                   <div className="flex items-center gap-1">
                                     {isViaturaAlerta && <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" title="Próximo da revisão!" />}
                                     {v.placa}
                                   </div>
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4 align-middle">
                                   <div>{v.marca} {v.modelo}</div>
                                   <span className="text-[9px] text-slate-400 font-mono block">Chassi: {v.chassi} | Ano: {v.anoFabricacao}</span>
                                 </td>
-                                <td className="p-3">
+                                <td className="p-4 align-middle">
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                                     v.alocacao === "Fiscalização" ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-600"
                                   }`}>
                                     {v.alocacao}
                                   </span>
                                 </td>
-                                <td className="p-3 text-right font-mono">{v.kmAtual.toLocaleString("pt-BR")}</td>
-                                <td className="p-3 text-right font-mono text-slate-500">{v.proximaRevisaoKm.toLocaleString("pt-BR")}</td>
-                                <td className="p-3">
+                                <td className="p-4 align-middle text-right font-mono">{v.kmAtual.toLocaleString("pt-BR")}</td>
+                                <td className="p-4 align-middle text-right font-mono text-slate-500">{v.proximaRevisaoKm.toLocaleString("pt-BR")}</td>
+                                <td className="p-4 align-middle">
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                                     v.status === "Ativo" ? "bg-emerald-100 text-emerald-800" :
                                     v.status === "Manutenção" ? "bg-amber-100 text-amber-800" :
@@ -1171,7 +1171,7 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                                     {v.status}
                                   </span>
                                 </td>
-                                <td className="p-3 text-right flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                <td className="p-4 align-middle text-right flex justify-end ga" onClick={e => e.stopPropagation()}>
                                   <button 
                                     onClick={() => handleEditViatura(v)}
                                     className="p-1 text-slate-400 hover:text-blue-800 transition cursor-pointer"

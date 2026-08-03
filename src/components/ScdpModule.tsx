@@ -695,15 +695,15 @@ export default function ScdpModule() {
 
           {/* Table layout (Combined information cell) */}
           <div className="overflow-x-auto border border-slate-150 rounded-xl max-h-[60vh] overflow-y-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead className="sticky top-0 bg-slate-50 z-10 border-b border-slate-150 shadow-3xs">
-                <tr className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                  <th className="p-4">Servidor Viajante</th>
-                  <th className="p-4">Período Ida/Volta</th>
-                  <th className="p-4 text-right">Valores</th>
-                  <th className="p-4">Prestação de Contas</th>
-                  <th className="p-4">Auditoria / Alertas</th>
-                  <th className="p-4 text-center">Ações</th>
+            <table className="w-full text-left border-collapse text-sm text-slate-800">
+              <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244]">
+                <tr className="font-black border-b border-[#002244]">
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Servidor Viajante</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Período Ida/Volta</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Valores</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Prestação de Contas</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Auditoria / Alertas</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -731,7 +731,7 @@ export default function ScdpModule() {
                         }}
                       >
                         {/* Combined cell 1: Servidor Name, CPF, Lotação */}
-                        <td className="p-4">
+                        <td className="p-4 align-middle">
                           <div className="font-bold text-slate-800 leading-none">{v.nomeViajante}</div>
                           <div className="text-[10px] text-slate-450 font-mono mt-1 flex flex-wrap gap-x-3 gap-y-0.5 items-center">
                             <span>CPF: {v.cpfViajante}</span>
@@ -745,12 +745,12 @@ export default function ScdpModule() {
                           </div>
                         </td>
 
-                        <td className="p-4 text-slate-600 font-medium font-mono">
+                        <td className="p-4 align-middle text-slate-600 font-medium font-mono">
                           {v.dataInicio} ➔ {v.dataFim}
                         </td>
 
                         {/* Combined cell 3: Total value + breakdown */}
-                        <td className="p-4 text-right">
+                        <td className="p-4 align-middle text-right">
                           <div className="font-extrabold text-[#003366]">{formatCurrency(v.valorTotal)}</div>
                           <span className="text-[9px] text-slate-400 block mt-0.5 font-mono">Diárias: {formatCurrency(v.valorDiarias)}</span>
                           {v.valorDevolucao > 0 && (
@@ -760,7 +760,7 @@ export default function ScdpModule() {
                           )}
                         </td>
 
-                        <td className="p-4">
+                        <td className="p-4 align-middle">
                           <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider inline-block ${statusBg}`}>
                             {v.statusPrestacao}
                           </span>
@@ -770,7 +770,7 @@ export default function ScdpModule() {
                         </td>
 
                         {/* Auditoria / Alertas */}
-                        <td className="p-4">
+                        <td className="p-4 align-middle">
                           <div className="flex flex-wrap gap-1 max-w-[180px]">
                             {v.inconsistenciaVinculo && (
                               <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-rose-50 text-rose-800 border border-rose-100">
@@ -800,7 +800,7 @@ export default function ScdpModule() {
                           </div>
                         </td>
 
-                        <td className="p-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <td className="p-4 align-middle text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-center gap-1.5">
                             <button
                               onClick={() => {

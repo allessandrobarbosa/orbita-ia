@@ -1562,18 +1562,18 @@ export default function EticaModule({
 
           {/* Processes Grid or Table depending on subtab */}
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-2xs">
-            <table className="w-full text-xs text-left border-collapse">
-              <thead className="sticky top-0 z-10">
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Processo SEI</th>
-                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Início</th>
-                  {processoTipoSubTab === "SECI" && <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">SLA (20 dias)</th>}
-                  {processoTipoSubTab === "Consulta" && <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Solicitante</th>}
-                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">
+            <table className="w-full text-left border-collapse text-sm text-slate-800">
+              <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo SEI</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Início</th>
+                  {processoTipoSubTab === "SECI" && <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">SLA (20 dias)</th>}
+                  {processoTipoSubTab === "Consulta" && <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Solicitante</th>}
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">
                     {processoTipoSubTab === "SECI" ? "Responsável/Relator" : "Assunto / Resumo"}
                   </th>
-                  <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Situação</th>
-                  <th className="p-4 text-center bg-slate-50">Ações</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Situação</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -1588,18 +1588,18 @@ export default function EticaModule({
                     const sla = calculateSeciSLA(p);
                     return (
                       <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="p-4.5">
+                        <td className="p-4 align-middle">
                           <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                             {p.processoSei}
                           </span>
                         </td>
-                        <td className="p-4.5 text-slate-500 font-mono">
+                        <td className="p-4 align-middle text-slate-500 font-mono">
                           {formatDate(p.dataInicio)}
                         </td>
 
                         {/* SECI SLA Column */}
                         {processoTipoSubTab === "SECI" && (
-                          <td className="p-4.5">
+                          <td className="p-4 align-middle">
                             {sla.isCompleted ? (
                               <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-bold border">
                                 Concluído
@@ -1623,13 +1623,13 @@ export default function EticaModule({
 
                         {/* Consultas Solicitante Column */}
                         {processoTipoSubTab === "Consulta" && (
-                          <td className="p-4.5 text-slate-700 font-semibold truncate max-w-[200px]">
+                          <td className="p-4 align-middle text-slate-700 font-semibold truncate max-w-[200px]">
                             {p.solicitante || "-"}
                           </td>
                         )}
 
                         {/* Dynamic Description / Relator Column */}
-                        <td className="p-4.5 max-w-[320px] truncate text-slate-600">
+                        <td className="p-4 align-middle max-w-[320px] truncate text-slate-600">
                           {p.tipo === "SECI" ? (
                             <span className="font-bold text-slate-800">{p.responsavel || "Não designado"}</span>
                           ) : (
@@ -1638,7 +1638,7 @@ export default function EticaModule({
                         </td>
 
                         {/* Situação status */}
-                        <td className="px-4 py-3.5">
+                        <td className="p-4 align-middle px-4 py-3.5">
                           <span className={`px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase ${p.situacao === "Deferido" || p.situacao === "Respondida" || p.situacao === "Arquivado"
                             ? "bg-emerald-100 text-emerald-800 border border-emerald-250"
                             : p.situacao === "Indeferido"
@@ -1650,7 +1650,7 @@ export default function EticaModule({
                         </td>
 
                         {/* Action buttons */}
-                        <td className="px-4 py-3.5 text-center">
+                        <td className="p-4 align-middle px-4 py-3.5 text-center">
                           <div className="flex justify-center gap-1.5">
                             <a
                               href="https://processoeletronico.trabalho.gov.br"

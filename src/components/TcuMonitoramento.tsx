@@ -5,6 +5,7 @@
 
 import { extractLocalHeuristics } from "../utils/tcuLocalExtractor";
 
+import TcuMonitoramentoEditRow from "./TcuMonitoramentoEditRow";
 import React, { useState, useRef } from "react";
 import { 
  Plus, 
@@ -249,19 +250,12 @@ export default function TcuMonitoramento({
  const [tipoProcessoFilter, setTipoProcessoFilter] = useState("TODOS");
  const [ressarcimentoFilter, setRessarcimentoFilter] = useState("TODOS");
  const [recomendacaoFilter, setRecomendacaoFilter] = useState("TODOS");
- const [selectedAcordao, setSelectedAcordao] = useState<AcordaoDemand | null>(null);
- const [isEditing, setIsEditing] = useState(false);
  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [editRowId, setEditRowId] = useState<string | null>(null);
 
  // Pagination states
  const [currentPage, setCurrentPage] = useState(1);
  const itemsPerPage = 8;
-
- // Edit Form state
- const [editStatus, setEditStatus] = useState<any>("Pendente");
- const [editResponsavel, setEditResponsavel] = useState("");
- const [editPrazo, setEditPrazo] = useState("");
- const [editObs, setEditObs] = useState("");
 
  // Importer states
  const [showImporter, setShowImporter] = useState(false);
@@ -1091,34 +1085,7 @@ export default function TcuMonitoramento({
  await onUpdateComunicacao(updated);
  };
 
- // Open Edit Dialog
- const handleOpenEdit = (ac: AcordaoDemand) => {
- setSelectedAcordao(ac);
- setEditStatus(ac.STATUS_MONITORAMENTO);
- setEditResponsavel(ac.RESPONSAVEL_INTERNO || "");
- setEditPrazo(ac.PRAZO_LIMITE || "");
- setEditObs(ac.OBSERVACOES || "");
- setIsEditing(true);
- };
-
- // Save Edit Dialog
- const handleSaveEdit = async () => {
- if (!selectedAcordao) return;
- 
- const updated: AcordaoDemand = {
- ...selectedAcordao,
- STATUS_MONITORAMENTO: editStatus,
- RESPONSAVEL_INTERNO: editResponsavel,
- PRAZO_LIMITE: editPrazo,
- OBSERVACOES: editObs
- };
-
- const success = await onUpdateAcordao(updated);
- if (success) {
- setSelectedAcordao(updated);
- setIsEditing(false);
- }
- };
+ ;
 
  // RFC 4180 compliant CSV parser that handles multiline fields (critical for ACORDAO inteiro teor)
  // This parser reads character-by-character instead of splitting by newline first,
@@ -1556,6 +1523,7 @@ export default function TcuMonitoramento({
  // Todos concluídos ou com erro
  setIsSyncingLocal(false);
  clearInterval(interval);
+ fetchImportStatus();
  if (onRefreshData) await onRefreshData();
  }
  }
@@ -2027,7 +1995,7 @@ export default function TcuMonitoramento({
  >
  <div className="flex items-start justify-between gap-1.5 mb-1.5">
  <div className="flex flex-col min-w-0">
- <span className="text-xs font-bold text-slate-500 truncate group-hover:text-slate-800 transition-colors select-raw select-all">
+ <span className="text-xs font-bold text-slate-500 break-words whitespace-normal group-hover:text-slate-800 transition-colors select-raw select-all">
  {cat.label}
  </span>
  <span className="text-xs font-black tracking-wider text-slate-400 uppercase">
@@ -2079,7 +2047,7 @@ export default function TcuMonitoramento({
  {isSyncingLocal ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
  </button>
  {lastUpdateDate && (
- <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
+ <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-normal break-words">
  Atualizado em: {lastUpdateDate}
  </span>
  )}
@@ -2162,7 +2130,7 @@ export default function TcuMonitoramento({
  <span className="font-semibold text-slate-550 shrink-0">Recomendações:</span>
  <select
  id="select-filter-recomendacao"
- className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium max-w-[200px] truncate"
+ className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium max-w-[200px] break-words whitespace-normal"
  value={recomendacaoFilter}
  onChange={(e) => { setRecomendacaoFilter(e.target.value); setCurrentPage(1); }}
  >
@@ -2195,15 +2163,15 @@ export default function TcuMonitoramento({
  </div>
 
  <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
- <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
- <thead className="sticky top-0 z-10">
- <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
- <th className="p-4 w-8 no-print cursor-pointer hover:bg-slate-100 transition-colors"></th>
- <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Título do Acórdão</th>
- <th className="p-4 font-sans cursor-pointer hover:bg-slate-100 transition-colors">Processo TCU</th>
- <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Sessão / Data</th>
- <th className="p-4 cursor-pointer hover:bg-slate-100 transition-colors">Status / Resumo</th>
- <th className="p-4 text-center cursor-pointer hover:bg-slate-100 transition-colors">Ações</th>
+ <table className="w-full text-left border-collapse text-sm text-slate-800">
+ <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-8 no-print cursor-pointer hover: transition-colors"></th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Título do Acórdão</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo TCU</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Sessão / Data</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status / Resumo</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Ações</th>
  </tr>
  </thead>
 
@@ -2259,7 +2227,7 @@ export default function TcuMonitoramento({
  >
  
  {/* Expand toggle icon */}
- <td className="p-4 no-print">
+ <td className="p-4 align-middle no-print">
  <button 
  onClick={async (e) => {
  e.stopPropagation();
@@ -2291,7 +2259,7 @@ export default function TcuMonitoramento({
  </td>
 
  {/* Title & Colegiado details */}
- <td className="p-4">
+ <td className="p-4 align-middle">
  <div>
  <div 
  className="font-medium text-slate-700 cursor-pointer hover:text-[#1351b4] transition-colors text-xs line-clamp-2"
@@ -2315,17 +2283,17 @@ export default function TcuMonitoramento({
  </td>
 
  {/* Process ID */}
- <td className="p-4">
+ <td className="p-4 align-middle">
  <span className="bg-slate-50 border border-slate-200 px-2 py-1 rounded text-xs text-slate-700 font-medium">
  {ac.PROC}
  </span>
  </td>
 
  {/* Session Date */}
- <td className="p-4 text-slate-600 text-sm">{ac.DATASESSAO}</td>
+ <td className="p-4 align-middle text-slate-600 text-sm">{ac.DATASESSAO}</td>
 
  {/* Status / Resumo */}
- <td className="p-4">
+ <td className="p-4 align-middle">
  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
  ac.STATUS_MONITORAMENTO === "Cumprido" ? "bg-emerald-100 text-emerald-800" :
  isLate ? "bg-red-100 text-red-800" :
@@ -2336,7 +2304,7 @@ export default function TcuMonitoramento({
  </td>
 
  {/* Ações */}
- <td className="p-4 text-center">
+ <td className="p-4 align-middle text-center">
  <button 
  className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition"
  onClick={(e) => {
@@ -2355,6 +2323,15 @@ export default function TcuMonitoramento({
  <tr>
  <td colSpan={6} className="bg-slate-50/25 px-8 py-6 border-b border-slate-200">
  <div className="space-y-4">
+                  {editRowId === ac.KEY && (
+                    <div className="mb-4 animate-slide-down border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                      <TcuMonitoramentoEditRow 
+                        item={ac}
+                        onSave={async (updated) => { const res = await onUpdateAcordao(updated); if(res) setEditRowId(null); return res; }}
+                        onCancel={() => setEditRowId(null)}
+                      />
+                    </div>
+                  )}
  
  {/* Internal monitoring values annotations */}
  <div className="flex flex-wrap gap-4">
@@ -2419,6 +2396,15 @@ export default function TcuMonitoramento({
  )}
  </div>
  <div className="space-y-4">
+                  {editRowId === ac.KEY && (
+                    <div className="mb-4 animate-slide-down border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                      <TcuMonitoramentoEditRow 
+                        item={ac}
+                        onSave={async (updated) => { const res = await onUpdateAcordao(updated); if(res) setEditRowId(null); return res; }}
+                        onCancel={() => setEditRowId(null)}
+                      />
+                    </div>
+                  )}
  {(Array.isArray(ac.aiAnalysisData.determinacoes) && ac.aiAnalysisData.determinacoes.length > 0) && (
  <div>
  <span className="text-xs font-bold text-rose-700 uppercase mb-1 block tracking-widest">Determinações</span>
@@ -2604,10 +2590,10 @@ export default function TcuMonitoramento({
  </div>
  <div className="flex items-center gap-2 shrink-0">
  <button
- onClick={() => handleOpenEdit(ac)}
+ onClick={() => setEditRowId(editRowId === ac.KEY ? null : ac.KEY)}
  className="px-4 py-2 bg-white border border-blue-250 text-[#003366] hover:bg-blue-50 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer font-sans"
  >
- <Edit3 className="w-3.5 h-3.5" /> Editar Notas e Prazos
+ {editRowId === ac.KEY ? "Fechar Edi��o" : <><Edit3 className="w-3.5 h-3.5" /> Editar Notas e Prazos</>}
  </button>
  </div>
  </div>
@@ -2649,98 +2635,6 @@ export default function TcuMonitoramento({
  </div>
 
  </div>
- {isEditing && selectedAcordao && (
- <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 shadow-xl font-sans no-print">
- <div className="bg-white rounded-lg w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
- 
- <div className="gov-header px-5 py-4 flex justify-between items-center">
- <div>
- <span className="text-xs text-blue-800 uppercase font-bold">{selectedAcordao.KEY}</span>
- <h3 className="text-sm font-bold font-display text-[#003366]">{selectedAcordao.TITULO}</h3>
- </div>
- <button onClick={() => setIsEditing(false)} className="text-slate-400 hover:text-[#003366]">
- <X className="w-5 h-5" />
- </button>
- </div>
-
- <div className="p-5 space-y-4 overflow-y-auto">
- 
- {/* Status */}
- <div>
- <label className="text-xs font-bold text-slate-700 block mb-1">Status do Monitoramento Interno:</label>
- <select
- id="modal-edit-status"
- className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:outline-hidden"
- value={editStatus}
- onChange={(e) => setEditStatus(e.target.value)}
- >
- <option value="Pendente">Pendente</option>
- <option value="Em Análise">Em Análise</option>
- <option value="Cumprido">Cumprido</option>
- <option value="Atrasado">Atrasado (Fora do Prazo)</option>
- </select>
- </div>
-
- {/* Responsavel */}
- <div>
- <label className="text-xs font-bold text-slate-700 block mb-1">Assessor Responsável (Interno):</label>
- <input
- id="modal-edit-responsavel"
- type="text"
- className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:outline-hidden"
- placeholder="Nome do analista ou assessoria designada"
- value={editResponsavel}
- onChange={(e) => setEditResponsavel(e.target.value)}
- />
- </div>
-
- {/* Prazo */}
- <div>
- <label className="text-xs font-bold text-slate-700 block mb-1">Prazo Limite para Atendimento ao TCU:</label>
- <input
- id="modal-edit-prazo"
- type="date"
- className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:outline-hidden"
- value={editPrazo}
- onChange={(e) => setEditPrazo(e.target.value)}
- />
- </div>
-
- {/* Observacoes */}
- <div>
- <label className="text-xs font-bold text-slate-700 block mb-1">Histórico de Observações e Providências:</label>
- <textarea
- id="modal-edit-observacoes"
- className="w-full h-24 bg-slate-50 border border-slate-300 rounded p-2 text-xs text-slate-800 focus:outline-hidden"
- placeholder="Registre as tratativas, link para processos SEI ou impedimentos técnicos para atendimento do acórdão..."
- value={editObs}
- onChange={(e) => setEditObs(e.target.value)}
- ></textarea>
- </div>
-
- </div>
-
- <div className="bg-slate-50 px-5 py-3.5 flex justify-end gap-2 border-t text-xs">
- <button
- id="btn-modal-cancel"
- onClick={() => setIsEditing(false)}
- className="px-4 py-1.5 font-semibold text-slate-600 hover:text-slate-800"
- >
- Cancelar
- </button>
- <button
- id="btn-modal-save"
- onClick={handleSaveEdit}
- className="px-4 py-1.5 bg-blue-800 hover:bg-blue-900 text-white font-bold rounded shadow-xs transition"
- >
- Salvar Alterações
- </button>
- </div>
-
- </div>
- </div>
- )}
-
  {/* PRINT-ONLY EMBEDDED DUST SHEETS */}
  <div className="hidden print-only">
  <div className="text-center mb-8">
@@ -2750,28 +2644,28 @@ export default function TcuMonitoramento({
  <p className="text-xs text-slate-500 mt-1">Extraído em: {new Date().toLocaleString("pt-BR")} | Usuário: Alessandro Barbosa (AECI)</p>
  </div>
 
- <table className="w-full text-xs text-left border border-slate-300 border-collapse">
+ <table className="w-full text-left border-collapse text-sm text-slate-800">
  <thead>
  <tr className="bg-slate-200 border-b border-slate-300 text-slate-800 font-bold">
- <th className="p-2 border">Título / Código</th>
- <th className="p-2 border">Processo</th>
- <th className="p-2 border">Sessão</th>
- <th className="p-2 border">Responsável</th>
- <th className="p-2 border">Prazo</th>
- <th className="p-2 border">Status</th>
- <th className="p-2 border">Assunto</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Título / Código</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Processo</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Sessão</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Responsável</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Prazo</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Status</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Assunto</th>
  </tr>
  </thead>
  <tbody>
  {filteredAcordaos.map(ac => (
  <tr key={ac.KEY} className="border-b">
- <td className="p-2 border font-bold">{ac.TITULO.split(" - ")[0]}</td>
- <td className="p-2 border ">{ac.PROC}</td>
- <td className="p-2 border">{ac.DATASESSAO}</td>
- <td className="p-2 border">{ac.RESPONSAVEL_INTERNO || "AECI"}</td>
- <td className="p-2 border font-bold">{new Date(ac.PRAZO_LIMITE + "T00:00:00").toLocaleDateString("pt-BR")}</td>
- <td className="p-2 border font-bold">{ac.STATUS_MONITORAMENTO}</td>
- <td className="p-2 border text-slate-600">{ac.ASSUNTO}</td>
+ <td className="p-4 align-middle border font-bold">{ac.TITULO.split(" - ")[0]}</td>
+ <td className="p-4 align-middle border">{ac.PROC}</td>
+ <td className="p-4 align-middle border">{ac.DATASESSAO}</td>
+ <td className="p-4 align-middle border">{ac.RESPONSAVEL_INTERNO || "AECI"}</td>
+ <td className="p-4 align-middle border font-bold">{new Date(ac.PRAZO_LIMITE + "T00:00:00").toLocaleDateString("pt-BR")}</td>
+ <td className="p-4 align-middle border font-bold">{ac.STATUS_MONITORAMENTO}</td>
+ <td className="p-4 align-middle border text-slate-600">{ac.ASSUNTO}</td>
  </tr>
  ))}
  </tbody>

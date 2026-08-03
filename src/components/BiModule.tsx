@@ -1028,14 +1028,14 @@ export default function BiModule({
               </div>
             ) : (
               <div className="border border-slate-200 rounded-2xl overflow-hidden max-h-[460px] overflow-y-auto shadow-4xs">
-                <table className="w-full text-left text-xs text-slate-800 border-collapse">
-                  <thead className="bg-[#f8fafc] text-slate-500 font-black uppercase text-[8px] tracking-wider border-b border-slate-200">
+                <table className="w-full text-left border-collapse text-sm text-slate-800">
+                  <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244]">
                     <tr>
-                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Ref. ID / Tipo</th>
-                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Objeto / Assunto</th>
-                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Status</th>
-                      <th className="p-3 cursor-pointer hover:bg-slate-100 transition-colors">Cruzamentos TCU Mapped</th>
-                      <th className="p-3 text-right">Ação</th>
+                      <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Ref. ID / Tipo</th>
+                      <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Objeto / Assunto</th>
+                      <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status</th>
+                      <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Cruzamentos TCU Mapped</th>
+                      <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ação</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-150">
@@ -1043,7 +1043,7 @@ export default function BiModule({
                       const isTceUnmapped = item.type.includes("TCE");
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/70 transition">
-                          <td className="p-3 align-top space-y-1">
+                          <td className="p-4 align-middle align-top space-y-1">
                             <span className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full inline-block ${
                               isTceUnmapped ? "bg-amber-100 text-amber-900" : "bg-blue-100 text-[#003366]"
                             }`}>
@@ -1053,12 +1053,12 @@ export default function BiModule({
                             <span className="text-[9px] text-slate-400 block font-mono">Ano: {item.year || "N/C"}</span>
                           </td>
 
-                          <td className="p-3 align-top max-w-sm space-y-1">
+                          <td className="p-4 align-middle align-top max-w-sm space-y-1">
                             <p className="font-bold text-slate-800 leading-snug">{item.title}</p>
                             <p className="text-[9.5px] text-slate-450 leading-relaxed font-mono">{item.detail}</p>
                           </td>
 
-                          <td className="p-3 align-top">
+                          <td className="p-4 align-middle align-top">
                             <span className={`text-[9px] font-black px-2 py-0.5 rounded-md inline-block ${
                               item.status === "Cumprido" ? "bg-emerald-100 text-emerald-800" :
                               item.status === "Atrasado" ? "bg-rose-100 text-rose-800" :
@@ -1069,7 +1069,7 @@ export default function BiModule({
                             </span>
                           </td>
 
-                          <td className="p-3 align-top space-y-2 max-w-xs">
+                          <td className="p-4 align-middle align-top space-y-2 max-w-xs">
                             {/* Connected communications indicator */}
                             {item.comsCount > 0 ? (
                               <div className="bg-sky-50 border border-sky-100 rounded-lg p-2 space-y-1">
@@ -1108,7 +1108,7 @@ export default function BiModule({
                             ) : null}
                           </td>
 
-                          <td className="p-3 align-top text-right">
+                          <td className="p-4 align-middle align-top text-right">
                             <span className="text-[9px] font-medium text-slate-400 hover:text-slate-800 underline block select-none cursor-pointer">
                               Análise Detalhada
                             </span>

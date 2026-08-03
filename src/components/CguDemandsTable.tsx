@@ -85,14 +85,14 @@ export default function CguDemandsTable({ demands, onView }: Props) {
 
   return (
     <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-com-scroll-container bg-slate-50/20 rounded-2xl border border-slate-200">
-      <table className="w-full text-left border-collapse table-auto text-xs min-w-[1000px]">
-        <thead className="sticky top-0 bg-slate-100 z-10 border-b border-slate-200 shadow-2xs">
-          <tr className="bg-slate-50/80 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10 backdrop-blur-sm">
-            <th className="p-4 bg-slate-100 no-print"></th>
-            <th className="p-4 bg-slate-100">Relatório de Auditoria</th>
-            <th className="p-4 bg-slate-100">Unidade Auditada</th>
-            <th className="p-4 bg-slate-100">Situação das Recomendações</th>
-            <th className="p-4 bg-slate-100 text-center no-print">Ações</th>
+      <table className="w-full text-left border-collapse text-sm text-slate-800">
+        <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors no-print"></th>
+            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Relatório de Auditoria</th>
+            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Unidade Auditada</th>
+            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Situação das Recomendações</th>
+            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors no-print">Ações</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 text-xs">
@@ -112,13 +112,13 @@ export default function CguDemandsTable({ demands, onView }: Props) {
                   className={`hover:bg-slate-50/50 transition duration-150 cursor-pointer ${isExpanded ? "bg-slate-50/70" : "bg-white"}`}
                   onClick={() => setExpandedReport(isExpanded ? null : g.reportName)}
                 >
-                  <td className="p-4 no-print">
+                  <td className="p-4 align-middle no-print">
                     <button className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left">
                       {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
                     </button>
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-4 align-middle">
                     <div>
                       <span className="font-extrabold text-[#003366] cursor-pointer hover:underline text-xs">
                         {g.reportName}
@@ -129,13 +129,13 @@ export default function CguDemandsTable({ demands, onView }: Props) {
                     </div>
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-4 align-middle">
                     <code className="bg-slate-50 border border-slate-200 px-2 py-0.5 rounded font-mono text-[10px] text-slate-750 font-medium truncate block max-w-[200px]">
                       {g.unidadeAuditada}
                     </code>
                   </td>
 
-                  <td className="p-4">
+                  <td className="p-4 align-middle">
                     <div className="flex gap-1 items-center">
                       {countAtrasado > 0 && (
                         <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold text-[10px]" title={`${countAtrasado} atrasadas`}>
@@ -153,7 +153,7 @@ export default function CguDemandsTable({ demands, onView }: Props) {
                     </div>
                   </td>
 
-                  <td className="p-4 text-center">
+                  <td className="p-4 align-middle text-center">
                     <button 
                       className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-[10px] font-bold transition"
                       onClick={(e) => {
@@ -175,15 +175,15 @@ export default function CguDemandsTable({ demands, onView }: Props) {
                         </span>
                         
                         <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                          <table className="w-full text-left text-xs bg-white">
-                            <thead className="bg-slate-100 text-slate-600 font-bold uppercase tracking-wider text-[9px]">
+                          <table className="w-full text-left border-collapse text-sm text-slate-800">
+                            <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244]">
                               <tr>
-                                <th className="px-4 py-2 font-mono">ID Tarefa</th>
-                                <th className="px-4 py-2">Item da Recomendação</th>
-                                <th className="px-4 py-2">Prazo Limite</th>
-                                <th className="px-4 py-2">Situação</th>
-                                <th className="px-4 py-2">Estado</th>
-                                <th className="px-4 py-2 text-center no-print w-20">Ações</th>
+                                <th className="p-4 font-semibold hover:bg-[#002244] transition-colors px-4 py-2">ID Tarefa</th>
+                                <th className="p-4 font-semibold hover:bg-[#002244] transition-colors px-4 py-2">Item da Recomendação</th>
+                                <th className="p-4 font-semibold hover:bg-[#002244] transition-colors px-4 py-2">Prazo Limite</th>
+                                <th className="p-4 font-semibold hover:bg-[#002244] transition-colors px-4 py-2">Situação</th>
+                                <th className="p-4 font-semibold hover:bg-[#002244] transition-colors px-4 py-2">Estado</th>
+                                <th className="p-4 font-semibold hover:bg-[#002244] transition-colors px-4 py-2 no-print w-20">Ações</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -204,7 +204,7 @@ export default function CguDemandsTable({ demands, onView }: Props) {
                                     >
                                       {recName}
                                     </td>
-                                    <td className="px-4 py-3">
+                                    <td className="p-4 align-middle px-4 py-3">
                                       {ds === "ATRASADO" ? (
                                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-black bg-red-100 text-red-800">
                                           {d.dataLimite || "—"}
@@ -217,9 +217,9 @@ export default function CguDemandsTable({ demands, onView }: Props) {
                                         <span className="font-mono text-slate-600 text-[11px] font-medium">{d.dataLimite || "—"}</span>
                                       )}
                                     </td>
-                                    <td className="px-4 py-3 text-slate-700 font-medium text-[11px]">{d.situacao || "—"}</td>
-                                    <td className="px-4 py-3 text-slate-700 font-medium text-[11px]">{d.estado || "—"}</td>
-                                    <td className="px-4 py-3 text-center no-print w-20">
+                                    <td className="p-4 align-middle px-4 py-3 text-slate-700 font-medium">{d.situacao || "—"}</td>
+                                    <td className="p-4 align-middle px-4 py-3 text-slate-700 font-medium">{d.estado || "—"}</td>
+                                    <td className="p-4 align-middle px-4 py-3 text-center no-print w-20">
                                       <div className="flex items-center justify-center gap-1.5">
                                         <button onClick={() => onView(d)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" title="Visualizar Dossiê">
                                           <Eye className="w-4 h-4" />

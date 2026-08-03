@@ -4,15 +4,15 @@
  */
 
 import React, { useState } from "react";
-import {
- Plus,
- Search,
- Download,
- Printer,
- Database,
- Edit3,
- Trash2,
- ChevronRight,
+import { 
+ Plus, 
+ Search, 
+ Download, 
+ Printer, 
+ Database, 
+ Edit3, 
+ Trash2, 
+ ChevronRight, 
  ChevronDown,
  X,
  FileText,
@@ -35,14 +35,13 @@ import {
  Landmark,
  Activity,
  Users,
+ RefreshCw,
  Building2,
  ArrowLeftRight,
  Archive,
  Sparkles,
  Bot,
- RefreshCw,
- Brain,
- Edit
+ Brain
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
 
@@ -62,19 +61,16 @@ interface TcuModuleProps {
  onDeleteTce?: (id: string) => Promise<boolean>;
  onImportTces?: (items: TceDemand[]) => Promise<any>;
  onImportTceMappings?: (items: TceAcordaoMapping[]) => Promise<any>;
- onAddTceMapping?: (tceId: string, acordaoKey: string) => Promise<boolean>;
- onDeleteTceMapping?: (tceId: string, acordaoKey: string) => Promise<boolean>;
  onClearOlderAcordaos?: () => Promise<any>;
  onResetDatabase?: () => Promise<any>;
  isLoading: boolean;
  onRefreshData?: () => Promise<void>;
- onNavigateToMonitoramento?: (searchKey: string) => void;
 }
 
-export default function TcuTCE({
- acordaos: rawAcordaos,
- onUpdateAcordao,
- onDeleteAcordao,
+export default function TcuComunicacoes({ 
+ acordaos: rawAcordaos, 
+ onUpdateAcordao, 
+ onDeleteAcordao, 
  onImportAcordaos,
  onSyncLocalAcordaos,
  comunicacoes: rawComunicacoes = [],
@@ -87,15 +83,12 @@ export default function TcuTCE({
  onDeleteTce,
  onImportTces,
  onImportTceMappings,
- onAddTceMapping,
- onDeleteTceMapping,
  onClearOlderAcordaos,
  onResetDatabase,
  isLoading,
- onRefreshData,
- onNavigateToMonitoramento
+ onRefreshData
 }: TcuModuleProps) {
-
+ 
  // Robust Portuguese Text Repair function
  const sanitizePortugueseText = (text: string | undefined | null): string => {
  if (!text) return "";
@@ -289,7 +282,7 @@ export default function TcuTCE({
  const extractYearFromTceString = (str: string | undefined | null): number => {
  if (!str) return 0;
  const cleanStr = str.trim();
-
+ 
  // 1. Match a year right after a separator: slash (/), pipe (|), hyphen (-), or backslash (\)
  const separatorMatch = cleanStr.match(/[/|\\-]\s*(\d{4})\b/);
  if (separatorMatch) {
@@ -353,7 +346,7 @@ export default function TcuTCE({
  } catch (error: any) {
  console.error(`Erro ao processar Acórdão ${ac.KEY || ac.NUMACORDAO}:`, error);
  errors.push({ id: ac.KEY || String(ac.NUMACORDAO), error: error.message });
-
+ 
  return {
  ...ac,
  RECOMENDACOES_DETERMINACOES_UNIFICADO: "Erro ao processar recomendações/determinações."
@@ -371,13 +364,13 @@ export default function TcuTCE({
  if (typeof value === "number") {
  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
  }
-
+ 
  const str = value.trim();
  if (!str) return "R$ 0,00";
-
+ 
  const hasComma = str.includes(",");
  const hasDot = str.includes(".");
-
+ 
  let numericValue = 0;
  if (hasComma && hasDot) {
  if (str.lastIndexOf(",") > str.lastIndexOf(".")) {
@@ -393,7 +386,7 @@ export default function TcuTCE({
  } else {
  numericValue = parseFloat(str.replace(/[^\d.-]/g, ""));
  }
-
+ 
  if (isNaN(numericValue)) return "R$ 0,00";
  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(numericValue);
  };
@@ -417,7 +410,7 @@ export default function TcuTCE({
  UNIDADE_EMITENTE: sanitizePortugueseText(c.UNIDADE_EMITENTE)
  }));
  }, [rawComunicacoes]);
-
+ 
  const [searchTerm, setSearchTerm] = useState("");
  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
@@ -474,6 +467,8 @@ export default function TcuTCE({
  const [isSyncingLocal, setIsSyncingLocal] = useState(false);
  const [syncLocalMessage, setSyncLocalMessage] = useState<string | null>(null);
  const [localSyncReport, setLocalSyncReport] = useState<any[] | null>(null);
+ const [isSyncingLocalCom, setIsSyncingLocalCom] = useState(false);
+ const [syncLocalComMessage, setSyncLocalComMessage] = useState<string | null>(null);
 
  // Portal da Transparência verification states
  const [docVerifyInput, setDocVerifyInput] = useState("");
@@ -514,30 +509,6 @@ export default function TcuTCE({
  const [editComProcessoSei, setEditComProcessoSei] = useState("");
  const [editComDestinacao, setEditComDestinacao] = useState("RESPOSTA");
 
- // TCE module states
- const [tceActiveSubTab, setTceActiveSubTab] = useState<"geral" | "com-acordaos">("geral");
- const [tceSelectedYear, setTceSelectedYear] = useState("TODOS");
- const [tceSearchTerm, setTceSearchTerm] = useState("");
- const [tceFilterStatus, setTceFilterStatus] = useState("TODOS");
- const [tceFilterVinculacao, setTceFilterVinculacao] = useState("TODOS");
- const [showTceImporter, setShowTceImporter] = useState(false);
- const [tcePasteContent, setTcePasteContent] = useState("");
- const [isDragOverTce, setIsDragOverTce] = useState(false);
- const [parsedTceItems, setParsedTceItems] = useState<TceDemand[] | null>(null);
- const [parsedTceMappingItems, setParsedTceMappingItems] = useState<TceAcordaoMapping[] | null>(null);
- const [isSavingTce, setIsSavingTce] = useState(false);
- const [tceImportMessage, setTceImportMessage] = useState<string | null>(null);
- const [isSyncingLocalTce, setIsSyncingLocalTce] = useState(false);
- const [syncLocalTceMessage, setSyncLocalTceMessage] = useState<string | null>(null);
- const [tceExpandedId, setTceExpandedId] = useState<string | null>(null);
- const [tceCurrentPage, setTceCurrentPage] = useState(1);
- const tceItemsPerPage = 15;
-
- const [editingTceItem, setEditingTceItem] = useState<TceDemand | null>(null);
- const [editTcePosicionamento, setEditTcePosicionamento] = useState("");
- const [editTceSiafi, setEditTceSiafi] = useState(false);
- const [editTceAcordaoKey, setEditTceAcordaoKey] = useState("");
-
  const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
 
  const fetchLastUpdateDate = async () => {
@@ -545,7 +516,7 @@ export default function TcuTCE({
  const res = await fetch("/api/files/last-updates");
  if (res.ok) {
  const data = await res.json();
- if (data.data?.tces) setLastUpdateDate(data.data.tces);
+ if (data.data?.comunicacoes) setLastUpdateDate(data.data.comunicacoes);
  }
  } catch (e) {
  console.error(e);
@@ -563,6 +534,30 @@ export default function TcuTCE({
  setComCurrentPage(1);
  }, []);
 
+ // TCE module states
+ const [tceActiveSubTab, setTceActiveSubTab] = useState<"geral" | "com-acordaos">("geral");
+ const [tceSelectedYear, setTceSelectedYear] = useState("TODOS");
+ const [tceSearchTerm, setTceSearchTerm] = useState("");
+ const [showTceImporter, setShowTceImporter] = useState(false);
+ const [tcePasteContent, setTcePasteContent] = useState("");
+ const [isDragOverTce, setIsDragOverTce] = useState(false);
+ const [parsedTceItems, setParsedTceItems] = useState<TceDemand[] | null>(null);
+ const [parsedTceMappingItems, setParsedTceMappingItems] = useState<TceAcordaoMapping[] | null>(null);
+ const [isSavingTce, setIsSavingTce] = useState(false);
+ const [tceImportMessage, setTceImportMessage] = useState<string | null>(null);
+ const [tceExpandedId, setTceExpandedId] = useState<string | null>(null);
+ const [tceCurrentPage, setTceCurrentPage] = useState(1);
+ const tceItemsPerPage = 15;
+
+ const [editingTceItem, setEditingTceItem] = useState<TceDemand | null>(null);
+ const [editTcePosicionamento, setEditTcePosicionamento] = useState("");
+
+ React.useEffect(() => {
+ window.scrollTo({ top: 0 });
+ setCurrentPage(1);
+ setTceCurrentPage(1);
+ setComCurrentPage(1);
+ }, []);
 
 
  // Robust and auto-detecting file decoding function that works with Windows-1252/ISO-8859-1 (standard for Brazilian gov exports) and UTF-8
@@ -572,7 +567,7 @@ export default function TcuTCE({
  try {
  const arrayBuffer = e.target?.result as ArrayBuffer;
  const uint8Array = new Uint8Array(arrayBuffer);
-
+ 
  // Robust detection of UTF-8 vs Latin-1 (Windows-1252)
  let isUtf8 = true;
  let i = 0;
@@ -603,7 +598,7 @@ export default function TcuTCE({
  break;
  }
  }
-
+ 
  const encoding = isUtf8 ? "utf-8" : "windows-1252";
  const decoder = new TextDecoder(encoding);
  const text = decoder.decode(uint8Array);
@@ -641,11 +636,11 @@ export default function TcuTCE({
 
  const allRows = parseCSVRobust(csvText, delimiter);
  const items: ComunicacaoDemand[] = [];
-
+ 
  for (let i = 0; i < allRows.length; i++) {
  const fields = allRows[i];
  if (fields.length < 5) continue;
-
+ 
  const comunicacao = fields[0] || "";
  const destinatario = fields[1] || "";
  const contato = fields[2] || "";
@@ -656,8 +651,8 @@ export default function TcuTCE({
 
  // Skip header lines
  if (
- comunicacao.toLowerCase().includes("comunicac") ||
- destinatario.toLowerCase().includes("destinat") ||
+ comunicacao.toLowerCase().includes("comunicac") || 
+ destinatario.toLowerCase().includes("destinat") || 
  unidadeEmitente.toLowerCase().includes("unidade emitente")
  ) {
  continue;
@@ -911,10 +906,10 @@ export default function TcuTCE({
  const readTceFileContent = (file: File) => {
  setTceImportMessage(null);
  const fileName = file.name.toLowerCase();
-
+ 
  // Check if filename contains acordao, acórdão or mapping to identify mappings file
  const isMapping = fileName.includes("acordao") || fileName.includes("acórdão") || fileName.includes("mapping");
-
+ 
  if (!fileName.startsWith("tce")) {
  setTceImportMessage(`Arquivo rejeitado! Para dados de TCE, o nome do arquivo deve obrigatoriamente começar com "tce" (ex: "tce_geral.csv" ou "tce_acordao.csv"). Você enviou: "${file.name}".`);
  return;
@@ -947,7 +942,6 @@ export default function TcuTCE({
  setTceImportMessage(`Carga finalizada com sucesso! ${res.importedCount} novas TCEs inseridas e ${res.updatedCount} atualizadas.`);
  setParsedTceItems(null);
  setTcePasteContent("");
- if (onRefreshData) onRefreshData();
  setTimeout(() => {
  setShowTceImporter(false);
  setTceImportMessage(null);
@@ -957,7 +951,7 @@ export default function TcuTCE({
  }
  }
  setIsSavingTce(false);
- }
+ } 
  else if (parsedTceMappingItems && parsedTceMappingItems.length > 0) {
  setIsSavingTce(true);
  if (onImportTceMappings) {
@@ -966,7 +960,6 @@ export default function TcuTCE({
  setTceImportMessage(`Gravação bem-sucedida de mapeamentos! ${res.importedCount} novos registros relacionados e ${res.updatedCount} vinculados retroativamente.`);
  setParsedTceMappingItems(null);
  setTcePasteContent("");
- if (onRefreshData) onRefreshData();
  setTimeout(() => {
  setShowTceImporter(false);
  setTceImportMessage(null);
@@ -978,31 +971,6 @@ export default function TcuTCE({
  setIsSavingTce(false);
  } else {
  setTceImportMessage("Nenhum dado pronto para sincronização. Por favor, carregue um arquivo válido começado com 'tce'.");
- }
- };
-
- const handleLocalSyncTce = async () => {
- setIsSyncingLocalTce(true);
- setSyncLocalTceMessage("Sincronizando arquivos de TCEs locais...");
- try {
- const response = await fetch('/api/tces/sync-local', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' }
- });
- const res = await response.json();
- if (res && res.success) {
- setSyncLocalTceMessage(res.message);
- if (onRefreshData) onRefreshData();
- setTimeout(() => setSyncLocalTceMessage(null), 4000);
- } else {
- setSyncLocalTceMessage(res?.message || "Erro na sincronização local de TCEs.");
- setTimeout(() => setSyncLocalTceMessage(null), 4000);
- }
- } catch (err: any) {
- setSyncLocalTceMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
- setTimeout(() => setSyncLocalTceMessage(null), 4000);
- } finally {
- setIsSyncingLocalTce(false);
  }
  };
 
@@ -1085,7 +1053,7 @@ export default function TcuTCE({
  const findMatchedAcordao = (ref: string) => {
  if (!ref) return null;
  const cleanedRef = ref.trim().toLowerCase();
-
+ 
  let matched = acordaos.find(ac => ac.KEY.toLowerCase() === cleanedRef);
  if (matched) return matched;
 
@@ -1098,8 +1066,8 @@ export default function TcuTCE({
  if (matched) return matched;
  }
 
- matched = acordaos.find(ac =>
- ac.KEY.toLowerCase().includes(cleanedRef) ||
+ matched = acordaos.find(ac => 
+ ac.KEY.toLowerCase().includes(cleanedRef) || 
  ac.TITULO.toLowerCase().includes(cleanedRef) ||
  ac.NUMACORDAO.toString() === cleanedRef
  );
@@ -1233,6 +1201,7 @@ export default function TcuTCE({
  setComImportMessage(`Sincronização concluída com sucesso! ${res.importedCount} novos registros adicionados e ${res.updatedCount} atualizados.`);
  setParsedComItems(null);
  setComPasteContent("");
+ if (onRefreshData) onRefreshData();
  setTimeout(() => {
  setShowComImporter(false);
  setComImportMessage(null);
@@ -1307,7 +1276,7 @@ export default function TcuTCE({
  // Save Edit Dialog
  const handleSaveEdit = async () => {
  if (!selectedAcordao) return;
-
+ 
  const updated: AcordaoDemand = {
  ...selectedAcordao,
  STATUS_MONITORAMENTO: editStatus,
@@ -1342,12 +1311,12 @@ export default function TcuTCE({
  i++; // skip next quote
  } else if (char === '"') {
  // Check if this quote is followed by delimiter, newline, carriage return, or EOF
- const isEndOfField =
- nextChar === delimiter ||
- nextChar === '\r' ||
- nextChar === '\n' ||
+ const isEndOfField = 
+ nextChar === delimiter || 
+ nextChar === '\r' || 
+ nextChar === '\n' || 
  nextChar === undefined;
-
+ 
  if (isEndOfField) {
  inQuotes = false; // end of quoted field
  } else {
@@ -1484,10 +1453,10 @@ export default function TcuTCE({
  const isMissing = !ac.aiAnalysisData?.dossieRessarcimento;
  const isEmpty = ac.aiAnalysisData?.dossieRessarcimento?.length === 0;
  const hasDebtText = /\b(condenar.*?em débito|tesouro nacional|recolhimento aos cofres)\b/.test(((ac.SUMARIO || "") + " " + (ac.ACORDAO || "")).toLowerCase());
-
+ 
  return isMissing || (isEmpty && hasDebtText);
  });
-
+ 
  if (pendentes.length === 0) {
  alert("Todos os Acórdãos já possuem Dossiê IA gerado!");
  return;
@@ -1502,26 +1471,26 @@ export default function TcuTCE({
  for (let i = 0; i < pendentes.length; i++) {
  const ac = pendentes[i];
  setBatchProgress({ current: i + 1, total: pendentes.length });
-
+ 
  let success = false;
  let retryCount = 0;
-
+ 
  while (!success && retryCount < 5) {
  try {
  const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
  method: "POST",
  headers: { "Content-Type": "application/json" }
  });
-
+ 
  if (response.status === 429) {
- console.warn(`Rate limit hit on item ${i + 1}. Waiting 62 seconds before retry...`);
+ console.warn(`Rate limit hit on item ${i+1}. Waiting 62 seconds before retry...`);
  await new Promise(r => setTimeout(r, 62000));
  retryCount++;
  continue;
  }
-
+ 
  const data = await response.json();
-
+ 
  if (data.success) {
  success = true;
  const updatedAc = { ...ac };
@@ -1533,12 +1502,12 @@ export default function TcuTCE({
  updatedAc.aiAnalysisData.darCiencia = data.checklist.darCiencia || [];
  updatedAc.aiAnalysisData.determinaArquivamento = !!data.checklist.determinaArquivamento;
  }
- const hasRessarcimento = data.dossie.some((r: any) => r.siafiEncontrados && r.siafiEncontrados.some((s: any) => s.confirmado === true));
+ const hasRessarcimento = data.dossie.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
  if (hasRessarcimento) {
  updatedAc.STATUS_MONITORAMENTO = "Cumprido";
  updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
  }
-
+ 
  // Call API directly to save without triggering full re-render on every loop
  await fetch("/api/acordaos/update", {
  method: "POST",
@@ -1548,7 +1517,7 @@ export default function TcuTCE({
  } else {
  console.error(`Falha no Acórdão ${ac.KEY}:`, data.error);
  if (data.error && data.error.includes("429")) {
- console.warn(`Rate limit hit on item ${i + 1}. Waiting 62 seconds before retry...`);
+ console.warn(`Rate limit hit on item ${i+1}. Waiting 62 seconds before retry...`);
  await new Promise(r => setTimeout(r, 62000));
  retryCount++;
  } else {
@@ -1564,7 +1533,7 @@ export default function TcuTCE({
 
  // Evitar que o sistema faça logout por inatividade
  window.dispatchEvent(new Event('mousemove'));
-
+ 
  // Pequeno respiro pro React atualizar a barra de progresso
  if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
  }
@@ -1572,7 +1541,7 @@ export default function TcuTCE({
  if (onSyncLocalAcordaos) {
  await onSyncLocalAcordaos();
  }
-
+ 
  setIsBatchProcessing(false);
  alert("✨ Processamento em Lote concluído com sucesso!");
  };
@@ -1589,21 +1558,21 @@ export default function TcuTCE({
  const updatedAc = { ...ac };
  if (!updatedAc.aiAnalysisData) updatedAc.aiAnalysisData = {} as any;
  (updatedAc.aiAnalysisData as any).dossieRessarcimento = data.dossie;
-
+ 
  if (data.checklist) {
  updatedAc.aiAnalysisData.determinacoes = data.checklist.determinacoes || [];
  updatedAc.aiAnalysisData.recomendacoes = data.checklist.recomendacoes || [];
  updatedAc.aiAnalysisData.darCiencia = data.checklist.darCiencia || [];
  updatedAc.aiAnalysisData.determinaArquivamento = !!data.checklist.determinaArquivamento;
  }
-
+ 
  // Se a IA encontrou pagamento, também muda o status (mesma lógica do backend)
- const hasRessarcimento = data.dossie.some((r: any) => r.siafiEncontrados && r.siafiEncontrados.some((s: any) => s.confirmado === true));
+ const hasRessarcimento = data.dossie.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
  if (hasRessarcimento) {
  updatedAc.STATUS_MONITORAMENTO = "Cumprido";
  updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
  }
-
+ 
  if (onUpdateAcordao) {
  await onUpdateAcordao(updatedAc);
  }
@@ -1672,6 +1641,32 @@ export default function TcuTCE({
  }
  };
 
+ // Trigger Local Sync Action for Comunicacoes
+ const handleLocalSyncCom = async () => {
+ setIsSyncingLocalCom(true);
+ setSyncLocalComMessage("Sincronizando comunicações locais...");
+ try {
+ const response = await fetch('/api/comunicacoes/sync-local', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' }
+ });
+ const res = await response.json();
+ if (res && res.success) {
+ setSyncLocalComMessage(res.message);
+ if (onRefreshData) await onRefreshData();
+ setTimeout(() => setSyncLocalComMessage(null), 4000);
+ } else {
+ setSyncLocalComMessage(res?.message || "Erro na sincronização local de comunicações.");
+ setTimeout(() => setSyncLocalComMessage(null), 4000);
+ }
+ } catch (err: any) {
+ setSyncLocalComMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
+ setTimeout(() => setSyncLocalComMessage(null), 4000);
+ } finally {
+ setIsSyncingLocalCom(false);
+ }
+ };
+
 
 
  // Extract unique sorted list of years from the acórdãos
@@ -1684,17 +1679,13 @@ export default function TcuTCE({
  new Set(acordaos.map(ac => ac.TIPOPROCESSO).filter(Boolean))
  ).sort() as string[];
 
- const availableTceStatus = Array.from(
- new Set(tces.map(t => t.ESTADO_PROCESSO).filter(Boolean))
- ).sort() as string[];
-
  const hasValoresARessarcir = (ac: AcordaoDemand) => {
  if (ac.aiAnalysisData && ac.aiAnalysisData.temDebitoFinanceiro !== undefined) {
  return ac.aiAnalysisData.temDebitoFinanceiro;
  }
  if (tceMappings && tceMappings.length > 0) {
  const isMapped = tceMappings.some(m => m.ACORDAO_KEY && (
- (ac.NUMACORDAO && m.ACORDAO_KEY.includes(ac.NUMACORDAO.toString())) ||
+ (ac.NUMACORDAO && m.ACORDAO_KEY.includes(ac.NUMACORDAO.toString())) || 
  (ac.KEY && m.ACORDAO_KEY.includes(ac.KEY))
  ));
  if (isMapped) return true;
@@ -1711,7 +1702,7 @@ export default function TcuTCE({
  // Filter logic
  const filteredAcordaos = acordaos.filter(ac => {
  const term = searchTerm.toLowerCase();
- const matchesSearch =
+ const matchesSearch = 
  ac.TITULO.toLowerCase().includes(term) ||
  (ac.PROC && ac.PROC.toLowerCase().includes(term)) ||
  (ac.INTERESSADOS && ac.INTERESSADOS.toLowerCase().includes(term)) ||
@@ -1725,11 +1716,11 @@ export default function TcuTCE({
  prazoFilter === "COM_PRAZO" ? !!ac.PRAZO_LIMITE : !ac.PRAZO_LIMITE
  );
  const matchesTipoProcesso = tipoProcessoFilter === "TODOS" || ac.TIPOPROCESSO === tipoProcessoFilter;
-
- const matchesRessarcimento = ressarcimentoFilter === "TODOS" ||
- (ressarcimentoFilter === "COM_VALORES" ? hasValoresARessarcir(ac) :
+ 
+ const matchesRessarcimento = ressarcimentoFilter === "TODOS" || 
+ (ressarcimentoFilter === "COM_VALORES" ? hasValoresARessarcir(ac) : 
  (ressarcimentoFilter === "SEM_VALORES" ? !hasValoresARessarcir(ac) :
- (ressarcimentoFilter === "PENDENTE_REGULARIZACAO" ?
+ (ressarcimentoFilter === "PENDENTE_REGULARIZACAO" ? 
  (ac.aiAnalysisData?.dossieRessarcimento?.length > 0 && ac.STATUS_MONITORAMENTO !== "Cumprido") : false
  )
  )
@@ -1888,193 +1879,451 @@ export default function TcuTCE({
 
  return (
  <div className="space-y-6 font-sans">
+ 
+ 
+
+ <div className="space-y-6 animate-fade-in">
 
 
+
+ {/* Core Analytics & Filtering */}
  {(() => {
- // Dynamic calculations
- const tceYears = Array.from(new Set([
- ...tces.map(t => extractYearFromTceString(t.NUMERO_ANO_TCE)),
- ...tceMappings.map(m => extractYearFromTceString(m.NUMERO_ANO_TCE))
- ])).filter(yr => yr >= 1990 && yr <= 2035).sort((a, b) => b - a);
+ const allComs = comunicacoes || [];
+ 
+ // Gather statistics on the fully loaded list of communications
+ const currentYearInt = parseInt(comAnoFilter);
+ const totalForSelectedYear = allComs.filter(x => comAnoFilter === "TODOS" || x.ANO === currentYearInt);
+ const totalComsCount = totalForSelectedYear.length;
+ const respondedCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && typeof x.DATA_RESPOSTA === 'string' && x.DATA_RESPOSTA.trim() !== "").length;
+ const pendingCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && (typeof x.DATA_RESPOSTA !== 'string' || x.DATA_RESPOSTA.trim() === "")).length;
+ const totalRequiredCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false).length;
+ const responseRate = totalRequiredCount > 0 ? ((respondedCount / totalRequiredCount) * 100).toFixed(1) : "100.0";
 
- const totalOriginalDebito = tces.reduce((sum, item) => {
- if (!item.DEBITO_ORIGINAL) return sum;
- const cleaned = item.DEBITO_ORIGINAL.replace(/[^\d\,]/g, "").replace(",", ".");
- const num = parseFloat(cleaned);
- return sum + (isNaN(num) ? 0 : num);
- }, 0);
-
- const formattedTotalDebito = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalOriginalDebito);
-
- const totalTceCount = tces.length;
- const totalMappedCount = tceMappings.length;
-
- // Year-specific statistics helper for TCE
- const tcesForSelectedYear = tces.filter(t => {
- const tYear = extractYearFromTceString(t.NUMERO_ANO_TCE);
- return tceSelectedYear === "TODOS" || tYear.toString() === tceSelectedYear;
+ // Unidade Emitente counts for breakdown
+ const emitentes: { [key: string]: number } = {};
+ totalForSelectedYear.forEach(x => {
+ const u = x.UNIDADE_EMITENTE || "OUTROS";
+ emitentes[u] = (emitentes[u] || 0) + 1;
  });
 
- // Sum updated debits dynamically
- const sumUpdatedDebito = tcesForSelectedYear.reduce((sum, item) => {
- if (!item.DEBITO_ATUALIZADO) return sum;
- const cleaned = item.DEBITO_ATUALIZADO.replace(/[R$\s.]/g, "").replace(",", ".");
- const num = parseFloat(cleaned);
- return sum + (isNaN(num) ? 0 : num);
- }, 0);
+ // Filtered Communications list
+ const finalFiltered = totalForSelectedYear.filter(item => {
+ const term = (comSearchTerm || "").toLowerCase();
+ const matchesSearch = 
+ (item.COMUNICACAO || "").toLowerCase().includes(term) ||
+ (item.PROCESSO || "").toLowerCase().includes(term) ||
+ (item.DESTINATARIO && item.DESTINATARIO.toLowerCase().includes(term)) ||
+ (item.CONTATO && item.CONTATO.toLowerCase().includes(term)) ||
+ (item.UNIDADE_EMITENTE && item.UNIDADE_EMITENTE.toLowerCase().includes(term));
 
- const formattedSelectedYearDebito = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(sumUpdatedDebito);
+ const matchesUnidade = comUnidadeFilter === "TODOS" || item.UNIDADE_EMITENTE === comUnidadeFilter;
+ 
+ const carece = item.CARECE_RESPOSTA !== false;
+ const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
+ const matchesRespondido = 
+ comRespondidoFilter === "TODOS" || 
+ (comRespondidoFilter === "RESPONDIDO" && carece && hasResponse) ||
+ (comRespondidoFilter === "PENDENTE" && carece && !hasResponse) ||
+ (comRespondidoFilter === "NAO_EXIGIDO" && !carece);
 
- // Count linked & pending for chosen year
- const mappedTcesForYear = tcesForSelectedYear.filter(t =>
- tceMappings.some(m => m.NUMERO_ANO_TCE?.toLowerCase() === t.NUMERO_ANO_TCE?.toLowerCase())
- );
- const linkedCount = mappedTcesForYear.length;
- const pendingTceCount = tcesForSelectedYear.length - linkedCount;
+ return matchesSearch && matchesUnidade && matchesRespondido;
+ });
 
- // Filtered General Lists
- const filteredTces = tces.filter(t => {
- const tYear = extractYearFromTceString(t.NUMERO_ANO_TCE);
- const matchesYear = tceSelectedYear === "TODOS" || tYear.toString() === tceSelectedYear;
- const matchesSearch = !tceSearchTerm ||
- (t.NUMERO_ANO_TCE || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
- (t.PROCESSO_ADMINISTRATIVO || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
- (t.MOTIVO_INSTAURACAO || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
- (t.SUBMOTIVO_INSTAURACAO || "").toLowerCase().includes(tceSearchTerm.toLowerCase()) ||
- (t.TC || "").toLowerCase().includes(tceSearchTerm.toLowerCase());
-
- const matchesStatus = tceFilterStatus === "TODOS" || t.ESTADO_PROCESSO === tceFilterStatus;
-
- let matchesVinculacao = true;
- if (tceFilterVinculacao === "VINCULADOS") {
- matchesVinculacao = tceMappings.some(m => m.NUMERO_ANO_TCE?.toLowerCase() === t.NUMERO_ANO_TCE?.toLowerCase());
- } else if (tceFilterVinculacao === "NAO_VINCULADOS") {
- matchesVinculacao = !tceMappings.some(m => m.NUMERO_ANO_TCE?.toLowerCase() === t.NUMERO_ANO_TCE?.toLowerCase());
+ // Recipient Statistics & Percentages
+ const destinatarioStats = (() => {
+ const statsMap: { [key: string]: { total: number; responded: number; pending: number; requireResponseTotal: number } } = {};
+ 
+ totalForSelectedYear.forEach(com => {
+ const dest = com.DESTINATARIO || "Geral / Não Especificado";
+ if (!statsMap[dest]) {
+ statsMap[dest] = { total: 0, responded: 0, pending: 0, requireResponseTotal: 0 };
  }
-
- return matchesYear && matchesSearch && matchesStatus && matchesVinculacao;
+ const carece = com.CARECE_RESPOSTA !== false;
+ statsMap[dest].total++;
+ if (carece) {
+ statsMap[dest].requireResponseTotal++;
+ if (com.DATA_RESPOSTA && com.DATA_RESPOSTA.trim() !== "") {
+ statsMap[dest].responded++;
+ } else {
+ statsMap[dest].pending++;
+ }
+ }
  });
 
- // Resolve Mappings side-by-side
- const resolvedMappings = tceMappings.map(m => {
- const matchedTce = tces.find(t => t.NUMERO_ANO_TCE?.trim().toLowerCase() === m.NUMERO_ANO_TCE?.trim().toLowerCase());
- const matchedAc = findMatchedAcordao(m.ACORDAO_KEY);
+ return Object.entries(statsMap).map(([dest, info]) => {
+ const pct = totalComsCount > 0 ? (info.total / totalComsCount) * 105 : 0; // scaled out of total
+ const realPct = totalComsCount > 0 ? (info.total / totalComsCount) * 100 : 0;
  return {
- mapping: m,
- tce: matchedTce,
- acordao: matchedAc
+ unidade: dest,
+ total: info.total,
+ requireResponseTotal: info.requireResponseTotal,
+ responded: info.responded,
+ pending: info.pending,
+ percentage: realPct
  };
- });
+ }).sort((a, b) => b.total - a.total);
+ })();
 
- const filteredMappings = resolvedMappings.filter(rm => {
- const year = rm.tce
- ? extractYearFromTceString(rm.tce.NUMERO_ANO_TCE)
- : (rm.acordao?.ANOACORDAO || extractYearFromTceString(rm.mapping.NUMERO_ANO_TCE));
- const matchesYear = tceSelectedYear === "TODOS" || (year && year.toString() === tceSelectedYear);
+ // Dynamic year tabs
+ const distinctYears = Array.from(new Set(allComs.map(x => x.ANO).filter(Boolean))).sort((a, b) => Number(b) - Number(a));
+ const uniqueUnidades = Array.from(new Set(allComs.map(x => x.UNIDADE_EMITENTE).filter(Boolean))).sort();
 
- const tceStr = rm.tce ? `${rm.tce.NUMERO_ANO_TCE} ${rm.tce.PROCESSO_ADMINISTRATIVO} ${rm.tce.MOTIVO_INSTAURACAO}` : "";
- const acStr = rm.acordao ? `${rm.acordao.KEY} ${rm.acordao.TITULO} ${rm.acordao.NUMACORDAO}` : "";
- const refStr = rm.mapping.ACORDAO_KEY;
- const fullText = `${tceStr} ${acStr} ${refStr}`.toLowerCase();
+ const escapeXML = (str: string) => {
+ return (str || "")
+ .replace(/&/g, "&amp;")
+ .replace(/</g, "&lt;")
+ .replace(/>/g, "&gt;")
+ .replace(/"/g, "&quot;")
+ .replace(/'/g, "&apos;");
+ };
 
- const matchesSearch = !tceSearchTerm || fullText.includes(tceSearchTerm.toLowerCase());
+ const handleExportToExcel = () => {
+ let xml = `<?xml version="1.0" encoding="utf-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+ <Style ss:ID="Default" ss:Name="Normal">
+ <Alignment ss:Vertical="Center"/>
+ <Borders>
+ <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ </Borders>
+ <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#1E293B"/>
+ <Interior/>
+ </Style>
+ <Style ss:ID="Header">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+ <Borders>
+ <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#0F172A"/>
+ </Borders>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/>
+ <Interior ss:Color="#003366" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="Title">
+ <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="15" ss:Color="#0F172A"/>
+ </Style>
+ <Style ss:ID="SubTitle">
+ <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Italic="1" ss:Size="10" ss:Color="#475569"/>
+ </Style>
+ <Style ss:ID="SaneadoRow">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#15803D" ss:Size="10"/>
+ <Interior ss:Color="#DCFCE7" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="PendenteRow">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#B45309" ss:Size="10"/>
+ <Interior ss:Color="#FEF3C7" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="NaoExigidoRow">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#475569" ss:Size="10"/>
+ <Interior ss:Color="#F1F5F9" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="PctCell">
+ <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+ <NumberFormat ss:Format="0.0%"/>
+ </Style>
+ </Styles>
+ <Worksheet ss:Name="Lote de Oficios">
+ <Table ss:DefaultRowHeight="19">
+ <Column ss:Width="130" />
+ <Column ss:Width="80" />
+ <Column ss:Width="200" />
+ <Column ss:Width="160" />
+ <Column ss:Width="120" />
+ <Column ss:Width="120" />
+ <Column ss:Width="120" />
+ <Column ss:Width="100" />
+ <Column ss:Width="90" />
+ <Column ss:Width="90" />
+ <Column ss:Width="130" />
+ 
+ <Row ss:Height="28">
+ <Cell ss:MergeAcross="10" ss:StyleID="Title">
+ <Data ss:Type="String">MINISTÉRIO DO TRABALHO E EMPREGO — AECI</Data>
+ </Cell>
+ </Row>
+ <Row ss:Height="20">
+ <Cell ss:MergeAcross="10" ss:StyleID="SubTitle">
+ <Data ss:Type="String">Relatório Oficial de Ofícios e Respostas TCU • Filtro: ${comAnoFilter === "TODOS" ? "Histórico Completo" : `Ano ${comAnoFilter}`} • Exportado em: ${new Date().toLocaleString('pt-BR')}</Data>
+ </Cell>
+ </Row>
+ <Row ss:Index="4" ss:Height="25" ss:StyleID="Header">
+ <Cell><Data ss:Type="String">Comunicação TCU</Data></Cell>
+ <Cell><Data ss:Type="String">Emitente TCU</Data></Cell>
+ <Cell><Data ss:Type="String">Destinatário MTE</Data></Cell>
+ <Cell><Data ss:Type="String">Contato MTE</Data></Cell>
+ <Cell><Data ss:Type="String">Processo TCU</Data></Cell>
+ <Cell><Data ss:Type="String">Unidade Executora</Data></Cell>
+ <Cell><Data ss:Type="String">Processo SEI</Data></Cell>
+ <Cell><Data ss:Type="String">Destinação</Data></Cell>
+ <Cell><Data ss:Type="String">Expedição</Data></Cell>
+ <Cell><Data ss:Type="String">Resposta</Data></Cell>
+ <Cell><Data ss:Type="String">Acompanhamento</Data></Cell>
+ </Row>`;
 
- let matchesStatus = true;
- if (tceFilterStatus !== "TODOS") {
- matchesStatus = rm.tce ? rm.tce.ESTADO_PROCESSO === tceFilterStatus : false;
+ finalFiltered.forEach(item => {
+ const carece = item.CARECE_RESPOSTA !== false;
+ const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
+ 
+ let stateText = "Não Precisa de Resposta";
+ let rowStyle = "NaoExigidoRow";
+
+ if (carece) {
+ stateText = hasResponse ? "Respondido" : "Aguardando Resposta";
+ rowStyle = hasResponse ? "SaneadoRow" : "PendenteRow";
  }
 
- let matchesVinculacao = true;
- if (tceFilterVinculacao === "LOCALIZADOS") {
- matchesVinculacao = !!rm.acordao;
- } else if (tceFilterVinculacao === "NAO_LOCALIZADOS") {
- matchesVinculacao = !rm.acordao;
- }
-
- return matchesYear && matchesSearch && matchesStatus && matchesVinculacao;
+ xml += `
+ <Row ss:Height="21">
+ <Cell><Data ss:Type="String">${escapeXML(item.COMUNICACAO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.UNIDADE_EMITENTE)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DESTINATARIO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.CONTATO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.PROCESSO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.UNIDADE_EXECUTORA || "-")}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.PROCESSO_SEI || "-")}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DESTINACAO || "-")}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DATA_EXPEDICAO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DATA_RESPOSTA || "-")}</Data></Cell>
+ <Cell ss:StyleID="${rowStyle}"><Data ss:Type="String">${stateText}</Data></Cell>
+ </Row>`;
  });
 
- // Pagination calculations
- const totalTcePages = Math.ceil(filteredTces.length / tceItemsPerPage);
- const paginatedTce = filteredTces.slice((tceCurrentPage - 1) * tceItemsPerPage, tceCurrentPage * tceItemsPerPage);
+ xml += `
+ </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Estatísticas Analíticas">
+ <Table ss:DefaultRowHeight="20">
+ <Column ss:Width="280" />
+ <Column ss:Width="95" />
+ <Column ss:Width="95" />
+ <Column ss:Width="95" />
+ <Column ss:Width="110" />
+ 
+ <Row ss:Height="28">
+ <Cell ss:MergeAcross="4" ss:StyleID="Title">
+ <Data ss:Type="String">IMPACTO DAS DEMANDAS POR DESTINATÁRIO (PARETO)</Data>
+ </Cell>
+ </Row>
+ <Row ss:Height="20">
+ <Cell ss:MergeAcross="4" ss:StyleID="SubTitle">
+ <Data ss:Type="String">Participação das Unidades do MTE sobre o total de comunicações expedidas (${totalComsCount} ofícios no contexto) • Filtro: ${comAnoFilter}</Data>
+ </Cell>
+ </Row>
+ <Row ss:Index="4" ss:Height="25" ss:StyleID="Header">
+ <Cell><Data ss:Type="String">Unidade Destinatária</Data></Cell>
+ <Cell><Data ss:Type="String">Ofícios Recebidos</Data></Cell>
+ <Cell><Data ss:Type="String">Total Respondidos</Data></Cell>
+ <Cell><Data ss:Type="String">Total Pendentes</Data></Cell>
+ <Cell><Data ss:Type="String">% de Participação</Data></Cell>
+ </Row>`;
 
- const totalMappingPages = Math.ceil(filteredMappings.length / tceItemsPerPage);
- const paginatedMappings = filteredMappings.slice((tceCurrentPage - 1) * tceItemsPerPage, tceCurrentPage * tceItemsPerPage);
+ destinatarioStats.forEach(stat => {
+ xml += `
+ <Row ss:Height="21">
+ <Cell><Data ss:Type="String">${escapeXML(stat.unidade)}</Data></Cell>
+ <Cell><Data ss:Type="Number">${stat.total}</Data></Cell>
+ <Cell><Data ss:Type="Number">${stat.responded}</Data></Cell>
+ <Cell><Data ss:Type="Number">${stat.pending}</Data></Cell>
+ <Cell ss:StyleID="PctCell"><Data ss:Type="Number">${(stat.percentage / 100).toFixed(4)}</Data></Cell>
+ </Row>`;
+ });
+
+ xml += `
+ </Table>
+ </Worksheet>
+</Workbook>`;
+
+ const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" });
+ const url = URL.createObjectURL(blob);
+ const link = document.createElement("a");
+ link.href = url;
+ link.download = `Relatorio_Comunicacoes_TCU_${comAnoFilter}_Formatado.xls`;
+ document.body.appendChild(link);
+ link.click();
+ document.body.removeChild(link);
+ URL.revokeObjectURL(url);
+ };
 
  return (
- <div className="space-y-6 animate-fade-in no-print">
-
- {/* TWO ELEGANT PRIMARY NAVIGATION SWITCHERS (Bento Card Style) */}
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- <button
+ <>
+ {/* Statistics bento grid */}
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+ <div 
  onClick={() => {
- setTceActiveSubTab("geral");
- setTceCurrentPage(1);
- setTceFilterVinculacao("TODOS");
- setShowTceImporter(false);
+ setComRespondidoFilter("TODOS");
+ setComSubTab("lista");
  }}
- className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${tceActiveSubTab === "geral"
- ? "bg-gradient-to-br from-[#003366] to-[#0b4d8c] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
- : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
+ className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-[#003366]/30 hover:bg-[#003366]/5 transition cursor-pointer"
+ >
+ <div className="space-y-1">
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Universo de Ofícios</span>
+ <h4 className="text-2xl font-black text-slate-900">{totalComsCount}</h4>
+ <p className="text-xs text-slate-500">Mapeados no ano ({comAnoFilter === "TODOS" ? "Histórico Total" : comAnoFilter})</p>
+ </div>
+ <div className="p-3 bg-blue-50 text-[#003366] rounded-xl animate-fade-in">
+ <MessageSquare className="w-6 h-6" />
+ </div>
+ </div>
+
+ <div 
+ onClick={() => {
+ setComRespondidoFilter("RESPONDIDO");
+ setComSubTab("lista");
+ }}
+ className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-emerald-300 hover:bg-emerald-50/30 transition cursor-pointer"
+ >
+ <div className="space-y-1">
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Respondidos</span>
+ <h4 className="text-2xl font-black text-emerald-700">{respondedCount}</h4>
+ <p className="text-xs text-emerald-600 font-semibold">Ofícios com resposta salvas</p>
+ </div>
+ <div className="p-3 bg bg-emerald-50 text-emerald-700 rounded-xl animate-fade-in">
+ <Check className="w-6 h-6" />
+ </div>
+ </div>
+
+ <div 
+ onClick={() => {
+ setComRespondidoFilter("PENDENTE");
+ setComSubTab("lista");
+ }}
+ className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-amber-300 hover:bg-amber-50/50 transition cursor-pointer group"
+ >
+ <div className="space-y-1">
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider group-hover:text-amber-700 transition">Resposta Pendente</span>
+ <h4 className="text-2xl font-black text-amber-600 inline-flex items-center gap-1.5">
+ {pendingCount}
+ {pendingCount > 0 && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse inline-block" />}
+ </h4>
+ <p className="text-xs text-slate-500 group-hover:text-amber-800 transition">Aguardando instrução da assessoria</p>
+ </div>
+ <div className="p-3 bg-amber-50 text-amber-600 rounded-xl animate-fade-in group-hover:bg-amber-100 transition">
+ <Clock className="w-6 h-6" />
+ </div>
+ </div>
+
+ <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+ <div className="space-y-1">
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Índice de Resposta</span>
+ <h4 className="text-2xl font-black text-slate-900">{responseRate}%</h4>
+ <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1 animate-fade-in">
+ <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${responseRate}%` }}></div>
+ </div>
+ </div>
+ <div className="p-3 bg-slate-50 text-slate-700 rounded-xl animate-fade-in">
+ <BarChart3 className="w-6 h-6" />
+ </div>
+ </div>
+ </div>
+
+ {/* Sub-emitters distribution badge rail */}
+ <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-wrap gap-2 items-center text-xs">
+ <span className="text-xs font-black text-[#003366] uppercase tracking-wider mr-1">Unidades Emitentes TCU:</span>
+ {Object.keys(emitentes).length === 0 ? (
+ <span className="text-slate-400 text-sm">Nenhuma unidade registrada neste período</span>
+ ) : (
+ Object.entries(emitentes).map(([unit, count]) => (
+ <span key={unit} className="bg-white border border-slate-200 px-2 py-0.5 rounded-md font-semibold text-slate-700 text-xs flex items-center gap-1">
+ <span>{unit}</span>
+ <span className="bg-[#003366] text-white px-1 rounded text-xs font-sans">{count}</span>
+ </span>
+ ))
+ )}
+ </div>
+
+ {/* Submodule View Selector: Tab Selection & Export */}
+ <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-200/60 pb-1.5 pt-1.5 no-print">
+ <div className="flex gap-1.5 bg-slate-100/60 p-0.5 rounded-xl border border-slate-200/50">
+ <button
+ onClick={() => setComSubTab("lista")}
+ className={`px-4 py-2 text-xs font-bold rounded-lg transition duration-200 inline-flex items-center gap-1.5 ${
+ comSubTab === "lista"
+ ? "bg-white text-[#003366] shadow-sm font-black"
+ : "text-slate-500 hover:text-slate-800"
  }`}
  >
- <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
- <div className="flex items-start gap-4">
- <div className={`p-3.5 rounded-2xl ${tceActiveSubTab === "geral" ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-700"}`}>
- <FileText className="w-6 h-6" />
- </div>
- <div className="space-y-1">
- <h3 className="font-semibold text-slate-700 group-hover:text-amber-500 text-base tracking-tight transition-colors duration-200" style={{ color: tceActiveSubTab === "geral" ? "white" : undefined }}>Instâncias de TCE (Geral)</h3>
- <p className={`text-xs ${tceActiveSubTab === "geral" ? "text-slate-100/90" : "text-slate-500"}`}>
- Visualização unificada de todas as {totalTceCount} instâncias gerais registradas no banco de dados.
- </p>
- </div>
- </div>
+ <Database className="w-3.5 h-3.5" />
+ Lote de Ofícios ({finalFiltered.length})
  </button>
-
  <button
- onClick={() => {
- setTceActiveSubTab("com-acordaos");
- setTceCurrentPage(1);
- setTceFilterVinculacao("TODOS");
- setShowTceImporter(false);
- }}
- className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${tceActiveSubTab === "com-acordaos"
- ? "bg-gradient-to-br from-[#1351b4] to-[#1a64df] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
- : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
+ onClick={() => setComSubTab("analytics")}
+ className={`px-4 py-2 text-xs font-bold rounded-lg transition duration-200 inline-flex items-center gap-1.5 ${
+ comSubTab === "analytics"
+ ? "bg-white text-[#003366] shadow-sm font-black"
+ : "text-slate-500 hover:text-slate-800"
  }`}
  >
- <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
- <div className="flex items-start gap-4">
- <div className={`p-3.5 rounded-2xl ${tceActiveSubTab === "com-acordaos" ? "bg-white/10 text-white" : "bg-emerald-50 text-emerald-700"}`}>
- <Merge className="w-6 h-6" />
- </div>
- <div className="space-y-1">
- <h3 className="font-semibold text-slate-700 group-hover:text-amber-500 text-base tracking-tight transition-colors duration-200" style={{ color: tceActiveSubTab === "com-acordaos" ? "white" : undefined }}>TCEs com Acórdãos TCU</h3>
- <p className={`text-xs ${tceActiveSubTab === "com-acordaos" ? "text-slate-100/90" : "text-slate-500"}`}>
- Visualização cruzada e mapeamento de {totalMappedCount} responsabilidades com acórdãos de condenação do TCU.
- </p>
- </div>
- </div>
+ <BarChart3 className="w-3.5 h-3.5" />
+ Estatísticas por Destinatário ({destinatarioStats.length})
  </button>
  </div>
 
- {/* Dynamic Year Tabs & KPIs Bento Grid (Standardized UX) */}
- <div className="flex border-b border-slate-150 no-print overflow-x-auto gap-1 pb-1 pt-2">
+ <div className="flex gap-2">
+ {syncLocalComMessage && (
+ <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+ {syncLocalComMessage}
+ </span>
+ )}
+ <div className="flex items-center gap-2">
  <button
- onClick={() => { setTceSelectedYear("TODOS"); setTceCurrentPage(1); }}
- className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${tceSelectedYear === "TODOS"
+ onClick={handleLocalSyncCom}
+ disabled={isSyncingLocalCom}
+ className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#003366] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
+ title="Sincronizar Arquivos Locais (data/comunicacoes)"
+ >
+ <RefreshCw className={`w-4 h-4 ${isSyncingLocalCom ? "animate-spin" : ""}`} />
+ {isSyncingLocalCom ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
+ </button>
+ {lastUpdateDate && (
+ <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
+ Atualizado em: {lastUpdateDate}
+ </span>
+ )}
+ </div>
+ <button
+ onClick={handleExportToExcel}
+ disabled={finalFiltered.length === 0}
+ className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer disabled:opacity-50"
+ title="Exportar dados e estatísticas para planilha Excel formatada com duas abas"
+ >
+ <Download size={16} /> Excel
+ </button>
+ </div>
+ </div>
+
+ {/* Sub Tab View 1: SCROLLABLE LIST OF OFICIOS */}
+ {comSubTab === "lista" && (
+ <div className="space-y-3 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs transition duration-200">
+ 
+ {/* Dynamic Year tabs */}
+ <div className="flex border-b border-slate-150 no-print overflow-x-auto gap-1 pb-1">
+ <button
+ onClick={() => { setComAnoFilter("TODOS"); }}
+ className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+ comAnoFilter === "TODOS"
  ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
  : "text-slate-400 hover:text-slate-700"
  }`}
  >
  Todos os Anos
  </button>
- {tceYears.map((yr) => (
+ {distinctYears.map((yr) => (
  <button
  key={yr}
- onClick={() => { setTceSelectedYear(yr.toString()); setTceCurrentPage(1); }}
- className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${tceSelectedYear === yr.toString()
+ onClick={() => { setComAnoFilter(yr.toString()); }}
+ className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+ comAnoFilter === yr.toString()
  ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
  : "text-slate-400 hover:text-slate-700"
  }`}
@@ -2084,786 +2333,247 @@ export default function TcuTCE({
  ))}
  </div>
 
- {/* Statistics bento grid */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">Universo de TCE</span>
- <h4 className="text-2xl font-black text-slate-900 truncate">{tcesForSelectedYear.length}</h4>
- <p className="text-xs text-slate-500 truncate">Instâncias no ano ({tceSelectedYear === "TODOS" ? "Histórico Total" : tceSelectedYear})</p>
- </div>
- <div className="p-3 bg-blue-50 text-[#003366] rounded-xl shrink-0 ml-2">
- <FileText className="w-6 h-6" />
- </div>
- </div>
-
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">Débito Atualizado</span>
- <h4 className="text-xl font-black text-slate-900 truncate" title={formattedSelectedYearDebito}>{formattedSelectedYearDebito}</h4>
- <p className="text-xs text-slate-500 truncate">Montante acumulado no ano</p>
- </div>
- <div className="p-3 bg-amber-50 text-amber-700 rounded-xl shrink-0 ml-2">
- <DollarSign className="w-6 h-6" />
- </div>
- </div>
-
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">TCEs COM ACÓRDÃOS VINCULADOS</span>
- <h4 className="text-2xl font-black text-emerald-700 truncate">{linkedCount}</h4>
- <p className="text-xs text-emerald-600 font-semibold truncate">Vinculo com Acórdãos bem sucedidos</p>
- </div>
- <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl shrink-0 ml-2">
- <Merge className="w-6 h-6" />
- </div>
- </div>
-
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">TCEs SEM ACÓRDAOS VINCULADOS</span>
- <h4 className="text-2xl font-black text-rose-700 inline-flex items-center gap-1.5 animate-pulse font-sans truncate w-full">
- {pendingTceCount}
- </h4>
- <p className="text-xs text-rose-600 font-semibold truncate">Aguardando vínculo</p>
- </div>
- <div className="p-3 bg-rose-50 text-rose-700 rounded-xl shrink-0 ml-2">
- <FileWarning className="w-6 h-6" />
- </div>
- </div>
- </div>
-
- {/* Contextual Importer Panel - Premium Bento Box Style */}
- {showTceImporter && (
- <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden no-print space-y-4">
- <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-10 -mt-10 pointer-events-none opacity-40"></div>
- <div className="relative z-10 flex justify-between items-start">
- <div className="space-y-1">
- <h3 className="text-sm font-black text-[#003366] uppercase tracking-wide">
- {tceActiveSubTab === "geral"
- ? "Sincronização de Instâncias e Carga de TCE Geral"
- : "Sincronização de Mapeamentos e Vínculos de Acórdãos"}
- </h3>
- <p className="text-xs text-slate-50 leading-relaxed max-w-4xl">
- {tceActiveSubTab === "geral"
- ? 'Arraste ou cole o conteúdo do arquivo CSV estruturado das TCEs gerais. O nome do arquivo físico deve iniciar com "tce" (ex: tces_geral.csv).'
- : 'Arraste ou cole o arquivo de mapeamento de vínculos. Certifique-se de que o nome inclua as palavras "acordao" ou "mapping" (ex: tce_acordao_link.csv).'}
- </p>
- </div>
- <button
- onClick={() => {
- setShowTceImporter(false);
- setTceImportMessage(null);
- setParsedTceItems(null);
- setParsedTceMappingItems(null);
- }}
- className="text-slate-400 hover:text-slate-600 transition"
- >
- <X className="w-5 h-5" />
- </button>
- </div>
-
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- {/* Drag & Drop File Zone */}
- <div
- onDragOver={(e) => { e.preventDefault(); setIsDragOverTce(true); }}
- onDragLeave={(e) => { e.preventDefault(); setIsDragOverTce(false); }}
- onDrop={(e) => {
- e.preventDefault();
- setIsDragOverTce(false);
- const file = e.dataTransfer.files?.[0];
- if (file) readTceFileContent(file);
- }}
- onClick={() => document.getElementById("tce-file-import-input")?.click()}
- className={`border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center transition text-center cursor-pointer ${isDragOverTce
- ? "border-[#003366] bg-blue-50/50"
- : "border-slate-200 hover:border-slate-300 bg-slate-50/55"
- }`}
- >
- <input
- type="file"
- id="tce-file-import-input"
- accept=".csv,.txt"
- className="hidden"
- onChange={handleTceFileChange}
- />
-
- <div className="p-3 bg-white rounded-full shadow-2xs mb-2 text-slate-500">
- <FileUp className="w-6 h-6 text-[#003366]" />
- </div>
-
- <h4 className="text-xs font-bold text-slate-800">
- {isDragOverTce ? "Pode soltar o arquivo!" : "Arraste um arquivo (.csv, .txt) ou clique aqui"}
- </h4>
- <p className="text-xs text-slate-400 mt-1 max-w-[200px]">
- Os dados da planilha serão processados localmente
- </p>
- <span className="mt-2 text-xs bg-[#003366] hover:bg-slate-900 text-white font-bold px-3 py-1 rounded-lg shadow-2xs">
- {tceActiveSubTab === "geral" ? "Selecionar Planilha Geral" : "Selecionar Planilha Mapeamentos"}
- </span>
- </div>
-
- {/* Textarea Area */}
- <div className="flex flex-col">
- <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1 block">
- Área de Texto para Colagem de Planilha
- </label>
- <textarea
- placeholder={tceActiveSubTab === "geral"
- ? "Cole os dados copiados do Excel das TCEs gerais..."
- : "Cole os dados copiados do Excel do mapeamento TCE <=> Acórdão..."}
- className="w-full flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition"
- value={tcePasteContent}
- onChange={(e) => {
- const val = e.target.value;
- setTcePasteContent(val);
- if (val.trim()) {
- if (val.toLowerCase().includes("acordao") || val.toLowerCase().includes("acórdão") || val.toLowerCase().includes("mapping")) {
- const parsed = parseTceAcordaoMappingsCSV(val);
- setParsedTceMappingItems(parsed);
- setParsedTceItems(null);
- setTceImportMessage(`Colagem identificada como planilha de mapeamento de acórdãos: ${parsed.length} itens parciais.`);
- } else {
- const parsed = parseTcesCSV(val);
- setParsedTceItems(parsed);
- setParsedTceMappingItems(null);
- setTceImportMessage(`Colagem de instâncias gerais de TCE: ${parsed.length} itens parciais detectados.`);
- }
- }
- }}
- style={{ minHeight: "140px" }}
- />
- </div>
- </div>
-
- {tceImportMessage && (
- <div className="p-3.5 bg-blue-50 border border-blue-100 text-[#003366] rounded-xl text-xs font-semibold flex items-center gap-2 animate-fade-in">
- <AlertCircle className="w-4 h-4 shrink-0 text-[#003366]" />
- <span>{tceImportMessage}</span>
- </div>
- )}
-
- <div className="flex justify-end gap-2 text-xs pt-1">
- <button
- onClick={() => {
- setShowTceImporter(false);
- setTceImportMessage(null);
- setParsedTceItems(null);
- setParsedTceMappingItems(null);
- }}
- className="px-4 py-2 font-bold text-slate-600 hover:text-slate-800 transition"
- >
- Mudar de Ideia
- </button>
- <button
- onClick={handleExecuteTceImport}
- disabled={isSavingTce || (!parsedTceItems && !parsedTceMappingItems)}
- className="px-4 py-2 bg-[#003366] hover:bg-slate-900 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-xs inline-flex items-center gap-1.5 transition duration-200"
- >
- {isSavingTce ? "Validando e Salvando..." : "Confirmar Sincronização no Banco"}
- </button>
- </div>
- </div>
- )}
-
- {/* Edit TCE Modal Overlay */}
- {editingTceItem && (
- <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
- <div className="bg-white rounded-3xl shadow-xl border border-slate-200 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
- <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
- <div>
- <h3 className="text-base font-black text-[#003366] flex items-center gap-2">
- <Edit className="w-5 h-5" />
- Editar TCE: {editingTceItem.NUMERO_ANO_TCE}
- </h3>
- <p className="text-xs text-slate-500 mt-0.5">Gerencie os detalhes e posicionamentos dessa Tomada de Contas Especial.</p>
- </div>
- <button
- onClick={() => setEditingTceItem(null)}
- className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 rounded-xl transition"
- >
- <X className="w-5 h-5" />
- </button>
- </div>
-
- <div className="p-6 overflow-y-auto custom-com-scroll-container space-y-6">
- <div className="space-y-4">
- <h4 className="text-sm font-black uppercase text-slate-400 tracking-wider">Metadados Principais</h4>
-
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-slate-700 block">SIAFI / Ressarcimento</label>
- <label className="flex items-center gap-2 p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition">
- <input
- type="checkbox"
- checked={editTceSiafi}
- onChange={(e) => setEditTceSiafi(e.target.checked)}
- className="w-4 h-4 rounded text-[#003366] focus:ring-[#003366]"
- />
- <span className="text-xs font-semibold text-slate-700">Ressarcido no SIAFI</span>
- </label>
- </div>
- </div>
-
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-slate-700 block">Último Posicionamento Técnico AECI</label>
- <textarea
- rows={4}
- className="w-full p-3 text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#003366] focus:ring-1 focus:ring-[#003366] transition"
- value={editTcePosicionamento}
- onChange={(e) => setEditTcePosicionamento(e.target.value)}
- placeholder="Adicione as últimas informações, andamento do processo ou parecer técnico..."
- />
- <p className="text-xs text-slate-500">Este texto será exibido como a última manifestação técnica nos cards de detalhes.</p>
- </div>
- </div>
-
- <div className="h-px w-full bg-slate-100"></div>
-
- <div className="space-y-4">
- <h4 className="text-sm font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
- <Merge className="w-3.5 h-3.5" />
- Mapeamento Manual de Acórdão
- </h4>
- <p className="text-xs text-slate-600">Para vincular manualmente um Acórdão a esta TCE, digite a Chave do Acórdão (Ex: 1234/2023-Plenário).</p>
-
- <div className="flex gap-2">
+ {/* Filter Rail */}
+ <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-1 no-print">
+ <div className="relative">
+ <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
  <input
  type="text"
- placeholder="Chave do Acórdão (Ex: 1234/2023-Plenário)"
- className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 focus:outline-none focus:border-[#1351b4]"
- value={editTceAcordaoKey}
- onChange={(e) => setEditTceAcordaoKey(e.target.value)}
+ placeholder="Buscar comunicação, processo, contato..."
+ value={comSearchTerm}
+ onChange={(e) => { setComSearchTerm(e.target.value); }}
+ className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white bg-slate-50/55 transition text-xs"
  />
- <button
- disabled={!editTceAcordaoKey.trim()}
- onClick={async () => {
- if (onAddTceMapping && editTceAcordaoKey.trim()) {
- const ok = await onAddTceMapping(editingTceItem.NUMERO_ANO_TCE, editTceAcordaoKey.trim());
- if (ok) {
- alert("Mapeamento adicionado com sucesso!");
- setEditTceAcordaoKey("");
- if (onRefreshData) onRefreshData();
- } else {
- alert("Erro ao adicionar mapeamento. Verifique se o Acórdão existe.");
- }
- }
- }}
- className="px-4 py-2 bg-[#1351b4] hover:bg-blue-800 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5"
- >
- <Plus className="w-4 h-4" />
- Vincular
- </button>
  </div>
 
- {tceMappings.filter(m => m.NUMERO_ANO_TCE === editingTceItem.NUMERO_ANO_TCE).length > 0 && (
- <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden">
- <div className="bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
- Vínculos Atuais
- </div>
- <ul className="divide-y divide-slate-100">
- {tceMappings.filter(m => m.NUMERO_ANO_TCE === editingTceItem.NUMERO_ANO_TCE).map(m => (
- <li key={m.ACORDAO_KEY} className="p-3 flex items-center justify-between text-xs hover:bg-slate-50">
- <span className=" text-[#003366] font-semibold">{m.ACORDAO_KEY}</span>
- <button
- onClick={async () => {
- if (onDeleteTceMapping && confirm(`Remover o vínculo com o acórdão ${m.ACORDAO_KEY}?`)) {
- const ok = await onDeleteTceMapping(m.NUMERO_ANO_TCE, m.ACORDAO_KEY);
- if (ok && onRefreshData) {
- onRefreshData();
- }
- }
- }}
- className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition"
- title="Remover Vínculo"
+ <div>
+ <select
+ value={comUnidadeFilter}
+ onChange={(e) => { setComUnidadeFilter(e.target.value); }}
+ className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white bg-slate-50/55 transition text-xs"
  >
- <Trash2 className="w-3.5 h-3.5" />
- </button>
- </li>
+ <option value="TODOS">Todas as Unidades Emitentes</option>
+ {uniqueUnidades.map(un => (
+ <option key={un} value={un}>{un}</option>
  ))}
- </ul>
+ </select>
  </div>
- )}
+ <div>
+ <select
+ value={comRespondidoFilter}
+ onChange={(e) => { setComRespondidoFilter(e.target.value); }}
+ className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white bg-slate-50/55 transition text-xs"
+ >
+ <option value="TODOS">Todos os Status de Resposta</option>
+ <option value="RESPONDIDO">Respondidos (Concluídos)</option>
+ <option value="PENDENTE">Pendentes (Não Respondidos)</option>
+ <option value="NAO_EXIGIDO">Não Precisa de Resposta</option>
+ </select>
+ </div>
+
+ <div className="flex items-center justify-end text-slate-400 text-xs pr-2">
+ Retornou {finalFiltered.length} registros • Rolagem vertical ativa
  </div>
  </div>
 
- <div className="p-5 border-t border-slate-100 bg-slate-50 flex justify-end gap-3 rounded-b-3xl">
- <button
- onClick={() => setEditingTceItem(null)}
- className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 transition"
- >
- Cancelar
- </button>
- <button
- onClick={async () => {
- if (onUpdateTce) {
- const updated = {
- ...editingTceItem,
- ULTIMO_POSICIONAMENTO: editTcePosicionamento,
- SIAFI_RESSARCIDO: editTceSiafi
- };
- const ok = await onUpdateTce(updated);
- if (ok) {
- setEditingTceItem(null);
+ {/* Highly Formatted Scrollable list table - SCROLLABLE WITHOUT PAGES */}
+ <div className="overflow-y-auto max-h-[500px] rounded-xl border border-slate-200 mt-4 bg-slate-50/20">
+ <table className="w-full text-left border-collapse text-sm text-slate-800">
+ <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors no-print cursor-pointer hover: transition-colors w-10"></th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Ofício / Comunicação</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Destinatário MTE</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Expedição</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Situação</th>
+ </tr>
+ </thead>
+ <tbody className="divide-y divide-slate-100 text-xs">
+ {finalFiltered.length === 0 ? (
+ <tr>
+ <td colSpan={6} className="p-16 text-center text-slate-400 space-y-2">
+ <MessageSquare className="w-10 h-10 text-slate-300 mx-auto animate-bounce" />
+ <p className="font-bold text-slate-700">Nenhuma comunicação localizada</p>
+ <p className="text-sm text-slate-400 max-w-md mx-auto">
+ Altere os termos de pesquisa ou use a barra de sincronização acima para importar dados deste ou de outros anos.
+ </p>
+ </td>
+ </tr>
+ ) : (
+ finalFiltered.map((item) => {
+ const isExpanded = comExpandedRow === item.KEY;
+ const carece = item.CARECE_RESPOSTA !== false;
+ const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
+ 
+ let situacaoText = "NÃO PRECISA DE RESPOSTA";
+ let situacaoStyle = "bg-slate-50 text-slate-600 border-slate-200";
+ let dotStyle = "bg-slate-450";
+ 
+ if (carece) {
+ if (hasResponse) {
+ situacaoText = "RESPONDIDA";
+ situacaoStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+ dotStyle = "bg-emerald-500";
  } else {
- alert("Erro ao salvar informações da TCE.");
+ situacaoText = "PENDENTE";
+ situacaoStyle = "bg-amber-50 text-amber-800 border-amber-200 animate-pulse";
+ dotStyle = "bg-amber-500";
  }
  }
- }}
- className="px-5 py-2 bg-[#003366] hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1.5"
+
+ return (
+ <React.Fragment key={item.KEY || `${item.COMUNICACAO}-${item.ANO}`}>
+ {/* Row Item */}
+ <tr className={`hover:bg-[#1351b4]/5 transition-colors group border-b border-slate-100 ${isExpanded ? "bg-blue-50/50" : ""}`}>
+ 
+ {/* Expand toggle icon */}
+ <td className="p-4 align-middle text-center no-print">
+ <button 
+ onClick={() => setComExpandedRow(isExpanded ? null : item.KEY)}
+ className="text-slate-400 hover:text-[#003366] hover:bg-slate-100 p-1.5 rounded-lg transition"
  >
+ {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-[#003366] stroke-[2.5]" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400" />}
+ </button>
+ </td>
+
+ {/* Ofício/Comunicação */}
+ <td className="p-4 align-middle font-bold">
+ <span 
+ className="cursor-pointer hover:underline text-xs"
+ onClick={() => setComExpandedRow(isExpanded ? null : item.KEY)}
+ >
+ {item.COMUNICACAO}
+ </span>
+ </td>
+
+ {/* Destinatário */}
+ <td className="p-4 align-middle font-semibold text-slate-800 truncate max-w-[280px]" title={item.DESTINATARIO}>
+ {item.DESTINATARIO}
+ </td>
+
+ {/* Processo */}
+ <td className="p-4 align-middle text-xs text-slate-600 text-center whitespace-nowrap">
+ {item.PROCESSO || <span className="text-slate-350 italic">Não associado</span>}
+ </td>
+
+ {/* Expedição */}
+ <td className="p-4 align-middle text-slate-500 text-center whitespace-nowrap font-medium">
+ {item.DATA_EXPEDICAO}
+ </td>
+
+ {/* Situação */}
+ <td className="p-4 align-middle text-center whitespace-nowrap">
+ <span className={`text-[8.5px] font-black px-2 py-0.5 rounded-full inline-flex items-center gap-1 border ${situacaoStyle}`}>
+ <span className={`w-1 h-1 rounded-full ${dotStyle}`} />
+ {situacaoText}
+ </span>
+ </td>
+
+ </tr>
+
+ {/* Detail panel expansion */}
+ {isExpanded && (
+ <tr>
+ <td colSpan={6} className="bg-slate-50/30 px-6 py-4.5 border-b border-slate-200 no-print">
+ <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+ 
+ {/* Emitente block */}
+ <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+ <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+ <Database className="w-4 h-4" />
+ </div>
+ <div>
+ <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider leading-none mb-1">Emitente TCU</span>
+ <span className="text-xs text-[#003366] font-bold block">{item.UNIDADE_EMITENTE}</span>
+ </div>
+ </div>
+
+ {/* Contato block */}
+ <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+ <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+ <Users className="w-4 h-4" />
+ </div>
+ <div>
+ <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider leading-none mb-1">Contato Vinculado</span>
+ <span className="text-xs text-slate-700 font-bold block truncate max-w-[200px]" title={item.CONTATO || "Alessandro Barbosa"}>
+ {item.CONTATO || "Alessandro Barbosa"}
+ </span>
+ </div>
+ </div>
+
+ {/* Data da Resposta / Ação Responder block */}
+ <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center justify-between gap-3">
+ <div className="flex items-center gap-3">
+ <div className={`p-2 rounded-lg ${hasResponse ? "bg-emerald-50 text-emerald-700" : "bg-slate-50 text-slate-400"}`}>
  <Check className="w-4 h-4" />
- Salvar Alterações
- </button>
- </div>
- </div>
- </div>
- )}
-
- {/* Filter Row and Sync/Export Buttons */}
- <div className="bg-slate-100 p-2.5 rounded-2xl flex flex-col items-stretch md:flex-row md:items-center justify-between gap-3 shadow-3xs">
- <div className="flex gap-1.5 shrink-0">
- {syncLocalTceMessage && (
- <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 self-center">
- {syncLocalTceMessage}
- </span>
- )}
-
- <div className="flex items-center gap-2">
- <button
- onClick={handleLocalSyncTce}
- disabled={isSyncingLocalTce}
- className={`px-3.5 py-1.5 ${isSyncingLocalTce ? "bg-slate-800 text-white opacity-50" : "bg-[#003366] text-white hover:bg-[#002244]"} rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs`}
- title="Sincronizar Arquivos Locais (data/tces)"
- >
- <RefreshCw className={`w-4 h-4 ${isSyncingLocalTce ? "animate-spin" : ""}`} />
- {isSyncingLocalTce ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
- </button>
- {lastUpdateDate && (
- <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
- Atualizado em: {lastUpdateDate}
- </span>
- )}
- </div>
- </div>
- {/* Real-time search and filter tools */}
- <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 grow max-w-xl self-end">
- <div className="relative grow">
- <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
- <input
- type="text"
- placeholder="Filtrar por nº, processo, culpado..."
- className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800"
- value={tceSearchTerm}
- onChange={(e) => {
- setTceSearchTerm(e.target.value);
- setTceCurrentPage(1);
- }}
- />
- </div>
-
- <select
- className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 focus:outline-none focus:border-[#003366] max-w-[150px]"
- value={tceFilterStatus}
- onChange={(e) => {
- setTceFilterStatus(e.target.value);
- setTceCurrentPage(1);
- }}
- >
- <option value="TODOS">Todas Situações</option>
- {availableTceStatus.map(s => (
- <option key={s} value={s}>{s}</option>
- ))}
- </select>
-
- <select
- className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 focus:outline-none focus:border-[#003366] max-w-[150px]"
- value={tceFilterVinculacao}
- onChange={(e) => {
- setTceFilterVinculacao(e.target.value);
- setTceCurrentPage(1);
- }}
- >
- {tceActiveSubTab === "geral" ? (
- <>
- <option value="TODOS">Todas Vinculações</option>
- <option value="VINCULADOS">Apenas Vinculados</option>
- <option value="NAO_VINCULADOS">Apenas Não Vinculados</option>
- </>
- ) : (
- <>
- <option value="TODOS">Todos Acórdãos Mapeados</option>
- <option value="LOCALIZADOS">Acórdãos Localizados na Base</option>
- <option value="NAO_LOCALIZADOS">Acórdãos Não Localizados</option>
- </>
- )}
- </select>
-
- <button
- onClick={() => {
- if (tceActiveSubTab === "geral") {
- handleExportTcesExcel(filteredTces);
- } else {
- handleExportTcesAcordaosExcel(filteredMappings);
- }
- }}
- className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
- >
- <Download size={16} /> Excel
- </button>
- </div>
- </div>
-
- {/* ACTIVE TAB CONDITIONAL CONTENT */}
- {tceActiveSubTab === "geral" ? (
- <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
- {/* Status indicator rail */}
- <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 no-print">
- <div className="flex items-center gap-1.5">
- <span className="w-2.5 h-2.5 rounded-full bg-[#003366] animate-pulse"></span>
- <span className="font-semibold text-slate-700 uppercase tracking-wide">Instâncias de TCE (Geral): {filteredTces.length} registros</span>
- </div>
- <span className="text-slate-400 text-xs uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
- </div>
-
- {/* TCE GENERAL LISTING TABLE */}
- <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
- <table className="w-full text-left border-collapse text-sm text-slate-800">
- <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
-            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-8 no-print cursor-pointer hover: transition-colors"></th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Nº / Ano (TCE)</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo TCU</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Assunto / Motivo da Instauração</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Débito Atualizado</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-slate-100 text-xs">
- {filteredTces.length === 0 ? (
- <tr>
- <td colSpan={5} className="text-center py-12 text-slate-400 font-sans">
- Nenhuma tomada de conta especial corresponde aos filtros aplicados. Carregue novos dados via Planilha MTE.
- </td>
- </tr>
- ) : (
- filteredTces.map((tce, idx) => {
- const tceId = tce.id || tce.NUMERO_ANO_TCE || `tce-${idx}`;
- const isExpanded = tceExpandedId === tceId;
- const hasMapping = tceMappings.some(m => m.NUMERO_ANO_TCE?.toLowerCase() === tce.NUMERO_ANO_TCE?.toLowerCase());
-
- return (
- <React.Fragment key={tceId}>
- <tr className={`hover:bg-[#1351b4]/5 transition-colors group ${isExpanded ? "bg-blue-50/50" : ""}`}>
- <td className="p-4 align-middle w-8 no-print text-slate-500">
- <button
- onClick={() => setTceExpandedId(isExpanded ? null : tceId)}
- className="text-slate-400 hover:text-blue-600 hover:bg-blue-100 p-1 rounded-lg transition"
- >
- {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
- </button>
- </td>
- <td className="p-4 align-middle px-5 py-3.5 font-bold text-slate-900 group-hover:text-blue-900 transition-colors">{tce.NUMERO_ANO_TCE}</td>
- <td className="p-4 align-middle px-4 py-3.5 text-sm">{tce.TC || "-"}</td>
- <td className="p-4 align-middle px-4 py-3.5 max-w-xs truncate" title={tce.MOTIVO_INSTAURACAO}>
- <span className="font-semibold text-slate-900 block truncate">{tce.MOTIVO_INSTAURACAO}</span>
- <span className="text-xs text-slate-400 block truncate">{tce.SUBMOTIVO_INSTAURACAO}</span>
- </td>
- <td className="p-4 align-middle px-4 py-3.5 text-right font-bold text-slate-900">{tce.DEBITO_ATUALIZADO || "-"}</td>
- </tr>
-
- {/* Nested detail layout */}
- {isExpanded && (
- <tr className=" border-b border-[#002244]">
- <td colSpan={5} className="p-6 bg-slate-50 border-y border-slate-100 animate-fade-in text-xs">
- <div className="max-h-[500px] overflow-y-auto pr-2 scrollbar-thin space-y-5">
-
- {/* Top 4-column Meta Indicator Cards */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
- <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1 relative group/card">
- <button
- onClick={() => {
- setEditingTceItem(tce);
- setEditTcePosicionamento(tce.ULTIMO_POSICIONAMENTO || "");
- setEditTceSiafi(tce.SIAFI_RESSARCIDO || false);
- setEditTceAcordaoKey("");
- window.scrollTo({ top: 0, behavior: 'smooth' });
- }}
- className="absolute top-2 right-2 text-slate-400 hover:text-[#003366] hover:bg-blue-50 p-1.5 rounded-lg transition opacity-0 group-hover/card:opacity-100"
- title="Editar TCE"
- >
- <Edit size={14} />
- </button>
- <span className="text-xs text-[#003366] font-black uppercase tracking-wider block pr-6">ID Registro / Chave</span>
- <span className="text-sm font-bold text-slate-800">{tce.NUMERO_ANO_TCE}</span>
- </div>
- <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1">
- <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Fase Processual</span>
- <span className="text-xs font-bold text-slate-700">{tce.ESTADO_PROCESSO || "Não Declarado"}</span>
- </div>
- <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1">
- <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">Situação Atual</span>
- <span className="text-xs font-bold text-slate-700">{tce.SITUACAO_PROCESSO || "Não Declarada"}</span>
- </div>
- <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-3xs space-y-1">
- <span className="text-xs text-[#1351b4] font-black uppercase tracking-wider block">Processo TCU</span>
- <span className="text-xs font-bold text-blue-900">{tce.TC || "Não Localizado"}</span>
- </div>
- </div>
-
- {/* Content Breakdown Layout */}
- <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
- {/* Process Identifiers */}
- <div className="bg-white p-4.5 rounded-2xl border border-slate-200/60 shadow-3xs space-y-3">
- <h5 className="text-xs font-black uppercase text-[#003366] border-b border-slate-100 pb-1.5">Identificadores e Prazos</h5>
- <div className="space-y-1.5 text-sm text-slate-600">
- <p><span className="font-bold text-slate-400">Processo MTE (PA):</span> <span className=" text-slate-800">{tce.PROCESSO_ADMINISTRATIVO || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Fato Gerador:</span> <span className="text-slate-800 font-medium">{tce.MOTIVO_INSTAURACAO || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Enquadramento:</span> <span className="text-slate-600 block pl-2 border-l border-slate-100 mt-0.5">{tce.SUBMOTIVO_INSTAURACAO || "-"}</span></p>
- </div>
- </div>
-
- {/* Financial details */}
- <div className="bg-white p-4.5 rounded-2xl border border-slate-200/60 shadow-3xs space-y-3">
- <h5 className="text-xs font-black uppercase text-[#003366] border-b border-slate-100 pb-1.5">Mapeamento de Valores</h5>
- <div className="space-y-1.5 text-sm text-slate-600 ">
- <p><span className="font-bold font-sans text-slate-400">Débito Original:</span> <span className="text-slate-800 font-semibold">{tce.DEBITO_ORIGINAL || "R$ 0,00"}</span></p>
- <p><span className="font-bold font-sans text-slate-400">Débito Atualizado:</span> <span className="text-emerald-700 font-bold">{tce.DEBITO_ATUALIZADO || "-"}</span></p>
- <p><span className="font-bold font-sans text-slate-400">Data Atualização:</span> <span className="text-slate-600">{tce.DATA_ATUALIZACAO_DEBITO || "-"}</span></p>
- <p><span className="font-bold font-sans text-slate-400">Primeiro Julgamento:</span> <span className="text-slate-600 font-sans">{tce.PRIMEIRO_JULGAMENTO || "-"}</span></p>
- <p><span className="font-bold font-sans text-slate-400">Data Encerramento:</span> <span className="text-slate-600 font-sans">{tce.ENCERRAMENTO || "-"}</span></p>
- </div>
- </div>
-
- {/* Supervisor Technical Manifestation block */}
- <div className="bg-amber-50/15 p-4.5 rounded-2xl border border-amber-200/40 shadow-3xs space-y-2 col-span-1 md:col-span-1 flex flex-col justify-between">
- <div className="space-y-1.5">
- <h5 className="text-xs font-black uppercase text-amber-800">Último Posicionamento Técnico AECI</h5>
- <p className="text-sm text-slate-700 italic leading-relaxed bg-white p-3 rounded-xl border border-slate-200/60 min-h-[70px]">
- “{tce.ULTIMO_POSICIONAMENTO || "Nenhum parecer técnico ou manifestação cadastrada de forma recente."}”
- </p>
- </div>
- <div className="text-xs text-slate-400 mt-2 flex items-center justify-between border-t border-amber-100/40 pt-2">
- <span>Estado TCU: <strong className="font-sans text-slate-600">{tce.ESTADO_PROCESSO || "Indefinido"}</strong></span>
- <span>Estado Mapeamento: <strong className="font-sans text-emerald-700">{hasMapping ? "Sincronizado" : "Pendente"}</strong></span>
- </div>
- </div>
-
- </div>
- </div>
- </td>
- </tr>
- )}
- </React.Fragment>
- );
- })
- )}
- </tbody>
- </table>
- </div>
- </div>
- ) : (
- <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
- {/* Status indicator rail */}
- <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 no-print">
- <div className="flex items-center gap-1.5">
- <span className="w-2.5 h-2.5 rounded-full bg-[#1351b4] animate-pulse"></span>
- <span className="font-bold text-[#1351b4] uppercase tracking-wide">Mapeamentos TCE {"<=>"} Acórdão: {filteredMappings.length} registros</span>
- </div>
- <span className="text-slate-400 text-xs uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
- </div>
-
- {/* MAPPED WITH ACORDAOS VIEW */}
- <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
- <table className="w-full text-left border-collapse text-sm text-slate-800">
- <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
-            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-8 no-print cursor-pointer hover: transition-colors"></th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Nº TCE</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo TCU / Motivo</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Acórdão Mapeado (Referência)</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Chave Base Recente</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status Cruzamento</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors pr-6 cursor-pointer hover: transition-colors">Colegiado / Data Sessão</th>
- </tr>
- </thead>
- <tbody className="divide-y divide-slate-100 text-xs">
- {filteredMappings.length === 0 ? (
- <tr>
- <td colSpan={7} className="text-center py-12 text-slate-400 font-sans">
- Nenhum mapeamento TCE {"<=>"} Acórdão corresponde aos termos digitados. Faça o upload do arquivo de sincronização de acórdãos TCU.
- </td>
- </tr>
- ) : (
- filteredMappings.map((item, idx) => {
- const mappingId = `map-${item.mapping.NUMERO_ANO_TCE || idx}`;
- const isExpanded = tceExpandedId === mappingId;
- const isMatched = !!item.acordao;
-
- return (
- <React.Fragment key={idx}>
- <tr className={`hover:bg-[#1351b4]/5 transition-colors group ${isExpanded ? "bg-blue-50/50" : ""}`}>
- <td className="p-4 align-middle w-8 no-print text-slate-500">
- <button
- onClick={() => setTceExpandedId(isExpanded ? null : mappingId)}
- className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
- >
- {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
- </button>
- </td>
- <td className="p-4 align-middle px-5 py-3.5 font-bold text-slate-900">{item.mapping.NUMERO_ANO_TCE}</td>
- <td className="p-4 align-middle px-4 py-3.5 max-w-xs truncate">
- <span className="font-semibold text-slate-800 block truncate" title={item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}>{item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}</span>
- <span className="text-xs text-[#003366] block">{item.tce?.TC || "-"}</span>
- </td>
- <td className="p-4 align-middle px-4 py-3.5 font-semibold text-slate-900 italic">{item.mapping.ACORDAO_KEY}</td>
- <td className="p-4 align-middle px-4 py-3.5 text-sm text-slate-500">{item.acordao?.KEY || "Indefinida / Não Ingerido"}</td>
- <td className="p-4 align-middle px-4 py-3.5 text-center">
- {isMatched ? (
- <span className="bg-emerald-50 text-emerald-800 text-xs font-black uppercase tracking-wider px-2.2 py-0.5 rounded-full border border-emerald-200 inline-block text-center shadow-3xs">
- LOCALIZADO
- </span>
- ) : (
- <span className="bg-rose-50 text-rose-800 text-xs font-black uppercase tracking-wider px-2.2 py-0.5 rounded-full border border-rose-200 inline-block text-center" title="Importe este acórdão TCU no Monitoramento para completar os metadados do cruzamento">
- NÃO IMPORTADO
- </span>
- )}
- </td>
- <td className="p-4 align-middle px-4 py-3.5 text-sm pr-6">
- {item.acordao ? `${item.acordao.COLEGIADO} • ${item.acordao.DATASESSAO}` : "-"}
- </td>
- </tr>
-
- {/* Mapping Expanded Details */}
- {isExpanded && (
- <tr className=" border-b border-[#002244]">
- <td colSpan={7} className="p-6 bg-slate-50 border-y border-slate-100 animate-fade-in text-xs">
- <div className="max-h-[550px] overflow-y-auto pr-2 scrollbar-thin">
- <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
- {/* Left Panel: Complete TCE Data */}
- <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-3xs space-y-4">
- <div className="flex items-center justify-between border-b border-slate-100 pb-2">
- <span className="bg-[#003366]/10 text-[#003366] text-xs font-black uppercase px-2.5 py-1 rounded-md">
- METADADOS COMPLETOS DA TCE
- </span>
- <span className="text-xs text-slate-400 hover:text-slate-600 ">
- {item.tce?.TC || "-"}
- </span>
- </div>
-
- {item.tce ? (
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-700">
- <div className="space-y-2">
- <p><span className="font-bold text-slate-400">Instância:</span> <span className="font-semibold text-slate-800">{item.tce.NUMERO_ANO_TCE}</span></p>
- <p><span className="font-bold text-slate-400">Processo MTE/PA:</span> <span className=" text-slate-800">{item.tce.PROCESSO_ADMINISTRATIVO || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Processo TCU:</span> <span className=" text-slate-800">{item.tce.TC || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Fato Gerador:</span> <span className="font-semibold text-slate-800">{item.tce.MOTIVO_INSTAURACAO || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Submotivo:</span> <span className="text-slate-600 block pl-2 border-l border-slate-100 mt-0.5">{item.tce.SUBMOTIVO_INSTAURACAO || "-"}</span></p>
- </div>
-
- <div className="space-y-2">
- <p><span className="font-bold text-slate-400">Débito Original:</span> <span className=" text-slate-800 font-semibold">{item.tce.DEBITO_ORIGINAL || "R$ 0,00"}</span></p>
- <p><span className="font-bold text-slate-400">Débito Atualizado:</span> <span className=" text-slate-850 font-bold text-emerald-700">{item.tce.DEBITO_ATUALIZADO || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Data Atualização:</span> <span className="text-slate-700 ">{item.tce.DATA_ATUALIZACAO_DEBITO || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Estado Processual:</span> <span className="font-semibold text-slate-800">{item.tce.ESTADO_PROCESSO || "-"}</span></p>
- <p><span className="font-bold text-slate-400">Situação Atual:</span> <span className="text-slate-600">{item.tce.SITUACAO_PROCESSO || "-"}</span></p>
- </div>
-
- <div className="col-span-1 md:col-span-2 space-y-1 bg-amber-50/20 p-3.5 rounded-xl border border-amber-200/40">
- <span className="text-xs font-bold text-amber-800 block uppercase">Último Posicionamento Técnico</span>
- <p className="italic text-slate-750 bg-white p-2.5 rounded-lg border border-slate-200/60 leading-relaxed text-sm min-h-[50px]">
- {item.tce.ULTIMO_POSICIONAMENTO || "Nenhum parecer técnico recente cadastrado pelo supervisor."}
- </p>
- </div>
- </div>
- ) : (
- <div className="p-5 bg-slate-100/65 rounded-xl text-center text-slate-500 text-sm border border-dashed border-slate-200">
- Metadados gerais da TCE ausentes. Sincronize o arquivo de instâncias gerais de TCE para cruzar as informações completas.
- </div>
- )}
- </div>
-
- {/* Right Panel: Complete Acórdão Data */}
- <div className="bg-white p-5 rounded-3xl border border-slate-200/60 shadow-3xs space-y-4">
- <div className="flex items-center justify-between border-b border-slate-100 pb-2">
- <span className="bg-[#1351b4]/10 text-[#1351b4] text-xs font-black uppercase px-2.5 py-1 rounded-md">
- DETALHES DO ACÓRDÃO TCU ASSOCIADO
- </span>
- <span className="text-xs font-bold text-[#1351b4] ">
- {item.mapping.ACORDAO_KEY}
- </span>
- </div>
-
- {item.acordao ? (
- <div className="space-y-3.5 text-sm text-slate-700">
- <div className="grid grid-cols-2 gap-3">
- <div>
- <span className="text-xs text-slate-400 block uppercase font-bold">Identificador Único</span>
- <span className=" text-slate-800 font-bold">{item.acordao.KEY}</span>
  </div>
  <div>
- <span className="text-xs text-slate-400 block uppercase font-bold">Número / Colegiado</span>
- <span className="font-semibold text-slate-800">Acórdão {item.acordao.NUMACORDAO}/{item.acordao.ANOACORDAO} — {item.acordao.COLEGIADO}</span>
- </div>
- <div>
- <span className="text-xs text-slate-400 block uppercase font-bold">Ata & Sessão</span>
- <span className="text-slate-800 font-medium">Ata {item.acordao.NUMATA || "S/N"} • {item.acordao.DATASESSAO || "S/D"}</span>
- </div>
- <div>
- <span className="text-xs text-slate-400 block uppercase font-bold">Autoridade Relatora</span>
- <span className="text-slate-800 font-medium">{(item.acordao as any).RELATOR || "Não Especificado"}</span>
+ <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider leading-none mb-1">Data da Resposta</span>
+ <span className="text-xs text-slate-800 font-bold block">
+ {hasResponse ? item.DATA_RESPOSTA : "Sem data registrada"}
+ </span>
  </div>
  </div>
 
- <div className="border-t border-slate-100 pt-2.5 space-y-1">
- <span className="text-xs text-slate-400 block uppercase font-bold">Assunto do Acórdão</span>
- <p className="text-slate-800 font-semibold">{item.acordao.ASSUNTO}</p>
- </div>
-
- <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
- <span className="text-xs text-slate-400 block uppercase font-bold">Sumário de Julgamento (Jurisprudência)</span>
- <p className="text-slate-600 line-clamp-3 leading-relaxed mt-1 text-sm" title={item.acordao.TITULO}>
- {item.acordao.TITULO}
- </p>
- </div>
-
- <div className="flex justify-end pt-2">
  <button
- type="button"
- onClick={() => {
- handleViewFullText(item.acordao);
- }}
- className="px-4 py-2 bg-[#1351b4] hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-3xs"
+ onClick={() => triggerComEdit(item)}
+ className="px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider bg-[#003366] hover:bg-slate-900 text-white cursor-pointer transition shadow-2xs shrink-0"
+ title="Editar resposta ou dados complementares desta comunicação"
  >
+ Editar / Responder
+ </button>
+ </div>
+
+ {/* Unidade Executora block */}
+ <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+ <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+ <Building2 className="w-4 h-4" />
+ </div>
+ <div>
+ <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider leading-none mb-1">Unidade Executora</span>
+ <span className="text-xs text-[#003366] font-bold block">
+ {item.UNIDADE_EXECUTORA || <span className="text-slate-300 italic">Não informada</span>}
+ </span>
+ </div>
+ </div>
+
+ {/* Processo SEI block */}
+ <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+ <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
  <FileText className="w-4 h-4" />
- Visualizar Inteiro Teor do Acórdão
- </button>
+ </div>
+ <div>
+ <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider leading-none mb-1">Processo SEI</span>
+ <span className="text-xs text-slate-700 font-bold block">
+ {item.PROCESSO_SEI || <span className="text-slate-300 italic">Não informado</span>}
+ </span>
  </div>
  </div>
+
+ {/* Destinação block */}
+ <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3">
+ <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
+ {item.DESTINACAO === "ARQUIVAMENTO" ? <Archive className="w-4 h-4 text-slate-500" /> : <ArrowLeftRight className="w-4 h-4 text-[#003366]" />}
+ </div>
+ <div>
+ <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider leading-none mb-1">Destinação</span>
+ <span className="text-xs text-slate-700 font-bold block">
+ {item.DESTINACAO === "ARQUIVAMENTO" ? (
+ <span className="bg-slate-100 text-slate-700 border border-slate-200/60 px-2 py-0.5 rounded-full text-xs font-black uppercase">
+ Arquivamento
+ </span>
+ ) : item.DESTINACAO === "RESPOSTA" ? (
+ <span className="bg-blue-50 text-blue-800 border border-blue-200/60 px-2 py-0.5 rounded-full text-xs font-black uppercase">
+ Resposta
+ </span>
  ) : (
- <div className="p-5 bg-rose-50/20 border border-rose-100 rounded-xl space-y-3">
- <p className="text-sm text-slate-650 leading-relaxed">
- Este acórdão (<strong className="text-rose-800">{item.mapping.ACORDAO_KEY}</strong>) está mapeado para esta TCE, mas o teor oficial não foi localizado na base de dados do monitoramento de Acórdãos.
- </p>
- <button
- type="button"
- onClick={() => {
- if (onNavigateToMonitoramento) {
- onNavigateToMonitoramento(item.mapping.ACORDAO_KEY);
- } else {
- alert(`Por favor, acesse a aba "Monitoramento de Acórdãos" e busque por: ${item.mapping.ACORDAO_KEY}`);
- }
- }}
- className="px-3.5 py-1.5 bg-[#003366] hover:bg-slate-900 text-white rounded-xl text-[10.5px] font-bold transition flex items-center gap-1.5 shadow-2xs"
- >
- <Search className="w-3.5 h-3.5" />
- Buscar e Importar Acórdão {item.mapping.ACORDAO_KEY}
- </button>
- </div>
+ <span className="text-slate-300 italic">Não informada</span>
  )}
+ </span>
  </div>
  </div>
+
  </div>
  </td>
  </tr>
@@ -2875,117 +2585,388 @@ export default function TcuTCE({
  </tbody>
  </table>
  </div>
+ 
+ <div className="text-xs text-slate-400 italic text-right">
+ Dica: Use a rolagem lateral e vertical do próprio painel para navegar pelas linhas da tabela sem paginação.
+ </div>
  </div>
  )}
 
- <div className="text-xs text-slate-400 text-center py-2 border-t border-slate-100 italic">
- Apoio Técnico Normativo: Corregedoria do Ministério do Trabalho e Emprego & Assessoria Especial de Controle Interno (AECI-MTE) • Acordo de Cooperação Técnica TCU
+ {/* Sub Tab View 2: RECIPIENT STATISTICS & DETAILS (PARETO) */}
+ {comSubTab === "analytics" && (
+ <div className="space-y-6 animate-fade-in transition duration-200">
+ 
+ <div className="space-y-2">
+ <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider block">
+ Volume Total de Comunicações por Unidades (Destinatários)
+ </h3>
+ 
+ {/* Scrollable Grid representation of units with communications count */}
+ <div className="max-h-[600px] overflow-y-auto pr-2 scrollbar-thin">
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-2">
+ {destinatarioStats.map((stat, idx) => {
+ const respRate = stat.requireResponseTotal > 0 ? ((stat.responded / stat.requireResponseTotal) * 100).toFixed(0) : (stat.total > 0 ? "100" : "0");
+ return (
+ <div key={idx} className="bg-white border border-slate-200 p-4.5 rounded-2xl shadow-3xs space-y-3 relative overflow-hidden">
+ <div className="absolute top-0 right-0 w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center translate-x-3 -translate-y-3">
+ <span className="text-sm font-black text-slate-300">#{idx + 1}</span>
+ </div>
+ <div className="space-y-0.5 pr-4">
+ <span className="bg-slate-100 text-slate-600 text-xs font-black px-1.5 py-0.5 rounded uppercase block truncate" title={stat.unidade}>
+ {stat.unidade}
+ </span>
+ <h4 className="text-2xl font-black text-slate-900">
+ {stat.total} <span className="text-xs font-normal text-slate-400">ofícios ({stat.percentage.toFixed(1)}%)</span>
+ </h4>
+ </div>
+
+ <div className="grid grid-cols-2 text-xs text-slate-500 border-t border-slate-100 pt-2 ">
+ <div className="text-emerald-700 font-bold">✓ {stat.responded} Respondidos</div>
+ <div className="border-l border-slate-100 pl-2 text-amber-700 font-bold">⚡ {stat.pending} Pendentes</div>
+ </div>
+
+ <div className="space-y-1">
+ <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
+ <span>Índice de Resposta</span>
+ <span>{respRate}%</span>
+ </div>
+ <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+ <div className="h-full bg-emerald-500" style={{ width: `${respRate}%` }}></div>
  </div>
  </div>
+ </div>
+ );
+ })}
+ {destinatarioStats.length === 0 && (
+ <div className="col-span-4 p-8 text-center text-slate-400 bg-white border border-slate-200 rounded-2xl">
+ Aguardando sincronização de dados para cálculo de indicadores em tempo real.
+ </div>
+ )}
+ </div>
+ </div>
+ </div>
+
+ {/* Detailed Pareto Distribution Table representation */}
+ <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+ <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+ <div>
+ <h4 className="text-sm font-black text-[#003366] uppercase tracking-wide">
+ Impacto por Destinatário & Participação Relativa
+ </h4>
+ <p className="text-sm text-slate-500">
+ Fórmula de Pareto: Ofícios Recebidos por unidade em relação ao total de comunicações enviadas em {comAnoFilter === "TODOS" ? "todos os anos" : `no ano ${comAnoFilter}`} ({totalComsCount} ofícios).
+ </p>
+ </div>
+ <span className="text-xs font-black text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg">
+ Unidade Ativas: {destinatarioStats.length}
+ </span>
+ </div>
+
+ <div className="overflow-x-auto rounded-xl border border-slate-200">
+ <table className="w-full text-left border-collapse text-sm text-slate-800">
+ <thead>
+ <tr className="sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Unidade do Ministério do Trabalho (Destinatário)</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-[130px] cursor-pointer hover: transition-colors">Ofícios Recebidos</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-[130px] cursor-pointer hover: transition-colors">Demandam Resposta</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-[130px] cursor-pointer hover: transition-colors">Respondidos</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-[130px] cursor-pointer hover: transition-colors">Pendentes (Em Aberto)</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-[200px] cursor-pointer hover: transition-colors">% de Representação no Órgão</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-[130px] cursor-pointer hover: transition-colors">Índice de Conclusão</th>
+ </tr>
+ </thead>
+ <tbody className="divide-y divide-slate-100">
+ {destinatarioStats.map((stat, idx) => {
+ const respPct = stat.requireResponseTotal > 0 ? (stat.responded / stat.requireResponseTotal) * 100 : (stat.total > 0 ? 100 : 0);
+ return (
+ <tr key={idx} className="hover:bg-[#1351b4]/5 transition-colors group">
+ <td className="p-4 align-middle text-slate-800 font-black flex items-center ga text-sm">
+ <span className="w-5 h-5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full flex items-center justify-center">
+ {idx + 1}
+ </span>
+ <span>{stat.unidade}</span>
+ </td>
+ <td className="p-4 align-middle text-center text-slate-900 font-bold text-sm">
+ {stat.total}
+ </td>
+ <td className="p-4 align-middle text-center font-bold text-slate-600">
+ {stat.requireResponseTotal}
+ </td>
+ <td className="p-4 align-middle text-center font-bold text-emerald-700">
+ {stat.responded}
+ </td>
+ <td className="p-4 align-middle text-center font-bold text-amber-700">
+ {stat.pending}
+ </td>
+ <td className="p-4 align-middle">
+ <div className="space-y-1 max-w-[180px] mx-auto">
+ <div className="flex justify-between text-xs font-bold text-slate-700">
+ <span>{stat.percentage.toFixed(1)}%</span>
+ </div>
+ <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+ <div className="h-full bg-[#003366] rounded-full" style={{ width: `${stat.percentage}%` }}></div>
+ </div>
+ </div>
+ </td>
+ <td className="p-4 align-middle text-center">
+ <span className={`px-2.5 py-1 rounded-sm font-bold text-xs ${
+ respPct >= 90
+ ? "bg-emerald-100 border border-emerald-200 text-emerald-800"
+ : respPct >= 50
+ ? "bg-amber-100 border border-amber-200 text-amber-800"
+ : "bg-rose-100 border border-rose-200 text-rose-800"
+ }`}>
+ {respPct.toFixed(1)}%
+ </span>
+ </td>
+ </tr>
+ );
+ })}
+ {destinatarioStats.length === 0 && (
+ <tr>
+ <td colSpan={7} className="p-12 text-center text-slate-400 italic">
+ Sem dados acumulados para este filtro de período.
+ </td>
+ </tr>
+ )}
+ </tbody>
+ </table>
+ </div>
+ </div>
+ </div>
+ )}
+ </>
  );
  })()}
- {/* Print Sandbox Helper Modal */}
- {showPrintModal && (
- <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in">
- <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden">
- {/* Modal Header */}
- <div className="bg-slate-50 border-b border-slate-100 p-5 flex items-center justify-between">
- <div className="flex items-center gap-2.5">
- <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
- <Printer className="w-5 h-5" />
- </div>
+
+ {/* Edit / Resposta Modal for Communication */}
+ {editingComItem && (
+ <div className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in no-print">
+ <div className="bg-white border border-slate-200 rounded-3xl shadow-xl max-w-lg w-full flex flex-col max-h-[90vh] overflow-hidden">
+ {/* Header */}
+ <div className="flex justify-between items-center border-b border-slate-100 p-6 pb-4 shrink-0">
  <div>
- <h3 className="text-sm font-black text-slate-800 uppercase tracking-wide">
- Relatório de Impressão (PDF)
- </h3>
- <p className="text-xs text-slate-500">Emissão de Relatório e Exportação Formal — AECI</p>
+ <h3 className="text-sm font-black text-[#003366] uppercase tracking-wider">Responder / Editar Comunicação</h3>
+ <p className="text-xs text-slate-400 font-bold">{editingComItem.COMUNICACAO} • Ano {editingComItem.ANO}</p>
  </div>
- </div>
- <button
- onClick={() => setShowPrintModal(false)}
- className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-lg transition"
- >
- <X className="w-4 h-4" />
+ <button onClick={() => setEditingComItem(null)} className="text-slate-400 hover:text-slate-600 transition">
+ <X className="w-5 h-5" />
  </button>
  </div>
 
- {/* Modal Body */}
- <div className="p-6 space-y-4">
- <div className="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 space-y-2">
- <h4 className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
- <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
- Nota sobre visualização segura em Janelas Protegidas (iFrame)
- </h4>
- <p className="text-xs text-slate-600 leading-relaxed font-sans">
- Pelo sistema estar em ambiente de desenvolvimento interativo, o navegador pode restringir a geração direta de PDFs e popups de impressão internos do formulário.
- </p>
- <p className="text-xs text-slate-600 leading-relaxed font-sans font-semibold">
- 💡 Para emitir o relatório oficial sem qualquer limitação técnica:
- </p>
- <ol className="list-decimal pl-5 text-sm text-slate-600 space-y-1 font-sans">
- <li>Clique em <strong>"Abrir em nova aba"</strong> (no cabeçalho do portal) para isolar o sistema.</li>
- <li>Use o botão <strong>"Tentar Acionar Impressora do Navegador"</strong> abaixo para salvar em PDF.</li>
- </ol>
+ {/* Scrollable Body */}
+ <div className="p-6 pt-4 pb-4 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-200 hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-thumb]:rounded-full">
+ <div className="space-y-3.5 text-xs text-slate-700">
+ <div className="grid grid-cols-2 gap-3">
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Unidade Emitente</label>
+ <input
+ type="text"
+ className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+ value={editComUnidade}
+ onChange={(e) => setEditComUnidade(e.target.value)}
+ />
+ </div>
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Processo Associado</label>
+ <input
+ type="text"
+ className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+ value={editComProcesso}
+ onChange={(e) => setEditComProcesso(e.target.value)}
+ />
+ </div>
  </div>
 
- {/* Action Buttons inside Modal */}
- <div className="space-y-2.5 pt-2">
- <button
- onClick={() => {
- try {
- window.print();
- } catch (e) {
- console.error(e);
- }
- }}
- className="w-full py-3 px-4 bg-[#1351b4] hover:bg-[#0f4094] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs transition cursor-pointer"
- >
- <Printer className="w-4 h-4" />
- Tentar Acionar Impressora do Navegador
- </button>
-
- <button
- onClick={handleCopyReportText}
- className={`w-full py-3 px-4 font-bold text-xs rounded-xl flex items-center justify-center gap-2 border transition cursor-pointer ${copySuccessAlert
- ? "bg-emerald-50 border-emerald-300 text-emerald-800"
- : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
- }`}
- >
- {copySuccessAlert ? (
- <>
- <Check className="w-4 h-4 text-emerald-600" />
- Copiado com Sucesso! (Área de Transferência)
- </>
- ) : (
- <>
- <FileText className="w-4 h-4 text-slate-500" />
- Copiar Relatório Formatado (Para Word/Docs)
- </>
- )}
- </button>
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Destinatário</label>
+ <input
+ type="text"
+ className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+ value={editComDestinatario}
+ onChange={(e) => setEditComDestinatario(e.target.value)}
+ />
  </div>
 
- {copySuccessAlert && (
- <p className="text-xs text-center text-emerald-700 font-bold bg-emerald-50/50 py-1.5 rounded-lg animate-pulse">
- ✓ Texto formatado com as colunas estruturadas para colar no Bloco de Notas ou Word!
- </p>
- )}
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Contato de Referência</label>
+ <input
+ type="text"
+ className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+ value={editComContato}
+ onChange={(e) => setEditComContato(e.target.value)}
+ />
  </div>
 
- {/* Modal Footer */}
- <div className="bg-slate-50 border-t border-slate-100 px-6 py-3.5 flex justify-end">
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Unidade Executora</label>
+ <input
+ type="text"
+ placeholder="Ex: SECI"
+ className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white"
+ value={editComUnidadeExecutora}
+ onChange={(e) => setEditComUnidadeExecutora(e.target.value)}
+ />
+ </div>
+
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Nº Processo SEI</label>
+ <input
+ type="text"
+ placeholder="Ex: 19973.100234/2026-99"
+ className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white"
+ value={editComProcessoSei}
+ onChange={(e) => setEditComProcessoSei(e.target.value)}
+ />
+ </div>
+
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Destinação da Comunicação</label>
+ <div className="flex gap-2">
  <button
  type="button"
- onClick={() => setShowPrintModal(false)}
- className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
+ onClick={() => setEditComDestinacao("RESPOSTA")}
+ className={`flex-1 py-2 px-3 rounded-xl border text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+ editComDestinacao === "RESPOSTA"
+ ? "bg-[#003366] text-white border-[#003366] shadow-2xs"
+ : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
+ }`}
  >
- Fechar
+ <ArrowLeftRight className="w-3.5 h-3.5" />
+ Resposta
+ </button>
+ <button
+ type="button"
+ onClick={() => setEditComDestinacao("ARQUIVAMENTO")}
+ className={`flex-1 py-2 px-3 rounded-xl border text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+ editComDestinacao === "ARQUIVAMENTO"
+ ? "bg-slate-700 text-white border-slate-700 shadow-2xs"
+ : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
+ }`}
+ >
+ <Archive className="w-3.5 h-3.5" />
+ Arquivamento
+ </button>
+ </div>
+ </div>
+
+ <div className="grid grid-cols-2 gap-3">
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Data de Expedição</label>
+ <input
+ type="text"
+ placeholder="DD/MM/AAAA"
+ className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-center"
+ value={editComExpedicao}
+ onChange={(e) => setEditComExpedicao(e.target.value)}
+ />
+ </div>
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider block">Data da Resposta</label>
+ <input
+ type="text"
+ placeholder="DD/MM/AAAA ou em branco se pendente"
+ className="w-full p-2.5 border border-slate-200 rounded-xl text-center font-bold bg-[#003366]/5 focus:bg-white text-slate-900 border-[#003366]/30"
+ value={editComResposta}
+ onChange={(e) => setEditComResposta(e.target.value)}
+ />
+ </div>
+ </div>
+
+ <div className="flex items-center gap-2 pt-1.5">
+ <input
+ type="checkbox"
+ id="edit-com-carece"
+ checked={editComCarece}
+ onChange={(e) => setEditComCarece(e.target.checked)}
+ className="w-4 h-4 text-[#003366] border-slate-350 rounded-sm focus:ring-[#003366] cursor-pointer"
+ />
+ <label htmlFor="edit-com-carece" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
+ Esta comunicação carece/exige resposta oficial da assessoria
+ </label>
+ </div>
+
+ {editComCarece && editComExpedicao && (() => {
+ const [d, m, y] = editComExpedicao.split("/");
+ if (d && m && y && d.length === 2 && m.length === 2 && y.length === 4) {
+ const dtExpedicao = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+ if (!isNaN(dtExpedicao.getTime())) {
+ let dtReferencia = new Date(); // today
+ const resolved = editComResposta && editComResposta.trim() !== "";
+ if (resolved) {
+ const [rd, rm, ry] = editComResposta.split("/");
+ if (rd && rm && ry) {
+ dtReferencia = new Date(parseInt(ry), parseInt(rm) - 1, parseInt(rd));
+ }
+ }
+ 
+ const diffTime = dtReferencia.getTime() - dtExpedicao.getTime();
+ const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+ 
+ if (diffDays >= 0) {
+ return (
+ <div className={`p-3 mt-1 rounded-xl flex items-center justify-between border ${resolved ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+ <div className="flex items-center gap-2">
+ <Clock className={`w-4 h-4 ${resolved ? 'text-emerald-600' : 'text-amber-600'}`} />
+ <span className={`text-sm font-black uppercase ${resolved ? 'text-emerald-700' : 'text-amber-700'}`}>
+ {resolved ? "Comunicação Respondida" : "Contagem de Prazo / Tempo Decorrido"}
+ </span>
+ </div>
+ <span className={`text-xs font-bold ${resolved ? 'text-emerald-800' : 'text-amber-800'}`}>
+ {resolved ? `Respondido em ${diffDays} dias` : `${diffDays} dias em aberto`}
+ </span>
+ </div>
+ );
+ }
+ }
+ }
+ return null;
+ })()}
+
+ <div className="flex flex-wrap gap-2.5 pt-2 border-t border-slate-150/70">
+ <a
+ href="https://processoeletronico.trabalho.gov.br"
+ target="_blank"
+ rel="noopener noreferrer"
+ className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
+ >
+ <ExternalLink className="w-3.5 h-3.5" />
+ Acessar SEI
+ </a>
+ <a
+ href="https://conecta-tcu.apps.tcu.gov.br/"
+ target="_blank"
+ rel="noopener noreferrer"
+ className="flex-1 min-w-[145px] py-2 px-3 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-[#003366] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition duration-155 cursor-pointer"
+ >
+ <ExternalLink className="w-3.5 h-3.5" />
+ Conecta TCU
+ </a>
+ </div>
+ </div>
+ </div>
+
+ {/* Footer */}
+ <div className="flex justify-end gap-2 border-t border-slate-100 p-6 pt-4 shrink-0">
+ <button
+ onClick={() => setEditingComItem(null)}
+ className="px-4 py-2 text-slate-500 hover:text-slate-800 transition text-xs font-bold"
+ >
+ Mudar Credencial & Cancelar
+ </button>
+ <button
+ onClick={saveComEdit}
+ disabled={isSavingCom}
+ className="px-4 py-2 bg-[#003366] text-white rounded-xl text-xs font-bold hover:bg-slate-900 disabled:opacity-50 transition"
+ >
+ {isSavingCom ? "Salvando..." : "Salvar Alterações"}
  </button>
  </div>
  </div>
  </div>
  )}
-
+ </div>
+ 
  {/* Full Acórdão Text Modal Popup */}
  {fullTextAcordao && (
  <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in text-slate-800">
@@ -3003,7 +2984,7 @@ export default function TcuTCE({
  <p className="text-xs text-blue-200 mt-1">Identificador Único: <span className="">{fullTextAcordao.KEY}</span> | Sessão de {fullTextAcordao.DATASESSAO}</p>
  </div>
  </div>
- <button
+ <button 
  type="button"
  onClick={() => {
  setFullTextAcordao(null);
@@ -3036,7 +3017,8 @@ export default function TcuTCE({
  setTimeout(() => setCopySuccessFullText(false), 2500);
  });
  }}
- className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition flex items-center gap-1.5 cursor-pointer ${copySuccessFullText
+ className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition flex items-center gap-1.5 cursor-pointer ${
+ copySuccessFullText
  ? "bg-emerald-50 border-emerald-300 text-emerald-800"
  : "bg-white border-slate-200 hover:bg-slate-100 text-slate-700"
  }`}
@@ -3082,7 +3064,6 @@ export default function TcuTCE({
  </div>
  </div>
  )}
-
 
  </div>
  );
