@@ -11,6 +11,7 @@ const inp = "w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-s
 const lbl = "block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1";
 const btnPrimary = "px-4 py-2 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-1.5 bg-[#003366] text-white hover:bg-slate-900 transition shadow-sm";
 const btnSecondary = "px-3 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-1.5 hover:bg-slate-50 hover:border-slate-300 transition shadow-sm";
+const btnEdit = "inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 hover:border-blue-300 rounded-lg text-xs font-bold transition-colors";
 
 // ─── Interfaces API ────────────────────────────────────────────────────────
 interface MandatoAPI { id_registro: string; is_substituto: boolean; data_inicio: string; data_fim: string | null; id_pessoa: number; nome_completo: string; cpf: string; email: string; id_cargo: number; nome_cargo: string; id_unidade: number; sigla_unidade: string; nome_unidade: string; tipo_responsabilidade: string | null; ato_nomeacao: string | null; ato_exoneracao: string | null; }
@@ -312,23 +313,23 @@ export default function RolModule() {
 
               <Card>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-sm text-slate-800">
-                    <thead>
-                      <tr className="font-semibold sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
-                        <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Responsável (Dirigente)</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Cargo / Função</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Unidade</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Início Exercício</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Fim Exercício</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Status</th>
+                   <table className="w-full text-left border-collapse text-sm">
+                    <thead className="gov-table-header">
+                      <tr>
+                        <th>Responsável (Dirigente)</th><th>Cargo / Função</th><th>Unidade</th><th>Início Exercício</th><th>Fim Exercício</th><th>Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
+                    <tbody>
                       {filteredMandatos.map(m => (
-                        <tr key={m.id_registro} className={`hover:bg-slate-50/50 transition-colors ${m.is_substituto ? 'bg-purple-50/20' : ''}`}>
-                          <td className="p-4 align-middle">
+                        <tr key={m.id_registro} className={`gov-table-row ${m.is_substituto ? 'bg-purple-50/30' : ''}`}>
+                          <td className="p-3 align-middle">
                             <div>
-                              <div className="font-bold text-slate-800">{m.nome_completo}</div>
-                              <div className="text-[11px] text-slate-500 font-medium">CPF: {m.cpf}</div>
+                              <div className="font-semibold text-slate-800">{m.nome_completo}</div>
+                              <div className="text-[11px] text-slate-400 font-normal">CPF: {m.cpf}</div>
                             </div>
                           </td>
-                          <td className="p-4 align-middle">
-                            <div className="font-bold text-slate-700">{m.nome_cargo}</div>
+                          <td className="p-3 align-middle">
+                            <div className="font-medium text-slate-700">{m.nome_cargo}</div>
                               {m.is_substituto ? (
                                 <div className="mt-1"><Badge color="purple">Substituto</Badge></div>
                               ) : (
@@ -337,10 +338,10 @@ export default function RolModule() {
                                 </div>
                               )}
                           </td>
-                          <td className="p-4 align-middle"><div className="font-bold text-[#003366]">{m.sigla_unidade}</div><div className="text-[10px] text-slate-500 truncate max-w-[150px]" title={m.nome_unidade}>{m.nome_unidade}</div></td>
-                          <td className="p-4 align-middle font-medium text-slate-600">{fmtDate(m.data_inicio)}</td>
-                          <td className="p-4 align-middle font-medium text-slate-600">{fmtDate(m.data_fim)}</td>
-                          <td className="p-4 align-middle">{isVigente(m) ? <Badge color="green">Vigente</Badge> : <Badge color="gray">Histórico</Badge>}</td>
+                          <td className="p-3 align-middle"><div className="font-semibold text-[#003366]">{m.sigla_unidade}</div><div className="text-[10px] text-slate-400 font-normal truncate max-w-[150px]" title={m.nome_unidade}>{m.nome_unidade}</div></td>
+                          <td className="p-3 align-middle text-slate-600">{fmtDate(m.data_inicio)}</td>
+                          <td className="p-3 align-middle text-slate-600">{fmtDate(m.data_fim)}</td>
+                          <td className="p-3 align-middle">{isVigente(m) ? <Badge color="green">Vigente</Badge> : <Badge color="gray">Histórico</Badge>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -359,31 +360,31 @@ export default function RolModule() {
               </Card>
               <Card>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-sm text-slate-800">
-                    <thead>
-                      <tr className="font-semibold sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
-                        <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Dados Pessoais</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Lotação / Cargo Atual</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead className="gov-table-header">
+                      <tr>
+                        <th>Dados Pessoais</th><th>Lotação / Cargo Atual</th><th className="w-24 text-center">Ações</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
+                    <tbody>
                       {filteredMandatos.map(m => (
-                        <tr key={m.id_registro} className={`hover:bg-slate-50/50 transition-colors ${m.is_substituto ? 'bg-purple-50/20' : ''}`}>
-                          <td className="p-4 align-middle">
+                        <tr key={m.id_registro} className={`gov-table-row ${m.is_substituto ? 'bg-purple-50/30' : ''}`}>
+                          <td className="p-3 align-middle">
                             <div>
-                              <div className="font-bold text-slate-800">{m.nome_completo}</div>
-                              <div className="text-[11px] text-slate-500 font-medium">CPF: {m.cpf} • {m.email}</div>
+                              <div className="font-semibold text-slate-800">{m.nome_completo}</div>
+                              <div className="text-[11px] text-slate-400 font-normal">CPF: {m.cpf} • {m.email}</div>
                             </div>
                           </td>
-                          <td className="p-4 align-middle">
-                            <div className="font-bold text-[#003366]">{m.sigla_unidade} - {m.nome_cargo}</div>
-                            <div className="text-[10px] text-slate-500">
+                          <td className="p-3 align-middle">
+                            <div className="font-medium text-[#003366]">{m.sigla_unidade} - {m.nome_cargo}</div>
+                            <div className="text-[10px] text-slate-400 font-normal">
                               Desde: {fmtDate(m.data_inicio)} 
                               {m.is_substituto ? ` (Substituto)` : ' (Titular)'}
                             </div>
                           </td>
-                          <td className="p-4 align-middle text-center">
+                          <td className="p-3 align-middle text-center">
                             <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => openEditModal("dirigente", m)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar"><Edit3 size={16} /></button>
+                              <button onClick={() => openEditModal("dirigente", m)} className={btnEdit} title="Editar"><Edit3 size={13} /> Editar</button>
                               <button onClick={() => handleDelete("dirigente", m.id_registro)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir"><Trash2 size={16} /></button>
                             </div>
                           </td>
@@ -412,25 +413,25 @@ export default function RolModule() {
               </Card>
               <Card>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse text-sm text-slate-800">
-                    <thead>
-                      <tr className="font-semibold sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
-                        <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Titular Afastado</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Substituto que Assumiu</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Motivo / Tipo</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Data Início</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Data Final</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead className="gov-table-header">
+                      <tr>
+                        <th>Titular Afastado</th><th>Substituto que Assumiu</th><th>Motivo / Tipo</th><th>Data Início</th><th>Data Final</th><th className="w-24 text-center">Ações</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 text-xs">
+                    <tbody>
                       {filteredAfastamentos.map(a => (
-                        <tr key={a.id_afastamento} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="p-4 align-middle font-bold text-slate-800">{getPessoaName(`T_${a.id_mandato}`)}</td>
-                          <td className="p-4 align-middle font-bold text-purple-700">{a.id_designacao ? getPessoaName(`S_${a.id_designacao}`) : '-'}</td>
-                          <td className="p-4 align-middle text-slate-600 font-medium">{a.motivo}</td>
-                          <td className="p-4 align-middle text-amber-700 font-bold">{fmtDate(a.data_inicio)}</td>
-                          <td className="p-4 align-middle text-amber-700 font-bold">
+                        <tr key={a.id_afastamento} className="gov-table-row">
+                          <td className="p-3 align-middle font-medium text-slate-800">{getPessoaName(`T_${a.id_mandato}`)}</td>
+                          <td className="p-3 align-middle font-medium text-purple-700">{a.id_designacao ? getPessoaName(`S_${a.id_designacao}`) : '-'}</td>
+                          <td className="p-3 align-middle text-slate-600">{a.motivo}</td>
+                          <td className="p-3 align-middle text-amber-700">{fmtDate(a.data_inicio)}</td>
+                          <td className="p-3 align-middle text-amber-700">
                             {a.data_fim ? fmtDate(a.data_fim) : (a.motivo === "Vacância" ? "Aguardando nomeação do Titular" : "Em Exercício")}
                           </td>
-                          <td className="p-4 align-middle text-center">
+                          <td className="p-3 align-middle text-center">
                             <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => openEditModal("afastamento", a)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Editar"><Edit3 size={16} /></button>
+                              <button onClick={() => openEditModal("afastamento", a)} className={btnEdit} title="Editar"><Edit3 size={13} /> Editar</button>
                               <button onClick={() => handleDelete("afastamento", a.id_afastamento)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Excluir"><Trash2 size={16} /></button>
                             </div>
                           </td>
@@ -450,17 +451,17 @@ export default function RolModule() {
                 <button className={btnPrimary} onClick={() => openNewModal("unidade")}><PlusCircle size={14} /> Cadastrar Unidade</button>
               </Card>
               <Card>
-                <table className="w-full text-left border-collapse text-sm text-slate-800">
-                  <thead>
-                    <tr className="font-semibold sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
-                      <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Sigla</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Nome da Unidade</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead className="gov-table-header">
+                    <tr>
+                      <th>Sigla</th><th>Nome da Unidade</th><th className="w-24 text-center">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
+                  <tbody>
                     {unidades.map(u => (
-                      <tr key={u.id_unidade} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 align-middle font-black">{u.sigla}</td><td className="p-4 align-middle font-bold text-slate-800">{u.nome}</td>
-                        <td className="p-4 align-middle text-center"><button onClick={() => openEditModal("unidade", u)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit3 size={16} /></button></td>
+                      <tr key={u.id_unidade} className="gov-table-row">
+                        <td className="p-3 align-middle font-semibold text-[#003366]">{u.sigla}</td><td className="p-3 align-middle text-slate-700">{u.nome}</td>
+                        <td className="p-3 align-middle text-center"><button onClick={() => openEditModal("unidade", u)} className={btnEdit}><Edit3 size={13} /> Editar</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -476,17 +477,17 @@ export default function RolModule() {
                 <button className={btnPrimary} onClick={() => openNewModal("cargo")}><PlusCircle size={14} /> Cadastrar Cargo</button>
               </Card>
               <Card>
-                <table className="w-full text-left border-collapse text-sm text-slate-800">
-                  <thead>
-                    <tr className="font-semibold sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
-                      <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Nomenclatura do Cargo</th><th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead className="gov-table-header">
+                    <tr>
+                      <th>Nomenclatura do Cargo</th><th className="w-24 text-center">Ações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-xs">
+                  <tbody className="divide-y divide-slate-100">
                     {cargos.map(c => (
-                      <tr key={c.id_cargo} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-4 align-middle font-bold text-slate-800">{c.nome}</td>
-                        <td className="p-4 align-middle text-center"><button onClick={() => openEditModal("cargo", c)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"><Edit3 size={16} /></button></td>
+                      <tr key={c.id_cargo} className="gov-table-row">
+                        <td className="p-3 align-middle text-slate-700">{c.nome}</td>
+                        <td className="p-3 align-middle text-center"><button onClick={() => openEditModal("cargo", c)} className={btnEdit}><Edit3 size={13} /> Editar</button></td>
                       </tr>
                     ))}
                   </tbody>

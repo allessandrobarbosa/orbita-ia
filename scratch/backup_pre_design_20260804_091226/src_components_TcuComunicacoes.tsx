@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { extractLocalHeuristics } from "../utils/tcuLocalExtractor";
-
-import TcuMonitoramentoEditRow from "./TcuMonitoramentoEditRow";
-import React, { useState, useRef } from "react";
+import TcuComunicacoesEditRow from "./TcuComunicacoesEditRow";
+import React, { useState } from "react";
 import { 
  Plus, 
  Search, 
@@ -38,12 +36,12 @@ import {
  Landmark,
  Activity,
  Users,
+ RefreshCw,
  Building2,
  ArrowLeftRight,
  Archive,
  Sparkles,
  Bot,
- RefreshCw,
  Brain
 } from "lucide-react";
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
@@ -68,10 +66,9 @@ interface TcuModuleProps {
  onResetDatabase?: () => Promise<any>;
  isLoading: boolean;
  onRefreshData?: () => Promise<void>;
- initialMonitoramentoSearch?: string;
 }
 
-export default function TcuMonitoramento({ 
+export default function TcuComunicacoes({ 
  acordaos: rawAcordaos, 
  onUpdateAcordao, 
  onDeleteAcordao, 
@@ -90,13 +87,196 @@ export default function TcuMonitoramento({
  onClearOlderAcordaos,
  onResetDatabase,
  isLoading,
- onRefreshData,
- initialMonitoramentoSearch
+ onRefreshData
 }: TcuModuleProps) {
  
- // Robust Portuguese Text Repair function (Now bypassed since ETL cleans at root)
+ // Robust Portuguese Text Repair function
  const sanitizePortugueseText = (text: string | undefined | null): string => {
- return text || "";
+ if (!text) return "";
+ let clean = text;
+
+ // Strip HTML tags if present (detect by looking for < and >)
+ if (clean.includes("<") && clean.includes(">")) {
+ clean = clean.replace(/<br\s*\/?>/gi, "\n")
+ .replace(/<\/p>/gi, "\n\n")
+ .replace(/<p\b[^>]*>/gi, "")
+ .replace(/<\/li>/gi, "\n")
+ .replace(/<li\b[^>]*>/gi, " • ")
+ .replace(/<\/tr>/gi, "\n")
+ .replace(/<td>|<\/td>|<th>|<\/th>/gi, " | ")
+ .replace(/<[^>]*>/g, "")
+ .replace(/&nbsp;/g, " ")
+ .replace(/&amp;/g, "&")
+ .replace(/&lt;/g, "<")
+ .replace(/&gt;/g, ">")
+ .replace(/&quot;/g, '"');
+ }
+
+ // Convert standard Unicode Replacement Character and other weird placeholder characters to '?'
+ // to normalize all encodings before passing through the targeted repairs
+ clean = clean.replace(/[\uFFFD\u009d]/g, "?");
+
+ // Repair "Órgão" and "Órgãos" when starting/ending letters are corrupted to '?' or similar
+ clean = clean.replace(/[?\uFFFD]*rg[?\uFFFD]*os?/gi, (match) => {
+ const isPlural = match.toLowerCase().endsWith("s");
+ const isCap = match.startsWith("Ó") || match.startsWith("O") || match.startsWith("?") || match.startsWith("\uFFFD");
+ const base = isCap ? "Órgão" : "órgão";
+ return isPlural ? base + "s" : base;
+ });
+
+ // Special repair: Match Omissão / Omissao followed by corrupted/uncorrupt preposition patterns
+ clean = clean.replace(/\bOmis[s]?o\s+(?:n[\uFFFD\?]+o|não?|no)\b/gi, (match) => {
+ return match.startsWith("O") ? "Omissão no" : "omissão no";
+ });
+
+ // Direct words with clean accents
+ clean = clean.replace(/minsist\?rio/gi, "ministério")
+ .replace(/minist\?rio/gi, "ministério")
+ .replace(/minsistério/gi, "ministério")
+ .replace(/ministerio/gi, "ministério")
+ .replace(/omiss\?o/gi, "omissão")
+ .replace(/omis\?o/gi, "omissão")
+ // Avoid generic /No/g inside words, use word bounds and check for standard corrupted shapes only
+ .replace(/\bN(?:[?\uFFFD]|[\s])o\b/g, "Não")
+ .replace(/\bn(?:[?\uFFFD]|[\s])o\b/g, "não")
+ .replace(/comprovao/g, "comprovação")
+ .replace(/comprovaao/g, "comprovação")
+ .replace(/aplicao/g, "aplicação")
+ .replace(/aplicaao/g, "aplicação")
+ .replace(/regulao/g, "regulação")
+ .replace(/regulaao/g, "regulação")
+ .replace(/Instaurao/g, "Instauração")
+ .replace(/instaurao/g, "instauração")
+ .replace(/Acrdo/g, "Acórdão")
+ .replace(/acrdo/g, "acórdão")
+ .replace(/consecuo/g, "consecução")
+ .replace(/consecuao/g, "consecução")
+ .replace(/Ministrio/g, "Ministério")
+ .replace(/Omisso/g, "Omissão")
+ .replace(/omisso/g, "omissão")
+ .replace(/Impugnao/g, "Impugnação")
+ .replace(/impugnao/g, "impugnação")
+ .replace(/Atribuio/g, "Atribuição")
+ .replace(/atribuio/g, "atribuição")
+ .replace(/Sesso/g, "Sessão")
+ .replace(/sesso/g, "sessão")
+ .replace(/Mnimo/g, "Mínimo")
+ .replace(/mnimo/g, "mínimo")
+ .replace(/Deciso/g, "Decisão")
+ .replace(/deciso/g, "decisão")
+ .replace(/Informao/g, "Informação")
+ .replace(/informao/g, "informação")
+ .replace(/Situao/g, "Situação")
+ .replace(/situao/g, "situação")
+ .replace(/Ateno/g, "Atenção")
+ .replace(/ateno/g, "atenção")
+ .replace(/pblicos/g, "públicos")
+ .replace(/pblico/g, "público")
+ .replace(/Pblico/g, "Público")
+ .replace(/relatrio/g, "relatório")
+ .replace(/Relatrio/g, "Relatório")
+ .replace(/orgo/g, "órgão")
+ .replace(/Orgo/g, "Órgão")
+ .replace(/rgo/g, "órgão")
+ .replace(/rgos/g, "órgãos")
+ .replace(/reunio/g, "reunião");
+
+ // Common double UTF-8 decoding / Latin-1 corruptions
+ clean = clean
+ .replace(/Ã¡/g, "á")
+ .replace(/Ã¢/g, "â")
+ .replace(/Ã£/g, "ã")
+ .replace(/Ã§/g, "ç")
+ .replace(/Ã©/g, "é")
+ .replace(/Ãª/g, "ê")
+ .replace(/Ã\u00ad/g, "í")
+ .replace(/Ã­/g, "í")
+ .replace(/Ã³/g, "ó")
+ .replace(/Ã´/g, "ô")
+ .replace(/Ãµ/g, "õ")
+ .replace(/Ãº/g, "ú")
+ .replace(/Ã\u0081/g, "Á")
+ .replace(/Ã\u0082/g, "Â")
+ .replace(/Ã\u0083/g, "Ã")
+ .replace(/Ã\u0087/g, "Ç")
+ .replace(/Ã\u0089/g, "É")
+ .replace(/Ã\u008a/g, "Ê")
+ .replace(/Ã\u008d/g, "Í")
+ .replace(/Ã\u0093/g, "Ó")
+ .replace(/Ã\u0094/g, "Ô")
+ .replace(/Ã\u0095/g, "Õ")
+ .replace(/Ã\u009a/g, "Ú");
+
+ // Repair corruptions from bad import encodings
+ clean = clean
+ .replace(/minsist\?rio/gi, "ministério")
+ .replace(/minist\?rio/gi, "ministério")
+ .replace(/omiss\?o/gi, "omissão")
+ .replace(/omis\?o/gi, "omissão")
+ .replace(/N\?o/gi, "Não")
+ .replace(/comprova\?o/gi, "comprovação")
+ .replace(/aplica\?o/gi, "aplicação")
+ .replace(/regula\?o/gi, "regulação")
+ .replace(/consecu\?o/gi, "consecução")
+ .replace(/Insta\?o/gi, "Instauração")
+ .replace(/Ac\?rd\?o/gi, "Acórdão")
+ .replace(/acr\?rd\?o/gi, "acórdão")
+ .replace(/ac\?rd\?o/gi, "acórdão")
+ .replace(/Acr\?do/gi, "Acórdão")
+ .replace(/Aco\?rda\?o/gi, "Acórdão")
+ .replace(/aco\?rda\?o/gi, "acórdão")
+ .replace(/Omis\?o/gi, "Omissão")
+ .replace(/omis\?o/gi, "omissão")
+ .replace(/Impugna\?o/gi, "Impugnação")
+ .replace(/impugna\?o/gi, "impugnação")
+ .replace(/Atribui\?o/gi, "Atribuição")
+ .replace(/atribui\?o/gi, "atribuição")
+ .replace(/Sess\?o/gi, "Sessão")
+ .replace(/sess\?o/gi, "sessão")
+ .replace(/M\?nimo/gi, "Mínimo")
+ .replace(/m\?nimo/gi, "mínimo")
+ .replace(/Decis\?o/gi, "Decisão")
+ .replace(/decis\?o/gi, "decisão")
+ .replace(/Informa\?o/gi, "Informação")
+ .replace(/informa\?o/gi, "informação")
+ .replace(/Situa\?o/gi, "Situação")
+ .replace(/situa\?o/gi, "situação")
+ .replace(/Aten\?o/gi, "Atenção")
+ .replace(/aten\?o/gi, "atenção")
+ .replace(/p\?blico/gi, "público")
+ .replace(/Relat\?rio/gi, "Relatório")
+ .replace(/relat\?rio/gi, "relatório")
+ .replace(/org\?o/gi, "órgão")
+ .replace(/Org\?o/gi, "Órgão");
+
+ // Contextual regex repair for non-alphanumeric replacement sequences
+ clean = clean
+ .replace(/N[^a-zA-Z0-9\s]o /g, "Não ")
+ .replace(/N[^a-zA-Z0-9\s]o/g, "Não")
+ .replace(/comprova[^a-zA-Z0-9\s]+o/g, "comprovação")
+ .replace(/aplica[^a-zA-Z0-9\s]+o/g, "aplicação")
+ .replace(/regula[^a-zA-Z0-9\s]+o/g, "regulação")
+ .replace(/consecu[^a-zA-Z0-9\s]+o/g, "consecução")
+ .replace(/omis[^a-zA-Z0-9\s]+o/g, "omissão")
+ .replace(/Omis[^a-zA-Z0-9\s]+o/g, "Omissão")
+ .replace(/Impugna[^a-zA-Z0-9\s]+o/g, "Impugnação")
+ .replace(/impugna[^a-zA-Z0-9\s]+o/g, "impugnação")
+ .replace(/Ac[^a-zA-Z0-9\s]+rd[^a-zA-Z0-9\s]+o/g, "Acórdão")
+ .replace(/ac[^a-zA-Z0-9\s]+rd[^a-zA-Z0-9\s]+o/g, "acórdão")
+ .replace(/Atribui[^a-zA-Z0-9\s]+o/g, "Atribuição")
+ .replace(/atribui[^a-zA-Z0-9\s]+o/g, "atribuição")
+ .replace(/Situa[^a-zA-Z0-9\s]+o/g, "Situação")
+ .replace(/situa[^a-zA-Z0-9\s]+o/g, "situação")
+ .replace(/Informa[^a-zA-Z0-9\s]+o/g, "Informação")
+ .replace(/informa[^a-zA-Z0-9\s]+o/g, "informação")
+ .replace(/Sess[^a-zA-Z0-9\s]+o/g, "Sessão")
+ .replace(/sess[^a-zA-Z0-9\s]+o/g, "sessão")
+ .replace(/Relat[^a-zA-Z0-9\s]+rio/g, "Relatório")
+ .replace(/relat[^a-zA-Z0-9\s]+rio/g, "relatório")
+ .replace(/org[^a-zA-Z0-9\s]+o/g, "órgão")
+ .replace(/Org[^a-zA-Z0-9\s]+o/g, "Órgão");
+
+ return clean;
  };
 
  // Robust function to extract correct 4-digit year from TCE designation, avoiding matching sequence number
@@ -233,16 +413,9 @@ export default function TcuMonitoramento({
  }, [rawComunicacoes]);
  
  const [searchTerm, setSearchTerm] = useState("");
-
- React.useEffect(() => {
- if (initialMonitoramentoSearch) {
- setSearchTerm(initialMonitoramentoSearch);
- }
- }, [initialMonitoramentoSearch]);
  const [isBatchProcessing, setIsBatchProcessing] = useState(false);
- const [processingAiKey, setProcessingAiKey] = useState<string | null>(null);
  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
- 
+
  const [statusFilter, setStatusFilter] = useState("TODOS");
  const [colegiadoFilter, setColegiadoFilter] = useState("TODOS");
  const [anoFilter, setAnoFilter] = useState("TODOS");
@@ -250,12 +423,19 @@ export default function TcuMonitoramento({
  const [tipoProcessoFilter, setTipoProcessoFilter] = useState("TODOS");
  const [ressarcimentoFilter, setRessarcimentoFilter] = useState("TODOS");
  const [recomendacaoFilter, setRecomendacaoFilter] = useState("TODOS");
+ const [selectedAcordao, setSelectedAcordao] = useState<AcordaoDemand | null>(null);
+ const [isEditing, setIsEditing] = useState(false);
  const [expandedRow, setExpandedRow] = useState<string | null>(null);
-  const [editRowId, setEditRowId] = useState<string | null>(null);
 
  // Pagination states
  const [currentPage, setCurrentPage] = useState(1);
  const itemsPerPage = 8;
+
+ // Edit Form state
+ const [editStatus, setEditStatus] = useState<any>("Pendente");
+ const [editResponsavel, setEditResponsavel] = useState("");
+ const [editPrazo, setEditPrazo] = useState("");
+ const [editObs, setEditObs] = useState("");
 
  // Importer states
  const [showImporter, setShowImporter] = useState(false);
@@ -263,30 +443,21 @@ export default function TcuMonitoramento({
  const [copySuccessAlert, setCopySuccessAlert] = useState(false);
  const [fullTextAcordao, setFullTextAcordao] = useState<AcordaoDemand | null>(null);
 
- const [isLoadingTeor, setIsLoadingTeor] = useState(false);
- const handleViewFullText = async (ac: AcordaoDemand, silent?: boolean) => {
- if (!silent) setFullTextAcordao(ac);
+ const handleViewFullText = async (ac: AcordaoDemand) => {
+ setFullTextAcordao(ac);
  if (!ac.ACORDAO) {
- setIsLoadingTeor(true);
  try {
  const res = await fetch(`/api/acordaos/${ac.KEY}/teor`);
  if (res.ok) {
  const data = await res.json();
  if (data.acordao) {
- if (!silent) setFullTextAcordao({ ...ac, ACORDAO: data.acordao });
- return data;
- } else if (!silent) {
- // Also update state if it is truly empty, so it doesn't try to fetch again next time
- setFullTextAcordao({ ...ac, ACORDAO: "" });
+ setFullTextAcordao({ ...ac, ACORDAO: data.acordao });
  }
  }
  } catch (e) {
  console.error("Failed to fetch full text", e);
- } finally {
- setIsLoadingTeor(false);
  }
  }
- return { acordao: ac.ACORDAO };
  };
  const [copySuccessFullText, setCopySuccessFullText] = useState(false);
 
@@ -297,27 +468,8 @@ export default function TcuMonitoramento({
  const [isSyncingLocal, setIsSyncingLocal] = useState(false);
  const [syncLocalMessage, setSyncLocalMessage] = useState<string | null>(null);
  const [localSyncReport, setLocalSyncReport] = useState<any[] | null>(null);
- const [importStatus, setImportStatus] = useState<any[]>([]);
- const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
-
- // Fetches import control status (data da última sincronização)
- const fetchImportStatus = async () => {
- try {
- const res = await fetch("/api/acordaos/import-status");
- if (res.ok) {
- const data = await res.json();
- setImportStatus(data.data || []);
- }
- } catch {}
- 
- try {
- const res = await fetch("/api/files/last-updates");
- if (res.ok) {
- const data = await res.json();
- if (data.data?.acordaos) setLastUpdateDate(data.data.acordaos);
- }
- } catch {}
- };
+ const [isSyncingLocalCom, setIsSyncingLocalCom] = useState(false);
+ const [syncLocalComMessage, setSyncLocalComMessage] = useState<string | null>(null);
 
  // Portal da Transparência verification states
  const [docVerifyInput, setDocVerifyInput] = useState("");
@@ -331,7 +483,7 @@ export default function TcuMonitoramento({
 
  // Communications module states
  const [comSearchTerm, setComSearchTerm] = useState("");
- const [comAnoFilter, setComAnoFilter] = useState("TODOS");
+ const [comAnoFilter, setComAnoFilter] = useState("2026"); // Current Active Year defaults to 2026 as current year
  const [comUnidadeFilter, setComUnidadeFilter] = useState("TODOS");
  const [comRespondidoFilter, setComRespondidoFilter] = useState("TODOS");
  const [showComImporter, setShowComImporter] = useState(false);
@@ -358,6 +510,31 @@ export default function TcuMonitoramento({
  const [editComProcessoSei, setEditComProcessoSei] = useState("");
  const [editComDestinacao, setEditComDestinacao] = useState("RESPOSTA");
 
+ const [lastUpdateDate, setLastUpdateDate] = useState<string | null>(null);
+
+ const fetchLastUpdateDate = async () => {
+ try {
+ const res = await fetch("/api/files/last-updates");
+ if (res.ok) {
+ const data = await res.json();
+ if (data.data?.comunicacoes) setLastUpdateDate(data.data.comunicacoes);
+ }
+ } catch (e) {
+ console.error(e);
+ }
+ };
+
+ React.useEffect(() => {
+ fetchLastUpdateDate();
+ }, []);
+
+ React.useEffect(() => {
+ window.scrollTo({ top: 0 });
+ setCurrentPage(1);
+ setTceCurrentPage(1);
+ setComCurrentPage(1);
+ }, []);
+
  // TCE module states
  const [tceActiveSubTab, setTceActiveSubTab] = useState<"geral" | "com-acordaos">("geral");
  const [tceSelectedYear, setTceSelectedYear] = useState("TODOS");
@@ -382,6 +559,7 @@ export default function TcuMonitoramento({
  setTceCurrentPage(1);
  setComCurrentPage(1);
  }, []);
+
 
  // Robust and auto-detecting file decoding function that works with Windows-1252/ISO-8859-1 (standard for Brazilian gov exports) and UTF-8
  const readAndDecodeFile = (file: File, callback: (text: string) => void, onFinish?: () => void) => {
@@ -1024,6 +1202,7 @@ export default function TcuMonitoramento({
  setComImportMessage(`Sincronização concluída com sucesso! ${res.importedCount} novos registros adicionados e ${res.updatedCount} atualizados.`);
  setParsedComItems(null);
  setComPasteContent("");
+ if (onRefreshData) onRefreshData();
  setTimeout(() => {
  setShowComImporter(false);
  setComImportMessage(null);
@@ -1085,7 +1264,34 @@ export default function TcuMonitoramento({
  await onUpdateComunicacao(updated);
  };
 
- ;
+ // Open Edit Dialog
+ const handleOpenEdit = (ac: AcordaoDemand) => {
+ setSelectedAcordao(ac);
+ setEditStatus(ac.STATUS_MONITORAMENTO);
+ setEditResponsavel(ac.RESPONSAVEL_INTERNO || "");
+ setEditPrazo(ac.PRAZO_LIMITE || "");
+ setEditObs(ac.OBSERVACOES || "");
+ setIsEditing(true);
+ };
+
+ // Save Edit Dialog
+ const handleSaveEdit = async () => {
+ if (!selectedAcordao) return;
+ 
+ const updated: AcordaoDemand = {
+ ...selectedAcordao,
+ STATUS_MONITORAMENTO: editStatus,
+ RESPONSAVEL_INTERNO: editResponsavel,
+ PRAZO_LIMITE: editPrazo,
+ OBSERVACOES: editObs
+ };
+
+ const success = await onUpdateAcordao(updated);
+ if (success) {
+ setSelectedAcordao(updated);
+ setIsEditing(false);
+ }
+ };
 
  // RFC 4180 compliant CSV parser that handles multiline fields (critical for ACORDAO inteiro teor)
  // This parser reads character-by-character instead of splitting by newline first,
@@ -1240,64 +1446,18 @@ export default function TcuMonitoramento({
  setIsSearchingFavorecido(false);
  }
  };
- const handleSingleProcessAi = async (ac: AcordaoDemand) => {
- setProcessingAiKey(ac.KEY);
- try {
- const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
- method: "POST",
- headers: { "Content-Type": "application/json" }
- });
- const data = await response.json();
- 
- if (data.success) {
- const updatedAc = { ...ac };
- if (!updatedAc.aiAnalysisData) updatedAc.aiAnalysisData = {} as any;
- (updatedAc.aiAnalysisData as any).dossieRessarcimento = data.dossie;
- if (data.checklist) {
- updatedAc.aiAnalysisData.determinacoes = data.checklist.determinacoes || [];
- updatedAc.aiAnalysisData.recomendacoes = data.checklist.recomendacoes || [];
- updatedAc.aiAnalysisData.darCiencia = data.checklist.darCiencia || [];
- updatedAc.aiAnalysisData.determinaArquivamento = !!data.checklist.determinaArquivamento;
- }
- const hasRessarcimento = data.dossie.some((r:any) => r.siafiEncontrados && r.siafiEncontrados.some((s:any) => s.confirmado === true));
- if (hasRessarcimento) {
- updatedAc.STATUS_MONITORAMENTO = "Cumprido";
- updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
- }
- 
- if (onUpdateAcordao) {
- await onUpdateAcordao(updatedAc);
- } else {
- await fetch("/api/acordaos/update", {
- method: "POST",
- headers: { "Content-Type": "application/json" },
- body: JSON.stringify(updatedAc)
- });
- }
- 
- alert("Dossiê gerado com sucesso!");
- } else {
- alert("Falha ao gerar dossiê: " + data.error);
- }
- } catch (err) {
- console.error(err);
- alert("Erro de conexão ao processar o Acórdão.");
- } finally {
- setProcessingAiKey(null);
- }
- };
-
- const abortBatchRef = useRef(false);
 
  const handleBatchProcessAi = async () => {
- const pendentes = acordaos.filter(a => {
- if (a.STATUS_MONITORAMENTO === "Cumprido" || a.STATUS_MONITORAMENTO === "Atrasado") return false;
- const dossie = a.aiAnalysisData?.dossieRessarcimento;
- if (!dossie || dossie.length === 0) return true;
- if (dossie[0].status === "pendente") return true;
- return false;
+ // 1. Encontrar todos os acórdãos que ainda não possuem dossieRessarcimento
+ // ou que possuem dossiê vazio (tentativa anterior falhou) E tem possível débito no texto
+ const pendentes = acordaos.filter(ac => {
+ const isMissing = !ac.aiAnalysisData?.dossieRessarcimento;
+ const isEmpty = ac.aiAnalysisData?.dossieRessarcimento?.length === 0;
+ const hasDebtText = /\b(condenar.*?em débito|tesouro nacional|recolhimento aos cofres)\b/.test(((ac.SUMARIO || "") + " " + (ac.ACORDAO || "")).toLowerCase());
+ 
+ return isMissing || (isEmpty && hasDebtText);
  });
-
+ 
  if (pendentes.length === 0) {
  alert("Todos os Acórdãos já possuem Dossiê IA gerado!");
  return;
@@ -1306,18 +1466,10 @@ export default function TcuMonitoramento({
  const confirmar = window.confirm(`Foram encontrados ${pendentes.length} Acórdãos pendentes de extração em lote.\n\nO processamento ocorrerá de forma instantânea através do nosso Agente Nativo local, sem limites ou bloqueios.\n\nDeseja iniciar?`);
  if (!confirmar) return;
 
- abortBatchRef.current = false;
  setIsBatchProcessing(true);
  setBatchProgress({ current: 0, total: pendentes.length });
- 
- let wasAborted = false;
 
  for (let i = 0; i < pendentes.length; i++) {
- if (abortBatchRef.current) {
- wasAborted = true;
- break;
- }
- 
  const ac = pendentes[i];
  setBatchProgress({ current: i + 1, total: pendentes.length });
  
@@ -1325,10 +1477,6 @@ export default function TcuMonitoramento({
  let retryCount = 0;
  
  while (!success && retryCount < 5) {
- if (abortBatchRef.current) {
- wasAborted = true;
- break;
- }
  try {
  const response = await fetch(`/api/acordaos/${ac.KEY}/analisar-ressarcimento`, {
  method: "POST",
@@ -1361,6 +1509,7 @@ export default function TcuMonitoramento({
  updatedAc.OBSERVACOES = "[Atualização Automática IA]: Ressarcimento identificado nos dados do SIAFI.";
  }
  
+ // Call API directly to save without triggering full re-render on every loop
  await fetch("/api/acordaos/update", {
  method: "POST",
  headers: { "Content-Type": "application/json" },
@@ -1368,25 +1517,25 @@ export default function TcuMonitoramento({
  });
  } else {
  console.error(`Falha no Acórdão ${ac.KEY}:`, data.error);
- if ((data.error && data.error.includes("429")) || (data.details && data.details.includes("429"))) {
+ if (data.error && data.error.includes("429")) {
  console.warn(`Rate limit hit on item ${i+1}. Waiting 62 seconds before retry...`);
  await new Promise(r => setTimeout(r, 62000));
  retryCount++;
  } else {
- break; 
+ break; // Stop retry on non-429 error
  }
  }
  } catch (err) {
  console.error(`Erro ao processar lote no Acórdão ${ac.KEY}:`, err);
  alert(`Erro de conexão ao processar o item ${i + 1}. O lote foi pausado para evitar perda de dados.`);
- wasAborted = true;
- break; 
+ break; // Stop the retry on network error!
  }
  }
- 
- if (wasAborted) break;
 
+ // Evitar que o sistema faça logout por inatividade
  window.dispatchEvent(new Event('mousemove'));
+ 
+ // Pequeno respiro pro React atualizar a barra de progresso
  if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
  }
 
@@ -1395,11 +1544,7 @@ export default function TcuMonitoramento({
  }
  
  setIsBatchProcessing(false);
- if (wasAborted) {
- alert("Processamento em Lote foi abortado/interrompido.");
- } else {
  alert("✨ Processamento em Lote concluído com sucesso!");
- }
  };
 
  const handleAnalyzeDossieAI = async (ac: AcordaoDemand) => {
@@ -1487,53 +1632,41 @@ export default function TcuMonitoramento({
  if (res && res.success) {
  setSyncLocalMessage(res.message);
  setLocalSyncReport(res.report || []);
- fetchImportStatus();
- if (onRefreshData) onRefreshData();
  } else {
  setSyncLocalMessage(res?.message || "Erro na sincronização local de acórdãos.");
- setIsSyncingLocal(false);
  }
  } catch (err: any) {
  setSyncLocalMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
+ } finally {
  setIsSyncingLocal(false);
  }
  };
 
- // Busca status de importação na montagem do componente
- React.useEffect(() => {
- fetchImportStatus();
- }, []);
-
- // Polling para acompanhar o status da importação em background
- React.useEffect(() => {
- let interval: any;
- if (isSyncingLocal) {
- interval = setInterval(async () => {
+ // Trigger Local Sync Action for Comunicacoes
+ const handleLocalSyncCom = async () => {
+ setIsSyncingLocalCom(true);
+ setSyncLocalComMessage("Sincronizando comunicações locais...");
  try {
- const res = await fetch("/api/acordaos/import-status");
- if (res.ok) {
- const data = await res.json();
- const statuses: any[] = data.data || [];
- setImportStatus(statuses);
- 
- // Verifica se tem algum rodando
- const isProcessing = statuses.some(s => ["INICIADO", "PENDENTE", "BAIXANDO", "PROCESSANDO"].includes(s.status));
- 
- if (!isProcessing && statuses.length > 0) {
- // Todos concluídos ou com erro
- setIsSyncingLocal(false);
- clearInterval(interval);
- fetchImportStatus();
+ const response = await fetch('/api/comunicacoes/sync-local', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' }
+ });
+ const res = await response.json();
+ if (res && res.success) {
+ setSyncLocalComMessage(res.message);
  if (onRefreshData) await onRefreshData();
+ setTimeout(() => setSyncLocalComMessage(null), 4000);
+ } else {
+ setSyncLocalComMessage(res?.message || "Erro na sincronização local de comunicações.");
+ setTimeout(() => setSyncLocalComMessage(null), 4000);
  }
+ } catch (err: any) {
+ setSyncLocalComMessage(`Falha na sincronização local: ${err.message || "Erro de rede"}`);
+ setTimeout(() => setSyncLocalComMessage(null), 4000);
+ } finally {
+ setIsSyncingLocalCom(false);
  }
- } catch (e) {
- console.error("Erro no polling de status:", e);
- }
- }, 3000);
- }
- return () => clearInterval(interval);
- }, [isSyncingLocal, onRefreshData]);
+ };
 
 
 
@@ -1548,13 +1681,8 @@ export default function TcuMonitoramento({
  ).sort() as string[];
 
  const hasValoresARessarcir = (ac: AcordaoDemand) => {
- if (ac.aiAnalysisData) {
- if (ac.aiAnalysisData.ha_ressarcimento !== undefined) {
- return ac.aiAnalysisData.ha_ressarcimento;
- }
- if (Array.isArray(ac.aiAnalysisData.dossieRessarcimento)) {
- return ac.aiAnalysisData.dossieRessarcimento.length > 0;
- }
+ if (ac.aiAnalysisData && ac.aiAnalysisData.temDebitoFinanceiro !== undefined) {
+ return ac.aiAnalysisData.temDebitoFinanceiro;
  }
  if (tceMappings && tceMappings.length > 0) {
  const isMapped = tceMappings.some(m => m.ACORDAO_KEY && (
@@ -1580,8 +1708,6 @@ export default function TcuMonitoramento({
  (ac.PROC && ac.PROC.toLowerCase().includes(term)) ||
  (ac.INTERESSADOS && ac.INTERESSADOS.toLowerCase().includes(term)) ||
  (ac.ASSUNTO && ac.ASSUNTO.toLowerCase().includes(term)) ||
- (ac.KEY && ac.KEY.toLowerCase().includes(term)) ||
- (ac.NUMACORDAO && ac.ANOACORDAO && `${ac.NUMACORDAO}/${ac.ANOACORDAO}`.includes(term)) ||
  (ac.NUMACORDAO && ac.NUMACORDAO.toString().includes(term));
 
  const matchesStatus = statusFilter === "TODOS" || ac.STATUS_MONITORAMENTO === statusFilter;
@@ -1594,10 +1720,9 @@ export default function TcuMonitoramento({
  
  const matchesRessarcimento = ressarcimentoFilter === "TODOS" || 
  (ressarcimentoFilter === "COM_VALORES" ? hasValoresARessarcir(ac) : 
- (ressarcimentoFilter === "SEM_VALORES" ? (ac.aiAnalysisData && !hasValoresARessarcir(ac)) :
+ (ressarcimentoFilter === "SEM_VALORES" ? !hasValoresARessarcir(ac) :
  (ressarcimentoFilter === "PENDENTE_REGULARIZACAO" ? 
- (ac.aiAnalysisData?.dossieRessarcimento?.length > 0 && ac.STATUS_MONITORAMENTO !== "Cumprido") :
- (ressarcimentoFilter === "SEM_LEITURA_IA" ? !ac.aiAnalysisData : false)
+ (ac.aiAnalysisData?.dossieRessarcimento?.length > 0 && ac.STATUS_MONITORAMENTO !== "Cumprido") : false
  )
  )
  );
@@ -1756,812 +1881,769 @@ export default function TcuMonitoramento({
  return (
  <div className="space-y-6 font-sans">
  
+ 
+
+ <div className="space-y-6 animate-fade-in">
 
 
- {processErrors.length > 0 && (
- <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-md flex items-start shadow-sm">
- <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
- <div>
- <h3 className="text-red-800 font-bold text-sm">Atenção: Inconsistência no processamento de dados</h3>
- <p className="text-red-700 text-xs mt-1">
- Encontramos erros ao processar as Recomendações e Determinações de {processErrors.length} acórdão(s).
- </p>
- <ul className="mt-2 text-xs text-red-600 list-disc list-inside">
- {processErrors.slice(0, 5).map(err => (
- <li key={err.id}>Acórdão ID/Key: <span className="font-semibold">{err.id}</span> - {err.error}</li>
- ))}
- {processErrors.length > 5 && (
- <li>... e mais {processErrors.length - 5} acórdão(s).</li>
- )}
- </ul>
- </div>
- </div>
- )}
 
- {/* TCU Acórdão Importer Section - Premium Bento Box */}
- {showImporter && (
- <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden no-print">
- <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-10 -mt-10 pointer-events-none opacity-40"></div>
- <div className="relative z-10 flex justify-between items-start mb-4">
- <div className="space-y-1">
- <h3 className="text-sm font-black text-[#003366] uppercase tracking-wide">
- Painel de Importação e Carga do TCU
- </h3>
- <p className="text-xs text-slate-500 leading-relaxed max-w-4xl">
- O sistema realiza a sincronização automática de acórdãos lendo os arquivos consolidados e atualizando o inteiro teor das decisões.
- </p>
- </div>
- <button onClick={() => setShowImporter(false)} className="text-slate-400 hover:text-slate-600 transition">
- <X className="w-5 h-5" />
- </button>
- </div>
+ {/* Core Analytics & Filtering */}
+ {(() => {
+ const allComs = comunicacoes || [];
+ 
+ // Gather statistics on the fully loaded list of communications
+ const currentYearInt = parseInt(comAnoFilter);
+ const totalForSelectedYear = allComs.filter(x => comAnoFilter === "TODOS" || x.ANO === currentYearInt);
+ const totalComsCount = totalForSelectedYear.length;
+ const respondedCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && typeof x.DATA_RESPOSTA === 'string' && x.DATA_RESPOSTA.trim() !== "").length;
+ const pendingCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false && (typeof x.DATA_RESPOSTA !== 'string' || x.DATA_RESPOSTA.trim() === "")).length;
+ const totalRequiredCount = totalForSelectedYear.filter(x => x.CARECE_RESPOSTA !== false).length;
+ const responseRate = totalRequiredCount > 0 ? ((respondedCount / totalRequiredCount) * 100).toFixed(1) : "100.0";
 
- <div className="space-y-4 relative z-10">
- {/* Sincronização Local Incremental - Premium Card */}
- <div className="border border-slate-200 rounded-xl p-5 bg-slate-50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-fade-in">
- <div className="space-y-2">
- <h4 className="text-xs font-bold text-[#003366] uppercase tracking-wider flex items-center gap-1.5">
- <RefreshCw className={`w-4 h-4 text-[#003366] ${isSyncingLocal ? "animate-spin" : ""}`} />
- Sincronização Automática via Planilhas Locais
- </h4>
- <p className="text-sm text-slate-500 max-w-[650px] leading-relaxed">
- Para maior segurança e controle de dados, salve as planilhas completas obtidas no TCU (ex: <code className="bg-slate-200 px-1 py-0.5 rounded ">Acórdãos2026.csv</code>) dentro da pasta segura <code className="bg-slate-200 px-1 py-0.5 rounded ">data/tcu/acordaos/</code> do projeto.
- </p>
- <p className="text-xs text-slate-400">
- O sistema fará a leitura local em lote de forma otimizada para atualizar os teores das decisões sem depender da conexão externa do TCU.
- </p>
- {/* Label de última atualização por ano */}
- {importStatus.length > 0 && (
- <div className="flex flex-wrap gap-2 pt-1">
- {importStatus
- .filter((s: any) => s.status === 'CONCLUIDO')
- .map((s: any) => (
- <span
- key={s.ano_referencia}
- className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border"
- style={{
- background: s.eh_historico ? '#f0fdf4' : '#eff6ff',
- borderColor: s.eh_historico ? '#bbf7d0' : '#bfdbfe',
- color: s.eh_historico ? '#166534' : '#1e40af'
+ // Unidade Emitente counts for breakdown
+ const emitentes: { [key: string]: number } = {};
+ totalForSelectedYear.forEach(x => {
+ const u = x.UNIDADE_EMITENTE || "OUTROS";
+ emitentes[u] = (emitentes[u] || 0) + 1;
+ });
+
+ // Filtered Communications list
+ const finalFiltered = totalForSelectedYear.filter(item => {
+ const term = (comSearchTerm || "").toLowerCase();
+ const matchesSearch = 
+ (item.COMUNICACAO || "").toLowerCase().includes(term) ||
+ (item.PROCESSO || "").toLowerCase().includes(term) ||
+ (item.DESTINATARIO && item.DESTINATARIO.toLowerCase().includes(term)) ||
+ (item.CONTATO && item.CONTATO.toLowerCase().includes(term)) ||
+ (item.UNIDADE_EMITENTE && item.UNIDADE_EMITENTE.toLowerCase().includes(term));
+
+ const matchesUnidade = comUnidadeFilter === "TODOS" || item.UNIDADE_EMITENTE === comUnidadeFilter;
+ 
+ const carece = item.CARECE_RESPOSTA !== false;
+ const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
+ const matchesRespondido = 
+ comRespondidoFilter === "TODOS" || 
+ (comRespondidoFilter === "RESPONDIDO" && carece && hasResponse) ||
+ (comRespondidoFilter === "PENDENTE" && carece && !hasResponse) ||
+ (comRespondidoFilter === "NAO_EXIGIDO" && !carece);
+
+ return matchesSearch && matchesUnidade && matchesRespondido;
+ });
+
+ // Recipient Statistics & Percentages
+ const destinatarioStats = (() => {
+ const statsMap: { [key: string]: { total: number; responded: number; pending: number; requireResponseTotal: number } } = {};
+ 
+ totalForSelectedYear.forEach(com => {
+ const dest = com.DESTINATARIO || "Geral / Não Especificado";
+ if (!statsMap[dest]) {
+ statsMap[dest] = { total: 0, responded: 0, pending: 0, requireResponseTotal: 0 };
+ }
+ const carece = com.CARECE_RESPOSTA !== false;
+ statsMap[dest].total++;
+ if (carece) {
+ statsMap[dest].requireResponseTotal++;
+ if (com.DATA_RESPOSTA && com.DATA_RESPOSTA.trim() !== "") {
+ statsMap[dest].responded++;
+ } else {
+ statsMap[dest].pending++;
+ }
+ }
+ });
+
+ return Object.entries(statsMap).map(([dest, info]) => {
+ const pct = totalComsCount > 0 ? (info.total / totalComsCount) * 105 : 0; // scaled out of total
+ const realPct = totalComsCount > 0 ? (info.total / totalComsCount) * 100 : 0;
+ return {
+ unidade: dest,
+ total: info.total,
+ requireResponseTotal: info.requireResponseTotal,
+ responded: info.responded,
+ pending: info.pending,
+ percentage: realPct
+ };
+ }).sort((a, b) => b.total - a.total);
+ })();
+
+ // Dynamic year tabs
+ const distinctYears = Array.from(new Set(allComs.map(x => x.ANO).filter(Boolean))).sort((a, b) => Number(b) - Number(a));
+ const uniqueUnidades = Array.from(new Set(allComs.map(x => x.UNIDADE_EMITENTE).filter(Boolean))).sort();
+
+ const escapeXML = (str: string) => {
+ return (str || "")
+ .replace(/&/g, "&amp;")
+ .replace(/</g, "&lt;")
+ .replace(/>/g, "&gt;")
+ .replace(/"/g, "&quot;")
+ .replace(/'/g, "&apos;");
+ };
+
+ const handleExportToExcel = () => {
+ let xml = `<?xml version="1.0" encoding="utf-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+ <Style ss:ID="Default" ss:Name="Normal">
+ <Alignment ss:Vertical="Center"/>
+ <Borders>
+ <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#CBD5E1"/>
+ </Borders>
+ <Font ss:FontName="Calibri" x:Family="Swiss" ss:Size="11" ss:Color="#1E293B"/>
+ <Interior/>
+ </Style>
+ <Style ss:ID="Header">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+ <Borders>
+ <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#0F172A"/>
+ </Borders>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#FFFFFF" ss:Size="11"/>
+ <Interior ss:Color="#003366" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="Title">
+ <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Size="15" ss:Color="#0F172A"/>
+ </Style>
+ <Style ss:ID="SubTitle">
+ <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Italic="1" ss:Size="10" ss:Color="#475569"/>
+ </Style>
+ <Style ss:ID="SaneadoRow">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#15803D" ss:Size="10"/>
+ <Interior ss:Color="#DCFCE7" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="PendenteRow">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#B45309" ss:Size="10"/>
+ <Interior ss:Color="#FEF3C7" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="NaoExigidoRow">
+ <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+ <Font ss:FontName="Calibri" ss:Bold="1" ss:Color="#475569" ss:Size="10"/>
+ <Interior ss:Color="#F1F5F9" ss:Pattern="Solid"/>
+ </Style>
+ <Style ss:ID="PctCell">
+ <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+ <NumberFormat ss:Format="0.0%"/>
+ </Style>
+ </Styles>
+ <Worksheet ss:Name="Lote de Oficios">
+ <Table ss:DefaultRowHeight="19">
+ <Column ss:Width="130" />
+ <Column ss:Width="80" />
+ <Column ss:Width="200" />
+ <Column ss:Width="160" />
+ <Column ss:Width="120" />
+ <Column ss:Width="120" />
+ <Column ss:Width="120" />
+ <Column ss:Width="100" />
+ <Column ss:Width="90" />
+ <Column ss:Width="90" />
+ <Column ss:Width="130" />
+ 
+ <Row ss:Height="28">
+ <Cell ss:MergeAcross="10" ss:StyleID="Title">
+ <Data ss:Type="String">MINISTÉRIO DO TRABALHO E EMPREGO — AECI</Data>
+ </Cell>
+ </Row>
+ <Row ss:Height="20">
+ <Cell ss:MergeAcross="10" ss:StyleID="SubTitle">
+ <Data ss:Type="String">Relatório Oficial de Ofícios e Respostas TCU • Filtro: ${comAnoFilter === "TODOS" ? "Histórico Completo" : `Ano ${comAnoFilter}`} • Exportado em: ${new Date().toLocaleString('pt-BR')}</Data>
+ </Cell>
+ </Row>
+ <Row ss:Index="4" ss:Height="25" ss:StyleID="Header">
+ <Cell><Data ss:Type="String">Comunicação TCU</Data></Cell>
+ <Cell><Data ss:Type="String">Emitente TCU</Data></Cell>
+ <Cell><Data ss:Type="String">Destinatário MTE</Data></Cell>
+ <Cell><Data ss:Type="String">Contato MTE</Data></Cell>
+ <Cell><Data ss:Type="String">Processo TCU</Data></Cell>
+ <Cell><Data ss:Type="String">Unidade Executora</Data></Cell>
+ <Cell><Data ss:Type="String">Processo SEI</Data></Cell>
+ <Cell><Data ss:Type="String">Destinação</Data></Cell>
+ <Cell><Data ss:Type="String">Expedição</Data></Cell>
+ <Cell><Data ss:Type="String">Resposta</Data></Cell>
+ <Cell><Data ss:Type="String">Acompanhamento</Data></Cell>
+ </Row>`;
+
+ finalFiltered.forEach(item => {
+ const carece = item.CARECE_RESPOSTA !== false;
+ const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
+ 
+ let stateText = "Não Precisa de Resposta";
+ let rowStyle = "NaoExigidoRow";
+
+ if (carece) {
+ stateText = hasResponse ? "Respondido" : "Aguardando Resposta";
+ rowStyle = hasResponse ? "SaneadoRow" : "PendenteRow";
+ }
+
+ xml += `
+ <Row ss:Height="21">
+ <Cell><Data ss:Type="String">${escapeXML(item.COMUNICACAO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.UNIDADE_EMITENTE)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DESTINATARIO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.CONTATO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.PROCESSO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.UNIDADE_EXECUTORA || "-")}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.PROCESSO_SEI || "-")}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DESTINACAO || "-")}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DATA_EXPEDICAO)}</Data></Cell>
+ <Cell><Data ss:Type="String">${escapeXML(item.DATA_RESPOSTA || "-")}</Data></Cell>
+ <Cell ss:StyleID="${rowStyle}"><Data ss:Type="String">${stateText}</Data></Cell>
+ </Row>`;
+ });
+
+ xml += `
+ </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Estatísticas Analíticas">
+ <Table ss:DefaultRowHeight="20">
+ <Column ss:Width="280" />
+ <Column ss:Width="95" />
+ <Column ss:Width="95" />
+ <Column ss:Width="95" />
+ <Column ss:Width="110" />
+ 
+ <Row ss:Height="28">
+ <Cell ss:MergeAcross="4" ss:StyleID="Title">
+ <Data ss:Type="String">IMPACTO DAS DEMANDAS POR DESTINATÁRIO (PARETO)</Data>
+ </Cell>
+ </Row>
+ <Row ss:Height="20">
+ <Cell ss:MergeAcross="4" ss:StyleID="SubTitle">
+ <Data ss:Type="String">Participação das Unidades do MTE sobre o total de comunicações expedidas (${totalComsCount} ofícios no contexto) • Filtro: ${comAnoFilter}</Data>
+ </Cell>
+ </Row>
+ <Row ss:Index="4" ss:Height="25" ss:StyleID="Header">
+ <Cell><Data ss:Type="String">Unidade Destinatária</Data></Cell>
+ <Cell><Data ss:Type="String">Ofícios Recebidos</Data></Cell>
+ <Cell><Data ss:Type="String">Total Respondidos</Data></Cell>
+ <Cell><Data ss:Type="String">Total Pendentes</Data></Cell>
+ <Cell><Data ss:Type="String">% de Participação</Data></Cell>
+ </Row>`;
+
+ destinatarioStats.forEach(stat => {
+ xml += `
+ <Row ss:Height="21">
+ <Cell><Data ss:Type="String">${escapeXML(stat.unidade)}</Data></Cell>
+ <Cell><Data ss:Type="Number">${stat.total}</Data></Cell>
+ <Cell><Data ss:Type="Number">${stat.responded}</Data></Cell>
+ <Cell><Data ss:Type="Number">${stat.pending}</Data></Cell>
+ <Cell ss:StyleID="PctCell"><Data ss:Type="Number">${(stat.percentage / 100).toFixed(4)}</Data></Cell>
+ </Row>`;
+ });
+
+ xml += `
+ </Table>
+ </Worksheet>
+</Workbook>`;
+
+ const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8" });
+ const url = URL.createObjectURL(blob);
+ const link = document.createElement("a");
+ link.href = url;
+ link.download = `Relatorio_Comunicacoes_TCU_${comAnoFilter}_Formatado.xls`;
+ document.body.appendChild(link);
+ link.click();
+ document.body.removeChild(link);
+ URL.revokeObjectURL(url);
+ };
+
+ return (
+ <>
+ {/* Statistics bento grid */}
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+ <div 
+ onClick={() => {
+ setComRespondidoFilter("TODOS");
+ setComSubTab("lista");
  }}
+ className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-[#003366]/30 hover:bg-[#003366]/5 transition cursor-pointer"
  >
- {s.ano_referencia}
- {s.eh_historico ? ' ✓ Histórico' : ' ↻ Corrente'}
- {s.data_fim && (
- <span className="text-slate-400 font-normal ml-0.5">
- — {new Date(s.data_fim).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
- </span>
- )}
- </span>
- ))}
- </div>
- )}
- </div>
- <button
- id="btn-sync-local"
- onClick={handleLocalSync}
- disabled={isSyncingLocal}
- className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 flex items-center gap-1.5 transition duration-200 cursor-pointer"
- >
- {isSyncingLocal ? (
- <>
- <RefreshCw className="w-4 h-4 animate-spin" />
- Sincronizando...
- </>
- ) : (
- <>
- <RefreshCw className="w-4 h-4" />
- Sincronizar Arquivos Locais
- </>
- )}
- </button>
- </div>
-
- {syncLocalMessage && (
- <div className="p-3.5 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold flex items-start gap-2 animate-fade-in">
- <AlertCircle className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
  <div className="space-y-1">
- <span>{syncLocalMessage}</span>
- {localSyncReport && localSyncReport.length > 0 && (
- <div className="mt-2 text-xs text-emerald-700 space-y-1">
- {localSyncReport.map((rep: any, idx: number) => (
- <div key={idx}>
- • {rep.file}: {rep.imported} importados, {rep.updated} atualizados, {rep.skipped} ignorados.
- {rep.error && <span className="text-rose-600"> (Erro: {rep.error})</span>}
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Universo de Ofícios</span>
+ <h4 className="text-2xl font-black text-slate-900">{totalComsCount}</h4>
+ <p className="text-xs text-slate-500">Mapeados no ano ({comAnoFilter === "TODOS" ? "Histórico Total" : comAnoFilter})</p>
  </div>
- ))}
+ <div className="p-3 bg-blue-50 text-[#003366] rounded-xl animate-fade-in">
+ <MessageSquare className="w-6 h-6" />
  </div>
+ </div>
+
+ <div 
+ onClick={() => {
+ setComRespondidoFilter("RESPONDIDO");
+ setComSubTab("lista");
+ }}
+ className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-emerald-300 hover:bg-emerald-50/30 transition cursor-pointer"
+ >
+ <div className="space-y-1">
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Respondidos</span>
+ <h4 className="text-2xl font-black text-emerald-700">{respondedCount}</h4>
+ <p className="text-xs text-emerald-600 font-semibold">Ofícios com resposta salvas</p>
+ </div>
+ <div className="p-3 bg bg-emerald-50 text-emerald-700 rounded-xl animate-fade-in">
+ <Check className="w-6 h-6" />
+ </div>
+ </div>
+
+ <div 
+ onClick={() => {
+ setComRespondidoFilter("PENDENTE");
+ setComSubTab("lista");
+ }}
+ className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs hover:border-amber-300 hover:bg-amber-50/50 transition cursor-pointer group"
+ >
+ <div className="space-y-1">
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider group-hover:text-amber-700 transition">Resposta Pendente</span>
+ <h4 className="text-2xl font-black text-amber-600 inline-flex items-center gap-1.5">
+ {pendingCount}
+ {pendingCount > 0 && <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse inline-block" />}
+ </h4>
+ <p className="text-xs text-slate-500 group-hover:text-amber-800 transition">Aguardando instrução da assessoria</p>
+ </div>
+ <div className="p-3 bg-amber-50 text-amber-600 rounded-xl animate-fade-in group-hover:bg-amber-100 transition">
+ <Clock className="w-6 h-6" />
+ </div>
+ </div>
+
+ <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
+ <div className="space-y-1">
+ <span className="text-xs font-black uppercase text-slate-400 tracking-wider">Índice de Resposta</span>
+ <h4 className="text-2xl font-black text-slate-900">{responseRate}%</h4>
+ <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1 animate-fade-in">
+ <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${responseRate}%` }}></div>
+ </div>
+ </div>
+ <div className="p-3 bg-slate-50 text-slate-700 rounded-xl animate-fade-in">
+ <BarChart3 className="w-6 h-6" />
+ </div>
+ </div>
+ </div>
+
+ {/* Sub-emitters distribution badge rail */}
+ <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3 flex flex-wrap gap-2 items-center text-xs">
+ <span className="text-xs font-black text-[#003366] uppercase tracking-wider mr-1">Unidades Emitentes TCU:</span>
+ {Object.keys(emitentes).length === 0 ? (
+ <span className="text-slate-400 text-sm">Nenhuma unidade registrada neste período</span>
+ ) : (
+ Object.entries(emitentes).map(([unit, count]) => (
+ <span key={unit} className="bg-white border border-slate-200 px-2 py-0.5 rounded-md font-semibold text-slate-700 text-xs flex items-center gap-1">
+ <span>{unit}</span>
+ <span className="bg-[#003366] text-white px-1 rounded text-xs font-sans">{count}</span>
+ </span>
+ ))
  )}
  </div>
- </div>
- )}
- </div>
- </div>
- )}
 
-
-
-
-
-
-
-
- {/* Year Pill Bar — padrão CGU */}
-  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar no-print">
-  <button
-  onClick={() => { setAnoFilter("TODOS"); setCurrentPage(1); }}
-  className={`px-3.5 py-1.5 text-[11px] font-bold tracking-wide whitespace-nowrap rounded-full transition-all duration-200 ${
-  anoFilter === "TODOS"
-  ? "bg-[#003366] text-white shadow-sm shadow-blue-900/20"
-  : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-  }`}
-  >
-  TODOS OS ANOS
-  </button>
-  {availableYears.map((yr) => (
-  <button
-  key={yr}
-  onClick={() => { setAnoFilter(yr.toString()); setCurrentPage(1); }}
-  className={`px-3.5 py-1.5 text-[11px] font-bold tracking-wide whitespace-nowrap rounded-full transition-all duration-200 ${
-  anoFilter === yr.toString()
-  ? "bg-[#003366] text-white shadow-sm shadow-blue-900/20"
-  : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-  }`}
-  >
-  ANO {yr}{yr === new Date().getFullYear() && <span className="bg-emerald-400/30 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
-  </button>
-  ))}
-  </div>
-
-
-  {/* Filters HUD - Bento Card layout */}
- <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print mb-4">
- <div className="flex flex-col gap-4">
- {/* Top Row: Action Buttons and Search */}
- <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
- <div className="flex flex-wrap gap-2 items-center">
- <div className="flex items-center gap-2">
- <button 
- id="btn-sync-local"
- onClick={handleLocalSync}
- disabled={isSyncingLocal}
- className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${
- isSyncingLocal 
- ? "bg-slate-800 text-white shadow-xs opacity-50" 
- : "bg-[#003366] text-white hover:bg-[#0f4396] shadow-sm"
+ {/* Submodule View Selector: Tab Selection & Export */}
+ <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-slate-200/60 pb-1.5 pt-1.5 no-print">
+ <div className="flex gap-1.5 bg-slate-100/60 p-0.5 rounded-xl border border-slate-200/50">
+ <button
+ onClick={() => setComSubTab("lista")}
+ className={`px-4 py-2 text-xs font-bold rounded-lg transition duration-200 inline-flex items-center gap-1.5 ${
+ comSubTab === "lista"
+ ? "bg-white text-[#003366] shadow-sm font-black"
+ : "text-slate-500 hover:text-slate-800"
  }`}
  >
- {isSyncingLocal ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
- {isSyncingLocal ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
+ <Database className="w-3.5 h-3.5" />
+ Lote de Ofícios ({finalFiltered.length})
+ </button>
+ <button
+ onClick={() => setComSubTab("analytics")}
+ className={`px-4 py-2 text-xs font-bold rounded-lg transition duration-200 inline-flex items-center gap-1.5 ${
+ comSubTab === "analytics"
+ ? "bg-white text-[#003366] shadow-sm font-black"
+ : "text-slate-500 hover:text-slate-800"
+ }`}
+ >
+ <BarChart3 className="w-3.5 h-3.5" />
+ Estatísticas por Destinatário ({destinatarioStats.length})
+ </button>
+ </div>
+
+ <div className="flex gap-2">
+ {syncLocalComMessage && (
+ <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+ {syncLocalComMessage}
+ </span>
+ )}
+ <div className="flex items-center gap-2">
+ <button
+ onClick={handleLocalSyncCom}
+ disabled={isSyncingLocalCom}
+ className="px-3.5 py-1.5 bg-blue-50 border border-blue-200 hover:bg-blue-100 text-[#003366] rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs"
+ title="Sincronizar Arquivos Locais (data/comunicacoes)"
+ >
+ <RefreshCw className={`w-4 h-4 ${isSyncingLocalCom ? "animate-spin" : ""}`} />
+ {isSyncingLocalCom ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
  </button>
  {lastUpdateDate && (
- <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-normal break-words">
+ <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
  Atualizado em: {lastUpdateDate}
  </span>
  )}
  </div>
- 
- <button 
- id="btn-export-excel"
- onClick={handleExportExcel}
- className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
+ <button
+ onClick={handleExportToExcel}
+ disabled={finalFiltered.length === 0}
+ className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer disabled:opacity-50"
+ title="Exportar dados e estatísticas para planilha Excel formatada com duas abas"
  >
  <Download size={16} /> Excel
  </button>
  </div>
+ </div>
 
- <div className="relative w-full xl:w-[300px] shrink-0">
+ {/* Sub Tab View 1: SCROLLABLE LIST OF OFICIOS */}
+ {comSubTab === "lista" && (
+ <div className="space-y-3 bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs transition duration-200">
+ 
+ {/* Dynamic Year tabs */}
+ <div className="flex border-b border-slate-150 no-print overflow-x-auto gap-1 pb-1">
+ <button
+ onClick={() => { setComAnoFilter("TODOS"); }}
+ className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+ comAnoFilter === "TODOS"
+ ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+ : "text-slate-400 hover:text-slate-700"
+ }`}
+ >
+ Todos os Anos
+ </button>
+ {distinctYears.map((yr) => (
+ <button
+ key={yr}
+ onClick={() => { setComAnoFilter(yr.toString()); }}
+ className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+ comAnoFilter === yr.toString()
+ ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+ : "text-slate-400 hover:text-slate-700"
+ }`}
+ >
+ Ano {yr} {yr === 2026 && <span className="bg-emerald-200 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
+ </button>
+ ))}
+ </div>
+
+ {/* Filter Rail */}
+ <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-1 no-print">
+ <div className="relative">
  <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
  <input
- id="txt-search-acordao"
  type="text"
- className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-hidden transition text-slate-800"
- placeholder="Pesquisar..."
- value={searchTerm}
- onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+ placeholder="Buscar comunicação, processo, contato..."
+ value={comSearchTerm}
+ onChange={(e) => { setComSearchTerm(e.target.value); }}
+ className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white bg-slate-50/55 transition text-xs"
  />
  </div>
- </div>
 
- <hr className="border-slate-100" />
-
- {/* Bottom Row: Dynamic Filters */}
- <div className="flex flex-wrap gap-4 items-center w-full bg-slate-50/50 p-2 rounded-xl">
- <div className="flex items-center gap-2 text-xs text-slate-600">
- <span className="font-semibold text-slate-550 shrink-0">Situação:</span>
+ <div>
  <select
- id="select-filter-status"
- className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
- value={statusFilter}
- onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+ value={comUnidadeFilter}
+ onChange={(e) => { setComUnidadeFilter(e.target.value); }}
+ className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white bg-slate-50/55 transition text-xs"
  >
- <option value="TODOS">Todos</option>
- <option value="Pendente">Pendentes</option>
- <option value="Em Análise">Em Análise</option>
- <option value="Cumprido">Cumpridos</option>
- <option value="Atrasado">Em Atraso</option>
+ <option value="TODOS">Todas as Unidades Emitentes</option>
+ {uniqueUnidades.map(un => (
+ <option key={un} value={un}>{un}</option>
+ ))}
+ </select>
+ </div>
+ <div>
+ <select
+ value={comRespondidoFilter}
+ onChange={(e) => { setComRespondidoFilter(e.target.value); }}
+ className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-1 focus:ring-[#003366] focus:bg-white bg-slate-50/55 transition text-xs"
+ >
+ <option value="TODOS">Todos os Status de Resposta</option>
+ <option value="RESPONDIDO">Respondidos (Concluídos)</option>
+ <option value="PENDENTE">Pendentes (Não Respondidos)</option>
+ <option value="NAO_EXIGIDO">Não Precisa de Resposta</option>
  </select>
  </div>
 
- <div className="flex items-center gap-2 text-xs text-slate-600">
- <span className="font-semibold text-slate-550 shrink-0">Colegiado:</span>
- <select
- id="select-filter-colegiado"
- className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
- value={colegiadoFilter}
- onChange={(e) => { setColegiadoFilter(e.target.value); setCurrentPage(1); }}
- >
- <option value="TODOS">Todos</option>
- <option value="Plenário">Plenário</option>
- <option value="Primeira Câmara">1ª Câmara</option>
- <option value="Segunda Câmara">2ª Câmara</option>
- </select>
+ <div className="flex items-center justify-end text-slate-400 text-xs pr-2">
+ Retornou {finalFiltered.length} registros • Rolagem vertical ativa
+ </div>
  </div>
 
- <div className="flex items-center gap-2 text-xs text-slate-600">
- <span className="font-semibold text-slate-550 shrink-0">Ressarcimento:</span>
- <select
- id="select-filter-ressarcimento"
- className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium"
- value={ressarcimentoFilter}
- onChange={(e) => { setRessarcimentoFilter(e.target.value); setCurrentPage(1); }}
- >
- <option value="TODOS">Todos</option>
- <option value="COM_VALORES">Com Débito Exigido</option>
- <option value="SEM_VALORES">Sem Débito Exigido</option>
- <option value="PENDENTE_REGULARIZACAO">Débito Pendente de Pgto.</option>
- <option value="SEM_LEITURA_IA">Pendente de Leitura IA</option>
- </select>
- </div>
-
- <div className="flex items-center gap-2 text-xs text-slate-600">
- <span className="font-semibold text-slate-550 shrink-0">Recomendações:</span>
- <select
- id="select-filter-recomendacao"
- className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-hidden font-medium max-w-[200px] break-words whitespace-normal"
- value={recomendacaoFilter}
- onChange={(e) => { setRecomendacaoFilter(e.target.value); setCurrentPage(1); }}
- >
- <option value="TODOS">Todas</option>
- <option value="COM_RECOMENDACAO">Possui Determinação/Recomendação</option>
- <option value="SEM_RECOMENDACAO">Sem Ações</option>
- </select>
- </div>
-
- <button
- id="btn-clear-filters"
- className="ml-auto text-xs text-[#003366] hover:text-[#001f3f] underline font-bold px-2 py-1 shrink-0"
- onClick={() => { setSearchTerm(""); setStatusFilter("TODOS"); setColegiadoFilter("TODOS"); setAnoFilter("TODOS"); setRessarcimentoFilter("TODOS"); setRecomendacaoFilter("TODOS"); }}
- >
- Limpar Filtros
- </button>
- </div>
- </div>
- </div>
-{/* Main Datagrid - Bento Rounded Table wrapping */}
- <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
- 
- {/* Status indicator rail */}
- <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 text-xs flex flex-col sm:flex-row items-add sm:items-center justify-between gap-1 no-print">
- <div className="flex items-center gap-1.5">
- <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
- <span className="font-semibold text-slate-700 uppercase tracking-wide">Monitoramento de Acórdãos: {filteredAcordaos.length} registros</span>
- </div>
- <span className="text-slate-400 text-xs uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
- </div>
-
- <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
- <table className="w-full text-left border-collapse text-sm text-slate-800">
+ {/* Highly Formatted Scrollable list table - SCROLLABLE WITHOUT PAGES */}
+ <div className="overflow-y-auto max-h-[500px] rounded-xl border border-slate-200 mt-4 bg-slate-50/20">
+ <table className="w-full text-left border-collapse text-xs table-auto min-w-[1000px]">
  <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
-            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-8 no-print cursor-pointer hover: transition-colors"></th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Título do Acórdão</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo TCU</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Sessão / Data</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status / Resumo</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Ações</th>
+ <tr className="sticky top-0 z-10">
+ <th className="p-4 font-semibold whitespace-nowrap w-[150px]">
+ Ofício / Comunicação
+ </th>
+ <th className="p-4 font-semibold">
+ Destinatário MTE
+ </th>
+ <th className="p-4 font-semibold text-center w-[180px]">
+ Situação Geral
+ </th>
+ <th className="p-4 font-semibold w-24 no-print"></th>
  </tr>
  </thead>
-
  <tbody className="divide-y divide-slate-100 text-xs">
- {isLoading && filteredAcordaos.length === 0 ? (
+ {finalFiltered.length === 0 ? (
  <tr>
- <td colSpan={4} className="text-center py-12 text-slate-400 font-sans">
- Sincronizando dados com repositório remoto da AECI...
- </td>
- </tr>
- ) : filteredAcordaos.length === 0 ? (
- <tr>
- <td colSpan={4} className="text-center py-12 text-slate-400 font-sans">
- Nenhum acórdão localizado com os filtros inseridos.
+ <td colSpan={6} className="p-16 text-center text-slate-400 space-y-2">
+ <MessageSquare className="w-10 h-10 text-slate-300 mx-auto animate-bounce" />
+ <p className="font-bold text-slate-700">Nenhuma comunicação localizada</p>
+ <p className="text-sm text-slate-400 max-w-md mx-auto">
+ Altere os termos de pesquisa ou use a barra de sincronização acima para importar dados deste ou de outros anos.
+ </p>
  </td>
  </tr>
  ) : (
- filteredAcordaos.map((ac, idx) => {
- const uniqueKey = ac.KEY; // Removed -idx to prevent row collapse on updates
- const isExpanded = expandedRow === uniqueKey;
- const isLate = ac.STATUS_MONITORAMENTO === "Atrasado" || (ac.STATUS_MONITORAMENTO !== "Cumprido" && new Date(ac.PRAZO_LIMITE).getTime() < Date.now());
- const hasFullText = !!(ac.ACORDAO || (ac as any).acordao);
- const currentFullText = (ac.ACORDAO || (ac as any).acordao || "").trim();
+ finalFiltered.map((item) => {
+ const isExpanded = comExpandedRow === item.KEY;
+ const carece = item.CARECE_RESPOSTA !== false;
+ const hasResponse = !!item.DATA_RESPOSTA && item.DATA_RESPOSTA.trim() !== "";
+ 
+ let situacaoText = "NÃO PRECISA DE RESPOSTA";
+ let situacaoStyle = "bg-slate-50 text-slate-600 border-slate-200";
+ let dotStyle = "bg-slate-450";
+ 
+ if (carece) {
+ if (hasResponse) {
+ situacaoText = "RESPONDIDA";
+ situacaoStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+ dotStyle = "bg-emerald-500";
+ } else {
+ situacaoText = "PENDENTE";
+ situacaoStyle = "bg-amber-50 text-amber-800 border-amber-200 animate-pulse";
+ dotStyle = "bg-amber-500";
+ }
+ }
 
  return (
- <React.Fragment key={uniqueKey}>
- 
+ <React.Fragment key={item.KEY || `${item.COMUNICACAO}-${item.ANO}`}>
  {/* Row Item */}
- <tr 
- className={`hover:bg-[#1351b4]/5 transition-colors group cursor-pointer ${isExpanded ? "bg-blue-50/50" : ""}`}
- onClick={async () => {
- const willExpand = !isExpanded;
- setExpandedRow(willExpand ? uniqueKey : null);
- setDocVerifyInput("");
- setVerifyResult(null);
- setFavorecidoInput("");
- setFavorecidoDocsResult(null);
- setSearchMode("documento");
-
- if (willExpand && !ac.aiAnalysisData?.dossieRessarcimento) {
- try {
- const fullTextData = await handleViewFullText(ac, true);
- const teor = fullTextData?.acordao || currentFullText || "";
- if (teor) {
- const result = extractLocalHeuristics(teor);
- await onUpdateAcordao({ ...ac, aiAnalysisData: result });
- }
- } catch (e) {
- console.error("Auto extraction error:", e);
- }
- }
- }}
- >
+ <tr className={`hover:bg-[#1351b4]/5 transition-colors group ${isExpanded ? "border-b border-[#002244]" : "border-b border-slate-100"}`}>
  
- {/* Expand toggle icon */}
- <td className="p-4 align-middle no-print">
- <button 
- onClick={async (e) => {
- e.stopPropagation();
- const willExpand = !isExpanded;
- setExpandedRow(willExpand ? uniqueKey : null);
- setDocVerifyInput("");
- setVerifyResult(null);
- setFavorecidoInput("");
- setFavorecidoDocsResult(null);
- setSearchMode("documento");
-
- if (willExpand && !ac.aiAnalysisData?.dossieRessarcimento) {
- try {
- const fullTextData = await handleViewFullText(ac, true);
- const teor = fullTextData?.acordao || currentFullText || "";
- if (teor) {
- const result = extractLocalHeuristics(teor);
- await onUpdateAcordao({ ...ac, aiAnalysisData: result });
- }
- } catch (err) {
- console.error("Auto extraction error:", err);
- }
- }
- }}
- className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
- >
- {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
- </button>
+ {/* Ofício/Comunicação & Expedição */}
+ <td className="p-4 align-middle text-sm font-medium text-[#003366] whitespace-nowrap">
+ <div>{item.COMUNICACAO}</div>
+ <div className="text-xs text-slate-500 font-normal mt-1">Expedição: {item.EXPEDICAO || '-'}</div>
  </td>
 
- {/* Title & Colegiado details */}
- <td className="p-4 align-middle">
- <div>
- <div 
- className="font-medium text-slate-700 cursor-pointer hover:text-[#1351b4] transition-colors text-xs line-clamp-2"
- title={ac.TITULO}
- onClick={(e) => {
- e.stopPropagation();
- setExpandedRow(isExpanded ? null : ac.KEY);
- setDocVerifyInput("");
- setVerifyResult(null);
- setFavorecidoInput("");
- setFavorecidoDocsResult(null);
- setSearchMode("documento");
- }}
- >
- {ac.TITULO}
- </div>
- <span className="block text-xs text-slate-400 font-sans mt-1">
- Colegiado: {ac.COLEGIADO} | Ata: {ac.NUMATA}
- </span>
- </div>
+ {/* Destinatário & Processo */}
+ <td className="p-4 align-middle text-sm text-slate-700">
+ <div className="font-semibold">{item.DESTINATARIO}</div>
+ <div className="text-xs text-slate-500 mt-1">Processo: {item.PROCESSO || <span className="italic">Não associado</span>}</div>
  </td>
 
- {/* Process ID */}
- <td className="p-4 align-middle">
- <span className="bg-slate-50 border border-slate-200 px-2 py-1 rounded text-xs text-slate-700 font-medium">
- {ac.PROC}
+ {/* Situação */}
+ <td className="p-4 align-middle text-center">
+ <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${situacaoStyle}`}>
+ <span className={`w-1.5 h-1.5 rounded-full ${dotStyle}`}></span>
+ {situacaoText}
  </span>
  </td>
 
- {/* Session Date */}
- <td className="p-4 align-middle text-slate-600 text-sm">{ac.DATASESSAO}</td>
-
- {/* Status / Resumo */}
- <td className="px-4 py-3 align-middle">
- {ac.STATUS_MONITORAMENTO === "Cumprido" ? (
- <span className="badge-gov badge-gov-success">Cumprido</span>
- ) : isLate ? (
- <span className="badge-gov badge-gov-danger">Em Atraso</span>
- ) : ac.STATUS_MONITORAMENTO === "Em Análise" ? (
- <span className="badge-gov badge-gov-info">{ac.STATUS_MONITORAMENTO}</span>
- ) : (
- <span className="badge-gov badge-gov-warning">{ac.STATUS_MONITORAMENTO || "Pendente"}</span>
- )}
- </td>
-
- {/* Ações */}
- <td className="px-4 py-3 align-middle text-center">
+ {/* Expand Button */}
+ <td className="p-4 align-middle text-center no-print">
  <button
- className="px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap text-[#1351b4] bg-blue-50 border border-blue-100 hover:bg-[#003366] hover:text-white hover:border-transparent"
- onClick={(e) => {
- e.stopPropagation();
- setExpandedRow(isExpanded ? null : uniqueKey);
- }}
+ onClick={() => setComExpandedRow(isExpanded ? null : item.KEY)}
+ className={`px-3 py-1.5 text-xs font-semibold border rounded-md transition-colors whitespace-nowrap ${
+ isExpanded ? "bg-blue-50 border-blue-200 text-blue-700 shadow-inner" : "bg-white border-slate-200 text-[#003366] hover:bg-slate-50 shadow-sm"
+ }`}
  >
- {isExpanded ? '▲ Fechar' : 'Detalhes'}
+ Detalhamento
  </button>
  </td>
-
  </tr>
 
  {/* Detail panel expansion */}
  {isExpanded && (
  <tr>
- <td colSpan={6} className="bg-slate-50/25 px-8 py-6 border-b border-slate-200">
- <div className="space-y-4">
-                  {editRowId === ac.KEY && (
-                    <div className="mb-4 animate-slide-down border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      <TcuMonitoramentoEditRow 
-                        item={ac}
-                        onSave={async (updated) => { const res = await onUpdateAcordao(updated); if(res) setEditRowId(null); return res; }}
-                        onCancel={() => setEditRowId(null)}
-                      />
-                    </div>
-                  )}
- 
- {/* Internal monitoring values annotations */}
- <div className="flex flex-wrap gap-4">
- <div className="bg-white border border-slate-200/80 p-3 px-4 rounded-xl shadow-3xs flex items-center gap-3 min-w-[245px]">
- <div className="p-2 bg-blue-50 text-[#003366] rounded-lg">
- <Clock className="w-4 h-4" />
- </div>
- <div>
- <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider leading-none mb-1">Prazo de Resposta</span>
- <span className="text-xs text-[#003366] font-bold block">
- {(() => {
- const dateStr = ac.PRAZO_LIMITE;
- if (!dateStr) return "Sem limite definido";
- if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
- const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
- if (match) {
- return `${match[3]}/${match[2]}/${match[1]}`;
- }
- return dateStr;
- })()}
- </span>
- </div>
- </div>
- </div>
-
- {/* Meta fields breakdown */}
- <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
- <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
- <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider mb-0.5 shrink-0">Tipo Processo</span>
- <div className="text-xs text-slate-800 font-semibold max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.TIPOPROCESSO || "Não especificado"}</div>
- </div>
- <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
- <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider mb-0.5 shrink-0">Entidade Interessada</span>
- <div className="text-xs text-slate-800 font-semibold max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.ENTIDADE || "MTE"}</div>
- </div>
- <div className="bg-white border p-3 rounded-xl shadow-2xs flex flex-col">
- <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider mb-0.5 shrink-0">Acórdãos Relacionados</span>
- <div className="text-xs text-slate-800 max-h-24 overflow-y-auto scrollbar-thin pr-1 block break-words">{ac.ACORDAOSRELACIONADOS || "Nenhum"}</div>
- </div>
- </div>
-
- <div className="bg-white p-4.5 rounded-xl border">
- <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider">Tema Principal / Assunto</span>
- <p className="text-xs text-[#003366] mt-1 leading-relaxed font-black">{ac.ASSUNTO || "Sem descrição de assunto."}</p>
- </div>
-
- <div className="bg-white p-4.5 rounded-xl border">
- <span className="text-xs text-slate-400 block uppercase font-bold tracking-wider">Resumo / Sumário (Jurisprudência TCU)</span>
- <p className="text-xs text-slate-700 mt-1.5 leading-relaxed font-sans">{ac.SUMARIO || "Não informado."}</p>
- </div>
-
- {/* Recomendações e Determinações (Unificadas / IA) */}
- {ac.aiAnalysisData ? (
- <div className="bg-white p-4.5 rounded-xl border border-slate-200 shadow-sm">
- <div className="flex items-center gap-2 mb-3 border-b border-slate-100 pb-2">
- <FileCheck className="w-4 h-4 text-[#1351b4]" />
- <span className="text-xs text-[#1351b4] block uppercase font-bold tracking-wider">
- Checklist Extraído do Acórdão
- </span>
- {ac.aiAnalysisData.method === 'local_heuristic' && (
- <span className="ml-auto text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded ">EXTRAÇÃO LOCAL (REGEX)</span>
- )}
- </div>
- <div className="space-y-4">
-                  {editRowId === ac.KEY && (
-                    <div className="mb-4 animate-slide-down border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                      <TcuMonitoramentoEditRow 
-                        item={ac}
-                        onSave={async (updated) => { const res = await onUpdateAcordao(updated); if(res) setEditRowId(null); return res; }}
-                        onCancel={() => setEditRowId(null)}
-                      />
-                    </div>
-                  )}
- {(Array.isArray(ac.aiAnalysisData.determinacoes) && ac.aiAnalysisData.determinacoes.length > 0) && (
- <div>
- <span className="text-xs font-bold text-rose-700 uppercase mb-1 block tracking-widest">Determinações</span>
- <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
- {ac.aiAnalysisData.determinacoes.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
- </ul>
- </div>
- )}
- {(Array.isArray(ac.aiAnalysisData.recomendacoes) && ac.aiAnalysisData.recomendacoes.length > 0) && (
- <div>
- <span className="text-xs font-bold text-orange-700 uppercase mb-1 block tracking-widest">Recomendações</span>
- <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
- {ac.aiAnalysisData.recomendacoes.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
- </ul>
- </div>
- )}
- {(Array.isArray(ac.aiAnalysisData.darCiencia) && ac.aiAnalysisData.darCiencia.length > 0) && (
- <div>
- <span className="text-xs font-bold text-blue-700 uppercase mb-1 block tracking-widest">Dar Ciência</span>
- <ul className="list-disc pl-4 text-xs text-slate-800 space-y-1 font-medium">
- {ac.aiAnalysisData.darCiencia.map((item: string, idx: number) => <li key={idx}>{item}</li>)}
- </ul>
- </div>
- )}
- {ac.aiAnalysisData.determinaArquivamento && (
- <div className="inline-flex items-center gap-1 bg-slate-200 text-slate-700 px-2 py-1 rounded text-xs font-bold uppercase mt-2">
- ✓ Determina Arquivamento
- </div>
- )}
- {(!Array.isArray(ac.aiAnalysisData.determinacoes) || ac.aiAnalysisData.determinacoes.length === 0) && 
- (!Array.isArray(ac.aiAnalysisData.recomendacoes) || ac.aiAnalysisData.recomendacoes.length === 0) && 
- (!Array.isArray(ac.aiAnalysisData.darCiencia) || ac.aiAnalysisData.darCiencia.length === 0) && 
- !ac.aiAnalysisData.determinaArquivamento && (
- <span className="text-xs text-slate-500">Nenhuma ação técnica identificada neste documento.</span>
- )}
- </div>
- </div>
- ) : (ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || ac.RECOMENDACOES || ac.DETERMINACOES) && (
- <div className="bg-white p-4.5 rounded-xl border border-slate-200 shadow-sm">
- <div className="flex items-center gap-2 mb-2 border-b border-slate-100 pb-2">
- <FileCheck className="w-4 h-4 text-[#1351b4]" />
- <span className="text-xs text-[#1351b4] block uppercase font-bold tracking-wider">
- Recomendações e Determinações
- </span>
- </div>
- <div className="text-xs text-slate-800 leading-relaxed font-sans whitespace-pre-wrap mt-2">
- {ac.RECOMENDACOES_DETERMINACOES_UNIFICADO || "Nenhuma recomendação ou determinação registrada."}
- </div>
- </div>
- )}
-
- {/* Document content */}
- <div className="bg-white p-4.5 rounded-xl border border-slate-200 shadow-sm space-y-3">
- <div className="text-xs text-[#1351b4] uppercase font-bold tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
- <FileText className="w-4 h-4" />
- <span>Texto Completo do Acórdão</span>
- </div>
- <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border border-slate-100">
- <span className="text-xs text-slate-600 font-medium">O documento original pode ser visualizado na íntegra.</span>
- <button 
- type="button"
- onClick={(e) => {
- e.stopPropagation();
- handleViewFullText(ac);
+ <td colSpan={4} className="p-0 border-b-2 border-blue-200 shadow-inner">
+ <TcuComunicacoesEditRow
+ item={item}
+ onSave={async (updated) => {
+ const res = await onUpdateComunicacao(updated);
+ if (res) setComExpandedRow(null);
+ return res;
  }}
- className="text-sm text-white font-bold bg-[#1351b4] hover:bg-blue-800 px-4 py-2 rounded-lg transition shadow-sm flex items-center gap-2 cursor-pointer font-sans"
- >
- <ExternalLink className="w-3.5 h-3.5" /> Ler Inteiro Teor
- </button>
- </div>
- </div>
-
- {/* Verification Panel (SIAFI / Portal da Transparência) */}
- <div className={`p-4.5 rounded-xl border space-y-3 no-print transition-all duration-300 ${hasValoresARessarcir(ac) ? "bg-orange-50 border-orange-200 shadow-sm" : "bg-white border-slate-200 shadow-sm"}`}>
- {hasValoresARessarcir(ac) && (
- <div className="flex items-center gap-1.5 mb-2 bg-orange-100 text-orange-800 w-fit px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider">
- <AlertCircle className="w-3.5 h-3.5" /> Possível Débito ao Tesouro Nacional
- </div>
- )}
- <div className="flex items-center justify-between border-b border-slate-100 pb-2">
- <span className="text-xs text-[#1351b4] uppercase font-black tracking-wider flex items-center gap-1.5">
- <Scale className="w-4 h-4" />
- Dossiê de Ressarcimento (SIAFI / Extração)
- </span>
- <span className="text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-bold">
- CONCILIAÇÃO
- </span>
- </div>
- 
-
- <div className="pt-2">
- {!ac.aiAnalysisData?.dossieRessarcimento ? (
- <div className="text-xs text-slate-500 italic flex flex-col gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
- <span>Nenhum dossiê extraído. Clique abaixo para extrair dados localmente via RegEx.</span>
- <div className="flex gap-2 mt-1">
- <button 
- type="button"
- onClick={async (e) => { 
- e.stopPropagation(); 
- try {
- const fullTextData = await handleViewFullText(ac, true);
- const teor = fullTextData?.acordao || currentFullText || "";
- if (teor) {
- const result = extractLocalHeuristics(teor);
- await onUpdateAcordao({ ...ac, aiAnalysisData: result });
- }
- } catch (err) {
- console.error("Erro na extração local:", err);
- }
- }}
- className="text-sm font-bold bg-[#1351b4] text-white hover:bg-blue-800 transition px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-sm"
- >
- <Search className="w-3.5 h-3.5" /> Extrair Dados Localmente (RegEx)
- </button>
- </div>
- </div>
- ) : Array.isArray(ac.aiAnalysisData.dossieRessarcimento) && ac.aiAnalysisData.dossieRessarcimento.length === 0 ? (
- <div className="text-xs text-slate-600 italic">O extrator local não identificou condenação em débito ou devolução de valores no inteiro teor deste acórdão.</div>
- ) : Array.isArray(ac.aiAnalysisData.dossieRessarcimento) ? (
- <div className="space-y-3">
- {ac.aiAnalysisData.dossieRessarcimento.map((resp: any, i: number) => (
- <div key={i} className="bg-white p-2.5 rounded border border-[#1351b4]/20 shadow-sm text-xs">
- <div className="flex justify-between items-start mb-2">
- <div>
- <div className="font-bold text-slate-800">{resp.nome}</div>
- <div className="text-xs text-slate-500 mt-0.5">CPF/CNPJ Identificado: {resp.cpf_cnpj || resp.cpf || "Não extraído"}</div>
- </div>
- <div className="flex flex-col items-end gap-1">
- <div className="bg-red-50 text-red-700 px-2 py-0.5 rounded text-xs font-bold border border-red-100">
- Débito: {resp.valor_debito || resp.valor}
- </div>
- {resp.valor_atualizado && resp.valor_atualizado !== "Não há" && (
- <div className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded text-xs font-bold border border-amber-100">
- Atualizado: {resp.valor_atualizado}
- </div>
- )}
- </div>
- </div>
- 
- {resp.trecho_fonte && (
- <div className="mb-3 bg-slate-50 p-2 rounded border border-slate-200 text-xs text-slate-600 italic">
- <span className="font-bold block not-italic text-slate-400 mb-0.5">Evidência Extraída do Acórdão:</span>
- "{resp.trecho_fonte}"
- </div>
- )}
- 
- <div className="mt-2 pt-2 border-t border-slate-100">
- <span className="text-xs font-bold uppercase text-slate-400 mb-1 block">Resultado da Busca no SIAFI</span>
- {!Array.isArray(resp.siafiEncontrados) || resp.siafiEncontrados.length === 0 ? (
- <div className="text-xs text-slate-500 flex items-center gap-1"><AlertCircle className="w-3 h-3 text-slate-400"/> Nenhum registro correspondente encontrado no SIAFI com este Nome/CPF.</div>
- ) : (
- <div className="space-y-1.5">
- {resp.siafiEncontrados.map((s: any, sIdx: number) => (
- <div key={sIdx} className="flex items-center justify-between bg-slate-50 p-1.5 rounded text-xs">
- <div>
- <div className=" text-slate-700">{s.cpf_beneficiario || "CPF Omitido"}</div>
- <div className="text-slate-500">{s.status_descricao || "Status Indisponível"}</div>
- </div>
- <div>
- {s.confirmado ? (
- <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-1"><Check className="w-3 h-3"/> GRU Confirmada</span>
- ) : (
- <span className="bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">Pendente / Outro</span>
- )}
- </div>
- </div>
- ))}
- </div>
- )}
- </div>
- </div>
- ))}
- </div>
- ) : null}
- </div>
- </div>
-
- {/* Operating values annotations */}
- <div className="bg-blue-50/40 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row gap-4 items-center justify-between no-print">
- <div className="space-y-1">
- <span className="text-xs text-slate-550 uppercase font-black tracking-wider">Observações de Acompanhamento (AECI)</span>
- <p className="text-xs text-slate-805 italic font-medium">“{ac.OBSERVACOES || "Sem observações cadastradas para este acórdão."}”</p>
- </div>
- <div className="flex items-center gap-2 shrink-0">
- <button
- onClick={() => setEditRowId(editRowId === ac.KEY ? null : ac.KEY)}
- className="px-4 py-2 bg-white border border-blue-250 text-[#003366] hover:bg-blue-50 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition shadow-2xs cursor-pointer font-sans"
- >
- {editRowId === ac.KEY ? "Fechar Edi��o" : <><Edit3 className="w-3.5 h-3.5" /> Editar Notas e Prazos</>}
- </button>
- </div>
- </div>
-
- </div>
+ onCancel={() => setComExpandedRow(null)}
+ />
  </td>
  </tr>
  )}
-
  </React.Fragment>
  );
  })
-
  )}
  </tbody>
-
  </table>
  </div>
-
- {/* Footer Info Control with continuous scroll metrics */}
- <div className="bg-slate-50 border-t border-slate-200 px-5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 no-print">
- <div>
- Exibindo todos os <strong className="text-slate-800 font-bold">{filteredAcordaos.length}</strong> acórdãos mapeados • <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded">Filtros ativados com rolagem vertical infinita (páginas desativadas)</span>
- </div>
  
- <button
- onClick={() => {
- const scrollEl = document.querySelector(".custom-com-scroll-container");
- if (scrollEl) {
- scrollEl.scrollTo({ top: 0, behavior: "smooth" });
- } else {
- window.scrollTo({ top: 0, behavior: "smooth" });
- }
- }}
- className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-[#003366] font-black rounded-lg transition text-xs shadow-3xs"
- >
- Voltar ao Topo ↑
- </button>
+ <div className="text-xs text-slate-400 italic text-right">
+ Dica: Use a rolagem lateral e vertical do próprio painel para navegar pelas linhas da tabela sem paginação.
+ </div>
+ </div>
+ )}
+
+ {/* Sub Tab View 2: RECIPIENT STATISTICS & DETAILS (PARETO) */}
+ {comSubTab === "analytics" && (
+ <div className="space-y-6 animate-fade-in transition duration-200">
+ 
+ <div className="space-y-2">
+ <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider block">
+ Volume Total de Comunicações por Unidades (Destinatários)
+ </h3>
+ 
+ {/* Scrollable Grid representation of units with communications count */}
+ <div className="max-h-[600px] overflow-y-auto pr-2 scrollbar-thin">
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pb-2">
+ {destinatarioStats.map((stat, idx) => {
+ const respRate = stat.requireResponseTotal > 0 ? ((stat.responded / stat.requireResponseTotal) * 100).toFixed(0) : (stat.total > 0 ? "100" : "0");
+ return (
+ <div key={idx} className="bg-white border border-slate-200 p-4.5 rounded-2xl shadow-3xs space-y-3 relative overflow-hidden">
+ <div className="absolute top-0 right-0 w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center translate-x-3 -translate-y-3">
+ <span className="text-sm font-black text-slate-300">#{idx + 1}</span>
+ </div>
+ <div className="space-y-0.5 pr-4">
+ <span className="bg-slate-100 text-slate-600 text-xs font-black px-1.5 py-0.5 rounded uppercase block truncate" title={stat.unidade}>
+ {stat.unidade}
+ </span>
+ <h4 className="text-2xl font-black text-slate-900">
+ {stat.total} <span className="text-xs font-normal text-slate-400">ofícios ({stat.percentage.toFixed(1)}%)</span>
+ </h4>
  </div>
 
- </div>
- {/* PRINT-ONLY EMBEDDED DUST SHEETS */}
- <div className="hidden print-only">
- <div className="text-center mb-8">
- <h1 className="text-2xl font-bold uppercase text-slate-900">Ministério do Trabalho e Emprego</h1>
- <h2 className="text-lg font-bold text-slate-700">AECI - Assessoria Especial de Controle Interno</h2>
- <h3 className="text-md text-slate-600 mt-2">Relatório de Monitoramento Sistemático de Demandas - TCU</h3>
- <p className="text-xs text-slate-500 mt-1">Extraído em: {new Date().toLocaleString("pt-BR")} | Usuário: Alessandro Barbosa (AECI)</p>
+ <div className="grid grid-cols-2 text-xs text-slate-500 border-t border-slate-100 pt-2 ">
+ <div className="text-emerald-700 font-bold">✓ {stat.responded} Respondidos</div>
+ <div className="border-l border-slate-100 pl-2 text-amber-700 font-bold">⚡ {stat.pending} Pendentes</div>
  </div>
 
- <table className="w-full text-left border-collapse text-sm text-slate-800">
+ <div className="space-y-1">
+ <div className="flex justify-between text-xs text-slate-400 font-bold uppercase">
+ <span>Índice de Resposta</span>
+ <span>{respRate}%</span>
+ </div>
+ <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+ <div className="h-full bg-emerald-500" style={{ width: `${respRate}%` }}></div>
+ </div>
+ </div>
+ </div>
+ );
+ })}
+ {destinatarioStats.length === 0 && (
+ <div className="col-span-4 p-8 text-center text-slate-400 bg-white border border-slate-200 rounded-2xl">
+ Aguardando sincronização de dados para cálculo de indicadores em tempo real.
+ </div>
+ )}
+ </div>
+ </div>
+ </div>
+
+ {/* Detailed Pareto Distribution Table representation */}
+ <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+ <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+ <div>
+ <h4 className="text-sm font-black text-[#003366] uppercase tracking-wide">
+ Impacto por Destinatário & Participação Relativa
+ </h4>
+ <p className="text-sm text-slate-500">
+ Fórmula de Pareto: Ofícios Recebidos por unidade em relação ao total de comunicações enviadas em {comAnoFilter === "TODOS" ? "todos os anos" : `no ano ${comAnoFilter}`} ({totalComsCount} ofícios).
+ </p>
+ </div>
+ <span className="text-xs font-black text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg">
+ Unidade Ativas: {destinatarioStats.length}
+ </span>
+ </div>
+
+ <div className="overflow-x-auto rounded-xl border border-slate-200">
+ <table className="w-full text-left border-collapse text-xs">
  <thead>
- <tr className="bg-slate-200 border-b border-slate-300 text-slate-800 font-bold">
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Título / Código</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Processo</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Sessão</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Responsável</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Prazo</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Status</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors border">Assunto</th>
+ <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-200 text-xs uppercase tracking-wider sticky top-0 z-10 backdrop-blur-sm">
+ <th className="p-3 font-bold cursor-pointer hover:bg-slate-100 transition-colors">Unidade do Ministério do Trabalho (Destinatário)</th>
+ <th className="p-3 font-bold text-center w-[130px] cursor-pointer hover:bg-slate-100 transition-colors">Ofícios Recebidos</th>
+ <th className="p-3 font-bold text-center w-[130px] cursor-pointer hover:bg-slate-100 transition-colors">Demandam Resposta</th>
+ <th className="p-3 font-bold text-center w-[130px] cursor-pointer hover:bg-slate-100 transition-colors">Respondidos</th>
+ <th className="p-3 font-bold text-center w-[130px] cursor-pointer hover:bg-slate-100 transition-colors">Pendentes (Em Aberto)</th>
+ <th className="p-3 font-bold text-center w-[200px] cursor-pointer hover:bg-slate-100 transition-colors">% de Representação no Órgão</th>
+ <th className="p-3 font-bold text-center w-[130px] cursor-pointer hover:bg-slate-100 transition-colors">Índice de Conclusão</th>
  </tr>
  </thead>
- <tbody>
- {filteredAcordaos.map(ac => (
- <tr key={ac.KEY} className="border-b">
- <td className="p-4 align-middle border font-bold">{ac.TITULO.split(" - ")[0]}</td>
- <td className="p-4 align-middle border">{ac.PROC}</td>
- <td className="p-4 align-middle border">{ac.DATASESSAO}</td>
- <td className="p-4 align-middle border">{ac.RESPONSAVEL_INTERNO || "AECI"}</td>
- <td className="p-4 align-middle border font-bold">{new Date(ac.PRAZO_LIMITE + "T00:00:00").toLocaleDateString("pt-BR")}</td>
- <td className="p-4 align-middle border font-bold">{ac.STATUS_MONITORAMENTO}</td>
- <td className="p-4 align-middle border text-slate-600">{ac.ASSUNTO}</td>
+ <tbody className="divide-y divide-slate-100">
+ {destinatarioStats.map((stat, idx) => {
+ const respPct = stat.requireResponseTotal > 0 ? (stat.responded / stat.requireResponseTotal) * 100 : (stat.total > 0 ? 100 : 0);
+ return (
+ <tr key={idx} className="hover:bg-[#1351b4]/5 transition-colors group">
+ <td className="p-3 text-slate-800 font-black flex items-center gap-2 text-sm">
+ <span className="w-5 h-5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full flex items-center justify-center">
+ {idx + 1}
+ </span>
+ <span>{stat.unidade}</span>
+ </td>
+ <td className="p-3 text-center text-slate-900 font-bold text-sm">
+ {stat.total}
+ </td>
+ <td className="p-3 text-center font-bold text-slate-600">
+ {stat.requireResponseTotal}
+ </td>
+ <td className="p-3 text-center font-bold text-emerald-700">
+ {stat.responded}
+ </td>
+ <td className="p-3 text-center font-bold text-amber-700">
+ {stat.pending}
+ </td>
+ <td className="p-3">
+ <div className="space-y-1 max-w-[180px] mx-auto">
+ <div className="flex justify-between text-xs font-bold text-slate-700">
+ <span>{stat.percentage.toFixed(1)}%</span>
+ </div>
+ <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+ <div className="h-full bg-[#003366] rounded-full" style={{ width: `${stat.percentage}%` }}></div>
+ </div>
+ </div>
+ </td>
+ <td className="p-3 text-center">
+ <span className={`px-2.5 py-1 rounded-sm font-bold text-xs ${
+ respPct >= 90
+ ? "bg-emerald-100 border border-emerald-200 text-emerald-800"
+ : respPct >= 50
+ ? "bg-amber-100 border border-amber-200 text-amber-800"
+ : "bg-rose-100 border border-rose-200 text-rose-800"
+ }`}>
+ {respPct.toFixed(1)}%
+ </span>
+ </td>
  </tr>
- ))}
+ );
+ })}
+ {destinatarioStats.length === 0 && (
+ <tr>
+ <td colSpan={7} className="p-12 text-center text-slate-400 italic">
+ Sem dados acumulados para este filtro de período.
+ </td>
+ </tr>
+ )}
  </tbody>
  </table>
  </div>
+ </div>
+ </div>
+ )}
+ </>
+ );
+ })()}
 
+ </div>
+ 
  {/* Full Acórdão Text Modal Popup */}
  {fullTextAcordao && (
  <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-[100] no-print animate-fade-in text-slate-800">
@@ -2637,14 +2719,7 @@ export default function TcuMonitoramento({
 
  {/* Modal Content Scroll Area */}
  <div className="p-6 overflow-y-auto bg-slate-950 text-slate-100 flex-1 text-[11.5px] whitespace-pre-line leading-relaxed scrollbar-thin">
- {isLoadingTeor ? (
- <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
- <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
- <span>Baixando o inteiro teor do acórdão do banco de dados...</span>
- </div>
- ) : (
- fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "O TCU ainda não disponibilizou o inteiro teor deste acórdão no arquivo de Dados Abertos (normalmente ocorre com acórdãos publicados nas últimas semanas)."
- )}
+ {fullTextAcordao.ACORDAO || (fullTextAcordao as any).acordao || "Este acórdão não possui a íntegra dos autos gravada."}
  </div>
 
  {/* Modal Footer */}

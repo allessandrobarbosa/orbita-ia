@@ -7,14 +7,12 @@ import React, { useState } from "react";
 import TcuMonitoramento from './TcuMonitoramento';
 import TcuComunicacoes from './TcuComunicacoes';
 import TcuTCE from './TcuTCE';
-import TcuPainelGerencial from './TcuPainelGerencial';
 
 import { 
   Database, 
   MessageSquare,
   FileWarning,
-  Landmark,
-  LayoutDashboard
+  Landmark
 } from "lucide-react";
 
 import { AcordaoDemand, ComunicacaoDemand, TceDemand, TceAcordaoMapping } from "../types";
@@ -45,10 +43,8 @@ interface TcuModuleProps {
   initialMonitoramentoSearch?: string;
 }
 
-type TcuSection = "painel" | "monitoramento" | "comunicacoes" | "tce";
-
 export default function TcuModule(props: TcuModuleProps) {
-  const [tcuActiveSection, setTcuActiveSection] = useState<TcuSection>("monitoramento");
+  const [tcuActiveSection, setTcuActiveSection] = useState<"monitoramento" | "comunicacoes" | "tce">("monitoramento");
   const [initialMonitoramentoSearch, setInitialMonitoramentoSearch] = useState<string>("");
 
   const handleNavigateToMonitoramento = (searchKey: string) => {
@@ -56,17 +52,10 @@ export default function TcuModule(props: TcuModuleProps) {
     setTcuActiveSection("monitoramento");
   };
 
-  const navItems: { id: TcuSection; label: string; desc: string; icon: React.ElementType }[] = [
-    { id: "monitoramento", label: "Monitoramento",                   desc: "Acompanhamento de Acordaos",           icon: Database        },
-    { id: "comunicacoes",  label: "Comunicacoes",                    desc: "Recepcao de Oficios & Notificacoes",   icon: MessageSquare   },
-    { id: "tce",           label: "Tomada de Contas Especial (TCE)", desc: "Apurar Danos ao Erario",               icon: FileWarning     },
-    { id: "painel",        label: "Painel Gerencial",                desc: "Volumetria e indicadores consolidados", icon: LayoutDashboard },
-  ];
-
   return (
     <div className="space-y-6 font-sans">
       
-      {/* Module Title Header */}
+      {/* Module Title Header - NOW STICKY */}
       <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">
           <div>
@@ -75,8 +64,8 @@ export default function TcuModule(props: TcuModuleProps) {
                 <Landmark size={20} strokeWidth={2.5} />
               </div>
               <div>
-                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Tribunal de Contas da Uniao - TCU</h1>
-                <p className="text-sm text-slate-500 font-medium mt-1">Acompanhamento de Acordaos e Monitoramento de Processos</p>
+                <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Tribunal de Contas da União — TCU</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">Acompanhamento de Acórdãos e Monitoramento de Processos</p>
               </div>
             </div>
           </div>
@@ -84,45 +73,45 @@ export default function TcuModule(props: TcuModuleProps) {
       </div>
 
       {/* TCU Submodules Navigation */}
-      <div className="no-print border border-slate-200 bg-white p-1.5 rounded-2xl flex flex-wrap gap-1 shadow-sm mb-6">
-        {navItems.map((subSection) => {
+      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
+        {[
+          { id: "monitoramento", label: "Monitoramento", desc: "Acompanhamento de Acórdãos", icon: Database, isDev: false },
+          { id: "comunicacoes", label: "Comunicações", desc: "Recepção de Ofícios & Notificações", icon: MessageSquare, isDev: false },
+          { id: "tce", label: "Tomada de Contas Especial (TCE)", desc: "Apurar Danos ao Erário", icon: FileWarning, isDev: false },
+        ].map((subSection) => {
           const SubIcon = subSection.icon;
           const isActive = tcuActiveSection === subSection.id;
           return (
             <button
               key={subSection.id}
-              onClick={() => setTcuActiveSection(subSection.id)}
-              className={`flex-1 min-w-[160px] flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
+              onClick={() => {
+                setTcuActiveSection(subSection.id as any);
+              }}
+              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${
                 isActive
-                  ? "bg-gradient-to-r from-[#003366] to-[#004080] text-white shadow-md shadow-blue-900/20"
-                  : "hover:bg-slate-50 text-slate-500 hover:text-slate-800"
+                  ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
+                  : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
               }`}
             >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
-                isActive ? "bg-white/15" : "bg-slate-100"
-              }`}>
-                <SubIcon className={`w-4 h-4 ${isActive ? "text-blue-100" : "text-slate-500"}`} />
+              <div className="flex items-center gap-2.5">
+                <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <span className="block text-xs font-black uppercase tracking-wide leading-none">{subSection.label}</span>
+                  <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{subSection.desc}</span>
+                </div>
               </div>
-              <div className="text-left">
-                <span className="block text-xs font-black uppercase tracking-wide leading-none">{subSection.label}</span>
-                <span className="block text-[9px] opacity-70 mt-0.5 font-normal leading-none">{subSection.desc}</span>
-              </div>
+              {subSection.isDev && (
+                <span className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded tracking-wide leading-none ${
+                  isActive ? "bg-amber-400 text-slate-900 animate-pulse" : "bg-slate-100 text-slate-500"
+                }`}>
+                  Breve
+                </span>
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* PAINEL GERENCIAL */}
-      <div className={tcuActiveSection === "painel" ? "block" : "hidden"}>
-        <TcuPainelGerencial
-          acordaos={props.acordaos}
-          comunicacoes={props.comunicacoes}
-          tces={props.tces}
-          tceMappings={props.tceMappings}
-        />
-      </div>
-
-      {/* MONITORAMENTO */}
       <div className={tcuActiveSection === "monitoramento" ? "block" : "hidden"}>
         <TcuMonitoramento 
           initialMonitoramentoSearch={initialMonitoramentoSearch}
@@ -142,12 +131,14 @@ export default function TcuModule(props: TcuModuleProps) {
           onUpdateTce={props.onUpdateTce}
           onDeleteTce={props.onDeleteTce}
           onImportTces={props.onImportTces}
+          onImportTceMappings={props.onImportTceMappings}
+          onAddTceMapping={props.onAddTceMapping}
+          onDeleteTceMapping={props.onDeleteTceMapping}
           isLoading={props.isLoading}
           onRefreshData={props.onRefreshData}
         />
       </div>
 
-      {/* COMUNICACOES */}
       <div className={tcuActiveSection === "comunicacoes" ? "block" : "hidden"}>
         <TcuComunicacoes 
           acordaos={props.acordaos}
@@ -172,7 +163,6 @@ export default function TcuModule(props: TcuModuleProps) {
         />
       </div>
 
-      {/* TCE */}
       <div className={tcuActiveSection === "tce" ? "block" : "hidden"}>
         <TcuTCE 
           onNavigateToMonitoramento={handleNavigateToMonitoramento}

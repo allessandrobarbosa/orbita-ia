@@ -175,17 +175,17 @@ export default function CguDossieModal({ demand, onClose, onUpdateCgu }: CguDoss
             <p className="text-xs font-semibold text-slate-700 leading-relaxed font-sans">{recName}</p>
             
             <div className="flex flex-wrap gap-2 mt-4">
-              <span className="badge-gov badge-gov-neutral font-mono">
+              <span className="bg-slate-200/80 px-2 py-0.5 rounded text-[9px] font-bold text-slate-600 font-mono">
                 CAT: {demand.categoria || "N/A"}
               </span>
-              <span className="badge-gov badge-gov-neutral font-mono">
+              <span className="bg-slate-200/80 px-2 py-0.5 rounded text-[9px] font-bold text-slate-600 font-mono">
                 ANO: {demand.ano || "N/A"}
               </span>
-              <span className="badge-gov badge-gov-info">
-                {demand.situacao || "N/A"}
+              <span className="bg-slate-200/80 px-2 py-0.5 rounded text-[9px] font-bold text-slate-600 font-mono">
+                SITUAÇÃO: {demand.situacao || "N/A"}
               </span>
-              <span className="badge-gov badge-gov-neutral font-mono">
-                {demand.estado || "N/A"}
+              <span className="bg-slate-200/80 px-2 py-0.5 rounded text-[9px] font-bold text-slate-600 font-mono">
+                ESTADO: {demand.estado || "N/A"}
               </span>
             </div>
           </div>
@@ -231,12 +231,12 @@ export default function CguDossieModal({ demand, onClose, onUpdateCgu }: CguDoss
                    value={processoSei}
                    onChange={e => setProcessoSei(e.target.value)}
                    placeholder="Ex: 19999.123456/2026-00" 
-                   className="gov-input flex-1"
+                   className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                  />
                  <button 
                    onClick={handleSaveProcessoSei}
                    disabled={isSavingSei || processoSei === (demand.processoSei || "") || !onUpdateCgu}
-                   className="px-4 py-2 bg-[#003366] text-white text-xs font-bold rounded-lg hover:bg-[#0f4396] disabled:opacity-50 transition flex items-center gap-2 shadow-sm"
+                   className="px-4 py-2 bg-[#003366] text-white text-xs font-bold rounded-lg hover:bg-blue-800 disabled:opacity-50 flex items-center gap-2"
                  >
                    {isSavingSei ? "Salvando..." : "Salvar"}
                  </button>

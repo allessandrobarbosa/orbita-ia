@@ -1,0 +1,155 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&family=Cinzel:wght@500;700;800;900&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-display: "Outfit", "Space Grotesk", sans-serif;
+  --font-serif: "Cinzel", serif;
+}
+
+/* Custom styling inspired by the Br-Gov / Federal Governo Federal styling */
+.gov-header {
+  background-color: #f0f6ff !important;
+  background-image: none !important;
+  border-bottom: 3.5px solid #003366 !important;
+}
+
+.gov-border-gold {
+  border-color: #d4af37;
+}
+
+.gov-bg-gold {
+  background-color: #d4af37;
+}
+
+.gov-text-gold {
+  color: #d4af37;
+}
+
+/* Elegant Federal Logo Glow and Orbit animation */
+.logo-orbit-ring {
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+}
+
+.glow-btn:hover {
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+}
+
+/* Print Styles configuration for Flawless PDF / Printer Export */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-page-break {
+    page-break-after: always;
+  }
+
+  .card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+}
+
+/* custom scrollbars */
+::-webkit-scrollbar {
+  width: 12px;
+  /* Increased vertical thickness for robust drag/touch target */
+  height: 10px;
+  /* Thicker horizontal targets */
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  /* Clear Slate track for easy boundary tracking */
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  /* Rich slate thumb for crisp contrast */
+  border: 2.5px solid #f1f5f9;
+  /* Generously sized inset borders */
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+  /* Darker slate hover effect */
+}
+
+/* Flat Gov.br navigation buttons */
+.nav-btn-inactive {
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #003366 !important;
+  border: 1.5px solid #003366 !important;
+  box-shadow: none !important;
+  transition: all 0.15s ease-in-out !important;
+  transform: none !important;
+}
+
+.nav-btn-inactive:hover {
+  background-color: #e6f1fe !important;
+  background-image: none !important;
+  border-color: #003366 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.nav-btn-active {
+  background-color: #003366 !important;
+  background-image: none !important;
+  color: #ffffff !important;
+  border: 1.5px solid #003366 !important;
+  box-shadow: none !important;
+  transition: all 0.15s ease-in-out !important;
+  transform: none !important;
+}
+/* Auto-scale UI for smaller screens so users dont have to manually zoom */
+@media screen and (max-width: 1536px) {
+  html {
+    zoom: 0.9;
+  }
+}
+
+@media screen and (max-width: 1366px) {
+  html {
+    zoom: 0.8;
+  }
+}
+
+@media screen and (max-width: 1280px) {
+  html {
+    zoom: 0.75;
+  }
+}
+
+@media screen and (max-width: 1024px) {
+  html {
+    zoom: 0.7;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  html {
+    zoom: 0.6;
+  }
+}

@@ -331,7 +331,7 @@ export default function TcuMonitoramento({
 
  // Communications module states
  const [comSearchTerm, setComSearchTerm] = useState("");
- const [comAnoFilter, setComAnoFilter] = useState("TODOS");
+ const [comAnoFilter, setComAnoFilter] = useState("2026"); // Current Active Year defaults to 2026 as current year
  const [comUnidadeFilter, setComUnidadeFilter] = useState("TODOS");
  const [comRespondidoFilter, setComRespondidoFilter] = useState("TODOS");
  const [showComImporter, setShowComImporter] = useState(false);
@@ -1881,40 +1881,152 @@ export default function TcuMonitoramento({
 
 
 
+ {/* Dynamic Year Tabs & KPIs Bento Grid (Standardized UX) */}
+ {(() => {
+ const acordaosForSelectedYear = acordaos.filter(ac => {
+ return anoFilter === "TODOS" || (ac.ANOACORDAO && ac.ANOACORDAO.toString() === anoFilter);
+ });
+ const totalAcordaosCount = acordaosForSelectedYear.length;
+ const cumpridosCount = acordaosForSelectedYear.filter(ac => ac.STATUS_MONITORAMENTO === "Cumprido").length;
+ const emAnaliseCount = acordaosForSelectedYear.filter(ac => ac.STATUS_MONITORAMENTO === "Em Análise" || ac.STATUS_MONITORAMENTO === "Pendente" || !ac.STATUS_MONITORAMENTO).length;
+ const atrasadosCount = acordaosForSelectedYear.filter(ac => {
+ return ac.STATUS_MONITORAMENTO === "Atrasado" || (ac.STATUS_MONITORAMENTO !== "Cumprido" && ac.PRAZO_LIMITE && new Date(ac.PRAZO_LIMITE).getTime() < Date.now());
+ }).length;
 
+ return (
+ <div className="space-y-4 no-print">
+ {/* Dynamic Year tabs */}
+ <div className="flex border-b border-slate-150 no-print overflow-x-auto gap-1 pb-1">
+ <button
+ onClick={() => { setAnoFilter("TODOS"); setCurrentPage(1); }}
+ className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+ anoFilter === "TODOS"
+ ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+ : "text-slate-400 hover:text-slate-700"
+ }`}
+ >
+ Todos os Anos
+ </button>
+ {availableYears.map((yr) => (
+ <button
+ key={yr}
+ onClick={() => { setAnoFilter(yr.toString()); setCurrentPage(1); }}
+ className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${
+ anoFilter === yr.toString()
+ ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
+ : "text-slate-400 hover:text-slate-700"
+ }`}
+ >
+ Ano {yr} {yr === 2026 && <span className="bg-emerald-200 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
+ </button>
+ ))}
+ </div>
 
+ {/* Statistics bento grid - Grouped dynamically by TIPOPROCESSO from data */}
+ {(() => {
+ const normalizeProcessType = (raw: string): string => {
+ const norm = (raw || "").trim().toUpperCase()
+ .normalize("NFD")
+ .replace(/[\u0300-\u036f]/g, ""); // strip accents
+ 
+ if (norm.includes("MONITORAMENTO E OUTROS")) return "MONITORAMENTO E OUTROS";
+ if (norm.includes("RELATORIO DE ACOMPANHAMENTO")) return "RELATÓRIO DE ACOMPANHAMENTO";
+ if (norm.includes("RELATORIO DE AUDITORIA") || norm.includes("RELATORIO DE AUDIT") || norm.includes("AUDITORIA") || norm === "RA") return "RELATÓRIO DE AUDITORIA";
+ if (norm.includes("ACOMPANHAMENTO") || norm === "ACOMP") return "ACOMPANHAMENTO";
+ if (norm.includes("MONITORAMENTO") || norm === "MONIT" || norm === "MON") return "MONITORAMENTO";
+ if (norm.includes("TOMADA DE CONTAS ESPECIAL") || norm === "TCE" || norm.includes("TOMADA DE CONTAS")) return "TOMADA DE CONTAS ESPECIAL";
+ if (norm.includes("JULGAMENTO DE TCE") || norm.includes("JULGAMENTO DE TC")) return "JULGAMENTO DE TCE";
+ if (norm.includes("REPRESENTACAO") || norm === "REPR" || norm.includes("REPRE")) return "REPRESENTAÇÃO";
+ if (norm.includes("DENUNCIA") || norm === "DEN" || norm.includes("DENUNCIAS")) return "DENÚNCIAS";
+ if (norm.includes("CONGRESSO") || norm === "SCN" || norm.includes("SOLICITACOES")) return "SOLICITAÇÕES DO CONGRESSO NACIONAL";
+ 
+ return "E OUTROS";
+ };
 
+ const standardCategories = [
+ { id: "ACOMPANHAMENTO", label: "Acompanhamento", short: "ACOMP", icon: Database, colorClass: "bg-blue-50/70 border-blue-100 text-blue-800", textClass: "text-[#003366] border-l-4 border-blue-500", desc: "Acompanhamentos de gestão" },
+ { id: "MONITORAMENTO", label: "Monitoramento", short: "MONIT", icon: Clock, colorClass: "bg-teal-50/70 border-teal-100 text-teal-800", textClass: "text-teal-950 border-l-4 border-teal-500", desc: "Monitoramento de deliberações" },
+ { id: "RELATÓRIO DE AUDITORIA", label: "Relatório de Auditoria", short: "RA / AUDIT", icon: BarChart3, colorClass: "bg-amber-50/70 border-amber-100 text-amber-800", textClass: "text-amber-950 border-l-4 border-amber-500", desc: "Fiscalizações por Relatório de Auditoria" },
+ { id: "RELATÓRIO DE ACOMPANHAMENTO", label: "Relatório de Acompanhamento", short: "REL-ACOMP", icon: FileCheck, colorClass: "bg-indigo-50/70 border-indigo-100 text-indigo-800", textClass: "text-indigo-950 border-l-4 border-indigo-500", desc: "Relatórios de acompanhamento formal" },
+ { id: "MONITORAMENTO E OUTROS", label: "Monitoramento e Outros", short: "MON-OUT", icon: Activity, colorClass: "bg-cyan-50/70 border-cyan-100 text-cyan-800", textClass: "text-cyan-950 border-l-4 border-cyan-500", desc: "Monitoramentos combinados" },
+ { id: "TOMADA DE CONTAS ESPECIAL", label: "Tomada de Contas Especial", short: "TCE", icon: DollarSign, colorClass: "bg-rose-50/70 border-rose-100 text-rose-800", textClass: "text-rose-950 border-l-4 border-rose-500", desc: "Tomadas de Contas Especiais" },
+ { id: "REPRESENTAÇÃO", label: "Representação", short: "REPR", icon: FileText, colorClass: "bg-sky-50/70 border-sky-100 text-sky-800", textClass: "text-sky-950 border-l-4 border-sky-500", desc: "Representações ao Tribunal" },
+ { id: "JULGAMENTO DE TCE", label: "Julgamento de TCE", short: "JULG-TCE", icon: Scale, colorClass: "bg-violet-50/70 border-violet-100 text-violet-800", textClass: "text-violet-950 border-l-4 border-violet-500", desc: "Julgamento de Tomada de Contas" },
+ { id: "DENÚNCIAS", label: "Denúncias", short: "DEN", icon: AlertCircle, colorClass: "bg-red-50/70 border-red-100 text-red-800", textClass: "text-red-950 border-l-4 border-red-500", desc: "Canais de denúncias recebidas" },
+ { id: "SOLICITAÇÕES DO CONGRESSO NACIONAL", label: "Solicitações do Congresso Nacional", short: "SCN", icon: Landmark, colorClass: "bg-emerald-50/70 border-emerald-100 text-emerald-800", textClass: "text-emerald-950 border-l-4 border-emerald-500", desc: "Demandas do poder legislativo" },
+ { id: "E OUTROS", label: "E Outros", short: "OUTROS", icon: LayoutGrid, colorClass: "bg-slate-50 border-slate-200 text-slate-700", textClass: "text-slate-850 border-l-4 border-slate-350", desc: "Demais classes processuais" }
+ ];
 
+ // Filter counts relative to the selected year filter (acordaosForSelectedYear)
+ const counts: Record<string, number> = {
+ "ACOMPANHAMENTO": 0,
+ "MONITORAMENTO": 0,
+ "RELATÓRIO DE AUDITORIA": 0,
+ "RELATÓRIO DE ACOMPANHAMENTO": 0,
+ "MONITORAMENTO E OUTROS": 0,
+ "TOMADA DE CONTAS ESPECIAL": 0,
+ "REPRESENTAÇÃO": 0,
+ "JULGAMENTO DE TCE": 0,
+ "DENÚNCIAS": 0,
+ "SOLICITAÇÕES DO CONGRESSO NACIONAL": 0,
+ "E OUTROS": 0
+ };
 
- {/* Year Pill Bar — padrão CGU */}
-  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar no-print">
-  <button
-  onClick={() => { setAnoFilter("TODOS"); setCurrentPage(1); }}
-  className={`px-3.5 py-1.5 text-[11px] font-bold tracking-wide whitespace-nowrap rounded-full transition-all duration-200 ${
-  anoFilter === "TODOS"
-  ? "bg-[#003366] text-white shadow-sm shadow-blue-900/20"
-  : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-  }`}
-  >
-  TODOS OS ANOS
-  </button>
-  {availableYears.map((yr) => (
-  <button
-  key={yr}
-  onClick={() => { setAnoFilter(yr.toString()); setCurrentPage(1); }}
-  className={`px-3.5 py-1.5 text-[11px] font-bold tracking-wide whitespace-nowrap rounded-full transition-all duration-200 ${
-  anoFilter === yr.toString()
-  ? "bg-[#003366] text-white shadow-sm shadow-blue-900/20"
-  : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-  }`}
-  >
-  ANO {yr}{yr === new Date().getFullYear() && <span className="bg-emerald-400/30 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
-  </button>
-  ))}
-  </div>
+ acordaosForSelectedYear.forEach(ac => {
+ const normalized = normalizeProcessType(ac.TIPOPROCESSO || "");
+ counts[normalized] = (counts[normalized] || 0) + 1;
+ });
 
+ return (
+ <div className="space-y-2">
+ <div className="flex items-center justify-between px-1">
+ <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">Volumetria por Tipo de Processo ({anoFilter})</span>
+ <span className="text-xs text-slate-500 font-semibold">{acordaosForSelectedYear.length} Acórdãos Filtrados</span>
+ </div>
+ <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 no-print">
+ {standardCategories.map((cat) => {
+ const Icon = cat.icon;
+ const countValue = counts[cat.id] || 0;
+ return (
+ <div 
+ key={cat.id} 
+ className={`bg-white border rounded-xl p-3 flex flex-col justify-between shadow-3xs hover:shadow-xs transition-all duration-200 cursor-default group relative overflow-hidden ${cat.textClass}`}
+ title={`${cat.label} - ${cat.desc}`}
+ >
+ <div className="flex items-start justify-between gap-1.5 mb-1.5">
+ <div className="flex flex-col min-w-0">
+ <span className="text-xs font-bold text-slate-500 break-words whitespace-normal group-hover:text-slate-800 transition-colors select-raw select-all">
+ {cat.label}
+ </span>
+ <span className="text-xs font-black tracking-wider text-slate-400 uppercase">
+ {cat.short}
+ </span>
+ </div>
+ <div className={`p-1.5 rounded-lg shrink-0 transition-transform group-hover:scale-105 duration-200 ${cat.colorClass}`}>
+ <Icon className="w-4 h-4" />
+ </div>
+ </div>
+ 
+ <div className="flex items-baseline justify-between mt-auto">
+ <h4 className="text-xl font-black text-slate-950">
+ {countValue}
+ </h4>
+ <span className="text-[8px] text-slate-400 font-bold">
+ {acordaosForSelectedYear.length > 0 ? `${((countValue / acordaosForSelectedYear.length) * 100).toFixed(0)}%` : "0%"}
+ </span>
+ </div>
+ </div>
+ );
+ })}
+ </div>
+ </div>
+ );
+ })()}
+ </div>
+ );
+ })()}
 
-  {/* Filters HUD - Bento Card layout */}
+ {/* Filters HUD - Bento Card layout */}
  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print mb-4">
  <div className="flex flex-col gap-4">
  {/* Top Row: Action Buttons and Search */}
@@ -2181,28 +2293,26 @@ export default function TcuMonitoramento({
  <td className="p-4 align-middle text-slate-600 text-sm">{ac.DATASESSAO}</td>
 
  {/* Status / Resumo */}
- <td className="px-4 py-3 align-middle">
- {ac.STATUS_MONITORAMENTO === "Cumprido" ? (
- <span className="badge-gov badge-gov-success">Cumprido</span>
- ) : isLate ? (
- <span className="badge-gov badge-gov-danger">Em Atraso</span>
- ) : ac.STATUS_MONITORAMENTO === "Em Análise" ? (
- <span className="badge-gov badge-gov-info">{ac.STATUS_MONITORAMENTO}</span>
- ) : (
- <span className="badge-gov badge-gov-warning">{ac.STATUS_MONITORAMENTO || "Pendente"}</span>
- )}
+ <td className="p-4 align-middle">
+ <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+ ac.STATUS_MONITORAMENTO === "Cumprido" ? "bg-emerald-100 text-emerald-800" :
+ isLate ? "bg-red-100 text-red-800" :
+ "bg-blue-100 text-blue-800"
+ }`}>
+ {ac.STATUS_MONITORAMENTO || "Pendente"}
+ </span>
  </td>
 
  {/* Ações */}
- <td className="px-4 py-3 align-middle text-center">
- <button
- className="px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap text-[#1351b4] bg-blue-50 border border-blue-100 hover:bg-[#003366] hover:text-white hover:border-transparent"
+ <td className="p-4 align-middle text-center">
+ <button 
+ className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold transition"
  onClick={(e) => {
  e.stopPropagation();
  setExpandedRow(isExpanded ? null : uniqueKey);
  }}
  >
- {isExpanded ? '▲ Fechar' : 'Detalhes'}
+ Detalhes
  </button>
  </td>
 

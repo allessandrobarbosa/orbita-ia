@@ -57,7 +57,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
       throw new Error(`Falha na API da CGU. Status: ${res.status}`);
     }
 
-    const data = await res.json();
+    const data = await res.json() as any;
     const relatorios = data.data || [];
     
     console.log(`[CGU] Recebidos ${relatorios.length} relatórios da API.`);
@@ -94,7 +94,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
         let municipio = item.localidades || null;
         if (municipio && municipio.includes("/")) {
           const parts = municipio.split("/");
-          uf = parts[parts.length - 1].trim();
+          uf = parts[parts.length - 1].trim().substring(0, 10);
         }
 
         const tipoServico = item.tipoServico || null;
@@ -179,7 +179,7 @@ export const runImportCguAuditorias = async (usuarioId: string = "SISTEMA") => {
 
   } catch (err: any) {
     if (importControlId) {
-      await registrarErroImportacao(importControlId, err.message, err.stack);
+      await registrarErroImportacao(importControlId, err);
     }
     console.error("[CGU] Erro fatal na sincronia de auditorias via API", err);
     return { error: err.message };

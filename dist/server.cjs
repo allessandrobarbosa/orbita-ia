@@ -1579,7 +1579,6 @@ router3.post("/acordaos/update", async (req, res) => {
       updated.RELATOR,
       updated.ASSUNTO,
       updated.SUMARIO,
-      updated.ACORDAO,
       updated.DECISAO,
       updated.RECOMENDACOES,
       updated.DETERMINACOES,
@@ -3226,7 +3225,7 @@ var runImportCguAuditorias = async (usuarioId = "SISTEMA") => {
         let municipio = item.localidades || null;
         if (municipio && municipio.includes("/")) {
           const parts = municipio.split("/");
-          uf = parts[parts.length - 1].trim();
+          uf = parts[parts.length - 1].trim().substring(0, 10);
         }
         const tipoServico = item.tipoServico || null;
         const linhaAcao = item.linhaAcao || null;
@@ -3318,7 +3317,7 @@ var runImportCguAuditorias = async (usuarioId = "SISTEMA") => {
     };
   } catch (err) {
     if (importControlId) {
-      await registrarErroImportacao(importControlId, err.message, err.stack);
+      await registrarErroImportacao(importControlId, err);
     }
     console.error("[CGU] Erro fatal na sincronia de auditorias via API", err);
     return { error: err.message };

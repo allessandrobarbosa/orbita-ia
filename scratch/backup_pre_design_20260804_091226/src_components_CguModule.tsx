@@ -254,8 +254,8 @@ export default function CguModule({
         </div>
       </div>
 
-      {/* Submodules Navigation — Pills Gov */}
-      <div className="no-print border border-slate-200 bg-white p-1.5 rounded-2xl flex flex-wrap gap-1 shadow-sm mb-6">
+      {/* Submodules Navigation */}
+      <div className="no-print border border-slate-200 bg-white p-1 rounded-2xl flex flex-wrap gap-1 shadow-xs mb-6">
         {[
           { id: "auditorias", label: "Auditorias", desc: "Base de Relatórios da CGU", icon: FileText },
           { id: "dashboard", label: "Painel Gerencial", desc: "Indicadores e Evolução", icon: LayoutDashboard }
@@ -266,20 +266,17 @@ export default function CguModule({
             <button
               key={sub.id}
               onClick={() => setActiveSubTab(sub.id as any)}
-              className={`flex-1 min-w-[200px] flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
-                isActive
-                  ? "bg-gradient-to-r from-[#003366] to-[#004080] text-white shadow-md shadow-blue-900/20"
-                  : "hover:bg-slate-50 text-slate-500 hover:text-slate-800"
-              }`}
+              className={`flex-1 min-w-[200px] flex items-center justify-between gap-3 p-3 rounded-xl transition-all cursor-pointer ${isActive
+                ? "bg-[#003366] text-white shadow-md shadow-blue-900/15"
+                : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
+                }`}
             >
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all ${
-                isActive ? "bg-white/15" : "bg-slate-100"
-              }`}>
-                <SubIcon className={`w-4 h-4 ${isActive ? "text-blue-100" : "text-slate-500"}`} />
-              </div>
-              <div className="text-left">
-                <span className="block text-xs font-black uppercase tracking-wide leading-none">{sub.label}</span>
-                <span className="block text-[9px] opacity-70 mt-0.5 font-normal leading-none">{sub.desc}</span>
+              <div className="flex items-center gap-2.5">
+                <SubIcon className={`w-5 h-5 ${isActive ? "text-blue-200" : "text-slate-400"}`} />
+                <div className="text-left">
+                  <span className="block text-xs font-black uppercase tracking-wide leading-none">{sub.label}</span>
+                  <span className="block text-[9px] opacity-75 mt-0.5 font-normal leading-none">{sub.desc}</span>
+                </div>
               </div>
             </button>
           );

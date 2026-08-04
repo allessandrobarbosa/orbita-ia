@@ -13,6 +13,17 @@
   --font-serif: "Cinzel", serif;
 }
 
+/* ─── Gov.br Design System Tokens ─────────────────────────────────────── */
+:root {
+  --gov-azul-principal: #003366;
+  --gov-azul-medio: #1351b4;
+  --gov-azul-claro: #dbe8fb;
+  --gov-azul-hover: #0f4396;
+  --gov-dourado: #d4af37;
+  --gov-slate-bg: #f8fafc;
+  --gov-border: #e2e8f0;
+}
+
 /* Custom styling inspired by the Br-Gov / Federal Governo Federal styling */
 .gov-header {
   background-color: #f0f6ff !important;
@@ -20,82 +31,126 @@
   border-bottom: 3.5px solid #003366 !important;
 }
 
-.gov-border-gold {
-  border-color: #d4af37;
-}
-
-.gov-bg-gold {
-  background-color: #d4af37;
-}
-
-.gov-text-gold {
-  color: #d4af37;
-}
+.gov-border-gold { border-color: #d4af37; }
+.gov-bg-gold     { background-color: #d4af37; }
+.gov-text-gold   { color: #d4af37; }
 
 /* Elegant Federal Logo Glow and Orbit animation */
-.logo-orbit-ring {
-  box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+.logo-orbit-ring { box-shadow: 0 0 12px rgba(212, 175, 55, 0.4); }
+.glow-btn:hover  { box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
+
+/* ─── Animações Suaves ─────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.glow-btn:hover {
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.5);
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Print Styles configuration for Flawless PDF / Printer Export */
-@media print {
-  body {
-    background: white !important;
-    color: black !important;
-    font-size: 12pt;
-  }
-
-  .no-print {
-    display: none !important;
-  }
-
-  .print-only {
-    display: block !important;
-  }
-
-  .print-page-break {
-    page-break-after: always;
-  }
-
-  .card {
-    border: 1px solid #ccc !important;
-    box-shadow: none !important;
-    background: transparent !important;
-  }
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* custom scrollbars */
-::-webkit-scrollbar {
-  width: 12px;
-  /* Increased vertical thickness for robust drag/touch target */
-  height: 10px;
-  /* Thicker horizontal targets */
+@keyframes pulse-gentle {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  /* Clear Slate track for easy boundary tracking */
-  border-radius: 6px;
+.animate-fade-in      { animation: fade-in 0.25s ease-out both; }
+.animate-slide-down   { animation: slide-down 0.3s ease-out both; }
+.animate-slide-up     { animation: slide-up 0.25s ease-out both; }
+.animate-pulse-gentle { animation: pulse-gentle 2s ease-in-out infinite; }
+
+/* ─── Tabelas Gov Premium ──────────────────────────────────────────────── */
+.gov-table-header {
+  background: linear-gradient(135deg, #003366 0%, #004080 100%);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 2px solid #002244;
+  user-select: none;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #94a3b8;
-  /* Rich slate thumb for crisp contrast */
-  border: 2.5px solid #f1f5f9;
-  /* Generously sized inset borders */
-  border-radius: 6px;
+.gov-table-header th {
+  padding: 0.75rem 1rem;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255,255,255,0.08);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-  /* Darker slate hover effect */
+.gov-table-header th:last-child { border-right: none; }
+
+.gov-table-row {
+  transition: background-color 0.15s ease;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-/* Flat Gov.br navigation buttons */
+.gov-table-row:hover { background-color: rgba(19, 81, 180, 0.04); }
+
+.gov-table-row:nth-child(even)       { background-color: rgba(248, 250, 252, 0.7); }
+.gov-table-row:nth-child(even):hover { background-color: rgba(19, 81, 180, 0.04); }
+
+/* ─── Badges de Status Gov ─────────────────────────────────────────────── */
+.badge-gov {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  border-width: 1px;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+.badge-gov-success { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.badge-gov-warning { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
+.badge-gov-danger  { background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+.badge-gov-info    { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.badge-gov-neutral { background: #f8fafc; color: #475569; border-color: #cbd5e1; }
+.badge-gov-purple  { background: #faf5ff; color: #6b21a8; border-color: #d8b4fe; }
+
+/* ─── Cards Gov ────────────────────────────────────────────────────────── */
+.gov-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.875rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.gov-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 51, 102, 0.08);
+  border-color: #bfdbfe;
+}
+
+/* ─── Inputs Gov ───────────────────────────────────────────────────────── */
+.gov-input {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: #1e293b;
+  font-weight: 500;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.15s;
+  width: 100%;
+  outline: none;
+}
+
+.gov-input:focus {
+  border-color: #1351b4;
+  box-shadow: 0 0 0 3px rgba(19, 81, 180, 0.12);
+  background: #ffffff;
+}
+
+/* ─── Botões Nav Gov ───────────────────────────────────────────────────── */
 .nav-btn-inactive {
   background-color: #ffffff !important;
   background-image: none !important;
@@ -123,33 +178,35 @@
   transition: all 0.15s ease-in-out !important;
   transform: none !important;
 }
-/* Auto-scale UI for smaller screens so users dont have to manually zoom */
-@media screen and (max-width: 1536px) {
-  html {
-    zoom: 0.9;
+
+/* ─── Print Styles ─────────────────────────────────────────────────────── */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+  }
+
+  .no-print     { display: none !important; }
+  .print-only   { display: block !important; }
+  .print-page-break { page-break-after: always; }
+
+  .card {
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    background: transparent !important;
   }
 }
 
-@media screen and (max-width: 1366px) {
-  html {
-    zoom: 0.8;
-  }
-}
+/* ─── Scrollbars ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 8px; }
+::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 6px; }
+::-webkit-scrollbar-thumb { background: #94a3b8; border: 2px solid #f1f5f9; border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-@media screen and (max-width: 1280px) {
-  html {
-    zoom: 0.75;
-  }
-}
-
-@media screen and (max-width: 1024px) {
-  html {
-    zoom: 0.7;
-  }
-}
-
-@media screen and (max-width: 768px) {
-  html {
-    zoom: 0.6;
-  }
-}
+/* ─── Auto-scale responsivo ────────────────────────────────────────────── */
+@media screen and (max-width: 1536px) { html { zoom: 0.9; } }
+@media screen and (max-width: 1366px) { html { zoom: 0.8; } }
+@media screen and (max-width: 1280px) { html { zoom: 0.75; } }
+@media screen and (max-width: 1024px) { html { zoom: 0.7; } }
+@media screen and (max-width: 768px)  { html { zoom: 0.6; } }

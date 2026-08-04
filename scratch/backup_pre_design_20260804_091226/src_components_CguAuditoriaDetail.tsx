@@ -206,18 +206,18 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
   
   let situacaoGeral = "Sem Monitoramento";
   let situacaoColor = "bg-slate-100 text-slate-700";
-    if (totalRecomendacoes > 0) {
-      if (concluidos === totalRecomendacoes) {
-        situacaoGeral = "Totalmente Atendida";
-        situacaoColor = "badge-gov badge-gov-success";
-      } else if (pendentes > 0) {
-        situacaoGeral = "Com Pendências";
-        situacaoColor = "badge-gov badge-gov-danger";
-      } else {
-        situacaoGeral = "Em Acompanhamento";
-        situacaoColor = "badge-gov badge-gov-warning";
-      }
+  if (totalRecomendacoes > 0) {
+    if (concluidos === totalRecomendacoes) {
+      situacaoGeral = "Totalmente Atendida";
+      situacaoColor = "bg-emerald-100 text-emerald-800 border-emerald-200";
+    } else if (pendentes > 0) {
+      situacaoGeral = "Com Pendências";
+      situacaoColor = "bg-rose-100 text-rose-800 border-rose-200";
+    } else {
+      situacaoGeral = "Em Acompanhamento";
+      situacaoColor = "bg-amber-100 text-amber-800 border-amber-200";
     }
+  }
 
   const ultimaAtualizacao = monitoramentos.reduce((latest, current) => {
     if (!current.ultimaAtualizacao) return latest;
@@ -235,10 +235,10 @@ export default function CguAuditoriaDetail({ id_tarefa, onBack }: CguAuditoriaDe
         <div className="flex flex-col lg:flex-row justify-between items-start gap-4 mb-6">
           <div className="w-full">
             <div className="flex flex-wrap items-center gap-3 mb-3">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 text-[#003366] rounded-lg text-[11px] font-mono font-semibold">
+              <span className="px-2.5 py-1.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold tracking-wider border border-slate-200">
                 ID Auditoria: {auditoria.id_auditoria}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-[11px] font-mono font-semibold">
+              <span className="px-2.5 py-1.5 bg-slate-100 text-slate-600 rounded-md text-xs font-semibold tracking-wider border border-slate-200">
                 ID Tarefa: {auditoria.id_tarefa}
               </span>
               

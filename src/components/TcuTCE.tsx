@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -2004,133 +2004,64 @@ export default function TcuTCE({
  return (
  <div className="space-y-6 animate-fade-in no-print">
 
- {/* TWO ELEGANT PRIMARY NAVIGATION SWITCHERS (Bento Card Style) */}
- <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
- <button
- onClick={() => {
- setTceActiveSubTab("geral");
- setTceCurrentPage(1);
- setTceFilterVinculacao("TODOS");
- setShowTceImporter(false);
- }}
- className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${tceActiveSubTab === "geral"
- ? "bg-gradient-to-br from-[#003366] to-[#0b4d8c] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
- : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
- }`}
- >
- <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
- <div className="flex items-start gap-4">
- <div className={`p-3.5 rounded-2xl ${tceActiveSubTab === "geral" ? "bg-white/10 text-white" : "bg-indigo-50 text-indigo-700"}`}>
- <FileText className="w-6 h-6" />
- </div>
- <div className="space-y-1">
- <h3 className="font-semibold text-slate-700 group-hover:text-amber-500 text-base tracking-tight transition-colors duration-200" style={{ color: tceActiveSubTab === "geral" ? "white" : undefined }}>Instâncias de TCE (Geral)</h3>
- <p className={`text-xs ${tceActiveSubTab === "geral" ? "text-slate-100/90" : "text-slate-500"}`}>
- Visualização unificada de todas as {totalTceCount} instâncias gerais registradas no banco de dados.
- </p>
- </div>
- </div>
- </button>
-
- <button
- onClick={() => {
- setTceActiveSubTab("com-acordaos");
- setTceCurrentPage(1);
- setTceFilterVinculacao("TODOS");
- setShowTceImporter(false);
- }}
- className={`p-6 rounded-3xl text-left border transition-all duration-300 relative overflow-hidden group ${tceActiveSubTab === "com-acordaos"
- ? "bg-gradient-to-br from-[#1351b4] to-[#1a64df] text-white border-transparent shadow-md ring-4 ring-blue-500/10"
- : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50/55 shadow-2xs"
- }`}
- >
- <div className="absolute top-0 right-0 w-32 h-32 bg-slate-100/10 rounded-full -mr-10 -mt-10 pointer-events-none group-hover:scale-110 transition duration-300"></div>
- <div className="flex items-start gap-4">
- <div className={`p-3.5 rounded-2xl ${tceActiveSubTab === "com-acordaos" ? "bg-white/10 text-white" : "bg-emerald-50 text-emerald-700"}`}>
- <Merge className="w-6 h-6" />
- </div>
- <div className="space-y-1">
- <h3 className="font-semibold text-slate-700 group-hover:text-amber-500 text-base tracking-tight transition-colors duration-200" style={{ color: tceActiveSubTab === "com-acordaos" ? "white" : undefined }}>TCEs com Acórdãos TCU</h3>
- <p className={`text-xs ${tceActiveSubTab === "com-acordaos" ? "text-slate-100/90" : "text-slate-500"}`}>
- Visualização cruzada e mapeamento de {totalMappedCount} responsabilidades com acórdãos de condenação do TCU.
- </p>
- </div>
- </div>
- </button>
+ {/* TCE Sub-Tab Pills — compact & centered */}
+ <div className="flex justify-center gap-3 no-print">
+ {[
+  { id: "geral", label: "TCEs (Geral)", icon: FileText, count: totalTceCount },
+  { id: "com-acordaos", label: "TCEs c/ Acórdãos", icon: Merge, count: totalMappedCount },
+ ].map(tab => {
+  const TabIcon = tab.icon;
+  const isActive = tceActiveSubTab === tab.id;
+  return (
+  <button
+   key={tab.id}
+   onClick={() => {
+   setTceActiveSubTab(tab.id as any);
+   setTceCurrentPage(1);
+   setTceFilterVinculacao("TODOS");
+   setShowTceImporter(false);
+   }}
+   className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold transition-all duration-200 border ${
+   isActive
+    ? "bg-gradient-to-r from-[#003366] to-[#004080] text-white border-transparent shadow-md"
+    : "bg-white text-[#1351b4] border-blue-200 hover:bg-blue-50 hover:border-[#003366]"
+   }`}
+  >
+  <TabIcon className="w-3.5 h-3.5" />
+  {tab.label}
+  <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ml-0.5 ${
+   isActive ? "bg-white/20 text-white" : "bg-blue-50 text-[#003366]"
+  }`}>{tab.count}</span>
+  </button>
+ );
+ })}
  </div>
 
- {/* Dynamic Year Tabs & KPIs Bento Grid (Standardized UX) */}
- <div className="flex border-b border-slate-150 no-print overflow-x-auto gap-1 pb-1 pt-2">
+ {/* Year Pill Bar — padrão CGU */}
+ <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar no-print">
  <button
  onClick={() => { setTceSelectedYear("TODOS"); setTceCurrentPage(1); }}
- className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${tceSelectedYear === "TODOS"
- ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
- : "text-slate-400 hover:text-slate-700"
+ className={`px-3.5 py-1.5 text-[11px] font-bold tracking-wide whitespace-nowrap rounded-full transition-all duration-200 ${
+ tceSelectedYear === "TODOS"
+ ? "bg-[#003366] text-white shadow-sm shadow-blue-900/20"
+ : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
  }`}
  >
- Todos os Anos
+ TODOS OS ANOS
  </button>
  {tceYears.map((yr) => (
  <button
  key={yr}
- onClick={() => { setTceSelectedYear(yr.toString()); setTceCurrentPage(1); }}
- className={`px-4 py-1.5 -mb-px text-sm font-black uppercase tracking-wider rounded-t-lg shrink-0 transition ${tceSelectedYear === yr.toString()
- ? "border-b-2 border-[#003366] text-[#003366] bg-slate-50"
- : "text-slate-400 hover:text-slate-700"
- }`}
+  onClick={() => { setTceSelectedYear(yr.toString()); setTceCurrentPage(1); }}
+ className={`px-3.5 py-1.5 text-[11px] font-bold tracking-wide whitespace-nowrap rounded-full transition-all duration-200 ${
+  tceSelectedYear === yr.toString()
+  ? "bg-[#003366] text-white shadow-sm shadow-blue-900/20"
+  : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+  }`}
  >
- Ano {yr} {yr === 2026 && <span className="bg-emerald-200 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
+  ANO {yr}{yr === new Date().getFullYear() && <span className="bg-emerald-400/30 text-emerald-900 text-[8px] px-1 py-0.5 rounded font-black uppercase ml-1">Ativo</span>}
  </button>
  ))}
- </div>
-
- {/* Statistics bento grid */}
- <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">Universo de TCE</span>
- <h4 className="text-2xl font-black text-slate-900 truncate">{tcesForSelectedYear.length}</h4>
- <p className="text-xs text-slate-500 truncate">Instâncias no ano ({tceSelectedYear === "TODOS" ? "Histórico Total" : tceSelectedYear})</p>
- </div>
- <div className="p-3 bg-blue-50 text-[#003366] rounded-xl shrink-0 ml-2">
- <FileText className="w-6 h-6" />
- </div>
- </div>
-
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">Débito Atualizado</span>
- <h4 className="text-xl font-black text-slate-900 truncate" title={formattedSelectedYearDebito}>{formattedSelectedYearDebito}</h4>
- <p className="text-xs text-slate-500 truncate">Montante acumulado no ano</p>
- </div>
- <div className="p-3 bg-amber-50 text-amber-700 rounded-xl shrink-0 ml-2">
- <DollarSign className="w-6 h-6" />
- </div>
- </div>
-
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">TCEs COM ACÓRDÃOS VINCULADOS</span>
- <h4 className="text-2xl font-black text-emerald-700 truncate">{linkedCount}</h4>
- <p className="text-xs text-emerald-600 font-semibold truncate">Vinculo com Acórdãos bem sucedidos</p>
- </div>
- <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl shrink-0 ml-2">
- <Merge className="w-6 h-6" />
- </div>
- </div>
-
- <div className="bg-white border border-slate-200/80 p-5 rounded-2xl flex items-center justify-between shadow-2xs">
- <div className="space-y-1 min-w-0">
- <span className="text-xs font-black uppercase text-slate-400 tracking-wider truncate block">TCEs SEM ACÓRDAOS VINCULADOS</span>
- <h4 className="text-2xl font-black text-rose-700 inline-flex items-center gap-1.5 animate-pulse font-sans truncate w-full">
- {pendingTceCount}
- </h4>
- <p className="text-xs text-rose-600 font-semibold truncate">Aguardando vínculo</p>
- </div>
- <div className="p-3 bg-rose-50 text-rose-700 rounded-xl shrink-0 ml-2">
- <FileWarning className="w-6 h-6" />
- </div>
- </div>
  </div>
 
  {/* Contextual Importer Panel - Premium Bento Box Style */}
@@ -2419,126 +2350,109 @@ export default function TcuTCE({
  </div>
  </div>
  )}
-
- {/* Filter Row and Sync/Export Buttons */}
- <div className="bg-slate-100 p-2.5 rounded-2xl flex flex-col items-stretch md:flex-row md:items-center justify-between gap-3 shadow-3xs">
- <div className="flex gap-1.5 shrink-0">
- {syncLocalTceMessage && (
- <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 self-center">
- {syncLocalTceMessage}
- </span>
- )}
-
- <div className="flex items-center gap-2">
- <button
- onClick={handleLocalSyncTce}
- disabled={isSyncingLocalTce}
- className={`px-3.5 py-1.5 ${isSyncingLocalTce ? "bg-slate-800 text-white opacity-50" : "bg-[#003366] text-white hover:bg-[#002244]"} rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-150 shadow-xs`}
- title="Sincronizar Arquivos Locais (data/tces)"
- >
- <RefreshCw className={`w-4 h-4 ${isSyncingLocalTce ? "animate-spin" : ""}`} />
- {isSyncingLocalTce ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
- </button>
- {lastUpdateDate && (
- <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
- Atualizado em: {lastUpdateDate}
- </span>
- )}
- </div>
- </div>
- {/* Real-time search and filter tools */}
- <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 grow max-w-xl self-end">
- <div className="relative grow">
- <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
- <input
- type="text"
- placeholder="Filtrar por nº, processo, culpado..."
- className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800"
- value={tceSearchTerm}
- onChange={(e) => {
- setTceSearchTerm(e.target.value);
- setTceCurrentPage(1);
- }}
- />
- </div>
-
- <select
- className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 focus:outline-none focus:border-[#003366] max-w-[150px]"
- value={tceFilterStatus}
- onChange={(e) => {
- setTceFilterStatus(e.target.value);
- setTceCurrentPage(1);
- }}
- >
- <option value="TODOS">Todas Situações</option>
- {availableTceStatus.map(s => (
- <option key={s} value={s}>{s}</option>
- ))}
- </select>
-
- <select
- className="px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white text-slate-800 focus:outline-none focus:border-[#003366] max-w-[150px]"
- value={tceFilterVinculacao}
- onChange={(e) => {
- setTceFilterVinculacao(e.target.value);
- setTceCurrentPage(1);
- }}
- >
- {tceActiveSubTab === "geral" ? (
- <>
- <option value="TODOS">Todas Vinculações</option>
- <option value="VINCULADOS">Apenas Vinculados</option>
- <option value="NAO_VINCULADOS">Apenas Não Vinculados</option>
- </>
- ) : (
- <>
- <option value="TODOS">Todos Acórdãos Mapeados</option>
- <option value="LOCALIZADOS">Acórdãos Localizados na Base</option>
- <option value="NAO_LOCALIZADOS">Acórdãos Não Localizados</option>
- </>
- )}
- </select>
-
- <button
- onClick={() => {
- if (tceActiveSubTab === "geral") {
- handleExportTcesExcel(filteredTces);
- } else {
- handleExportTcesAcordaosExcel(filteredMappings);
- }
- }}
- className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
- >
- <Download size={16} /> Excel
- </button>
- </div>
- </div>
+  {/* Filter HUD - Bento Card layout (padrão Monitoramento) */}
+  <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm no-print">
+  <div className="flex flex-col gap-4">
+  {/* Top Row: Action Buttons and Search */}
+  <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center w-full">
+  <div className="flex flex-wrap gap-2 items-center">
+  <div className="flex items-center gap-2">
+  {syncLocalTceMessage && (
+  <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 self-center">
+  {syncLocalTceMessage}
+  </span>
+  )}
+  <button
+  onClick={handleLocalSyncTce}
+  disabled={isSyncingLocalTce}
+  className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-1.5 transition duration-200 ${isSyncingLocalTce ? "bg-slate-800 text-white shadow-xs opacity-50" : "bg-[#003366] text-white hover:bg-[#0f4396] shadow-sm"}`}
+  title="Sincronizar Arquivos Locais (data/tces)"
+  >
+  <RefreshCw className={`w-4 h-4 ${isSyncingLocalTce ? "animate-spin" : ""}`} />
+  {isSyncingLocalTce ? "Sincronizando..." : "Sincronizar Arquivos Locais"}
+  </button>
+  {lastUpdateDate && (
+  <span className="text-xs text-slate-500 bg-slate-200 px-2 py-1 rounded-lg font-medium whitespace-nowrap">
+  Atualizado em: {lastUpdateDate}
+  </span>
+  )}
+  </div>
+  <button
+  onClick={() => { if (tceActiveSubTab === "geral") { handleExportTcesExcel(filteredTces); } else { handleExportTcesAcordaosExcel(filteredMappings); } }}
+  className="px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-2 bg-green-600 text-white hover:bg-green-700 transition shadow-sm cursor-pointer"
+  >
+  <Download size={16} /> Excel
+  </button>
+  </div>
+  <div className="relative w-full xl:w-[300px] shrink-0">
+  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+  <input
+  type="text"
+  placeholder="Filtrar por nº, processo, culpado..."
+  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-[#003366] focus:bg-white focus:outline-none transition text-slate-800"
+  value={tceSearchTerm}
+  onChange={(e) => { setTceSearchTerm(e.target.value); setTceCurrentPage(1); }}
+  />
+  </div>
+  </div>
+  <hr className="border-slate-100" />
+  {/* Bottom Row: Filters */}
+  <div className="flex flex-wrap gap-4 items-center w-full bg-slate-50/50 p-2 rounded-xl">
+  <div className="flex items-center gap-2 text-xs text-slate-600">
+  <span className="font-semibold text-slate-500 shrink-0">Situação:</span>
+  <select
+  className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-none font-medium"
+  value={tceFilterStatus}
+  onChange={(e) => { setTceFilterStatus(e.target.value); setTceCurrentPage(1); }}
+  >
+  <option value="TODOS">Todas Situações</option>
+  {availableTceStatus.map(s => (
+  <option key={s} value={s}>{s}</option>
+  ))}
+  </select>
+  </div>
+  <div className="flex items-center gap-2 text-xs text-slate-600">
+  <span className="font-semibold text-slate-500 shrink-0">Vinculação:</span>
+  <select
+  className="bg-white border border-slate-200 p-1.5 px-2 rounded-lg text-xs text-slate-800 focus:outline-none font-medium"
+  value={tceFilterVinculacao}
+  onChange={(e) => { setTceFilterVinculacao(e.target.value); setTceCurrentPage(1); }}
+  >
+  {tceActiveSubTab === "geral" ? (
+  <>
+  <option value="TODOS">Todas Vinculações</option>
+  <option value="VINCULADOS">Apenas Vinculados</option>
+  <option value="NAO_VINCULADOS">Apenas Não Vinculados</option>
+  </>
+  ) : (
+  <>
+  <option value="TODOS">Todos Acórdãos Mapeados</option>
+  <option value="LOCALIZADOS">Acórdãos Localizados na Base</option>
+  <option value="NAO_LOCALIZADOS">Acórdãos Não Localizados</option>
+  </>
+  )}
+  </select>
+  </div>
+  </div>
+  </div>
+  </div>
 
  {/* ACTIVE TAB CONDITIONAL CONTENT */}
  {tceActiveSubTab === "geral" ? (
  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
- {/* Status indicator rail */}
- <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 no-print">
- <div className="flex items-center gap-1.5">
- <span className="w-2.5 h-2.5 rounded-full bg-[#003366] animate-pulse"></span>
- <span className="font-semibold text-slate-700 uppercase tracking-wide">Instâncias de TCE (Geral): {filteredTces.length} registros</span>
- </div>
- <span className="text-slate-400 text-xs uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
- </div>
-
- {/* TCE GENERAL LISTING TABLE */}
- <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
- <table className="w-full text-left border-collapse text-sm text-slate-800">
- <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
-            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-8 no-print cursor-pointer hover: transition-colors"></th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Nº / Ano (TCE)</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo TCU</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Assunto / Motivo da Instauração</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Débito Atualizado</th>
+ {/* Status indi {/* TCE GENERAL LISTING TABLE */}
+ <div className="overflow-x-auto overflow-y-auto max-h-[550px] rounded-xl border border-slate-200 shadow-sm">
+ <table className="w-full text-left border-collapse">
+ <thead className="gov-table-header sticky top-0 z-10">
+ <tr>
+ <th>Nº / Ano (TCE)</th>
+ <th>Processo TCU</th>
+ <th>Assunto / Motivo da Instauração</th>
+ <th className="text-right">Débito Atualizado</th>
+ <th className="no-print text-center">Ações</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-slate-100 text-xs">
+ <tbody>
  {filteredTces.length === 0 ? (
  <tr>
  <td colSpan={5} className="text-center py-12 text-slate-400 font-sans">
@@ -2553,22 +2467,26 @@ export default function TcuTCE({
 
  return (
  <React.Fragment key={tceId}>
- <tr className={`hover:bg-[#1351b4]/5 transition-colors group ${isExpanded ? "bg-blue-50/50" : ""}`}>
- <td className="p-4 align-middle w-8 no-print text-slate-500">
+ <tr className={`gov-table-row ${isExpanded ? 'bg-blue-50/60' : ''}`}>
+ <td className="px-4 py-3 align-middle font-bold text-[#003366] text-xs">{tce.NUMERO_ANO_TCE}</td>
+ <td className="px-4 py-3 align-middle text-xs text-slate-600 font-medium">{tce.TC || "—"}</td>
+ <td className="px-4 py-3 align-middle max-w-xs" title={tce.MOTIVO_INSTAURACAO}>
+ <span className="font-semibold text-slate-800 text-xs block truncate">{tce.MOTIVO_INSTAURACAO}</span>
+ <span className="text-[10px] text-slate-400 block truncate">{tce.SUBMOTIVO_INSTAURACAO}</span>
+ </td>
+ <td className="px-4 py-3 align-middle text-right font-bold text-[#003366] text-xs">{tce.DEBITO_ATUALIZADO || "—"}</td>
+ <td className="px-4 py-3 align-middle text-center no-print">
  <button
  onClick={() => setTceExpandedId(isExpanded ? null : tceId)}
- className="text-slate-400 hover:text-blue-600 hover:bg-blue-100 p-1 rounded-lg transition"
+ className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap ${
+ isExpanded
+ ? 'bg-[#003366] text-white shadow-sm'
+ : 'text-[#1351b4] bg-blue-50 border border-blue-100 hover:bg-[#003366] hover:text-white hover:border-transparent'
+ }`}
  >
- {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+ {isExpanded ? '▲ Fechar' : 'Detalhamento'}
  </button>
  </td>
- <td className="p-4 align-middle px-5 py-3.5 font-bold text-slate-900 group-hover:text-blue-900 transition-colors">{tce.NUMERO_ANO_TCE}</td>
- <td className="p-4 align-middle px-4 py-3.5 text-sm">{tce.TC || "-"}</td>
- <td className="p-4 align-middle px-4 py-3.5 max-w-xs truncate" title={tce.MOTIVO_INSTAURACAO}>
- <span className="font-semibold text-slate-900 block truncate">{tce.MOTIVO_INSTAURACAO}</span>
- <span className="text-xs text-slate-400 block truncate">{tce.SUBMOTIVO_INSTAURACAO}</span>
- </td>
- <td className="p-4 align-middle px-4 py-3.5 text-right font-bold text-slate-900">{tce.DEBITO_ATUALIZADO || "-"}</td>
  </tr>
 
  {/* Nested detail layout */}
@@ -2664,33 +2582,23 @@ export default function TcuTCE({
  </div>
  ) : (
  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
- {/* Status indicator rail */}
- <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-150 text-slate-500 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1 no-print">
- <div className="flex items-center gap-1.5">
- <span className="w-2.5 h-2.5 rounded-full bg-[#1351b4] animate-pulse"></span>
- <span className="font-bold text-[#1351b4] uppercase tracking-wide">Mapeamentos TCE {"<=>"} Acórdão: {filteredMappings.length} registros</span>
- </div>
- <span className="text-slate-400 text-xs uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
- </div>
-
  {/* MAPPED WITH ACORDAOS VIEW */}
- <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
- <table className="w-full text-left border-collapse text-sm text-slate-800">
- <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
-            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-8 no-print cursor-pointer hover: transition-colors"></th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Nº TCE</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo TCU / Motivo</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Acórdão Mapeado (Referência)</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Chave Base Recente</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status Cruzamento</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors pr-6 cursor-pointer hover: transition-colors">Colegiado / Data Sessão</th>
+ <div className="overflow-x-auto overflow-y-auto max-h-[550px] rounded-xl border border-slate-200 shadow-sm">
+ <table className="w-full text-left border-collapse">
+ <thead className="gov-table-header sticky top-0 z-10">
+ <tr>
+ <th>Nº TCE</th>
+ <th>Processo TCU / Motivo</th>
+ <th>Acórdão Relacionado</th>
+ <th>Status Cruzamento</th>
+ <th>Colegiado / Data Sessão</th>
+ <th className="no-print text-center">Ações</th>
  </tr>
  </thead>
- <tbody className="divide-y divide-slate-100 text-xs">
+ <tbody>
  {filteredMappings.length === 0 ? (
  <tr>
- <td colSpan={7} className="text-center py-12 text-slate-400 font-sans">
+ <td colSpan={6} className="text-center py-12 text-slate-400 font-sans">
  Nenhum mapeamento TCE {"<=>"} Acórdão corresponde aos termos digitados. Faça o upload do arquivo de sincronização de acórdãos TCU.
  </td>
  </tr>
@@ -2702,42 +2610,41 @@ export default function TcuTCE({
 
  return (
  <React.Fragment key={idx}>
- <tr className={`hover:bg-[#1351b4]/5 transition-colors group ${isExpanded ? "bg-blue-50/50" : ""}`}>
- <td className="p-4 align-middle w-8 no-print text-slate-500">
- <button
- onClick={() => setTceExpandedId(isExpanded ? null : mappingId)}
- className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 p-1 rounded-lg transition text-left"
- >
- {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-450" />}
- </button>
+ <tr className={`gov-table-row ${isExpanded ? 'bg-blue-50/60' : ''}`}>
+ <td className="px-4 py-3 align-middle font-bold text-[#003366] text-xs">{item.mapping.NUMERO_ANO_TCE}</td>
+ <td className="px-4 py-3 align-middle max-w-xs">
+ <span className="font-semibold text-slate-800 text-xs block truncate" title={item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}>{item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}</span>
+ <span className="text-[10px] text-[#1351b4] block font-medium">{item.tce?.TC || "—"}</span>
  </td>
- <td className="p-4 align-middle px-5 py-3.5 font-bold text-slate-900">{item.mapping.NUMERO_ANO_TCE}</td>
- <td className="p-4 align-middle px-4 py-3.5 max-w-xs truncate">
- <span className="font-semibold text-slate-800 block truncate" title={item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}>{item.tce?.MOTIVO_INSTAURACAO || "(Dados TCE Ausentes)"}</span>
- <span className="text-xs text-[#003366] block">{item.tce?.TC || "-"}</span>
- </td>
- <td className="p-4 align-middle px-4 py-3.5 font-semibold text-slate-900 italic">{item.mapping.ACORDAO_KEY}</td>
- <td className="p-4 align-middle px-4 py-3.5 text-sm text-slate-500">{item.acordao?.KEY || "Indefinida / Não Ingerido"}</td>
- <td className="p-4 align-middle px-4 py-3.5 text-center">
+ <td className="px-4 py-3 align-middle font-bold text-[#003366] text-xs">{item.mapping.ACORDAO_KEY}</td>
+ <td className="px-4 py-3 align-middle text-center">
  {isMatched ? (
- <span className="bg-emerald-50 text-emerald-800 text-xs font-black uppercase tracking-wider px-2.2 py-0.5 rounded-full border border-emerald-200 inline-block text-center shadow-3xs">
- LOCALIZADO
- </span>
+ <span className="badge-gov badge-gov-success">Localizado</span>
  ) : (
- <span className="bg-rose-50 text-rose-800 text-xs font-black uppercase tracking-wider px-2.2 py-0.5 rounded-full border border-rose-200 inline-block text-center" title="Importe este acórdão TCU no Monitoramento para completar os metadados do cruzamento">
- NÃO IMPORTADO
- </span>
+ <span className="badge-gov badge-gov-danger" title="Importe este acórdão TCU no Monitoramento para completar os metadados do cruzamento">Não Importado</span>
  )}
  </td>
- <td className="p-4 align-middle px-4 py-3.5 text-sm pr-6">
- {item.acordao ? `${item.acordao.COLEGIADO} • ${item.acordao.DATASESSAO}` : "-"}
+ <td className="px-4 py-3 align-middle text-xs text-slate-600 font-medium">
+ {item.acordao ? `${item.acordao.COLEGIADO} • ${item.acordao.DATASESSAO}` : "—"}
+ </td>
+ <td className="px-4 py-3 align-middle text-center no-print">
+ <button
+ onClick={() => setTceExpandedId(isExpanded ? null : mappingId)}
+ className={`px-3 py-1.5 text-[11px] font-bold rounded-lg transition-all whitespace-nowrap ${
+ isExpanded
+ ? 'bg-[#003366] text-white shadow-sm'
+ : 'text-[#1351b4] bg-blue-50 border border-blue-100 hover:bg-[#003366] hover:text-white hover:border-transparent'
+ }`}
+ >
+ {isExpanded ? '▲ Fechar' : 'Detalhamento'}
+ </button>
  </td>
  </tr>
 
  {/* Mapping Expanded Details */}
  {isExpanded && (
  <tr className=" border-b border-[#002244]">
- <td colSpan={7} className="p-6 bg-slate-50 border-y border-slate-100 animate-fade-in text-xs">
+ <td colSpan={6} className="p-6 bg-slate-50 border-y border-slate-100 animate-fade-in text-xs">
  <div className="max-h-[550px] overflow-y-auto pr-2 scrollbar-thin">
  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
