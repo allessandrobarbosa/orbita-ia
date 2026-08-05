@@ -57,25 +57,38 @@ const formatDate = (dateStr: string): string => {
   return dateStr;
 };
 
-// Scanner for matching acórdãos for each state
-const findRelatedAcordaos = (uf: string, capital: string, list: AcordaoDemand[]) => {
+// =============================================================================
+// Motor de cruzamento — usa IDs pré-computados pelo backend quando disponíveis.
+// Fallback: busca textual apenas nos campos que chegam na listagem (TITULO,
+// INTERESSADOS, ASSUNTO, SUMARIO, DECISAO). O campo ACORDAO é omitido na
+// listagem geral para economizar banda — não deve ser usado aqui.
+// =============================================================================
+const findRelatedAcordaosFallback = (uf: string, capital: string, list: AcordaoDemand[]) => {
   const ufLower = uf.toLowerCase();
-  const capitalLower = capital.toLowerCase();
-  
+  const capitalLower = capital.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   return list.filter(ac => {
-    const textToSearch = `${ac.TITULO || ""} ${ac.INTERESSADOS || ""} ${ac.ASSUNTO || ""} ${ac.SUMARIO || ""} ${ac.ACORDAO || ""} ${ac.DECISAO || ""}`.toLowerCase();
-    const hasUfPattern = textToSearch.includes(`srte-${ufLower}`) || 
-                         textToSearch.includes(`srte/${ufLower}`) ||
-                         textToSearch.includes(`srt-${ufLower}`) ||
-                         textToSearch.includes(`srt/${ufLower}`);
-    const hasSuperintendencia = textToSearch.includes("superintendência") || 
-                                textToSearch.includes("superintendencia") || 
-                                textToSearch.includes("srte");
-    const mentionsLocation = textToSearch.includes(capitalLower) || 
-                             textToSearch.includes(`no estado d${ufLower === 'mg' || ufLower === 'go' ? 'e' : 'o'} ${ufLower}`) ||
-                             textToSearch.includes(`srt-${ufLower}`) ||
-                             textToSearch.includes(`srte-${ufLower}`);
-    return hasUfPattern || (hasSuperintendencia && mentionsLocation);
+    // Apenas campos que chegam populados na listagem geral
+    const raw = `${ac.TITULO || ""} ${ac.INTERESSADOS || ""} ${ac.ASSUNTO || ""} ${ac.SUMARIO || ""} ${ac.DECISAO || ""}`;
+    const text = raw.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const hasUfPattern =
+      text.includes(`srte-${ufLower}`) ||
+      text.includes(`srte/${ufLower}`) ||
+      text.includes(`srt-${ufLower}`) ||
+      text.includes(`srt/${ufLower}`);
+
+    const hasSrteContext =
+      text.includes("srte") ||
+      text.includes("superintendencia regional") ||
+      text.includes("gerencia regional do trabalho");
+
+    const mentionsLocation =
+      text.includes(capitalLower) ||
+      text.includes(ufLower + " ") ||
+      text.includes(" " + ufLower);
+
+    return hasUfPattern || (hasSrteContext && mentionsLocation);
   });
 };
 
@@ -558,26 +571,40 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
   // Eficiência km/L da frota (based on seeds: SP is ~11.0, RJ is ~10.3)
   const eficienciaMedia = sr.uf === "SP" ? 11.0 : sr.uf === "RJ" ? 10.3 : 10.8;
 
-  // Conformidade do controle externo para Visão Geral
-  const relatedAcordaos = findRelatedAcordaos(sr.uf, sr.capital, acordaos);
-  const relatedTces = tces.filter(t => {
-    const code = t.PROCESSO_ADMINISTRATIVO || "";
-    // check if it starts with the state's historical code
-    const norte = ["AC", "AP", "AM", "PA", "RO", "RR", "TO"];
-    const nordeste = ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"];
-    const centroOeste = ["DF", "GO", "MT", "MS"];
-    const sudeste = ["ES", "MG", "RJ", "SP"];
-    const codes: Record<string, string> = {
-      AC: "46002", AL: "46003", AM: "46004", BA: "46005", CE: "46006",
-      DF: "46007", ES: "46008", GO: "46009", MA: "46017", MT: "46027",
-      MS: "46028", MG: "46013", PA: "46016", PB: "46018", PR: "46011",
-      PE: "46014", PI: "46023", RN: "46019", RS: "46015", RJ: "46012",
-      RO: "46024", RR: "46025", SC: "46020", SP: "46010", SE: "46021",
-      TO: "46026", AP: "46030"
-    };
-    const mteCode = codes[sr.uf] || "XXXXX";
-    return code.replace(/\D/g, "").startsWith(mteCode) || code.toLowerCase().includes(sr.uf.toLowerCase());
-  });
+  // ── Cruzamento de dados: usa IDs pré-computados pelo backend (após recálculo)
+  // ── Fallback: matching textual nos campos disponíveis na listagem
+  const hasPrecomputedAcordaos = Array.isArray(sr.acordaoIds) && sr.acordaoIds.length > 0;
+  const relatedAcordaos = hasPrecomputedAcordaos
+    ? acordaos.filter(ac => (sr.acordaoIds as string[]).includes(ac.KEY))
+    : findRelatedAcordaosFallback(sr.uf, sr.capital, acordaos);
+
+  const hasPrecomputedTces = Array.isArray(sr.tceIds) && sr.tceIds.length > 0;
+  const relatedTces = hasPrecomputedTces
+    ? tces.filter(t => (sr.tceIds as string[]).includes(t.id))
+    : tces.filter(t => {
+        // Fallback textual: busca no PA e nos campos de texto disponíveis
+        const ufLower = sr.uf.toLowerCase();
+        const capitalNorm = sr.capital.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const pa = (t.PROCESSO_ADMINISTRATIVO || "").toLowerCase();
+        const motivo = (t.MOTIVO_INSTAURACAO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const submotivo = (t.SUBMOTIVO_INSTAURACAO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const posicionamento = (t.ULTIMO_POSICIONAMENTO || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const allText = `${pa} ${motivo} ${submotivo} ${posicionamento}`;
+        const hasUfPattern =
+          allText.includes(`srte-${ufLower}`) || allText.includes(`srte/${ufLower}`) ||
+          allText.includes(`srt-${ufLower}`) || allText.includes(`srt/${ufLower}`);
+        const hasLocation = allText.includes(capitalNorm);
+        return hasUfPattern || hasLocation;
+      });
+
+  const hasPrecomputedComunicacoes = Array.isArray(sr.comunicacaoIds) && sr.comunicacaoIds.length > 0;
+  const relatedComunicacoes = hasPrecomputedComunicacoes
+    ? comunicacoes.filter(c => (sr.comunicacaoIds as string[]).includes(c.KEY))
+    : comunicacoes.filter(c => {
+        const ufLower = sr.uf.toLowerCase();
+        const dest = (c.DESTINATARIO || "").toLowerCase();
+        return dest.includes(`srte-${ufLower}`) || dest.includes(`srte/${ufLower}`) || dest.includes(`srte ${ufLower}`);
+      });
 
   return (
     <div className="space-y-6 font-sans select-text">
@@ -712,8 +739,8 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                     <CheckCircle className="w-4 h-4 text-[#003366]" /> Alertas de Auditoria e Controle Externo
                   </h3>
                   
-                  {relatedAcordaos.length === 0 && relatedTces.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-6 font-medium">Nenhuma demanda ativa do TCU ou TCE registrada para esta regional.</p>
+                  {relatedAcordaos.length === 0 && relatedTces.length === 0 && relatedComunicacoes.length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-6 font-medium">Nenhuma demanda ativa do TCU, TCE ou Comunicação registrada para esta regional.</p>
                   ) : (
                     <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                       {relatedAcordaos.map(ac => (
@@ -743,6 +770,22 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                           <div className="text-[10px] text-slate-500 font-bold flex justify-between pt-1">
                             <span>Proc: {t.PROCESSO_ADMINISTRATIVO}</span>
                             <span className="text-rose-700">Débito: {t.DEBITO_ATUALIZADO}</span>
+                          </div>
+                        </div>
+                      ))}
+
+                      {relatedComunicacoes.map(c => (
+                        <div key={c.KEY} className="p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl text-xs space-y-1">
+                          <div className="flex justify-between items-start">
+                            <span className="font-bold text-indigo-900 font-mono text-[10.5px]">{c.COMUNICACAO}</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                              c.CARECE_RESPOSTA ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
+                            }`}>{c.CARECE_RESPOSTA ? "Pendente" : "Respondida"}</span>
+                          </div>
+                          <p className="text-slate-600 font-medium text-[11px] leading-tight truncate">{c.DESTINATARIO}</p>
+                          <div className="text-[10px] text-slate-400 font-semibold flex gap-3 pt-1">
+                            <span>Emissão: {c.DATA_EXPEDICAO}</span>
+                            {c.PRAZO_DIAS && <span>Prazo: {c.PRAZO_DIAS}d</span>}
                           </div>
                         </div>
                       ))}

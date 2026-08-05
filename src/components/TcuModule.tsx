@@ -58,7 +58,7 @@ export default function TcuModule(props: TcuModuleProps) {
 
   const navItems: { id: TcuSection; label: string; desc: string; icon: React.ElementType }[] = [
     { id: "monitoramento", label: "Monitoramento",                   desc: "Acompanhamento de Acordaos",           icon: Database        },
-    { id: "comunicacoes",  label: "Comunicacoes",                    desc: "Recepcao de Oficios & Notificacoes",   icon: MessageSquare   },
+    { id: "comunicacoes",  label: "Comunicações",                    desc: "Recepção de Ofícios & Notificações",   icon: MessageSquare   },
     { id: "tce",           label: "Tomada de Contas Especial (TCE)", desc: "Apurar Danos ao Erario",               icon: FileWarning     },
     { id: "painel",        label: "Painel Gerencial",                desc: "Volumetria e indicadores consolidados", icon: LayoutDashboard },
   ];

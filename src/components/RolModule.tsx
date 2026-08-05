@@ -451,21 +451,23 @@ export default function RolModule() {
                 <button className={btnPrimary} onClick={() => openNewModal("unidade")}><PlusCircle size={14} /> Cadastrar Unidade</button>
               </Card>
               <Card>
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead className="gov-table-header">
-                    <tr>
-                      <th>Sigla</th><th>Nome da Unidade</th><th className="w-24 text-center">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unidades.map(u => (
-                      <tr key={u.id_unidade} className="gov-table-row">
-                        <td className="p-3 align-middle font-semibold text-[#003366]">{u.sigla}</td><td className="p-3 align-middle text-slate-700">{u.nome}</td>
-                        <td className="p-3 align-middle text-center"><button onClick={() => openEditModal("unidade", u)} className={btnEdit}><Edit3 size={13} /> Editar</button></td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead className="gov-table-header">
+                      <tr>
+                        <th>Sigla</th><th>Nome da Unidade</th><th className="w-24 text-center">Ações</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {unidades.map(u => (
+                        <tr key={u.id_unidade} className="gov-table-row">
+                          <td className="p-3 align-middle font-semibold text-[#003366]">{u.sigla}</td><td className="p-3 align-middle text-slate-700">{u.nome}</td>
+                          <td className="p-3 align-middle text-center"><button onClick={() => openEditModal("unidade", u)} className={btnEdit}><Edit3 size={13} /> Editar</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             </div>
           )}
@@ -477,21 +479,23 @@ export default function RolModule() {
                 <button className={btnPrimary} onClick={() => openNewModal("cargo")}><PlusCircle size={14} /> Cadastrar Cargo</button>
               </Card>
               <Card>
-                <table className="w-full text-left border-collapse text-sm">
-                  <thead className="gov-table-header">
-                    <tr>
-                      <th>Nomenclatura do Cargo</th><th className="w-24 text-center">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {cargos.map(c => (
-                      <tr key={c.id_cargo} className="gov-table-row">
-                        <td className="p-3 align-middle text-slate-700">{c.nome}</td>
-                        <td className="p-3 align-middle text-center"><button onClick={() => openEditModal("cargo", c)} className={btnEdit}><Edit3 size={13} /> Editar</button></td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-sm">
+                    <thead className="gov-table-header">
+                      <tr>
+                        <th>Nomenclatura do Cargo</th><th className="w-24 text-center">Ações</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {cargos.map(c => (
+                        <tr key={c.id_cargo} className="gov-table-row">
+                          <td className="p-3 align-middle text-slate-700">{c.nome}</td>
+                          <td className="p-3 align-middle text-center"><button onClick={() => openEditModal("cargo", c)} className={btnEdit}><Edit3 size={13} /> Editar</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             </div>
           )}

@@ -90,6 +90,14 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
+/* ── Tamanho de fonte padrão nas células (padrão TCU/CGU = text-xs) ── */
+/* Aplica 0.75rem (12px) em todos os <td> de qualquer módulo que use gov-table-row. */
+/* Classes explícitas de tamanho (text-[10px], text-[11px], text-xs) continuam */
+/* prevalecendo normalmente por terem especificidade de classe Tailwind.          */
+.gov-table-row td {
+  font-size: 0.75rem; /* text-xs — padrão uniforme TCU/CGU/ROL/CGU em todos os módulos */
+}
+
 .gov-table-row:hover { background-color: rgba(19, 81, 180, 0.04); }
 
 .gov-table-row:nth-child(even)       { background-color: rgba(248, 250, 252, 0.7); }

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from "react";
-import { Building2, Search, Phone, Mail, MapPin, AlertCircle, Edit, Save, ExternalLink, FileText, X } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Building2, Search, Phone, Mail, MapPin, AlertCircle, Edit, Save, ExternalLink, FileText, X, RefreshCw, CheckCircle2, Loader2 } from "lucide-react";
 import { SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand, CguDemand } from "../types";
 import SRTEDetailView from "./SRTEDetailView";
 
@@ -38,8 +38,16 @@ const calculateRisk = (tcu: number, cgu: number): "Regular" | "Atenção" | "Cr�
   if (tcu >= 1 || (tcu + cgu) >= 4) return "Atenção";
   return "Regular";
 };
+// Helper para formatar moeda (R$)
+const formatCurrency = (value: string | number) => {
+  if (!value) return "R$ 0,00";
+  const strVal = String(value);
+  const num = parseFloat(strVal.replace(/\./g, "").replace(",", "."));
+  if (isNaN(num)) return `R$ ${strVal}`;
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
+};
 
-// Mapeamento de UFs para nomes de estados por extenso
+// Mapeamento de UFs para nomes de estados por extenso (usado no JSX)
 const getUfStateName = (uf: string): string => {
   const ufNames: Record<string, string> = {
     AC: "Acre", AL: "Alagoas", AP: "Amapá", AM: "Amazonas", BA: "Bahia", CE: "Ceará",
@@ -52,150 +60,12 @@ const getUfStateName = (uf: string): string => {
   return ufNames[uf] || "";
 };
 
-// Mapeamento de códigos regionais históricos do MTE (número do processo) por UF
-const getMteCodeByUf = (uf: string): string => {
-  const codes: Record<string, string> = {
-    AC: "46002", AL: "46003", AM: "46004", BA: "46005", CE: "46006",
-    DF: "46007", ES: "46008", GO: "46009", MA: "46017", MT: "46027",
-    MS: "46028", MG: "46013", PA: "46016", PB: "46018", PR: "46011",
-    PE: "46014", PI: "46023", RN: "46019", RS: "46015", RJ: "46012",
-    RO: "46024", RR: "46025", SC: "46020", SP: "46010", SE: "46021",
-    TO: "46026", AP: "46030"
-  };
-  return codes[uf] || "XXXXX";
-};
-
-// Helper para formatar moeda (R$)
-const formatCurrency = (value: string | number) => {
-  if (!value) return "R$ 0,00";
-  const strVal = String(value);
-  const num = parseFloat(strVal.replace(/\./g, "").replace(",", "."));
-  if (isNaN(num)) return `R$ ${strVal}`;
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
-};
-
-// Scanner for matching acórdãos for each state
-const findRelatedAcordaos = (uf: string, capital: string, list: (AcordaoDemand & { _normalizedText?: string })[]) => {
-  const ufLower = uf.toLowerCase();
-  const capitalLower = capital.toLowerCase();
-  
-  return list.filter(ac => {
-    const textToSearch = ac._normalizedText || "";
-    
-    // Look for patterns like "srte-sp", "srte/sp", "srt-sp", "srt/sp"
-    const hasUfPattern = textToSearch.includes(`srte-${ufLower}`) || 
-                         textToSearch.includes(`srte/${ufLower}`) ||
-                         textToSearch.includes(`srt-${ufLower}`) ||
-                         textToSearch.includes(`srt/${ufLower}`);
-                         
-    // Match exact MTE phrases instead of disjoint words to prevent false positives with other agencies
-    const hasSuperintendencia = textToSearch.includes("superintendencia regional do trabalho") || 
-                                textToSearch.includes("superintendencia do trabalho") || 
-                                textToSearch.includes("gerencia regional do trabalho") ||
-                                textToSearch.includes("srte");
-                                
-    const mentionsLocation = textToSearch.includes(capitalLower) || 
-                             textToSearch.includes(`no estado d${ufLower === 'mg' || ufLower === 'go' ? 'e' : 'o'} ${ufLower}`) ||
-                             textToSearch.includes(`srt-${ufLower}`) ||
-                             textToSearch.includes(`srte-${ufLower}`);
-                             
-    return hasUfPattern || (hasSuperintendencia && mentionsLocation);
-  });
-};
-
-// Scanner para associar Comunicações (Ofícios) às SRTEs
-const findRelatedComunicacoes = (uf: string, capital: string, list: (ComunicacaoDemand & { _normalizedText?: string })[]) => {
-  const ufLower = uf.toLowerCase();
-  const capitalLower = capital.toLowerCase();
-  const stateNameLower = getUfStateName(uf).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  
-  return list.filter(com => {
-    const normalizedText = com._normalizedText || "";
-
-    const hasUfPattern = normalizedText.includes(`srte-${ufLower}`) || 
-                         normalizedText.includes(`srte/${ufLower}`) ||
-                         normalizedText.includes(`srt-${ufLower}`) ||
-                         normalizedText.includes(`srt/${ufLower}`);
-                         
-    const mentionsSuper = normalizedText.includes("superintendencia regional do trabalho") || 
-                          normalizedText.includes("superintendencia do trabalho") ||
-                          normalizedText.includes("gerencia regional do trabalho") ||
-                          normalizedText.includes("srte");
-                          
-    const mentionsLocation = normalizedText.includes(normalizedCapital) || 
-                              normalizedText.includes(stateNameLower) ||
-                              normalizedText.includes(`no estado d${ufLower === 'mg' || ufLower === 'go' ? 'e' : 'o'} ${ufLower}`);
-                              
-    return hasUfPattern || (mentionsSuper && mentionsLocation);
-  });
-};
-
-// Scanner para associar TCEs às SRTEs
-const findRelatedTces = (uf: string, capital: string, list: (TceDemand & { _normalizedText?: string })[]) => {
-  const ufLower = uf.toLowerCase();
-  const capitalLower = capital.toLowerCase();
-  const stateNameLower = getUfStateName(uf).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const mteCode = getMteCodeByUf(uf);
-  
-  return list.filter(tce => {
-    const normalizedText = tce._normalizedText || "";
-
-    const hasUfPattern = normalizedText.includes(`srte-${ufLower}`) || 
-                         normalizedText.includes(`srte/${ufLower}`) ||
-                         normalizedText.includes(`srt-${ufLower}`) ||
-                         normalizedText.includes(`srt/${ufLower}`) ||
-                         normalizedText.includes(` ${ufLower} `) ||
-                         normalizedText.includes(`/${ufLower}`);
-
-    const matchesMteCode = tce.PROCESSO_ADMINISTRATIVO && tce.PROCESSO_ADMINISTRATIVO.replace(/\D/g, "").startsWith(mteCode);
-                         
-    const mentionsSuper = normalizedText.includes("superintendencia regional do trabalho") || 
-                          normalizedText.includes("superintendencia do trabalho") ||
-                          normalizedText.includes("gerencia regional do trabalho") ||
-                          normalizedText.includes("srte");
-                          
-    const mentionsLocation = normalizedText.includes(normalizedCapital) || 
-                              normalizedText.includes(stateNameLower);
-                              
-    return hasUfPattern || matchesMteCode || (mentionsSuper && mentionsLocation);
-  });
-};
-
-// Scanner para associar Demandas CGU às SRTEs
-const findRelatedCguDemands = (uf: string, capital: string, list: (CguDemand & { _normalizedText?: string })[]) => {
-  const ufLower = uf.toLowerCase();
-  const capitalLower = capital.toLowerCase();
-  const stateNameLower = getUfStateName(uf).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const normalizedCapital = capitalLower.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  
-  return list.filter(cgu => {
-    const normalizedText = cgu._normalizedText || "";
-
-    const hasUfPattern = normalizedText.includes(`srte-${ufLower}`) || 
-                         normalizedText.includes(`srte/${ufLower}`) ||
-                         normalizedText.includes(`srt-${ufLower}`) ||
-                         normalizedText.includes(`srt/${ufLower}`) ||
-                         normalizedText.includes(` ${ufLower} `) ||
-                         normalizedText.includes(`/${ufLower}`);
-                         
-    const mentionsSuper = normalizedText.includes("superintendencia regional do trabalho") || 
-                          normalizedText.includes("superintendencia do trabalho") ||
-                          normalizedText.includes("gerencia regional do trabalho") ||
-                          normalizedText.includes("srte");
-                          
-    const mentionsLocation = normalizedText.includes(normalizedCapital) || 
-                              normalizedText.includes(stateNameLower);
-                              
-    return hasUfPattern || (mentionsSuper && mentionsLocation);
-  });
-};
 
 export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, comunicacoes, tces, cguDemands = [] }: SrteModuleProps) {
   
-  // The backend now provides the related item counts and IDs directly in the `superintendencias` object,
-  // making client-side O(N*M) scanning unnecessary.
+  // The backend provides related item counts and IDs directly in the `superintendencias` object
+  // via the vw_srte_dashboard_metrics view and srte_* linking tables.
+  // Run POST /api/srte/recalcular-vinculos to populate them.
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("TODOS");
@@ -208,6 +78,39 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
   const [selectedTce, setSelectedTce] = useState<TceDemand | null>(null);
   const [loadingAcordaoKey, setLoadingAcordaoKey] = useState<string | null>(null);
   const [detailsModal, setDetailsModal] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' } | null>(null);
+
+  // ── Recálculo de vínculos SRTE ────────────────────────────────────────────
+  const [recalcRunning, setRecalcRunning] = useState(false);
+  const [recalcStatus, setRecalcStatus] = useState<{ processedUfs: number; totalUfs: number; finishedAt: string | null; error: string | null } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleRecalcular = async () => {
+    if (recalcRunning) return;
+    setRecalcRunning(true);
+    setRecalcStatus(null);
+    try {
+      await fetch("/api/srte/recalcular-vinculos", { method: "POST" });
+      // Inicia polling de status a cada 2s
+      pollRef.current = setInterval(async () => {
+        try {
+          const res = await fetch("/api/srte/recalcular-vinculos/status");
+          const data = await res.json();
+          const s = data.status;
+          setRecalcStatus({ processedUfs: s.processedUfs, totalUfs: s.totalUfs, finishedAt: s.finishedAt, error: s.error });
+          if (!s.running) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setRecalcRunning(false);
+          }
+        } catch { /* ignora erros de polling */ }
+      }, 2000);
+    } catch (err) {
+      setRecalcRunning(false);
+      console.error("Erro ao iniciar recálculo:", err);
+    }
+  };
+
+  // Limpa o polling ao desmontar o componente
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   // Edit states
   const [editSuperintendent, setEditSuperintendent] = useState("");
@@ -332,8 +235,53 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
               </div>
             </div>
           </div>
+
+          {/* Botão de Recálculo de Vínculos */}
+          <div className="flex items-center gap-3">
+            <button
+              id="btn-recalcular-vinculos"
+              onClick={handleRecalcular}
+              disabled={recalcRunning}
+              className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-2 transition duration-200 shadow-sm cursor-pointer ${
+                recalcRunning
+                  ? "bg-slate-200 text-slate-500 cursor-not-allowed"
+                  : "bg-[#003366] text-white hover:bg-[#0f4396]"
+              }`}
+              title="Recalcula os vínculos entre Acórdãos, Comunicações, TCEs e cada SRTE usando o motor de cruzamento do backend"
+            >
+              {recalcRunning
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Recalculando...</>
+                : <><RefreshCw className="w-4 h-4" /> Recalcular Vínculos</>}
+            </button>
+
+            {recalcStatus && !recalcRunning && recalcStatus.finishedAt && (
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {recalcStatus.error ? `Erro: ${recalcStatus.error}` : `Concluído — ${recalcStatus.processedUfs} SRTEs vinculadas`}
+              </span>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Banner de progresso durante recálculo */}
+      {recalcRunning && recalcStatus && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 flex items-center gap-3 animate-pulse">
+          <Loader2 className="w-4 h-4 text-[#1351b4] animate-spin shrink-0" />
+          <div className="flex-1">
+            <div className="text-xs font-bold text-[#1351b4]">Motor de cruzamento em execução no servidor...</div>
+            <div className="w-full bg-blue-200 rounded-full h-1.5 mt-1.5">
+              <div
+                className="bg-[#1351b4] h-1.5 rounded-full transition-all duration-500"
+                style={{ width: `${Math.round((recalcStatus.processedUfs / recalcStatus.totalUfs) * 100)}%` }}
+              />
+            </div>
+            <div className="text-[10px] text-blue-500 mt-0.5 font-medium">
+              {recalcStatus.processedUfs} / {recalcStatus.totalUfs} SRTEs processadas
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters Area */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
