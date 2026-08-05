@@ -1,5 +1,6 @@
 import express from "express";
 import { pool } from "../db";
+import { triggerSrteRecalcIfIdle } from "../services/srteRecalcService.js";
 
 import fs from "fs";
 import path from "path";
@@ -289,6 +290,8 @@ router.post("/tces/sync-local", async (req, res) => {
       success: true, 
       message: `Sincronização concluída: ${importedGeral} TCEs novas, ${updatedGeral} atualizadas e ${importedMap} mapeamentos inseridos.`
     });
+    // Dispara atualização dos vínculos SRTE
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_TCE").catch(() => {}));
   } catch (err: any) {
     console.error("Erro na sincronização local de TCEs:", err);
     res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });

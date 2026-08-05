@@ -1134,6 +1134,16 @@ export default function App() {
     return false;
   };
 
+  // Busca só superintendências (usado para auto-refresh após recálculo de vínculos)
+  const fetchSuperintendencias = async (): Promise<void> => {
+    try {
+      const res = await fetch(`/api/superintendencias?cb=${Date.now()}`);
+      if (res.ok) setSuperintendencias(await res.json());
+    } catch (err) {
+      console.error("[SRTE] Erro ao buscar superintendências:", err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased">
 
@@ -1431,6 +1441,7 @@ export default function App() {
                     <SrteModule
                   superintendencias={superintendencias}
                   onUpdateSrte={handleUpdateSrte}
+                  onRefreshSuperintendencias={fetchSuperintendencias}
                   acordaos={acordaos}
                   comunicacoes={comunicacoes}
                   tces={tces}

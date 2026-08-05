@@ -10,7 +10,7 @@ import {
   MapPin, Phone, Mail, Gauge, FileDown, PlusCircle, ShieldAlert, Edit, Save, X
 } from "lucide-react";
 import { 
-  SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand,
+  SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand, CguDemand,
   Contrato, ContratoConsumoMensal, Viatura, ViaturaAbastecimento, ViaturaManutencao 
 } from "../types";
 
@@ -20,6 +20,7 @@ interface SRTEDetailViewProps {
   acordaos: AcordaoDemand[];
   comunicacoes: ComunicacaoDemand[];
   tces: TceDemand[];
+  cguDemands?: CguDemand[];
 }
 
 // Mapeamento de UFs para nomes de estados por extenso
@@ -92,7 +93,7 @@ const findRelatedAcordaosFallback = (uf: string, capital: string, list: AcordaoD
   });
 };
 
-export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tces }: SRTEDetailViewProps) {
+export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tces, cguDemands = [] }: SRTEDetailViewProps) {
   const [activeTab, setActiveTab] = useState<"visao_geral" | "contratos" | "frota">("visao_geral");
   
   // Data State
@@ -733,63 +734,153 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
               {/* External compliance demands & summary grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* External demands */}
-                <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
-                  <h3 className="text-sm font-bold text-slate-950 flex items-center gap-2 border-b border-slate-100 pb-2 mb-2 uppercase">
-                    <CheckCircle className="w-4 h-4 text-[#003366]" /> Alertas de Auditoria e Controle Externo
+                {/* Demands split by type */}
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-5">
+                  <h3 className="text-sm font-bold text-slate-950 flex items-center gap-2 border-b border-slate-100 pb-2 uppercase">
+                    <CheckCircle className="w-4 h-4 text-[#003366]" /> Demandas de Auditoria e Controle Externo
                   </h3>
-                  
-                  {relatedAcordaos.length === 0 && relatedTces.length === 0 && relatedComunicacoes.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-6 font-medium">Nenhuma demanda ativa do TCU, TCE ou Comunicação registrada para esta regional.</p>
-                  ) : (
-                    <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-                      {relatedAcordaos.map(ac => (
-                        <div key={ac.KEY} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
-                          <div className="flex justify-between items-start">
-                            <span className="font-bold text-blue-900 font-mono text-[10.5px]">{ac.TITULO}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                              ac.STATUS_MONITORAMENTO === "Atrasado" ? "bg-rose-100 text-rose-800" :
-                              ac.STATUS_MONITORAMENTO === "Pendente" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
-                            }`}>{ac.STATUS_MONITORAMENTO}</span>
-                          </div>
-                          <p className="text-slate-600 font-medium text-[11px] leading-tight">{ac.ASSUNTO}</p>
-                          <div className="text-[10px] text-slate-400 font-semibold flex gap-3 pt-1">
-                            <span>Relator: {ac.RELATOR}</span>
-                            <span>Prazo: {formatDate(ac.PRAZO_LIMITE)}</span>
-                          </div>
-                        </div>
-                      ))}
 
-                      {relatedTces.map(t => (
-                        <div key={t.id} className="p-3 bg-rose-50/30 border border-rose-100 rounded-xl text-xs space-y-1">
-                          <div className="flex justify-between items-start">
-                            <span className="font-bold text-rose-900 font-mono text-[10.5px]">{t.NUMERO_ANO_TCE}</span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] bg-rose-100 text-rose-800 font-black uppercase">Instaurada</span>
+                  {/* ─── ACÓRDÃOS TCU ─────────────────────────────────────── */}
+                  {relatedAcordaos.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 rounded-full bg-[#003366] text-white text-[9px] font-black uppercase tracking-wider">TCU — Acórdãos</span>
+                        <span className="text-[9px] text-slate-400 font-semibold">{relatedAcordaos.length} vinculado{relatedAcordaos.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {relatedAcordaos.map(ac => (
+                          <div key={ac.KEY} className="p-3 bg-blue-50/40 border border-blue-100 rounded-xl text-xs group">
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="flex-1 min-w-0">
+                                <span className="font-black text-[#003366] font-mono text-[10px] block">{ac.TITULO}</span>
+                                <p className="text-slate-600 text-[11px] leading-tight mt-0.5 line-clamp-2">{ac.ASSUNTO}</p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
+                                  ac.STATUS_MONITORAMENTO === 'Atrasado' ? 'bg-rose-100 text-rose-800' :
+                                  ac.STATUS_MONITORAMENTO === 'Pendente' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                                }`}>{ac.STATUS_MONITORAMENTO || 'Monitoramento'}</span>
+                                <a
+                                  href={`https://pesquisa.apps.tcu.gov.br/#/documento/acordao-completo/${encodeURIComponent(ac.KEY)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-[9px] text-[#003366] font-bold hover:underline"
+                                  title="Abrir inteiro teor no TCU"
+                                >
+                                  <ExternalLink className="w-3 h-3" /> TCU
+                                </a>
+                              </div>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-semibold flex flex-wrap gap-3 mt-1.5 pt-1.5 border-t border-blue-100">
+                              {ac.RELATOR && <span>Relator: {ac.RELATOR}</span>}
+                              {ac.COLEGIADO && <span>Colegiado: {ac.COLEGIADO}</span>}
+                              {ac.PRAZO_LIMITE && <span className="text-amber-700">Prazo: {formatDate(ac.PRAZO_LIMITE)}</span>}
+                            </div>
                           </div>
-                          <p className="text-slate-600 font-medium text-[11px] leading-tight">{t.MOTIVO_INSTAURACAO}</p>
-                          <div className="text-[10px] text-slate-500 font-bold flex justify-between pt-1">
-                            <span>Proc: {t.PROCESSO_ADMINISTRATIVO}</span>
-                            <span className="text-rose-700">Débito: {t.DEBITO_ATUALIZADO}</span>
-                          </div>
-                        </div>
-                      ))}
-
-                      {relatedComunicacoes.map(c => (
-                        <div key={c.KEY} className="p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl text-xs space-y-1">
-                          <div className="flex justify-between items-start">
-                            <span className="font-bold text-indigo-900 font-mono text-[10.5px]">{c.COMUNICACAO}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-                              c.CARECE_RESPOSTA ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
-                            }`}>{c.CARECE_RESPOSTA ? "Pendente" : "Respondida"}</span>
-                          </div>
-                          <p className="text-slate-600 font-medium text-[11px] leading-tight truncate">{c.DESTINATARIO}</p>
-                          <div className="text-[10px] text-slate-400 font-semibold flex gap-3 pt-1">
-                            <span>Emissão: {c.DATA_EXPEDICAO}</span>
-                            {c.PRAZO_DIAS && <span>Prazo: {c.PRAZO_DIAS}d</span>}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
+                  )}
+
+                  {/* ─── COMUNICAÇÕES TCU ─────────────────────────────────── */}
+                  {relatedComunicacoes.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-700 text-white text-[9px] font-black uppercase tracking-wider">TCU — Comunicações</span>
+                        <span className="text-[9px] text-slate-400 font-semibold">{relatedComunicacoes.length} vinculada{relatedComunicacoes.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {relatedComunicacoes.map(c => (
+                          <div key={c.KEY} className="p-3 bg-indigo-50/40 border border-indigo-100 rounded-xl text-xs">
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="flex-1 min-w-0">
+                                <span className="font-black text-indigo-900 font-mono text-[10px] block">{c.COMUNICACAO}</span>
+                                <p className="text-slate-600 text-[11px] leading-tight mt-0.5 line-clamp-2">{c.DESTINATARIO}</p>
+                              </div>
+                              <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0 ${
+                                c.CARECE_RESPOSTA ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'
+                              }`}>{c.CARECE_RESPOSTA ? 'Pendente' : 'Respondida'}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-semibold flex flex-wrap gap-3 mt-1.5 pt-1.5 border-t border-indigo-100">
+                              {c.DATA_EXPEDICAO && <span>Expedição: {c.DATA_EXPEDICAO}</span>}
+                              {c.PRAZO_DIAS && <span className="text-amber-700">Prazo: {c.PRAZO_DIAS} dias</span>}
+                              {c.PROCESSO && <span>Processo: {c.PROCESSO}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─── TCEs ─────────────────────────────────────────────── */}
+                  {relatedTces.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 rounded-full bg-rose-700 text-white text-[9px] font-black uppercase tracking-wider">TCU — TCEs</span>
+                        <span className="text-[9px] text-slate-400 font-semibold">{relatedTces.length} vinculada{relatedTces.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {relatedTces.map(t => (
+                          <div key={t.id} className="p-3 bg-rose-50/40 border border-rose-100 rounded-xl text-xs">
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="flex-1 min-w-0">
+                                <span className="font-black text-rose-900 font-mono text-[10px] block">{t.NUMERO_ANO_TCE}</span>
+                                <p className="text-slate-600 text-[11px] leading-tight mt-0.5 line-clamp-2">{t.MOTIVO_INSTAURACAO}</p>
+                              </div>
+                              <span className="px-1.5 py-0.5 rounded text-[9px] bg-rose-100 text-rose-800 font-black uppercase shrink-0">{t.SITUACAO_PROCESSO || 'Em curso'}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-semibold flex flex-wrap gap-3 mt-1.5 pt-1.5 border-t border-rose-100">
+                              {t.PROCESSO_ADMINISTRATIVO && <span>PA: {t.PROCESSO_ADMINISTRATIVO}</span>}
+                              {t.DEBITO_ATUALIZADO && <span className="text-rose-700 font-bold">Débito: {t.DEBITO_ATUALIZADO}</span>}
+                              {t.ESTADO_PROCESSO && <span>Estado: {t.ESTADO_PROCESSO}</span>}
+                              {t.PRIMEIRO_JULGAMENTO && <span>1º Julgamento: {t.PRIMEIRO_JULGAMENTO}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ─── RECOMENDAÇÕES CGU ────────────────────────────────── */}
+                  {cguDemands.filter(cgu => sr.cguIds?.includes(cgu.idTarefa)).length > 0 && (() => {
+                    const relatedCgu = cguDemands.filter(cgu => sr.cguIds?.includes(cgu.idTarefa));
+                    return (
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-0.5 rounded-full bg-teal-700 text-white text-[9px] font-black uppercase tracking-wider">CGU — Recomendações</span>
+                          <span className="text-[9px] text-slate-400 font-semibold">{relatedCgu.length} vinculada{relatedCgu.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                          {relatedCgu.map(cgu => (
+                            <div key={cgu.idTarefa} className="p-3 bg-teal-50/40 border border-teal-100 rounded-xl text-xs">
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-black text-teal-900 font-mono text-[10px] block">{cgu.idTarefa}</span>
+                                  <p className="text-slate-600 text-[11px] leading-tight mt-0.5 line-clamp-2">{cgu.tituloTarefa}</p>
+                                </div>
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase shrink-0 ${
+                                  cgu.situacao === 'Pendente' ? 'bg-amber-100 text-amber-800' :
+                                  cgu.situacao === 'Encerrada' ? 'bg-slate-100 text-slate-600' : 'bg-teal-100 text-teal-800'
+                                }`}>{cgu.situacao}</span>
+                              </div>
+                              <div className="text-[10px] text-slate-500 font-semibold flex flex-wrap gap-3 mt-1.5 pt-1.5 border-t border-teal-100">
+                                {cgu.unidadeAuditada && <span>Auditada: {cgu.unidadeAuditada}</span>}
+                                {cgu.dataLimite && <span className="text-amber-700">Limite: {cgu.dataLimite}</span>}
+                                {cgu.ano && <span>Ano: {cgu.ano}</span>}
+                                {cgu.categoria && <span>Categoria: {cgu.categoria}</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ─── Estado vazio ─────────────────────────────────────── */}
+                  {relatedAcordaos.length === 0 && relatedTces.length === 0 && relatedComunicacoes.length === 0 && cguDemands.filter(cgu => sr.cguIds?.includes(cgu.idTarefa)).length === 0 && (
+                    <p className="text-xs text-slate-400 text-center py-8 font-medium">
+                      Nenhuma demanda ativa do TCU (acórdãos, comunicações, TCEs) ou da CGU vinculada a esta regional após o último recálculo.
+                    </p>
                   )}
                 </div>
 

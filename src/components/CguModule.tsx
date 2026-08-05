@@ -221,6 +221,7 @@ export default function CguModule({
 
   return (
     <div className="space-y-6 font-sans">
+
       {/* Header Sticky */}
       <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 no-print mb-4">

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { pool } from "../db.js";
 import fs from "fs";
 import path from "path";
+import { triggerSrteRecalcIfIdle } from "../services/srteRecalcService.js";
 
 const router = Router();
 
@@ -163,6 +164,8 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
       message: `Sincronização local concluída: ${imported} novos, ${updated} atualizados.`,
       report: [{ file: "Geral", imported, updated, skipped: 0 }]
     });
+    // Dispara atualização dos vínculos SRTE após sync
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_COMUNICACAO").catch(() => {}));
   } catch (err: any) {
     console.error("Erro na sincronização local de comunicacoes:", err);
     res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });
@@ -342,6 +345,8 @@ router.post("/comunicacoes/import", async (req, res) => {
       totalCount: parseInt(totalResult.rows[0].count),
       items: [] 
     });
+    // Dispara atualização dos vínculos SRTE após import
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_COMUNICACAO").catch(() => {}));
   } catch (err) {
     console.error("Error importing comunicacoes:", err);
     res.status(500).json({ error: "Failed to import comunicacoes." });

@@ -3,14 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
-import { Building2, Search, Phone, Mail, MapPin, AlertCircle, Edit, Save, ExternalLink, FileText, X, RefreshCw, CheckCircle2, Loader2 } from "lucide-react";
+import React, { useState } from "react";
+import { Building2, Search, Phone, Mail, MapPin, AlertCircle, Edit, Save, ExternalLink, FileText, X, ArrowLeft } from "lucide-react";
 import { SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand, CguDemand } from "../types";
 import SRTEDetailView from "./SRTEDetailView";
 
 interface SrteModuleProps {
   superintendencias: SuperintendenciaRegional[];
   onUpdateSrte: (uf: string, data: Partial<SuperintendenciaRegional>) => Promise<boolean>;
+  onRefreshSuperintendencias?: () => Promise<void>;
   acordaos: AcordaoDemand[];
   comunicacoes: ComunicacaoDemand[];
   tces: TceDemand[];
@@ -61,7 +62,7 @@ const getUfStateName = (uf: string): string => {
 };
 
 
-export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, comunicacoes, tces, cguDemands = [] }: SrteModuleProps) {
+export default function SrteModule({ superintendencias, onUpdateSrte, onRefreshSuperintendencias, acordaos, comunicacoes, tces, cguDemands = [] }: SrteModuleProps) {
   
   // The backend provides related item counts and IDs directly in the `superintendencias` object
   // via the vw_srte_dashboard_metrics view and srte_* linking tables.
@@ -76,41 +77,22 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
   // Modal preview states
   const [selectedAcordao, setSelectedAcordao] = useState<AcordaoDemand | null>(null);
   const [selectedTce, setSelectedTce] = useState<TceDemand | null>(null);
+  const [selectedComunicacao, setSelectedComunicacao] = useState<ComunicacaoDemand | null>(null);
+  const [selectedCguItem, setSelectedCguItem] = useState<CguDemand | null>(null);
   const [loadingAcordaoKey, setLoadingAcordaoKey] = useState<string | null>(null);
   const [detailsModal, setDetailsModal] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' } | null>(null);
+  // Context: tracks which list panel opened the current detail modal, enabling "return" button
+  const [detailReturnContext, setDetailReturnContext] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' } | null>(null);
 
-  // ── Recálculo de vínculos SRTE ────────────────────────────────────────────
-  const [recalcRunning, setRecalcRunning] = useState(false);
-  const [recalcStatus, setRecalcStatus] = useState<{ processedUfs: number; totalUfs: number; finishedAt: string | null; error: string | null } | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const handleRecalcular = async () => {
-    if (recalcRunning) return;
-    setRecalcRunning(true);
-    setRecalcStatus(null);
-    try {
-      await fetch("/api/srte/recalcular-vinculos", { method: "POST" });
-      // Inicia polling de status a cada 2s
-      pollRef.current = setInterval(async () => {
-        try {
-          const res = await fetch("/api/srte/recalcular-vinculos/status");
-          const data = await res.json();
-          const s = data.status;
-          setRecalcStatus({ processedUfs: s.processedUfs, totalUfs: s.totalUfs, finishedAt: s.finishedAt, error: s.error });
-          if (!s.running) {
-            if (pollRef.current) clearInterval(pollRef.current);
-            setRecalcRunning(false);
-          }
-        } catch { /* ignora erros de polling */ }
-      }, 2000);
-    } catch (err) {
-      setRecalcRunning(false);
-      console.error("Erro ao iniciar recálculo:", err);
-    }
+  const handleReturnToList = () => {
+    if (detailReturnContext) setDetailsModal(detailReturnContext);
+    setDetailReturnContext(null);
+    setSelectedAcordao(null);
+    setSelectedTce(null);
+    setSelectedComunicacao(null);
+    setSelectedCguItem(null);
   };
 
-  // Limpa o polling ao desmontar o componente
-  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
   // Edit states
   const [editSuperintendent, setEditSuperintendent] = useState("");
@@ -214,6 +196,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
         acordaos={acordaos}
         comunicacoes={comunicacoes}
         tces={tces}
+        cguDemands={cguDemands}
       />
     );
   }
@@ -235,53 +218,8 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
               </div>
             </div>
           </div>
-
-          {/* Botão de Recálculo de Vínculos */}
-          <div className="flex items-center gap-3">
-            <button
-              id="btn-recalcular-vinculos"
-              onClick={handleRecalcular}
-              disabled={recalcRunning}
-              className={`px-4 py-2.5 rounded-xl font-bold text-xs inline-flex items-center gap-2 transition duration-200 shadow-sm cursor-pointer ${
-                recalcRunning
-                  ? "bg-slate-200 text-slate-500 cursor-not-allowed"
-                  : "bg-[#003366] text-white hover:bg-[#0f4396]"
-              }`}
-              title="Recalcula os vínculos entre Acórdãos, Comunicações, TCEs e cada SRTE usando o motor de cruzamento do backend"
-            >
-              {recalcRunning
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Recalculando...</>
-                : <><RefreshCw className="w-4 h-4" /> Recalcular Vínculos</>}
-            </button>
-
-            {recalcStatus && !recalcRunning && recalcStatus.finishedAt && (
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                {recalcStatus.error ? `Erro: ${recalcStatus.error}` : `Concluído — ${recalcStatus.processedUfs} SRTEs vinculadas`}
-              </span>
-            )}
-          </div>
         </div>
       </div>
-
-      {/* Banner de progresso durante recálculo */}
-      {recalcRunning && recalcStatus && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3.5 flex items-center gap-3 animate-pulse">
-          <Loader2 className="w-4 h-4 text-[#1351b4] animate-spin shrink-0" />
-          <div className="flex-1">
-            <div className="text-xs font-bold text-[#1351b4]">Motor de cruzamento em execução no servidor...</div>
-            <div className="w-full bg-blue-200 rounded-full h-1.5 mt-1.5">
-              <div
-                className="bg-[#1351b4] h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${Math.round((recalcStatus.processedUfs / recalcStatus.totalUfs) * 100)}%` }}
-              />
-            </div>
-            <div className="text-[10px] text-blue-500 mt-0.5 font-medium">
-              {recalcStatus.processedUfs} / {recalcStatus.totalUfs} SRTEs processadas
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filters Area */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-4">
@@ -585,12 +523,164 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-slate-200 p-4 bg-slate-50 flex justify-end gap-2 shrink-0 select-none">
-              <button 
-                onClick={() => setSelectedAcordao(null)} 
+            <div className="border-t border-slate-200 p-4 bg-slate-50 flex justify-between items-center shrink-0 select-none">
+              {detailReturnContext ? (
+                <button
+                  onClick={handleReturnToList}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Voltar à lista
+                </button>
+              ) : <div />}
+              <button
+                onClick={() => setSelectedAcordao(null)}
                 className="px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
               >
                 Fechar Documento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* modal block for Comunicação detail */}
+      {selectedComunicacao && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center select-none shrink-0">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-indigo-200" />
+                <h3 className="font-extrabold text-sm tracking-tight">Comunicação Oficial — {selectedComunicacao.COMUNICACAO}</h3>
+              </div>
+              <button onClick={() => setSelectedComunicacao(null)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 transition cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-4 text-xs text-slate-700 bg-slate-50">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Ofício / Comunicação</h4>
+                  <p className="font-mono font-semibold text-slate-900">{selectedComunicacao.COMUNICACAO}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Resposta</h4>
+                  {selectedComunicacao.DATA_RESPOSTA
+                    ? <p className="font-semibold text-emerald-700">Respondida em {selectedComunicacao.DATA_RESPOSTA}</p>
+                    : <p className="font-bold text-rose-600">Pendente</p>}
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Destinatário / Contato</h4>
+                <p className="font-semibold text-slate-800">{selectedComunicacao.DESTINATARIO}</p>
+                {selectedComunicacao.CONTATO && <p className="text-slate-500 mt-1">{selectedComunicacao.CONTATO}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Processo TCU</h4>
+                  <p className="font-mono text-slate-800">{selectedComunicacao.PROCESSO || "—"}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Expedição / Prazo</h4>
+                  <p className="text-slate-800">{selectedComunicacao.DATA_EXPEDICAO || "—"}</p>
+                  {selectedComunicacao.PRAZO_DIAS && <p className="text-amber-700 font-bold mt-1">Prazo: {selectedComunicacao.PRAZO_DIAS} dias</p>}
+                </div>
+              </div>
+              {selectedComunicacao.ASSUNTO && (
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Assunto</h4>
+                  <p className="leading-relaxed text-slate-700">{selectedComunicacao.ASSUNTO}</p>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-slate-200 p-4 bg-slate-50 flex justify-between items-center shrink-0 select-none">
+              {detailReturnContext ? (
+                <button
+                  onClick={handleReturnToList}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Voltar à lista
+                </button>
+              ) : <div />}
+              <button
+                onClick={() => setSelectedComunicacao(null)}
+                className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* modal block for CGU Recomendação detail */}
+      {selectedCguItem && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-teal-700 text-white px-6 py-4 flex justify-between items-center select-none shrink-0">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-teal-200" />
+                <h3 className="font-extrabold text-sm tracking-tight">CGU — Recomendação #{selectedCguItem.idTarefa}</h3>
+              </div>
+              <button onClick={() => setSelectedCguItem(null)} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/10 transition cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto space-y-4 text-xs text-slate-700 bg-slate-50">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Título da Tarefa / Recomendação</h4>
+                <p className="font-semibold text-slate-900 leading-relaxed">{selectedCguItem.tituloTarefa}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Situação</h4>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
+                    selectedCguItem.situacao?.toLowerCase().includes('pendente') ? 'bg-amber-100 text-amber-800' :
+                    selectedCguItem.situacao?.toLowerCase().includes('encerrad') ? 'bg-slate-100 text-slate-600' : 'bg-teal-100 text-teal-800'
+                  }`}>{selectedCguItem.situacao}</span>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Prazo Limite</h4>
+                  <p className={`font-mono font-semibold ${selectedCguItem.dataLimite ? 'text-amber-700' : 'text-slate-400'}`}>{selectedCguItem.dataLimite || "N/A"}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Unidade Auditada</h4>
+                  <p className="font-semibold text-slate-800">{selectedCguItem.unidadeAuditada || "—"}</p>
+                </div>
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Categoria / Ano</h4>
+                  <p className="text-slate-700">{selectedCguItem.categoria || "—"}</p>
+                  {selectedCguItem.ano && <p className="text-slate-500 mt-1">Ano: {selectedCguItem.ano}</p>}
+                </div>
+              </div>
+              {selectedCguItem.textoMonitoramento && (
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-2">Descrição do Monitoramento</h4>
+                  <p className="leading-relaxed text-slate-700 whitespace-pre-wrap">{selectedCguItem.textoMonitoramento}</p>
+                </div>
+              )}
+              {selectedCguItem.processoSei && (
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-1">Processo SEI</h4>
+                  <p className="font-mono text-slate-800">{selectedCguItem.processoSei}</p>
+                </div>
+              )}
+            </div>
+            <div className="border-t border-slate-200 p-4 bg-slate-50 flex justify-between items-center shrink-0 select-none">
+              {detailReturnContext ? (
+                <button
+                  onClick={handleReturnToList}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Voltar à lista
+                </button>
+              ) : <div />}
+              <button
+                onClick={() => setSelectedCguItem(null)}
+                className="px-4 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl text-xs transition cursor-pointer"
+              >
+                Fechar
               </button>
             </div>
           </div>
@@ -685,22 +775,31 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-slate-200 p-4 bg-slate-100 flex justify-end gap-2 shrink-0 select-none">
-              <a 
-                href="https://pesquisa.apps.tcu.gov.br/#/pesquisa/processo" 
-                target="_blank" 
-                rel="noreferrer"
-                className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-blue-700 font-bold rounded-xl text-xs transition cursor-pointer flex items-center gap-2"
-                title="Pesquisar este processo no portal do TCU"
-              >
-                <ExternalLink className="w-4 h-4" /> Pesquisar no TCU
-              </a>
-              <button 
-                onClick={() => setSelectedTce(null)} 
-                className="px-4 py-2 bg-blue-800 hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition cursor-pointer"
-              >
-                Fechar Detalhes
-              </button>
+            <div className="border-t border-slate-200 p-4 bg-slate-100 flex justify-between items-center gap-2 shrink-0 select-none">
+              {detailReturnContext ? (
+                <button
+                  onClick={handleReturnToList}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-[#003366] hover:bg-[#002244] text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Voltar à lista
+                </button>
+              ) : <div />}
+              <div className="flex gap-2">
+                <a
+                  href="https://pesquisa.apps.tcu.gov.br/#/pesquisa/processo"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-50 text-blue-700 font-bold rounded-xl text-xs transition cursor-pointer flex items-center gap-2"
+                >
+                  <ExternalLink className="w-4 h-4" /> Pesquisar no TCU
+                </a>
+                <button
+                  onClick={() => setSelectedTce(null)}
+                  className="px-4 py-2 bg-blue-800 hover:bg-blue-900 text-white font-bold rounded-xl text-xs transition cursor-pointer"
+                >
+                  Fechar Detalhes
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -740,7 +839,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                       <td className="p-4 align-middle text-slate-500 leading-relaxed max-w-sm truncate" title={ac.SUMARIO}>{ac.SUMARIO}</td>
                       <td className="p-4 align-middle text-right">
                         <button
-                          onClick={() => handleViewAcordao(ac)}
+                          onClick={() => { setDetailReturnContext(detailsModal); setDetailsModal(null); handleViewAcordao(ac); }}
                           disabled={loadingAcordaoKey === ac.KEY}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-[#1351b4] font-bold hover:bg-blue-100 transition cursor-pointer text-[10px] disabled:opacity-50"
                         >
@@ -762,12 +861,13 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm text-slate-800">
                 <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
-            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Recomendação</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Unidade / Categoria</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-2/5">Descrição do Monitoramento</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Prazo Limite</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Status</th>
+                  <tr>
+                    <th className="p-4 w-1/4">Recomendação</th>
+                    <th className="p-4 w-1/4">Unidade / Categoria</th>
+                    <th className="p-4 w-2/5">Descrição do Monitoramento</th>
+                    <th className="p-4">Prazo Limite</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -785,7 +885,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                         {rec.textoMonitoramento}
                       </td>
                       <td className="p-4 align-middle font-mono text-slate-600">{rec.dataLimite || "N/A"}</td>
-                      <td className="p-4 align-middle text-right">
+                      <td className="p-4 align-middle">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
                           rec.situacao.toLowerCase().includes("cumprido") ? "bg-emerald-100 text-emerald-800" :
                           rec.situacao.toLowerCase().includes("em análise") ? "bg-blue-100 text-blue-800" :
@@ -793,6 +893,15 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                         }`}>
                           {rec.situacao}
                         </span>
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                          <button
+                            onClick={() => { setDetailReturnContext(detailsModal); setDetailsModal(null); setSelectedCguItem(rec); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-teal-50 text-teal-700 font-bold hover:bg-teal-100 transition text-[10px] cursor-pointer"
+                            title="Ver detalhes desta recomendação"
+                          >
+                            <FileText className="w-3 h-3" /> Ver Detalhes
+                          </button>
                       </td>
                     </tr>
                   ))}
@@ -809,12 +918,13 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm text-slate-800">
                 <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
-            <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Ofício</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/3">Destinatário / Contato</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4 cursor-pointer hover: transition-colors">Processo TCU</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Expedição</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Resposta</th>
+                  <tr>
+                    <th className="p-4 w-1/4">Ofício</th>
+                    <th className="p-4 w-1/3">Destinatário / Contato</th>
+                    <th className="p-4 w-1/4">Processo TCU</th>
+                    <th className="p-4">Expedição</th>
+                    <th className="p-4">Resposta</th>
+                    <th className="p-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-xs">
@@ -827,16 +937,21 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                       </td>
                       <td className="p-4 align-middle font-mono text-slate-600">{com.PROCESSO}</td>
                       <td className="p-4 align-middle text-slate-600">{com.DATA_EXPEDICAO}</td>
-                      <td className="p-4 align-middle text-right">
+                      <td className="p-4 align-middle">
                         {com.DATA_RESPOSTA ? (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold" title={`Respondido em ${com.DATA_RESPOSTA}`}>
-                            Resp. {com.DATA_RESPOSTA}
-                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold">Resp. {com.DATA_RESPOSTA}</span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-bold">
-                            Pendente
-                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] bg-rose-100 text-rose-800 font-bold">Pendente</span>
                         )}
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                          <button
+                            onClick={() => { setDetailReturnContext(detailsModal); setDetailsModal(null); setSelectedComunicacao(com); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100 transition text-[10px] cursor-pointer"
+                            title="Ver detalhes desta comunicação"
+                          >
+                            <FileText className="w-3 h-3" /> Ver Detalhes
+                          </button>
                       </td>
                     </tr>
                   ))}
@@ -852,20 +967,21 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm text-slate-800">
-                <thead>
-                  <tr className="font-semibold sticky top-0 z-10 backdrop-blur-sm border-b border-[#002244]">
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/6 cursor-pointer hover: transition-colors">Número TCE</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/4">Processo Adm. / TC</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors w-1/3">Motivo / Instauração</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Valores (Orig / Atual)</th>
-                    <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Situação</th>
+                <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+                  <tr>
+                    <th className="p-4 w-1/6">Número TCE</th>
+                    <th className="p-4 w-1/4">Processo Adm. / TC</th>
+                    <th className="p-4 w-1/3">Motivo / Instauração</th>
+                    <th className="p-4">Valores (Orig / Atual)</th>
+                    <th className="p-4">Situação</th>
+                    <th className="p-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {matched.map(t => (
                     <tr key={t.id} className="hover:bg-slate-50/50">
                       <td className="p-4 align-middle font-semibold text-rose-900">
-                        <button 
+                        <button
                           onClick={() => setSelectedTce(t)}
                           className="hover:underline flex items-center gap-1.5 text-blue-800 transition cursor-pointer text-left"
                           title="Clique para ver os detalhes da TCE"
@@ -886,7 +1002,7 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                         <div className="text-slate-500">{formatCurrency(t.DEBITO_ORIGINAL)}</div>
                         <div className="font-bold text-slate-900 mt-0.5">{formatCurrency(t.DEBITO_ATUALIZADO)}</div>
                       </td>
-                      <td className="p-4 align-middle text-right">
+                      <td className="p-4 align-middle">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
                           (t.ESTADO_PROCESSO || "").toLowerCase().includes("irregular")
                             ? "bg-rose-100 text-rose-800"
@@ -896,6 +1012,15 @@ export default function SrteModule({ superintendencias, onUpdateSrte, acordaos, 
                         }`}>
                           {t.ESTADO_PROCESSO || "Em Curso"}
                         </span>
+                      </td>
+                      <td className="p-4 align-middle text-right">
+                          <button
+                            onClick={() => { setDetailReturnContext(detailsModal); setDetailsModal(null); setSelectedTce(t); }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 font-bold hover:bg-rose-100 transition text-[10px] cursor-pointer"
+                            title="Ver detalhes desta TCE"
+                          >
+                            <FileText className="w-3 h-3" /> Ver Detalhes
+                          </button>
                       </td>
                     </tr>
                   ))}

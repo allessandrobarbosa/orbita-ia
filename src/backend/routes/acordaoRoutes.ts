@@ -21,6 +21,7 @@ import {
 } from "../utils/importControl.js";
 import { processSingleAcordao } from "../utils/backgroundProcessor.js";
 import { GoogleGenAI } from "@google/genai";
+import { triggerSrteRecalcIfIdle } from "../services/srteRecalcService.js";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const TCU_DIR = path.join(DATA_DIR, "tcu", "acordaos");
@@ -466,6 +467,11 @@ router.post("/acordaos/sync-local", async (req, res) => {
 
     console.log(
       `\n[SYNC] ═══ Sincronização concluída. Total: ${totalImportados} inseridos, ${totalAtualizados} atualizados ═══`
+    );
+
+    // Dispara atualização dos vínculos SRTE automaticamente após importação
+    triggerSrteRecalcIfIdle("IMPORT_ACORDAO").catch(err =>
+      console.error("[SRTE-AUTO] Erro ao disparar recálculo após sync de acórdãos:", err)
     );
   })().catch((err) => {
     console.error("[SYNC] Erro crítico no processamento em background:", err);

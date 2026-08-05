@@ -10,6 +10,7 @@ import {
 } from "../utils/importControl.js";
 import { extractCguDossieWithGemini } from "../utils/aiUtils.js";
 import { getCguPdfText } from "../utils/cguPdfService.js";
+import { triggerSrteRecalcIfIdle } from "../services/srteRecalcService.js";
 
 const router = express.Router();
 const MODULO_CGU = "CGU_DEMANDAS";
@@ -350,6 +351,8 @@ router.post("/cgu/sync-local/monitoramentos", async (req, res) => {
     });
 
     res.json({ success: true, importedCount: inseridos, erros });
+    // Dispara atualização dos vínculos SRTE após importação CGU
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_CGU").catch(() => {}));
   } catch (err: any) {
     if (importControlId) await registrarErroImportacao(importControlId, err);
     console.error("Erro no processamento de monitoramentos CGU", err);
