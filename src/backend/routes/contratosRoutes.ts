@@ -1,6 +1,6 @@
 import express from "express";
 import { pool } from "../db.js";
-import { fetchContratosPncp, fetchDetalheContratoPncp } from "../services/pncpService.js";
+import { fetchContratosPncp, fetchDetalheContratoPncp, fetchAllContratosMte, fetchAllContratosSraParaMte } from "../services/pncpService.js";
 
 const router = express.Router();
 
@@ -104,10 +104,13 @@ router.post("/contratos/sync-pncp", async (req, res) => {
     if (cnpjOrgao) {
       contratosPncp = await fetchContratosPncp(cnpjOrgao);
     } else {
-      // MTE (ID Órgãos PNCP: 74549 = MINISTÉRIO DO TRABALHO, 33375 = MINISTÉRIO DO TRABALHO E EMPREGO)
-      const mte = await fetchContratosPncp("74549|33375", "orgaos");
+      // Utiliza a nova função que busca por todas as UGs do MTE
+      const mte = await fetchAllContratosMte();
       
-      const todos = [...mte];
+      // Busca também os contratos de MGI (SRA) que pertencem ao MTE
+      const sraParaMte = await fetchAllContratosSraParaMte();
+      
+      const todos = [...mte, ...sraParaMte];
       const unicosMap = new Map();
       todos.forEach(c => unicosMap.set(c.id, c));
       contratosPncp = Array.from(unicosMap.values());
@@ -137,14 +140,18 @@ router.post("/contratos/sync-pncp", async (req, res) => {
            }
         }
 
+        const orgaoTag = p.orgaoEntidade?.cnpj === "00489828000155" ? "[MGI]" : "[MTE]";
+        const numeroContratoComTag = `${orgaoTag} ${p.numeroContrato}`;
+        const nomeUnidadeGestora = p.unidadeOrcamentaria?.nomeUnidade || "";
+
         const id = "C-PNCP-" + p.id;
         await pool.query(
           `INSERT INTO contratos (
-            id, numero_contrato, empresa, cnpj, objeto, valor_global, data_inicio, data_fim, uf, modalidade, pncp_id, link_pncp, status
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+            id, numero_contrato, empresa, cnpj, objeto, valor_global, data_inicio, data_fim, uf, modalidade, pncp_id, uasg, link_pncp, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
           [
-            id, p.numeroContrato, fornecedorNome, fornecedorCnpj, p.objeto || "Objeto não informado",
-            p.valorGlobal, p.dataInicioVigencia, p.dataFimVigencia, finalUf, 'Sincronizado', String(p.id),
+            id, numeroContratoComTag, fornecedorNome, fornecedorCnpj, p.objeto || "Objeto não informado",
+            p.valorGlobal, p.dataInicioVigencia, p.dataFimVigencia, finalUf, 'Sincronizado', String(p.id), nomeUnidadeGestora,
             `https://pncp.gov.br/app/contratos/${p.orgaoEntidade?.cnpj}/${p.anoContrato}/${p.numero_sequencial}`, 'Ativo'
           ]
         );

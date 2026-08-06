@@ -235,17 +235,11 @@ export default function ContratosModule() {
             <RefreshCw className={`w-4 h-4 ${isSyncingPncp ? "animate-spin" : ""}`} /> 
             {isSyncingPncp ? "Sincronizando..." : "Sincronizar PNCP"}
           </button>
-          <button 
-            onClick={() => { resetContractForm(); setShowContractForm(true); }}
-            className="px-4 py-2 bg-blue-800 hover:bg-blue-900 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4" /> Novo Contrato
-          </button>
         </div>
       </div>
 
       {/* DASHBOARD */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs flex items-center gap-4">
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
             <FileText className="w-6 h-6" />
@@ -253,17 +247,6 @@ export default function ContratosModule() {
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contratos Ativos</p>
             <p className="text-2xl font-black text-slate-800">{contratosAtivos.length}</p>
-          </div>
-        </div>
-        <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
-            <Banknote className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Custo Mensal Estimado</p>
-            <p className="text-xl font-black text-slate-800">
-              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(gastoMensalEstimado)}
-            </p>
           </div>
         </div>
         <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs flex items-center gap-4">
@@ -312,9 +295,8 @@ export default function ContratosModule() {
               <thead>
                 <tr className="font-bold border-b border-[#002244]">
                   <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Número</th>
-                  <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">UF</th>
+                  <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">UF/UASG</th>
                   <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Fornecedor</th>
-                  <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Mensal</th>
                   <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Total</th>
                   <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Vigência</th>
                   <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Status</th>
@@ -330,7 +312,7 @@ export default function ContratosModule() {
                         {c.numeroContrato || 'N/A'}
                         {c.pncpId && <span className="bg-indigo-100 text-indigo-700 text-[9px] px-1.5 py-0.5 rounded-md uppercase">PNCP</span>}
                       </div>
-                      <div className="text-[10px] font-normal text-slate-500 mt-1 max-w-xs truncate" title={c.objeto || ""}>{c.objeto || "-"}</div>
+                      <div className="text-[10px] font-normal text-slate-500 mt-1 line-clamp-3 pr-2" title={c.objeto || ""}>{c.objeto || "-"}</div>
                     </td>
                     <td className="p-4 align-middle font-bold">
                       {c.uf === 'DF' || !c.uf ? (
@@ -338,13 +320,15 @@ export default function ContratosModule() {
                       ) : (
                         <span className="text-slate-700">{c.uf}</span>
                       )}
+                      {c.uasg && (
+                        <div className="text-[9px] text-slate-500 mt-1 uppercase font-semibold truncate max-w-[120px]" title={c.uasg}>
+                          {c.uasg}
+                        </div>
+                      )}
                     </td>
                     <td className="p-4 align-middle">
                       <div className="font-semibold text-slate-800">{c.empresa || '-'}</div>
                       <div className="text-[10px] text-slate-500">CNPJ: {c.cnpj || '-'}</div>
-                    </td>
-                    <td className="p-4 align-middle text-emerald-700 font-bold">
-                      {c.valorMensal ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.valorMensal) : '-'}
                     </td>
                     <td className="p-4 align-middle font-semibold">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.valorGlobal || 0)}
@@ -367,12 +351,6 @@ export default function ContratosModule() {
                             <RefreshCw className="w-4 h-4" />
                           </a>
                         )}
-                        <button onClick={() => handleEditContract(c)} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition cursor-pointer" title="Editar">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => handleDeleteContract(c.id)} className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition cursor-pointer" title="Excluir">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
                       </div>
                     </td>
                   </tr>
