@@ -465,6 +465,356 @@ var import_express = require("express");
 init_db();
 var import_fs2 = __toESM(require("fs"), 1);
 var import_path2 = __toESM(require("path"), 1);
+
+// src/backend/services/srteRecalcService.ts
+init_db();
+var recalcJobStatus = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  source: "",
+  progress: [],
+  error: null,
+  totalUfs: 27,
+  processedUfs: 0
+};
+var SRTE_LOOKUP = [
+  { uf: "AC", mteCode: "46002", capital: ["rio branco"], state: ["acre"] },
+  { uf: "AL", mteCode: "46003", capital: ["maceio", "macei\xF3"], state: ["alagoas"] },
+  { uf: "AM", mteCode: "46004", capital: ["manaus"], state: ["amazonas"] },
+  { uf: "AP", mteCode: "46030", capital: ["macapa", "macap\xE1"], state: ["amapa", "amap\xE1"] },
+  { uf: "BA", mteCode: "46005", capital: ["salvador"], state: ["bahia"] },
+  { uf: "CE", mteCode: "46006", capital: ["fortaleza"], state: ["ceara", "cear\xE1"] },
+  { uf: "DF", mteCode: "46007", capital: ["brasilia", "bras\xEDlia"], state: ["distrito federal"] },
+  { uf: "ES", mteCode: "46008", capital: ["vitoria", "vit\xF3ria"], state: ["espirito santo", "esp\xEDrito santo"] },
+  { uf: "GO", mteCode: "46009", capital: ["goiania", "goi\xE2nia"], state: ["goias", "goi\xE1s"] },
+  { uf: "MA", mteCode: "46017", capital: ["sao luis", "s\xE3o lu\xEDs", "s\xE3o luis"], state: ["maranhao", "maranh\xE3o"] },
+  { uf: "MG", mteCode: "46013", capital: ["belo horizonte"], state: ["minas gerais"] },
+  { uf: "MS", mteCode: "46028", capital: ["campo grande"], state: ["mato grosso do sul"] },
+  { uf: "MT", mteCode: "46027", capital: ["cuiaba", "cuiab\xE1"], state: ["mato grosso"] },
+  { uf: "PA", mteCode: "46016", capital: ["belem", "bel\xE9m"], state: ["para", "par\xE1"] },
+  { uf: "PB", mteCode: "46018", capital: ["joao pessoa", "jo\xE3o pessoa"], state: ["paraiba", "para\xEDba"] },
+  { uf: "PE", mteCode: "46014", capital: ["recife"], state: ["pernambuco"] },
+  { uf: "PI", mteCode: "46023", capital: ["teresina"], state: ["piaui", "piau\xED"] },
+  { uf: "PR", mteCode: "46011", capital: ["curitiba"], state: ["parana", "paran\xE1"] },
+  { uf: "RJ", mteCode: "46012", capital: ["rio de janeiro"], state: ["rio de janeiro"] },
+  { uf: "RN", mteCode: "46019", capital: ["natal"], state: ["rio grande do norte"] },
+  { uf: "RO", mteCode: "46024", capital: ["porto velho"], state: ["rondonia", "rond\xF4nia"] },
+  { uf: "RR", mteCode: "46025", capital: ["boa vista"], state: ["roraima"] },
+  { uf: "RS", mteCode: "46015", capital: ["porto alegre"], state: ["rio grande do sul"] },
+  { uf: "SC", mteCode: "46020", capital: ["florianopolis", "florian\xF3polis"], state: ["santa catarina"] },
+  { uf: "SE", mteCode: "46021", capital: ["aracaju"], state: ["sergipe"] },
+  { uf: "SP", mteCode: "46010", capital: ["sao paulo", "s\xE3o paulo"], state: ["sao paulo", "s\xE3o paulo"] },
+  { uf: "TO", mteCode: "46026", capital: ["palmas"], state: ["tocantins"] }
+];
+var srteLinkingTablesReady = false;
+async function ensureSrteLinkingTables() {
+  if (srteLinkingTablesReady) return;
+  try {
+    await pool.query(`CREATE EXTENSION IF NOT EXISTS unaccent`);
+  } catch (_) {
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS srte_acordao (
+        uf             VARCHAR(5)   NOT NULL,
+        acordao_key    VARCHAR(255) NOT NULL,
+        motivo_vinculo VARCHAR(50)  DEFAULT 'TEXTO',
+        criado_em      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (uf, acordao_key)
+      )
+    `);
+    await pool.query(`ALTER TABLE srte_acordao ADD COLUMN IF NOT EXISTS motivo_vinculo VARCHAR(50) DEFAULT 'TEXTO'`);
+    await pool.query(`ALTER TABLE srte_acordao ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_srte_acordao_uf  ON srte_acordao(uf)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_srte_acordao_key ON srte_acordao(acordao_key)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS srte_comunicacao (
+        uf              VARCHAR(5)   NOT NULL,
+        comunicacao_key VARCHAR(255) NOT NULL,
+        motivo_vinculo  VARCHAR(50)  DEFAULT 'DESTINATARIO',
+        criado_em       TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (uf, comunicacao_key)
+      )
+    `);
+    await pool.query(`ALTER TABLE srte_comunicacao ADD COLUMN IF NOT EXISTS motivo_vinculo VARCHAR(50) DEFAULT 'DESTINATARIO'`);
+    await pool.query(`ALTER TABLE srte_comunicacao ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_srte_comunicacao_uf ON srte_comunicacao(uf)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS srte_tce (
+        uf             VARCHAR(5)   NOT NULL,
+        tce_id         VARCHAR(255) NOT NULL,
+        motivo_vinculo VARCHAR(50)  DEFAULT 'TEXTO',
+        criado_em      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (uf, tce_id)
+      )
+    `);
+    await pool.query(`ALTER TABLE srte_tce ADD COLUMN IF NOT EXISTS motivo_vinculo VARCHAR(50) DEFAULT 'TEXTO'`);
+    await pool.query(`ALTER TABLE srte_tce ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_srte_tce_uf ON srte_tce(uf)`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS srte_cgu (
+        uf             VARCHAR(5)   NOT NULL,
+        cgu_id         VARCHAR(255) NOT NULL,
+        motivo_vinculo VARCHAR(50)  DEFAULT 'UNIDADE',
+        criado_em      TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (uf, cgu_id)
+      )
+    `);
+    await pool.query(`ALTER TABLE srte_cgu ADD COLUMN IF NOT EXISTS motivo_vinculo VARCHAR(50) DEFAULT 'UNIDADE'`);
+    await pool.query(`ALTER TABLE srte_cgu ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_srte_cgu_uf ON srte_cgu(uf)`);
+    await pool.query(`DROP VIEW IF EXISTS vw_srte_dashboard_metrics`);
+    await pool.query(`
+      CREATE VIEW vw_srte_dashboard_metrics AS
+      SELECT
+        s.uf,
+        COUNT(DISTINCT sa.acordao_key)      AS demandas_tcu,
+        COUNT(DISTINCT sc.comunicacao_key)  AS demandas_comunicacoes,
+        COUNT(DISTINCT st.tce_id)           AS demandas_tces,
+        COUNT(DISTINCT sg.cgu_id)           AS demandas_cgu
+      FROM superintendencias s
+      LEFT JOIN srte_acordao     sa ON sa.uf = s.uf
+      LEFT JOIN srte_comunicacao sc ON sc.uf = s.uf
+      LEFT JOIN srte_tce         st ON st.uf = s.uf
+      LEFT JOIN srte_cgu         sg ON sg.uf = s.uf
+      GROUP BY s.uf
+    `);
+    srteLinkingTablesReady = true;
+    console.log("[SRTE] Tabelas de cruzamento inicializadas com sucesso.");
+  } catch (err) {
+    console.error("[SRTE] Erro ao criar tabelas de cruzamento:", err.message);
+  }
+}
+function buildLikeOrClause(field, patterns, params, startIdx) {
+  const clauses = patterns.map((p, i) => {
+    params.push(p);
+    return `${field} LIKE $${startIdx + i}`;
+  });
+  return `(${clauses.join(" OR ")})`;
+}
+function buildUfRegexClause(field, uf, params, startIdx) {
+  params.push(`srte[^a-zA-Z0-9]?${uf}`);
+  return `${field} ~* $${startIdx}`;
+}
+async function vincularAcordaos(uf, capitals, states) {
+  await pool.query(`DELETE FROM srte_acordao WHERE uf = $1`, [uf]);
+  const allText = `(titulo || ' ' || COALESCE(interessados,'') || ' ' || COALESCE(assunto,'') || ' ' || COALESCE(sumario,'') || ' ' || COALESCE(decisao,''))`;
+  const lowerText = `LOWER(${allText})`;
+  let p1 = [uf];
+  await pool.query(`
+    INSERT INTO srte_acordao (uf, acordao_key, motivo_vinculo)
+    SELECT $1, key, 'UF_PATTERN'
+    FROM tcu_acordaos WHERE ${buildUfRegexClause(allText, uf, p1, 2)}
+    ON CONFLICT (uf, acordao_key) DO NOTHING
+  `, p1);
+  const ctxPatterns = ["%srte%", "%superintend%", "%gerencia regional%", "%ger\xEAncia regional%"];
+  const locPatterns = [...capitals.map((c) => `%${c}%`), ...states.map((s) => `%${s}%`)];
+  for (const loc of locPatterns) {
+    let p2 = [uf, loc];
+    const ctx = buildLikeOrClause(lowerText, ctxPatterns, p2, 3);
+    await pool.query(`
+      INSERT INTO srte_acordao (uf, acordao_key, motivo_vinculo)
+      SELECT $1, key, 'LOCALIZACAO' FROM tcu_acordaos
+      WHERE ${lowerText} LIKE $2 AND ${ctx}
+      ON CONFLICT (uf, acordao_key) DO NOTHING
+    `, p2);
+  }
+  const r = await pool.query(`SELECT COUNT(*) FROM srte_acordao WHERE uf = $1`, [uf]);
+  return parseInt(r.rows[0].count);
+}
+async function vincularComunicacoes(uf, capitals, states) {
+  await pool.query(`DELETE FROM srte_comunicacao WHERE uf = $1`, [uf]);
+  const destText = `(COALESCE(destinatario,'') || ' ' || COALESCE(comunicacao,''))`;
+  const lowerDest = `LOWER(COALESCE(destinatario,'') || ' ' || COALESCE(comunicacao,'') || ' ' || COALESCE(contato,'') || ' ' || COALESCE(processo,''))`;
+  let p1 = [uf];
+  await pool.query(`
+    INSERT INTO srte_comunicacao (uf, comunicacao_key, motivo_vinculo)
+    SELECT $1, key, 'DESTINATARIO_UF' FROM tcu_comunicacoes
+    WHERE ${buildUfRegexClause(destText, uf, p1, 2)}
+    ON CONFLICT (uf, comunicacao_key) DO NOTHING
+  `, p1);
+  const locPatterns = [...capitals.map((c) => `%${c}%`), ...states.map((s) => `%${s}%`)];
+  for (const loc of locPatterns) {
+    await pool.query(`
+      INSERT INTO srte_comunicacao (uf, comunicacao_key, motivo_vinculo)
+      SELECT $1, key, 'LOCALIZACAO' FROM tcu_comunicacoes
+      WHERE ${lowerDest} LIKE $2
+      ON CONFLICT (uf, comunicacao_key) DO NOTHING
+    `, [uf, loc]);
+  }
+  const r = await pool.query(`SELECT COUNT(*) FROM srte_comunicacao WHERE uf = $1`, [uf]);
+  return parseInt(r.rows[0].count);
+}
+async function vincularTces(uf, mteCode, capitals, states) {
+  await pool.query(`DELETE FROM srte_tce WHERE uf = $1`, [uf]);
+  await pool.query(`
+    INSERT INTO srte_tce (uf, tce_id, motivo_vinculo)
+    SELECT $1, id, 'CODIGO_MTE' FROM tcu_tce
+    WHERE REGEXP_REPLACE(COALESCE(processo_administrativo,''), '[^0-9]', '', 'g') LIKE $2
+    ON CONFLICT (uf, tce_id) DO NOTHING
+  `, [uf, `${mteCode}%`]);
+  const allText = `(COALESCE(numero_ano_tce,'') || ' ' || COALESCE(processo_administrativo,'') || ' ' || COALESCE(motivo_instauracao,'') || ' ' || COALESCE(submotivo_instauracao,'') || ' ' || COALESCE(ultimo_posicionamento,''))`;
+  let p2 = [uf];
+  await pool.query(`
+    INSERT INTO srte_tce (uf, tce_id, motivo_vinculo)
+    SELECT $1, id, 'UF_PATTERN' FROM tcu_tce
+    WHERE ${buildUfRegexClause(allText, uf, p2, 2)}
+    ON CONFLICT (uf, tce_id) DO NOTHING
+  `, p2);
+  const motivoText = `LOWER(COALESCE(motivo_instauracao,'') || ' ' || COALESCE(submotivo_instauracao,'') || ' ' || COALESCE(ultimo_posicionamento,''))`;
+  const ctxPatterns = ["%srte%", "%superintend%", "%ministerio do trabalho%", "%minist\xE9rio do trabalho%"];
+  const locPatterns = [...capitals.map((c) => `%${c}%`), ...states.map((s) => `%${s}%`)];
+  for (const loc of locPatterns) {
+    let p3 = [uf, loc];
+    const ctx = buildLikeOrClause(motivoText, ctxPatterns, p3, 3);
+    await pool.query(`
+      INSERT INTO srte_tce (uf, tce_id, motivo_vinculo)
+      SELECT $1, id, 'LOCALIZACAO' FROM tcu_tce
+      WHERE ${motivoText} LIKE $2 AND ${ctx}
+      ON CONFLICT (uf, tce_id) DO NOTHING
+    `, p3);
+  }
+  const r = await pool.query(`SELECT COUNT(*) FROM srte_tce WHERE uf = $1`, [uf]);
+  return parseInt(r.rows[0].count);
+}
+async function vincularCgu(uf, capitals, states) {
+  await pool.query(`DELETE FROM srte_cgu WHERE uf = $1`, [uf]);
+  const fullText = `(
+    COALESCE(unidade_auditada,'')         || ' ' ||
+    COALESCE(unidades_auditoria,'')       || ' ' ||
+    COALESCE(titulo_tarefa,'')            || ' ' ||
+    COALESCE(texto_monitoramento,'')      || ' ' ||
+    COALESCE(providencia,'')              || ' ' ||
+    COALESCE(texto_ultima_manifestacao,'')|| ' ' ||
+    COALESCE(texto_ultimo_posicionamento,'')
+  )`;
+  const lowerFull = `LOWER(${fullText})`;
+  await pool.query(`
+    INSERT INTO srte_cgu (uf, cgu_id, motivo_vinculo)
+    SELECT $1, id_tarefa, 'ESTADO'
+    FROM cgu_demands
+    WHERE LOWER(COALESCE(estado,'')) = $2
+       OR UPPER(COALESCE(estado,'')) = $3
+    ON CONFLICT (uf, cgu_id) DO NOTHING
+  `, [uf, uf.toLowerCase(), uf]);
+  const srteTerms = [
+    `%srte${uf.toLowerCase()}%`,
+    `%srte/${uf.toLowerCase()}%`,
+    `%srte-${uf.toLowerCase()}%`,
+    `%superintend%trabalho%`,
+    `%superintend%emprego%`,
+    `%gerencia regional%trabalho%`,
+    `%ger\xEAncia regional%trabalho%`
+  ];
+  for (const term of srteTerms) {
+    await pool.query(`
+      INSERT INTO srte_cgu (uf, cgu_id, motivo_vinculo)
+      SELECT $1, id_tarefa, 'SRTE_EXPLICITO'
+      FROM cgu_demands
+      WHERE ${lowerFull} LIKE $2
+      ON CONFLICT (uf, cgu_id) DO NOTHING
+    `, [uf, term]);
+  }
+  const unidadeText = `(COALESCE(unidade_auditada,'') || ' ' || COALESCE(unidades_auditoria,''))`;
+  let p3 = [uf];
+  await pool.query(`
+    INSERT INTO srte_cgu (uf, cgu_id, motivo_vinculo)
+    SELECT $1, id_tarefa, 'UNIDADE_UF'
+    FROM cgu_demands
+    WHERE ${buildUfRegexClause(unidadeText, uf, p3, 2)}
+    ON CONFLICT (uf, cgu_id) DO NOTHING
+  `, p3);
+  const ctxPatterns = [
+    "%ministerio do trabalho%",
+    "%minist\xE9rio do trabalho%",
+    "%mte%",
+    "%srte%",
+    "%superintend%",
+    "%fiscal%trabalho%",
+    "%auditoria%fiscal%",
+    "%inspecao%trabalho%",
+    "%inspe\xE7\xE3o%trabalho%",
+    "%caged%",
+    "%rais%",
+    "%sine%",
+    "%fgts%"
+  ];
+  const locPatterns = [...capitals.map((c) => `%${c}%`), ...states.map((s) => `%${s}%`)];
+  for (const loc of locPatterns) {
+    let p4 = [uf, loc];
+    const ctx = buildLikeOrClause(lowerFull, ctxPatterns, p4, 3);
+    await pool.query(`
+      INSERT INTO srte_cgu (uf, cgu_id, motivo_vinculo)
+      SELECT $1, id_tarefa, 'LOCALIZACAO_CONTEXTO'
+      FROM cgu_demands
+      WHERE ${lowerFull} LIKE $2 AND ${ctx}
+      ON CONFLICT (uf, cgu_id) DO NOTHING
+    `, p4);
+  }
+  const r = await pool.query(`SELECT COUNT(*) FROM srte_cgu WHERE uf = $1`, [uf]);
+  return parseInt(r.rows[0].count);
+}
+async function runRecalcJob() {
+  console.log(`[SRTE-RECALC] \u2550\u2550\u2550 Iniciando rec\xE1lculo (fonte: ${recalcJobStatus.source}) \u2550\u2550\u2550`);
+  console.time("[SRTE-RECALC] Tempo total");
+  for (const srte of SRTE_LOOKUP) {
+    const { uf, mteCode, capital, state } = srte;
+    try {
+      const [a, c, t, g] = await Promise.all([
+        vincularAcordaos(uf, capital, state),
+        vincularComunicacoes(uf, capital, state),
+        vincularTces(uf, mteCode, capital, state),
+        vincularCgu(uf, capital, state)
+      ]);
+      const novoStatus = a >= 3 || a + g >= 8 ? "Cr\xEDtico" : a >= 1 || a + g >= 4 ? "Aten\xE7\xE3o" : "Regular";
+      await pool.query(
+        `UPDATE superintendencias SET status_geral = $1 WHERE uf = $2`,
+        [novoStatus, uf]
+      );
+      recalcJobStatus.progress.push({ uf, acordaos: a, comunicacoes: c, tces: t, cgu: g });
+      recalcJobStatus.processedUfs++;
+      console.log(`[SRTE-RECALC] ${uf}: ac\xF3rd\xE3os=${a}, comunica\xE7\xF5es=${c}, TCEs=${t}, CGU=${g}, status=${novoStatus}`);
+    } catch (err) {
+      console.error(`[SRTE-RECALC] \u274C Erro ao processar ${uf}:`, err.message);
+      recalcJobStatus.progress.push({ uf, acordaos: 0, comunicacoes: 0, tces: 0, cgu: 0 });
+      recalcJobStatus.processedUfs++;
+    }
+  }
+  recalcJobStatus.running = false;
+  recalcJobStatus.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+  console.timeEnd("[SRTE-RECALC] Tempo total");
+  console.log("[SRTE-RECALC] \u2550\u2550\u2550 Rec\xE1lculo conclu\xEDdo \u2550\u2550\u2550");
+}
+async function triggerSrteRecalcIfIdle(source = "MANUAL") {
+  if (recalcJobStatus.running) {
+    console.log(`[SRTE-RECALC] J\xE1 em andamento. Trigger '${source}' ignorado.`);
+    return;
+  }
+  await ensureSrteLinkingTables();
+  if (!srteLinkingTablesReady) {
+    console.warn(`[SRTE-RECALC] Tabelas n\xE3o prontas. Trigger '${source}' cancelado.`);
+    return;
+  }
+  recalcJobStatus = {
+    running: true,
+    startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    finishedAt: null,
+    source,
+    progress: [],
+    error: null,
+    totalUfs: SRTE_LOOKUP.length,
+    processedUfs: 0
+  };
+  runRecalcJob().catch((err) => {
+    console.error("[SRTE-RECALC] Erro cr\xEDtico:", err);
+    recalcJobStatus.running = false;
+    recalcJobStatus.error = err.message;
+    recalcJobStatus.finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+  });
+}
+
+// src/backend/routes/comunicacoesRoutes.ts
 var router = (0, import_express.Router)();
 router.post("/comunicacoes/sync-local", async (req, res) => {
   const COM_DIR = import_path2.default.join(process.cwd(), "data", "tcu", "comunicacoes");
@@ -613,6 +963,8 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
       message: `Sincroniza\xE7\xE3o local conclu\xEDda: ${imported} novos, ${updated} atualizados.`,
       report: [{ file: "Geral", imported, updated, skipped: 0 }]
     });
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_COMUNICACAO").catch(() => {
+    }));
   } catch (err) {
     console.error("Erro na sincroniza\xE7\xE3o local de comunicacoes:", err);
     res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });
@@ -784,6 +1136,8 @@ router.post("/comunicacoes/import", async (req, res) => {
       totalCount: parseInt(totalResult.rows[0].count),
       items: []
     });
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_COMUNICACAO").catch(() => {
+    }));
   } catch (err) {
     console.error("Error importing comunicacoes:", err);
     res.status(500).json({ error: "Failed to import comunicacoes." });
@@ -1447,6 +1801,9 @@ router3.post("/acordaos/sync-local", async (req, res) => {
       `
 [SYNC] \u2550\u2550\u2550 Sincroniza\xE7\xE3o conclu\xEDda. Total: ${totalImportados} inseridos, ${totalAtualizados} atualizados \u2550\u2550\u2550`
     );
+    triggerSrteRecalcIfIdle("IMPORT_ACORDAO").catch(
+      (err) => console.error("[SRTE-AUTO] Erro ao disparar rec\xE1lculo ap\xF3s sync de ac\xF3rd\xE3os:", err)
+    );
   })().catch((err) => {
     console.error("[SYNC] Erro cr\xEDtico no processamento em background:", err);
   });
@@ -2000,6 +2357,8 @@ router4.post("/tces/sync-local", async (req, res) => {
       success: true,
       message: `Sincroniza\xE7\xE3o conclu\xEDda: ${importedGeral} TCEs novas, ${updatedGeral} atualizadas e ${importedMap} mapeamentos inseridos.`
     });
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_TCE").catch(() => {
+    }));
   } catch (err) {
     console.error("Erro na sincroniza\xE7\xE3o local de TCEs:", err);
     res.status(500).json({ success: false, message: "Erro no servidor ao processar arquivos CSV." });
@@ -2964,6 +3323,8 @@ router7.post("/cgu/sync-local/monitoramentos", async (req, res) => {
       quantidade_erros: erros
     });
     res.json({ success: true, importedCount: inseridos, erros });
+    setImmediate(() => triggerSrteRecalcIfIdle("IMPORT_CGU").catch(() => {
+    }));
   } catch (err) {
     if (importControlId) await registrarErroImportacao(importControlId, err);
     console.error("Erro no processamento de monitoramentos CGU", err);
@@ -3528,18 +3889,19 @@ var import_express9 = __toESM(require("express"), 1);
 init_db();
 var router9 = import_express9.default.Router();
 router9.get("/superintendencias", async (req, res) => {
+  await ensureSrteLinkingTables();
   try {
     const result = await pool.query(`
-      SELECT 
-        s.*, 
-        v.demandas_tcu as view_tcu, 
-        v.demandas_cgu as view_cgu,
-        v.demandas_comunicacoes,
-        v.demandas_tces,
-        (SELECT json_agg(acordao_key) FROM srte_acordao WHERE uf = s.uf) as acordao_ids,
-        (SELECT json_agg(comunicacao_key) FROM srte_comunicacao WHERE uf = s.uf) as comunicacao_ids,
-        (SELECT json_agg(tce_id) FROM srte_tce WHERE uf = s.uf) as tce_ids,
-        (SELECT json_agg(cgu_id) FROM srte_cgu WHERE uf = s.uf) as cgu_ids
+      SELECT
+        s.*,
+        COALESCE(v.demandas_tcu, 0)            AS view_tcu,
+        COALESCE(v.demandas_cgu, 0)             AS view_cgu,
+        COALESCE(v.demandas_comunicacoes, 0)    AS demandas_comunicacoes,
+        COALESCE(v.demandas_tces, 0)            AS demandas_tces,
+        (SELECT json_agg(acordao_key)    FROM srte_acordao     WHERE uf = s.uf) AS acordao_ids,
+        (SELECT json_agg(comunicacao_key) FROM srte_comunicacao WHERE uf = s.uf) AS comunicacao_ids,
+        (SELECT json_agg(tce_id)         FROM srte_tce          WHERE uf = s.uf) AS tce_ids,
+        (SELECT json_agg(cgu_id)         FROM srte_cgu          WHERE uf = s.uf) AS cgu_ids
       FROM superintendencias s
       LEFT JOIN vw_srte_dashboard_metrics v ON s.uf = v.uf
     `);
@@ -3570,40 +3932,83 @@ router9.get("/superintendencias", async (req, res) => {
     res.json(mapped);
   } catch (error) {
     console.error("Error fetching superintendencias:", error);
-    res.status(500).json({ error: "Erro interno" });
+    res.status(500).json({ error: "Erro interno ao buscar superintend\xEAncias." });
   }
 });
 router9.put("/superintendencias/:uf", async (req, res) => {
   try {
     const uf = req.params.uf.toUpperCase();
-    const updateData = req.body;
+    const d = req.body;
     await pool.query(`
-      UPDATE superintendencias 
-      SET 
-        superintendente = $1,
-        endereco = $2,
-        contato = $3,
-        email = $4,
-        substituto = $5,
-        email_substituto = $6,
-        cep = $7,
-        status_geral = $8
+      UPDATE superintendencias
+      SET superintendente  = $1, endereco = $2, contato = $3, email = $4,
+          substituto       = $5, email_substituto = $6, cep = $7, status_geral = $8
       WHERE uf = $9
     `, [
-      updateData.superintendente,
-      updateData.endereco,
-      updateData.contato,
-      updateData.email,
-      updateData.substituto,
-      updateData.emailSubstituto,
-      updateData.cep,
-      updateData.statusGeral,
+      d.superintendente,
+      d.endereco,
+      d.contato,
+      d.email,
+      d.substituto,
+      d.emailSubstituto,
+      d.cep,
+      d.statusGeral,
       uf
     ]);
-    res.json({ success: true, uf, ...updateData });
+    res.json({ success: true, uf, ...d });
   } catch (error) {
     console.error("Error updating superintendencias:", error);
-    res.status(500).json({ error: "Erro interno ao atualizar a superintend\xEAncia" });
+    res.status(500).json({ error: "Erro interno ao atualizar a superintend\xEAncia." });
+  }
+});
+router9.post("/srte/recalcular-vinculos", async (req, res) => {
+  if (recalcJobStatus.running) {
+    return res.status(409).json({
+      success: false,
+      message: "Rec\xE1lculo j\xE1 em andamento. Aguarde a conclus\xE3o.",
+      status: recalcJobStatus
+    });
+  }
+  res.status(202).json({
+    success: true,
+    message: `Rec\xE1lculo iniciado para ${SRTE_LOOKUP.length} SRTEs.`,
+    startedAt: (/* @__PURE__ */ new Date()).toISOString()
+  });
+  triggerSrteRecalcIfIdle("MANUAL").catch(
+    (err) => console.error("[SRTE] Erro ao iniciar rec\xE1lculo manual:", err)
+  );
+});
+router9.get("/srte/recalcular-vinculos/status", (_req, res) => {
+  res.json({ success: true, status: recalcJobStatus });
+});
+router9.get("/srte/diagnostico/:uf", async (req, res) => {
+  const uf = req.params.uf.toUpperCase();
+  const srte = SRTE_LOOKUP.find((s) => s.uf === uf);
+  if (!srte) return res.status(404).json({ error: `UF "${uf}" n\xE3o encontrada.` });
+  try {
+    const [tables, acordaos, comunicacoes, tces, cgu, vinculos] = await Promise.all([
+      pool.query(`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('srte_acordao','srte_comunicacao','srte_tce','srte_cgu')`),
+      pool.query(`SELECT key, titulo, interessados, assunto FROM tcu_acordaos LIMIT 3`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT key, comunicacao, destinatario FROM tcu_comunicacoes LIMIT 3`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT id, numero_ano_tce, processo_administrativo, motivo_instauracao FROM tcu_tce LIMIT 3`).catch(() => ({ rows: [] })),
+      pool.query(`SELECT id_tarefa, estado, unidade_auditada FROM cgu_demands LIMIT 3`).catch(() => ({ rows: [] })),
+      pool.query(`
+        SELECT
+          (SELECT COUNT(*) FROM srte_acordao     WHERE uf = $1) AS acordaos,
+          (SELECT COUNT(*) FROM srte_comunicacao WHERE uf = $1) AS comunicacoes,
+          (SELECT COUNT(*) FROM srte_tce          WHERE uf = $1) AS tces,
+          (SELECT COUNT(*) FROM srte_cgu          WHERE uf = $1) AS cgu
+      `, [uf]).catch(() => ({ rows: [{}] }))
+    ]);
+    res.json({
+      uf,
+      srteMetadata: srte,
+      tablesExisting: tables.rows.map((r) => r.table_name),
+      vinculosAtuais: vinculos.rows[0],
+      amostras: { acordaos: acordaos.rows, comunicacoes: comunicacoes.rows, tces: tces.rows, cgu: cgu.rows }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 var superintendenciasRoutes_default = router9;
@@ -3611,41 +4016,431 @@ var superintendenciasRoutes_default = router9;
 // src/backend/routes/contratosRoutes.ts
 var import_express10 = __toESM(require("express"), 1);
 init_db();
+
+// src/backend/services/pncpService.ts
+var import_node_fetch4 = __toESM(require("node-fetch"), 1);
+async function fetchContratosPncp(termoBusca = "37115367000160", tipoBusca = "q") {
+  try {
+    let allItems = [];
+    let currentPage = 1;
+    let totalPages = 1;
+    do {
+      const queryEncoded = encodeURIComponent(termoBusca).replace(/%20/g, "+");
+      const param = tipoBusca === "orgaos" ? `orgaos=${queryEncoded}` : `q=${queryEncoded}`;
+      const url = `https://pncp.gov.br/api/search/?${param}&tipos_documento=contrato&ordenacao=-data&pagina=${currentPage}&tam_pagina=50&status=vigente`;
+      let response;
+      let attempt = 0;
+      const maxAttempts = 5;
+      let success = false;
+      while (attempt < maxAttempts) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12e3);
+        try {
+          response = await (0, import_node_fetch4.default)(url, {
+            method: "GET",
+            headers: { "Accept": "application/json" },
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          if (response.ok) {
+            success = true;
+            break;
+          }
+          attempt++;
+          await new Promise((res) => setTimeout(res, 3e3 * attempt));
+        } catch (e) {
+          clearTimeout(timeout);
+          attempt++;
+          await new Promise((res) => setTimeout(res, 3e3 * attempt));
+        }
+      }
+      if (!success) {
+        console.warn(`[PNCP] Falha ao buscar p\xE1gina ${currentPage} de ${termoBusca}. Retornando contratos obtidos at\xE9 o momento.`);
+        break;
+      }
+      const data = await response.json();
+      const items = data.items || [];
+      allItems = allItems.concat(items);
+      const totalRegistros = data.total || 0;
+      totalPages = Math.ceil(totalRegistros / 50);
+      currentPage++;
+      if (currentPage > 20) break;
+    } while (currentPage <= totalPages);
+    return allItems.map((item) => ({
+      id: item.numero_controle_pncp || String(item.id || Date.now()),
+      numeroContrato: item.title ? item.title.replace("Contrato n\xBA ", "") : "S/N",
+      anoContrato: item.ano || item.data_assinatura?.split("-")[0],
+      receitaDespesa: "Despesa",
+      objeto: item.description || "",
+      uf: item.uf || "DF",
+      dataAssinatura: item.data_assinatura,
+      dataInicioVigencia: item.data_inicio_vigencia,
+      dataFimVigencia: item.data_fim_vigencia,
+      valorInicial: item.valor_global,
+      valorGlobal: item.valor_global,
+      fornecedorNome: "Buscando...",
+      fornecedorCnpjCpf: "",
+      unidadeOrcamentaria: {
+        codigoUnidade: item.unidade_codigo || "",
+        nomeUnidade: item.unidade_nome || item.orgao_nome || ""
+      },
+      orgaoEntidade: {
+        cnpj: item.orgao_cnpj || (tipoBusca === "q" ? termoBusca : ""),
+        razaoSocial: item.orgao_nome || ""
+      },
+      numero_sequencial: item.numero_sequencial
+    }));
+  } catch (error) {
+    console.error(`Erro ao buscar contratos (Busca: ${termoBusca}):`, error);
+    return [];
+  }
+}
+async function fetchDetalheContratoPncp(cnpjOrgao, ano, sequencial) {
+  try {
+    const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}`;
+    const response = await (0, import_node_fetch4.default)(url, {
+      method: "GET",
+      headers: { "Accept": "application/json" }
+    });
+    if (!response.ok) return { nome: "N\xE3o informado", cnpj: "" };
+    const data = await response.json();
+    return {
+      nome: data.nomeRazaoSocialFornecedor || "N\xE3o informado",
+      cnpj: data.niFornecedor || ""
+    };
+  } catch (e) {
+    return { nome: "Erro ao buscar fornecedor", cnpj: "" };
+  }
+}
+
+// src/backend/routes/contratosRoutes.ts
 var router10 = import_express10.default.Router();
-router10.get("/contratos", async (req, res) => {
-  const result = await pool.query("SELECT * FROM contratos");
-  const mapped = result.rows.map((r) => ({
+function mapContratoRow(r) {
+  return {
     id: r.id,
     numeroContrato: r.numero_contrato,
     empresa: r.empresa,
     cnpj: r.cnpj,
     objeto: r.objeto,
-    valorAnual: parseFloat(r.valor_anual) || 0,
+    valorGlobal: parseFloat(r.valor_global) || 0,
+    valorMensal: parseFloat(r.valor_mensal) || 0,
     dataInicio: r.data_inicio,
     dataFim: r.data_fim,
-    uf: r.uf
-  }));
-  res.json(mapped);
+    uf: r.uf,
+    modalidade: r.modalidade,
+    pncpId: r.pncp_id,
+    uasg: r.uasg,
+    linkPncp: r.link_pncp,
+    status: r.status
+  };
+}
+router10.get("/contratos", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM contratos ORDER BY data_inicio DESC");
+    res.json(result.rows.map(mapContratoRow));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar contratos" });
+  }
+});
+router10.get("/contratos/srte/:uf", async (req, res) => {
+  try {
+    const { uf } = req.params;
+    const result = await pool.query("SELECT * FROM contratos WHERE uf = $1 ORDER BY data_inicio DESC", [uf.toUpperCase()]);
+    res.json(result.rows.map(mapContratoRow));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar contratos por UF" });
+  }
 });
 router10.post("/contratos", async (req, res) => {
-  const c = req.body;
-  c.id = "C-" + Date.now();
-  await pool.query(
-    "INSERT INTO contratos (id, numero_contrato, empresa, cnpj, objeto, valor_anual, data_inicio, data_fim, uf) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-    [c.id, c.numeroContrato, c.empresa, c.cnpj, c.objeto, c.valorAnual, c.dataInicio, c.dataFim, c.uf]
-  );
-  res.status(201).json(c);
+  try {
+    const c = req.body;
+    c.id = c.id || "C-" + Date.now();
+    await pool.query(
+      `INSERT INTO contratos (
+        id, numero_contrato, empresa, cnpj, objeto, valor_global, valor_mensal, data_inicio, data_fim, uf, modalidade, pncp_id, uasg, link_pncp, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+      [
+        c.id,
+        c.numeroContrato,
+        c.empresa,
+        c.cnpj,
+        c.objeto,
+        c.valorGlobal || 0,
+        c.valorMensal || 0,
+        c.dataInicio,
+        c.dataFim,
+        c.uf,
+        c.modalidade || "",
+        c.pncpId || "",
+        c.uasg || "",
+        c.linkPncp || "",
+        c.status || "Ativo"
+      ]
+    );
+    res.status(201).json(c);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao criar contrato" });
+  }
+});
+router10.put("/contratos/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const c = req.body;
+    await pool.query(
+      `UPDATE contratos SET 
+        numero_contrato = $1, empresa = $2, cnpj = $3, objeto = $4, 
+        valor_global = $5, valor_mensal = $6, data_inicio = $7, data_fim = $8, 
+        uf = $9, modalidade = $10, pncp_id = $11, uasg = $12, link_pncp = $13, status = $14
+      WHERE id = $15`,
+      [
+        c.numeroContrato,
+        c.empresa,
+        c.cnpj,
+        c.objeto,
+        c.valorGlobal || 0,
+        c.valorMensal || 0,
+        c.dataInicio,
+        c.dataFim,
+        c.uf,
+        c.modalidade || "",
+        c.pncpId || "",
+        c.uasg || "",
+        c.linkPncp || "",
+        c.status || "Ativo",
+        id
+      ]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao atualizar contrato" });
+  }
+});
+router10.delete("/contratos/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query("DELETE FROM contratos WHERE id = $1", [id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao deletar contrato" });
+  }
+});
+router10.post("/contratos/sync-pncp", async (req, res) => {
+  try {
+    const { cnpjOrgao, uf } = req.body;
+    let contratosPncp = [];
+    if (cnpjOrgao) {
+      contratosPncp = await fetchContratosPncp(cnpjOrgao);
+    } else {
+      const mte = await fetchContratosPncp("74549|33375", "orgaos");
+      const todos = [...mte];
+      const unicosMap = /* @__PURE__ */ new Map();
+      todos.forEach((c) => unicosMap.set(c.id, c));
+      contratosPncp = Array.from(unicosMap.values());
+    }
+    let imported = 0;
+    for (const p of contratosPncp) {
+      const exist = await pool.query("SELECT id FROM contratos WHERE pncp_id = $1", [p.id]);
+      if (exist.rows.length === 0) {
+        let fornecedorNome = "N\xE3o informado";
+        let fornecedorCnpj = "";
+        if (p.orgaoEntidade?.cnpj && p.anoContrato && p.numero_sequencial) {
+          const detalhe = await fetchDetalheContratoPncp(p.orgaoEntidade.cnpj, p.anoContrato, p.numero_sequencial);
+          fornecedorNome = detalhe.nome;
+          fornecedorCnpj = detalhe.cnpj;
+        }
+        let finalUf = p.uf || req.body.uf || "DF";
+        if (finalUf === "DF") {
+          const unidadeName = (p.unidadeOrcamentaria?.nomeUnidade || p.orgaoEntidade?.razaoSocial || "").toUpperCase();
+          if (unidadeName.includes("SUPERINTEND") || unidadeName.includes("SRTE")) {
+            finalUf = "DF_SRTE";
+          } else {
+            finalUf = "DF_SEDE";
+          }
+        }
+        const id = "C-PNCP-" + p.id;
+        await pool.query(
+          `INSERT INTO contratos (
+            id, numero_contrato, empresa, cnpj, objeto, valor_global, data_inicio, data_fim, uf, modalidade, pncp_id, link_pncp, status
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+          [
+            id,
+            p.numeroContrato,
+            fornecedorNome,
+            fornecedorCnpj,
+            p.objeto || "Objeto n\xE3o informado",
+            p.valorGlobal,
+            p.dataInicioVigencia,
+            p.dataFimVigencia,
+            finalUf,
+            "Sincronizado",
+            String(p.id),
+            `https://pncp.gov.br/app/contratos/${p.orgaoEntidade?.cnpj}/${p.anoContrato}/${p.numero_sequencial}`,
+            "Ativo"
+          ]
+        );
+        imported++;
+      }
+    }
+    res.json({ success: true, imported, total: contratosPncp.length });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro na sincroniza\xE7\xE3o" });
+  }
 });
 router10.get("/contratos/:id/consumo", async (req, res) => {
-  const result = await pool.query("SELECT * FROM contratos_consumo_mensal WHERE contrato_id = $1", [req.params.id]);
-  const mapped = result.rows.map((r) => ({
-    id: r.id,
-    contratoId: r.contrato_id,
-    mes: r.mes,
-    valorConsumido: parseFloat(r.valor_consumido) || 0,
-    faturaUrl: r.fatura_url
-  }));
-  res.json(mapped);
+  try {
+    const result = await pool.query("SELECT * FROM contratos_consumo_mensal WHERE contrato_id = $1 ORDER BY mes DESC", [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      contratoId: r.contrato_id,
+      mes: r.mes,
+      valorConsumido: parseFloat(r.valor_consumido) || 0,
+      faturaUrl: r.fatura_url
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar consumo" });
+  }
+});
+router10.post("/contratos/:id/consumo", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const c = req.body;
+    c.id = c.id || "CC-" + Date.now();
+    await pool.query(
+      "INSERT INTO contratos_consumo_mensal (id, contrato_id, mes, valor_consumido, fatura_url) VALUES ($1, $2, $3, $4, $5)",
+      [c.id, id, c.mes, c.valorConsumido || 0, c.faturaUrl || ""]
+    );
+    res.status(201).json(c);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao criar consumo" });
+  }
+});
+router10.delete("/contratos/consumo/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM contratos_consumo_mensal WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao deletar consumo" });
+  }
+});
+router10.get("/contratos/:id/fiscais", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM contratos_fiscais WHERE contrato_id = $1", [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      contratoId: r.contrato_id,
+      nome: r.nome,
+      cpf: r.cpf,
+      tipo: r.tipo,
+      portariaDesignacao: r.portaria_designacao,
+      dataInicio: r.data_inicio,
+      dataFim: r.data_fim,
+      status: r.status
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar fiscais" });
+  }
+});
+router10.post("/contratos/:id/fiscais", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const f = req.body;
+    f.id = f.id || "CF-" + Date.now();
+    await pool.query(
+      "INSERT INTO contratos_fiscais (id, contrato_id, nome, cpf, tipo, portaria_designacao, data_inicio, data_fim, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+      [f.id, id, f.nome, f.cpf, f.tipo, f.portariaDesignacao, f.dataInicio, f.dataFim, f.status || "Ativo"]
+    );
+    res.status(201).json(f);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao adicionar fiscal" });
+  }
+});
+router10.delete("/contratos/fiscais/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM contratos_fiscais WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao remover fiscal" });
+  }
+});
+router10.get("/contratos/:id/aditivos", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM contratos_aditivos WHERE contrato_id = $1", [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      contratoId: r.contrato_id,
+      numero: r.numero,
+      tipo: r.tipo,
+      valorAdicionado: parseFloat(r.valor_adicionado) || 0,
+      novaDataFim: r.nova_data_fim,
+      justificativa: r.justificativa,
+      dataAssinatura: r.data_assinatura
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar aditivos" });
+  }
+});
+router10.post("/contratos/:id/aditivos", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const a = req.body;
+    a.id = a.id || "CA-" + Date.now();
+    await pool.query(
+      "INSERT INTO contratos_aditivos (id, contrato_id, numero, tipo, valor_adicionado, nova_data_fim, justificativa, data_assinatura) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      [a.id, id, a.numero, a.tipo, a.valorAdicionado || 0, a.novaDataFim, a.justificativa, a.dataAssinatura]
+    );
+    res.status(201).json(a);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao adicionar aditivo" });
+  }
+});
+router10.delete("/contratos/aditivos/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM contratos_aditivos WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao remover aditivo" });
+  }
+});
+router10.get("/contratos/:id/empenhos", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM contratos_empenhos WHERE contrato_id = $1", [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      contratoId: r.contrato_id,
+      numeroEmpenho: r.numero_empenho,
+      valorEmpenhado: parseFloat(r.valor_empenhado) || 0,
+      dataEmissao: r.data_emissao,
+      ptres: r.ptres,
+      fonteRecurso: r.fonte_recurso
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar empenhos" });
+  }
+});
+router10.post("/contratos/:id/empenhos", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const e = req.body;
+    e.id = e.id || "CE-" + Date.now();
+    await pool.query(
+      "INSERT INTO contratos_empenhos (id, contrato_id, numero_empenho, valor_empenhado, data_emissao, ptres, fonte_recurso) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [e.id, id, e.numeroEmpenho, e.valorEmpenhado || 0, e.dataEmissao, e.ptres, e.fonteRecurso]
+    );
+    res.status(201).json(e);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao adicionar empenho" });
+  }
+});
+router10.delete("/contratos/empenhos/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM contratos_empenhos WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao remover empenho" });
+  }
 });
 var contratosRoutes_default = router10;
 
@@ -3653,56 +4448,295 @@ var contratosRoutes_default = router10;
 var import_express11 = __toESM(require("express"), 1);
 init_db();
 var router11 = import_express11.default.Router();
-router11.get("/viaturas", async (req, res) => {
-  const result = await pool.query("SELECT * FROM viaturas");
-  const mapped = result.rows.map((r) => ({
+function mapViaturaRow(r) {
+  return {
     id: r.id,
     placa: r.placa,
+    marca: r.marca,
     modelo: r.modelo,
     ano: r.ano,
     tipo: r.tipo,
     uf: r.uf,
     kmAtual: r.km_atual,
     proximaRevisaoKm: r.proxima_revisao_km,
-    status: r.status
-  }));
-  res.json(mapped);
+    status: r.status,
+    categoria: r.categoria,
+    renavamChassi: r.renavam_chassi,
+    numeroMotor: r.numero_motor,
+    alocacao: r.alocacao,
+    destinacaoBaixa: r.destinacao_baixa
+  };
+}
+router11.get("/viaturas", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM viaturas ORDER BY ano DESC");
+    res.json(result.rows.map(mapViaturaRow));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar viaturas" });
+  }
+});
+router11.get("/viaturas/srte/:uf", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM viaturas WHERE uf = $1 ORDER BY ano DESC", [req.params.uf.toUpperCase()]);
+    res.json(result.rows.map(mapViaturaRow));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar viaturas por UF" });
+  }
 });
 router11.post("/viaturas", async (req, res) => {
-  const v = req.body;
-  v.id = "V-" + Date.now();
-  await pool.query(
-    "INSERT INTO viaturas (id, placa, modelo, ano, tipo, uf, km_atual, proxima_revisao_km, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-    [v.id, v.placa, v.modelo, v.ano, v.tipo, v.uf, v.kmAtual, v.proximaRevisaoKm, v.status]
-  );
-  res.status(201).json(v);
+  try {
+    const v = req.body;
+    v.id = v.id || "V-" + Date.now();
+    await pool.query(
+      `INSERT INTO viaturas (
+        id, placa, marca, modelo, ano, tipo, uf, km_atual, proxima_revisao_km, status, categoria, renavam_chassi, numero_motor, alocacao
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        v.id,
+        v.placa,
+        v.marca || "",
+        v.modelo,
+        v.ano,
+        v.tipo,
+        v.uf,
+        v.kmAtual,
+        v.proximaRevisaoKm,
+        v.status,
+        v.categoria || "Terrestre",
+        v.renavamChassi || "",
+        v.numeroMotor || "",
+        v.alocacao || ""
+      ]
+    );
+    res.status(201).json(v);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao criar viatura" });
+  }
+});
+router11.put("/viaturas/:id", async (req, res) => {
+  try {
+    const v = req.body;
+    await pool.query(
+      `UPDATE viaturas SET 
+        placa = $1, marca = $2, modelo = $3, ano = $4, tipo = $5, uf = $6, km_atual = $7, proxima_revisao_km = $8, status = $9, 
+        categoria = $10, renavam_chassi = $11, numero_motor = $12, alocacao = $13, destinacao_baixa = $14
+      WHERE id = $15`,
+      [
+        v.placa,
+        v.marca || "",
+        v.modelo,
+        v.ano,
+        v.tipo,
+        v.uf,
+        v.kmAtual,
+        v.proximaRevisaoKm,
+        v.status,
+        v.categoria || "Terrestre",
+        v.renavamChassi || "",
+        v.numeroMotor || "",
+        v.alocacao || "",
+        v.destinacaoBaixa || "",
+        req.params.id
+      ]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao atualizar viatura" });
+  }
+});
+router11.delete("/viaturas/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM viaturas WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao deletar viatura" });
+  }
+});
+router11.get("/viaturas/condutores/srte/:uf", async (req, res) => {
+  try {
+    const result = await pool.query("SELECT * FROM frota_condutores WHERE uf = $1", [req.params.uf.toUpperCase()]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      uf: r.uf,
+      nome: r.nome,
+      cpf: r.cpf,
+      cnhCategoria: r.cnh_categoria,
+      cnhVencimento: r.cnh_vencimento,
+      arraisAmadorVencimento: r.arrais_amador_vencimento,
+      status: r.status
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar condutores" });
+  }
+});
+router11.post("/viaturas/condutores", async (req, res) => {
+  try {
+    const c = req.body;
+    c.id = c.id || "FC-" + Date.now();
+    await pool.query(
+      "INSERT INTO frota_condutores (id, uf, nome, cpf, cnh_categoria, cnh_vencimento, arrais_amador_vencimento, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      [c.id, c.uf, c.nome, c.cpf, c.cnhCategoria, c.cnhVencimento, c.arraisAmadorVencimento, c.status || "Ativo"]
+    );
+    res.status(201).json(c);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao criar condutor" });
+  }
+});
+router11.delete("/viaturas/condutores/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM frota_condutores WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao deletar condutor" });
+  }
+});
+router11.get("/viaturas/:id/diario-bordo", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT d.*, c.nome as condutor_nome 
+      FROM frota_diario_bordo d 
+      LEFT JOIN frota_condutores c ON d.condutor_id = c.id
+      WHERE d.viatura_id = $1 ORDER BY d.data_saida DESC
+    `, [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      viaturaId: r.viatura_id,
+      condutorId: r.condutor_id,
+      condutorNome: r.condutor_nome,
+      dataSaida: r.data_saida,
+      dataChegada: r.data_chegada,
+      odometroSaida: r.odometro_saida,
+      odometroChegada: r.odometro_chegada,
+      missaoDestino: r.missao_destino,
+      observacoes: r.observacoes
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar di\xE1rio" });
+  }
+});
+router11.post("/viaturas/:id/diario-bordo", async (req, res) => {
+  try {
+    const d = req.body;
+    d.id = d.id || "DB-" + Date.now();
+    await pool.query(
+      "INSERT INTO frota_diario_bordo (id, viatura_id, condutor_id, data_saida, data_chegada, odometro_saida, odometro_chegada, missao_destino, observacoes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+      [d.id, req.params.id, d.condutorId, d.dataSaida, d.dataChegada, d.odometroSaida, d.odometroChegada, d.missaoDestino, d.observacoes]
+    );
+    res.status(201).json(d);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao registrar di\xE1rio" });
+  }
+});
+router11.get("/viaturas/:id/infracoes", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT i.*, c.nome as condutor_nome 
+      FROM frota_infracoes i 
+      LEFT JOIN frota_condutores c ON i.condutor_id = c.id
+      WHERE i.viatura_id = $1 ORDER BY i.data_infracao DESC
+    `, [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      viaturaId: r.viatura_id,
+      condutorId: r.condutor_id,
+      condutorNome: r.condutor_nome,
+      dataInfracao: r.data_infracao,
+      tipoInfracao: r.tipo_infracao,
+      valor: parseFloat(r.valor) || 0,
+      statusPagamento: r.status_pagamento,
+      prazoRecurso: r.prazo_recurso
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar infra\xE7\xF5es" });
+  }
+});
+router11.post("/viaturas/:id/infracoes", async (req, res) => {
+  try {
+    const i = req.body;
+    i.id = i.id || "FI-" + Date.now();
+    await pool.query(
+      "INSERT INTO frota_infracoes (id, viatura_id, condutor_id, data_infracao, tipo_infracao, valor, status_pagamento, prazo_recurso) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      [i.id, req.params.id, i.condutorId, i.dataInfracao, i.tipoInfracao, i.valor || 0, i.statusPagamento, i.prazoRecurso]
+    );
+    res.status(201).json(i);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao registrar infra\xE7\xE3o" });
+  }
 });
 router11.get("/viaturas/:id/abastecimentos", async (req, res) => {
-  const result = await pool.query("SELECT * FROM viaturas_abastecimentos WHERE viatura_id = $1", [req.params.id]);
-  const mapped = result.rows.map((r) => ({
-    id: r.id,
-    viaturaId: r.viatura_id,
-    dataAbastecimento: r.data_abastecimento,
-    km: r.km,
-    litros: parseFloat(r.litros) || 0,
-    valorTotal: parseFloat(r.valor_total) || 0,
-    posto: r.posto
-  }));
-  res.json(mapped);
+  try {
+    const result = await pool.query("SELECT * FROM viaturas_abastecimentos WHERE viatura_id = $1 ORDER BY data_abastecimento DESC", [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      viaturaId: r.viatura_id,
+      dataAbastecimento: r.data_abastecimento,
+      km: r.km,
+      litros: parseFloat(r.litros) || 0,
+      valorTotal: parseFloat(r.valor_total) || 0,
+      posto: r.posto
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar abastecimentos" });
+  }
+});
+router11.post("/viaturas/:id/abastecimentos", async (req, res) => {
+  try {
+    const a = req.body;
+    a.id = a.id || "VA-" + Date.now();
+    await pool.query(
+      "INSERT INTO viaturas_abastecimentos (id, viatura_id, data_abastecimento, km, litros, valor_total, posto) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [a.id, req.params.id, a.dataAbastecimento, a.km, a.litros, a.valorTotal, a.posto]
+    );
+    res.status(201).json(a);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao adicionar abastecimento" });
+  }
+});
+router11.delete("/viaturas/abastecimentos/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM viaturas_abastecimentos WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao deletar abastecimento" });
+  }
 });
 router11.get("/viaturas/:id/manutencoes", async (req, res) => {
-  const result = await pool.query("SELECT * FROM viaturas_manutencoes WHERE viatura_id = $1", [req.params.id]);
-  const mapped = result.rows.map((r) => ({
-    id: r.id,
-    viaturaId: r.viatura_id,
-    dataManutencao: r.data_manutencao,
-    tipoManutencao: r.tipo_manutencao,
-    descricao: r.descricao,
-    kmManutencao: r.km_manutencao,
-    valor: parseFloat(r.valor) || 0,
-    proximaRevisaoKm: r.proxima_revisao_km
-  }));
-  res.json(mapped);
+  try {
+    const result = await pool.query("SELECT * FROM viaturas_manutencoes WHERE viatura_id = $1 ORDER BY data_manutencao DESC", [req.params.id]);
+    res.json(result.rows.map((r) => ({
+      id: r.id,
+      viaturaId: r.viatura_id,
+      dataManutencao: r.data_manutencao,
+      tipoManutencao: r.tipo_manutencao,
+      descricao: r.descricao,
+      kmManutencao: r.km_manutencao,
+      valor: parseFloat(r.valor) || 0,
+      proximaRevisaoKm: r.proxima_revisao_km
+    })));
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao buscar manuten\xE7\xF5es" });
+  }
+});
+router11.post("/viaturas/:id/manutencoes", async (req, res) => {
+  try {
+    const m = req.body;
+    m.id = m.id || "VM-" + Date.now();
+    await pool.query(
+      "INSERT INTO viaturas_manutencoes (id, viatura_id, data_manutencao, tipo_manutencao, descricao, km_manutencao, valor, proxima_revisao_km) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      [m.id, req.params.id, m.dataManutencao, m.tipoManutencao, m.descricao, m.kmManutencao, m.valor || 0, m.proximaRevisaoKm]
+    );
+    res.status(201).json(m);
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao adicionar manuten\xE7\xE3o" });
+  }
+});
+router11.delete("/viaturas/manutencoes/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM viaturas_manutencoes WHERE id = $1", [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Erro ao deletar manuten\xE7\xE3o" });
+  }
 });
 var viaturasRoutes_default = router11;
 

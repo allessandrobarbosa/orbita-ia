@@ -328,43 +328,122 @@ CREATE TABLE IF NOT EXISTS scdp_viagens (
   ultima_atualizacao VARCHAR(50)
 );
 
--- MÓDULO CONTRATOS
+-- MÓDULO CONTRATOS (Atualizado Lei 14.133 e PNCP)
 CREATE TABLE IF NOT EXISTS contratos (
   id VARCHAR(255) PRIMARY KEY,
   numero_contrato VARCHAR(255),
   empresa VARCHAR(255),
   cnpj VARCHAR(50),
   objeto TEXT,
-  valor_anual NUMERIC(15, 2),
+  valor_global NUMERIC(15, 2),
+  valor_mensal NUMERIC(15, 2),
   data_inicio VARCHAR(50),
   data_fim VARCHAR(50),
-  uf VARCHAR(10)
+  uf VARCHAR(10),
+  modalidade VARCHAR(100),
+  pncp_id VARCHAR(255),
+  uasg VARCHAR(50),
+  link_pncp TEXT,
+  status VARCHAR(100) DEFAULT 'Ativo'
+);
+
+CREATE TABLE IF NOT EXISTS contratos_fiscais (
+  id VARCHAR(255) PRIMARY KEY,
+  contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+  nome VARCHAR(255),
+  cpf VARCHAR(50),
+  tipo VARCHAR(100), -- Gestor, Fiscal Técnico, Administrativo
+  portaria_designacao VARCHAR(255),
+  data_inicio VARCHAR(50),
+  data_fim VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'Ativo'
+);
+
+CREATE TABLE IF NOT EXISTS contratos_aditivos (
+  id VARCHAR(255) PRIMARY KEY,
+  contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+  numero VARCHAR(50),
+  tipo VARCHAR(100),
+  valor_adicionado NUMERIC(15, 2) DEFAULT 0,
+  nova_data_fim VARCHAR(50),
+  justificativa TEXT,
+  data_assinatura VARCHAR(50)
+);
+
+CREATE TABLE IF NOT EXISTS contratos_empenhos (
+  id VARCHAR(255) PRIMARY KEY,
+  contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+  numero_empenho VARCHAR(100),
+  valor_empenhado NUMERIC(15, 2),
+  data_emissao VARCHAR(50),
+  ptres VARCHAR(50),
+  fonte_recurso VARCHAR(50)
 );
 
 CREATE TABLE IF NOT EXISTS contratos_consumo_mensal (
   id VARCHAR(255) PRIMARY KEY,
-  contrato_id VARCHAR(255),
+  contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
   mes VARCHAR(50),
   valor_consumido NUMERIC(15, 2),
   fatura_url TEXT
 );
 
--- MÓDULO VIATURAS
+-- MÓDULO VIATURAS E FROTA MULTIMODAL
 CREATE TABLE IF NOT EXISTS viaturas (
   id VARCHAR(255) PRIMARY KEY,
-  placa VARCHAR(50),
+  placa VARCHAR(50), -- Pode ser Placa ou TIE/TIEM
+  marca VARCHAR(255),
   modelo VARCHAR(255),
   ano INT,
-  tipo VARCHAR(100),
+  tipo VARCHAR(100), -- Carro, Caminhonete, Lancha
   uf VARCHAR(10),
-  km_atual INT,
+  km_atual INT, -- KM ou Horas de Motor
   proxima_revisao_km INT,
-  status VARCHAR(100)
+  status VARCHAR(100),
+  categoria VARCHAR(50) DEFAULT 'Terrestre',
+  renavam_chassi VARCHAR(100),
+  numero_motor VARCHAR(100),
+  alocacao VARCHAR(255),
+  destinacao_baixa VARCHAR(255)
+);
+
+CREATE TABLE IF NOT EXISTS frota_condutores (
+  id VARCHAR(255) PRIMARY KEY,
+  uf VARCHAR(10),
+  nome VARCHAR(255),
+  cpf VARCHAR(50),
+  cnh_categoria VARCHAR(20),
+  cnh_vencimento VARCHAR(50),
+  arrais_amador_vencimento VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'Ativo'
+);
+
+CREATE TABLE IF NOT EXISTS frota_diario_bordo (
+  id VARCHAR(255) PRIMARY KEY,
+  viatura_id VARCHAR(255) REFERENCES viaturas(id) ON DELETE CASCADE,
+  condutor_id VARCHAR(255) REFERENCES frota_condutores(id) ON DELETE SET NULL,
+  data_saida VARCHAR(50),
+  data_chegada VARCHAR(50),
+  odometro_saida INT,
+  odometro_chegada INT,
+  missao_destino TEXT,
+  observacoes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS frota_infracoes (
+  id VARCHAR(255) PRIMARY KEY,
+  viatura_id VARCHAR(255) REFERENCES viaturas(id) ON DELETE CASCADE,
+  condutor_id VARCHAR(255) REFERENCES frota_condutores(id) ON DELETE SET NULL,
+  data_infracao VARCHAR(50),
+  tipo_infracao VARCHAR(255),
+  valor NUMERIC(15, 2),
+  status_pagamento VARCHAR(50),
+  prazo_recurso VARCHAR(50)
 );
 
 CREATE TABLE IF NOT EXISTS viaturas_abastecimentos (
   id VARCHAR(255) PRIMARY KEY,
-  viatura_id VARCHAR(255),
+  viatura_id VARCHAR(255) REFERENCES viaturas(id) ON DELETE CASCADE,
   data_abastecimento VARCHAR(50),
   km INT,
   litros NUMERIC(15, 2),
@@ -374,7 +453,7 @@ CREATE TABLE IF NOT EXISTS viaturas_abastecimentos (
 
 CREATE TABLE IF NOT EXISTS viaturas_manutencoes (
   id VARCHAR(255) PRIMARY KEY,
-  viatura_id VARCHAR(255),
+  viatura_id VARCHAR(255) REFERENCES viaturas(id) ON DELETE CASCADE,
   data_manutencao VARCHAR(50),
   tipo_manutencao VARCHAR(255),
   descricao TEXT,

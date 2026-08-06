@@ -7,7 +7,7 @@ import React, { useState, useEffect } from "react";
 import { 
   Building2, ArrowLeft, Calendar, DollarSign, AlertCircle, Trash2, Plus, 
   FileText, CheckCircle, TrendingUp, TrendingDown, Car, Wrench, Droplet, 
-  MapPin, Phone, Mail, Gauge, FileDown, PlusCircle, ShieldAlert, Edit, Save, X
+  MapPin, Phone, Mail, Gauge, FileDown, PlusCircle, ShieldAlert, Edit, Save, X, RefreshCw, ExternalLink
 } from "lucide-react";
 import { 
   SuperintendenciaRegional, AcordaoDemand, ComunicacaoDemand, TceDemand, CguDemand,
@@ -101,6 +101,7 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
   const [viaturas, setViaturas] = useState<Viatura[]>([]);
   const [consumos, setConsumos] = useState<ContratoConsumoMensal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSyncingPncp, setIsSyncingPncp] = useState(false);
 
   // Forms Modals / Drawers
   const [showContractForm, setShowContractForm] = useState(false);
@@ -167,10 +168,10 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
         fetch(`/api/contratos`).then(r => r.json()).then(async (allContratos: Contrato[]) => {
           // Fetch consumos for all SRTE contracts
           const consumosList: ContratoConsumoMensal[] = [];
-          const srContratosIds = allContratos.filter(c => c.srteId === sr.uf).map(c => c.id);
+          const srContratosIds = allContratos.filter(c => c.uf === sr.uf).map(c => c.id);
           
           for (const cId of srContratosIds) {
-            const cRes = await fetch(`/api/contratos/${cId}/consumo`).then(r => r.json());
+            const cRes = await fetch(`/api/contratos/${encodeURIComponent(cId)}/consumo`).then(r => r.json());
             if (Array.isArray(cRes)) {
               consumosList.push(...cRes);
             }
@@ -205,37 +206,31 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
     }
   }, [selectedViatura]);
 
-  // CRUD Contrato
   const handleSaveContract = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      srteId: sr.uf,
-      numero: contractNumero,
+      uf: sr.uf,
+      numeroContrato: contractNumero,
       tipo: contractTipo,
-      fornecedor: contractFornecedor,
-      valorTotal: parseFloat(contractValorTotal),
-      valorMensal: parseFloat(contractValorMensal),
-      inicioVigencia: contractInicio,
-      fimVigencia: contractFim,
+      empresa: contractFornecedor,
+      cnpj: "", // a ser preenchido se tiver UI
+      valorGlobal: parseFloat(contractValorTotal) || 0,
+      valorMensal: parseFloat(contractValorMensal) || 0,
+      dataInicio: contractInicio,
+      dataFim: contractFim,
       status: contractStatus,
       objeto: contractObjeto
     };
 
     try {
       let res;
-      if (editingContractId) {
-        res = await fetch(`/api/contratos/${editingContractId}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-      } else {
-        res = await fetch(`/api/contratos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-      }
+      const method = editingContractId ? "PUT" : "POST";
+      const url = editingContractId ? `/api/contratos/${encodeURIComponent(editingContractId)}` : "/api/contratos";
+      res = await fetch(url, {
+        method: method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
       if (res.ok) {
         loadData();
@@ -249,13 +244,12 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
 
   const handleEditContract = (c: Contrato) => {
     setEditingContractId(c.id);
-    setContractNumero(c.numero);
-    setContractTipo(c.tipo);
-    setContractFornecedor(c.fornecedor);
-    setContractValorTotal(String(c.valorTotal));
+    setContractNumero(c.numeroContrato);
+    setContractFornecedor(c.empresa);
+    setContractValorTotal(String(c.valorGlobal));
     setContractValorMensal(String(c.valorMensal));
-    setContractInicio(c.inicioVigencia);
-    setContractFim(c.fimVigencia);
+    setContractInicio(c.dataInicio);
+    setContractFim(c.dataFim);
     setContractStatus(c.status);
     setContractObjeto(c.objeto || "");
     setShowContractForm(true);
@@ -264,7 +258,7 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
   const handleDeleteContract = async (id: string) => {
     if (window.confirm("Deseja realmente excluir este contrato e todos os seus históricos de consumo?")) {
       try {
-        const res = await fetch(`/api/contratos/${id}`, { method: "DELETE" });
+        const res = await fetch(`/api/contratos/${encodeURIComponent(id)}`, { method: "DELETE" });
         if (res.ok) {
           loadData();
         }
@@ -329,13 +323,12 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
   const handleSaveViatura = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
-      srteId: sr.uf,
+      uf: sr.uf,
       placa: viaturaPlaca,
       marca: viaturaMarca,
       modelo: viaturaModelo,
-      anoFabricacao: parseInt(viaturaAno),
-      chassi: viaturaChassi,
-      renavam: viaturaRenavam,
+      ano: parseInt(viaturaAno),
+      renavamChassi: viaturaChassi + "/" + viaturaRenavam,
       alocacao: viaturaAlocacao,
       kmAtual: parseInt(viaturaKm),
       proximaRevisaoKm: parseInt(viaturaProxRevisao),
@@ -378,9 +371,8 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
     setViaturaPlaca(v.placa);
     setViaturaMarca(v.marca);
     setViaturaModelo(v.modelo);
-    setViaturaAno(String(v.anoFabricacao));
-    setViaturaChassi(v.chassi);
-    setViaturaRenavam(v.renavam);
+    setViaturaAno(String(v.ano));
+    setViaturaChassi(v.renavamChassi);
     setViaturaAlocacao(v.alocacao);
     setViaturaKm(String(v.kmAtual));
     setViaturaProxRevisao(String(v.proximaRevisaoKm));
@@ -501,11 +493,11 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
     
     content += "--- CONTRATOS ---\n";
     contratos.forEach(c => {
-      content += `Contrato: ${c.numero} | Fornecedor: ${c.fornecedor} | Tipo: ${c.tipo} | Mensal: R$ ${c.valorMensal} | Vencimento: ${formatDate(c.fimVigencia)} | Status: ${c.status}\n`;
+      content += `Contrato: ${c.numeroContrato} | Fornecedor: ${c.empresa} | Tipo: ${c.tipo} | Mensal: R$ ${c.valorMensal} | Vencimento: ${formatDate(c.dataFim)} | Status: ${c.status}\n`;
     });
     content += "\n--- FROTA ---\n";
     viaturas.forEach(v => {
-      content += `Placa: ${v.placa} | Marca/Modelo: ${v.marca} ${v.modelo} | Ano: ${v.anoFabricacao} | Km Atual: ${v.kmAtual} | Próxima Revisão: ${v.proximaRevisaoKm} km | Status: ${v.status} ${v.destinacaoBaixa ? `(Destinação: ${v.destinacaoBaixa})` : ""}\n`;
+      content += `Placa: ${v.placa} | Marca/Modelo: ${v.marca} ${v.modelo} | Ano: ${v.ano} | Km Atual: ${v.kmAtual} | Próxima Revisão: ${v.proximaRevisaoKm} km | Status: ${v.status} ${v.destinacaoBaixa ? `(Destinação: ${v.destinacaoBaixa})` : ""}\n`;
     });
 
     const fileBlob = new Blob([content], { type: "text/plain;charset=utf-8" });
@@ -522,16 +514,16 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
   const contratosAtivos = contratos.filter(c => c.status === "Ativo");
   const totalCusteioMensal = contratosAtivos.reduce((sum, c) => sum + c.valorMensal, 0);
   const contratosAlerta = contratosAtivos.filter(c => {
-    const days = getDaysRemaining(c.fimVigencia);
+    const days = getDaysRemaining(c.dataFim);
     return days >= 0 && days <= 180;
   });
 
   // Tabela de Alertas (Lei 14.133/2021)
   const contratosFiltradosAlerta = contratosAtivos.filter(c => {
-    const days = getDaysRemaining(c.fimVigencia);
+    const days = getDaysRemaining(c.dataFim);
     return days >= 0 && days <= 180;
   }).map(c => {
-    const days = getDaysRemaining(c.fimVigencia);
+    const days = getDaysRemaining(c.dataFim);
     return {
       ...c,
       diasRestantes: days,
@@ -607,6 +599,9 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
         return dest.includes(`srte-${ufLower}`) || dest.includes(`srte/${ufLower}`) || dest.includes(`srte ${ufLower}`);
       });
 
+  const terrestres = viaturasNaoBaixadas.filter(v => v.categoria === 'Terrestre' || !v.categoria).length;
+  const aquaviarios = viaturasNaoBaixadas.filter(v => v.categoria === 'Aquaviário').length;
+
   return (
     <div className="space-y-6 font-sans select-text">
       
@@ -641,6 +636,18 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
           </div>
         </div>
         <div className="flex gap-2 self-stretch md:self-auto justify-end">
+          <button
+            onClick={() => { setActiveTab("contratos"); setSelectedViatura(null); }}
+            className={`flex-1 text-left px-5 py-3 rounded-xl transition cursor-pointer ${
+              activeTab === "contratos" 
+                ? "bg-[#003366] text-white shadow-xs" 
+                : "bg-transparent text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <span className="block text-xs font-black tracking-wider uppercase">Contratos da SRTE</span>
+            <span className={`block text-[10px] ${activeTab === "contratos" ? "text-blue-100" : "text-slate-400"}`}>Visualização de contratos alocados</span>
+          </button>
+
           <button 
             onClick={handleExportData}
             className="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 flex items-center gap-2 cursor-pointer shadow-xs transition"
@@ -938,298 +945,99 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
             </div>
           )}
 
-          {/* TAB 2: GESTÃO DE CONTRATOS */}
-          {activeTab === "contratos" && (
-            <div className="space-y-6 animate-in fade-in duration-150">
-              
-              {/* KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs text-center md:text-left">
-                  <span className="text-2xl font-black text-slate-900 font-mono block">{formatCurrency(totalCusteioMensal)}</span>
-                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Total Mensal (Custeio)</span>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs text-center md:text-left">
-                  <span className="text-2xl font-black text-slate-900 font-mono block">{contratosAtivos.length}</span>
-                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Contratos Ativos</span>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs text-center md:text-left">
-                  <span className={`text-2xl font-black font-mono block ${contratosAlerta.length > 0 ? "text-amber-600 animate-pulse" : "text-slate-900"}`}>{contratosAlerta.length}</span>
-                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Contratos em Alerta (≤180 dias)</span>
-                </div>
-              </div>
-
-              {/* Tabela de Alertas (Lei 14.133/2021) */}
-              <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
-                    <ShieldAlert className="w-4 h-4 text-amber-500" /> Tabela de Alertas de Vigência (Lei 14.133/2021)
-                  </h3>
-                  <span className="text-[10px] font-semibold text-slate-400">Exibição de contratos com vencimento em até 180 dias</span>
-                </div>
-
-                {contratosFiltradosAlerta.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-8 font-medium">Nenhum contrato em estado de alerta crítico de expiração.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-sm text-slate-800">
-                      <thead>
-                        <tr className="font-bold border-b border-[#002244]">
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Contrato</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Tipo</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Fornecedor</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Vencimento</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Dias Restantes</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações Recomendadas</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium">
-                        {contratosFiltradosAlerta.map(c => (
-                          <tr key={c.id} className="hover:bg-slate-50/50">
-                            <td className="p-4 align-middle font-bold text-slate-900">{c.numero}</td>
-                            <td className="p-4 align-middle">{c.tipo}</td>
-                            <td className="p-4 align-middle text-slate-500">{c.fornecedor}</td>
-                            <td className="p-4 align-middle font-mono">{formatDate(c.fimVigencia)}</td>
-                            <td className="p-4 align-middle text-right font-mono font-bold text-amber-600">{c.diasRestantes} dias</td>
-                            <td className="p-4 align-middle text-right">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                c.badge.color === "red" ? "bg-rose-100 text-rose-800" : "bg-amber-100 text-amber-800"
-                              }`}>
-                                {c.badge.text}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+            {/* TAB 2: CONTRATOS DA SRTE */}
+            {activeTab === "contratos" && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                    <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider">
+                      Contratos Alocados na {sr.nome}
+                    </h3>
                   </div>
-                )}
-              </div>
 
-              {/* Historical Consumption & general list */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Consumption History Table */}
-                <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4 lg:col-span-2">
-                  <h3 className="text-xs font-black uppercase text-slate-500 border-b border-slate-100 pb-3 tracking-wider">
-                    Histórico de Faturamento / Consumo Mensal
-                  </h3>
-                  
-                  {consumos.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-10 font-medium">Nenhum faturamento registrado até o momento.</p>
+                  {contratos.filter(c => c.uf === sr.uf).length === 0 ? (
+                    <p className="text-xs text-slate-400 text-center py-12 font-medium">Nenhum contrato alocado para esta regional.</p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse text-sm text-slate-800">
                         <thead>
                           <tr className="font-bold border-b border-[#002244]">
-                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Contrato</th>
-                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Mês/Ano</th>
-                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Valor</th>
-                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Variação vs. Mês Anterior</th>
-                            <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ação</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Número</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Fornecedor</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Mensal</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Total</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Vigência</th>
+                            <th className="p-4 font-semibold hover:bg-[#002244] hover:text-white transition-colors cursor-pointer">Status</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
-                          {consumos
-                            .sort((a, b) => {
-                              const [mA, yA] = a.mesAno.split("/").map(Number);
-                              const [mB, yB] = b.mesAno.split("/").map(Number);
-                              return (yB - yA) * 12 + (mB - mA); // Newest first
-                            })
-                            .map(item => {
-                              const contract = contratos.find(c => c.id === item.contratoId);
-                              return (
-                                <tr key={item.id} className="hover:bg-slate-50/50">
-                                  <td className="p-4 align-middle font-bold text-slate-900">{contract ? contract.numero : "Desconhecido"} ({contract?.tipo})</td>
-                                  <td className="p-4 align-middle font-mono">{item.mesAno}</td>
-                                  <td className="p-4 align-middle text-right font-mono">{formatCurrency(item.valor)}</td>
-                                  <td className="p-4 align-middle text-right font-mono">
-                                    {item.variacao === 0 ? (
-                                      <span className="text-slate-400">-</span>
-                                    ) : item.variacao > 0 ? (
-                                      <span className="text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-0.5 text-[10px]">
-                                        <TrendingUp className="w-3 h-3" /> +{item.variacao}%
-                                      </span>
-                                    ) : (
-                                      <span className="text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded font-bold inline-flex items-center gap-0.5 text-[10px]">
-                                        <TrendingDown className="w-3 h-3" /> {item.variacao}%
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="p-4 align-middle text-right">
-                                    <button 
-                                      onClick={() => handleDeleteConsumo(item.id)}
-                                      className="text-slate-400 hover:text-rose-600 transition cursor-pointer p-1"
-                                      title="Excluir lançamento"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
+                          {contratos.filter(c => c.uf === sr.uf).map(c => (
+                            <tr key={c.id} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="p-4 align-middle font-bold text-slate-900">
+                                <div className="flex items-center gap-1.5">
+                                  <FileText className="w-3.5 h-3.5 text-blue-600" />
+                                  {c.numeroContrato || 'N/A'}
+                                </div>
+                                <div className="text-[10px] font-normal text-slate-500 mt-1 max-w-xs truncate" title={c.objeto || ""}>{c.objeto || "-"}</div>
+                              </td>
+                              <td className="p-4 align-middle">
+                                <div className="font-semibold text-slate-800">{c.empresa || '-'}</div>
+                                <div className="text-[10px] text-slate-500">CNPJ: {c.cnpj || '-'}</div>
+                              </td>
+                              <td className="p-4 align-middle text-emerald-700 font-bold">
+                                {c.valorMensal ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.valorMensal) : '-'}
+                              </td>
+                              <td className="p-4 align-middle font-semibold">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(c.valorGlobal || 0)}
+                              </td>
+                              <td className="p-4 align-middle text-xs">
+                                <div className="flex items-center gap-1 text-slate-600"><Calendar className="w-3 h-3" /> Início: {c.dataInicio ? new Date(c.dataInicio).toLocaleDateString('pt-BR') : '-'}</div>
+                                <div className="flex items-center gap-1 text-slate-600 mt-0.5"><Calendar className="w-3 h-3 text-amber-500" /> Fim: {c.dataFim ? new Date(c.dataFim).toLocaleDateString('pt-BR') : '-'}</div>
+                              </td>
+                              <td className="p-4 align-middle">
+                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                                  c.status === "Ativo" ? "bg-emerald-100 text-emerald-800" :
+                                  c.status === "Suspenso" ? "bg-amber-100 text-amber-800" :
+                                  "bg-rose-100 text-rose-800"
+                                }`}>{c.status || 'Ativo'}</span>
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
                   )}
                 </div>
-
-                {/* Quick Add Consumption Form */}
-                <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
-                  <h3 className="text-xs font-black uppercase text-slate-500 border-b border-slate-100 pb-3 tracking-wider">
-                    Registrar Faturamento Mensal
-                  </h3>
-                  
-                  {contratosAtivos.length === 0 ? (
-                    <p className="text-xs text-slate-400 py-4">Cadastre contratos primeiro para lançar faturamento.</p>
-                  ) : (
-                    <form onSubmit={handleSaveConsumo} className="space-y-4 text-xs">
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Contrato:</label>
-                        <select 
-                          required
-                          value={consumoContratoId}
-                          onChange={e => setConsumoContratoId(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-800 focus:outline-hidden"
-                        >
-                          <option value="">Selecione o contrato...</option>
-                          {contratosAtivos.map(c => (
-                            <option key={c.id} value={c.id}>{c.numero} — {c.fornecedor} ({c.tipo})</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Mês/Ano:</label>
-                          <input 
-                            type="text" 
-                            placeholder="MM/AAAA"
-                            pattern="(0[1-9]|1[0-2])\/[0-9]{4}"
-                            required
-                            value={consumoMesAno}
-                            onChange={e => setConsumoMesAno(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-800 focus:outline-hidden font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Valor Faturado (R$):</label>
-                          <input 
-                            type="number" 
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            required
-                            value={consumoValor}
-                            onChange={e => setConsumoValor(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-blue-800 focus:outline-hidden font-mono"
-                          />
-                        </div>
-                      </div>
-
-                      <button 
-                        type="submit"
-                        className="w-full py-2 bg-blue-800 text-white rounded-lg font-bold hover:bg-blue-900 cursor-pointer shadow-2xs"
-                      >
-                        Salvar Lançamento
-                      </button>
-                    </form>
-                  )}
-                </div>
-
               </div>
-
-              {/* General contracts listing */}
-              <div className="bg-white rounded-3xl border border-slate-200 p-5 shadow-xs space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                  <h3 className="text-xs font-black uppercase text-slate-500 tracking-wider">
-                    Histórico Geral de Contratos Cadastrados
-                  </h3>
-                  <button 
-                    onClick={() => { resetContractForm(); setShowContractForm(true); }}
-                    className="px-3 py-1.5 bg-blue-800 hover:bg-blue-900 text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Novo Contrato
-                  </button>
-                </div>
-
-                {contratos.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-12 font-medium">Nenhum contrato cadastrado para esta regional.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-sm text-slate-800">
-                      <thead>
-                        <tr className="font-bold border-b border-[#002244]">
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Número</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Tipo</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Fornecedor</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Mensal</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Total</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Vigência</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status</th>
-                          <th className="p-4 font-semibold hover:bg-[#002244] transition-colors">Ações</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 font-medium">
-                        {contratos.map(c => (
-                          <tr key={c.id} className="hover:bg-slate-50/50">
-                            <td className="p-4 align-middle font-bold text-slate-900">{c.numero}</td>
-                            <td className="p-4 align-middle">{c.tipo}</td>
-                            <td className="p-4 align-middle text-slate-500">{c.fornecedor}</td>
-                            <td className="p-4 align-middle text-right font-mono">{formatCurrency(c.valorMensal)}</td>
-                            <td className="p-4 align-middle text-right font-mono">{formatCurrency(c.valorTotal)}</td>
-                            <td className="p-4 align-middle font-mono">{formatDate(c.inicioVigencia)} a {formatDate(c.fimVigencia)}</td>
-                            <td className="p-4 align-middle">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                c.status === "Ativo" ? "bg-emerald-100 text-emerald-800" :
-                                c.status === "Suspenso" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"
-                              }`}>
-                                {c.status}
-                              </span>
-                            </td>
-                            <td className="p-4 align-middle text-right flex justify-end ga">
-                              <button 
-                                onClick={() => handleEditContract(c)}
-                                className="p-1 text-slate-400 hover:text-blue-800 transition cursor-pointer"
-                                title="Editar contrato"
-                              >
-                                <Edit className="w-3.5 h-3.5" />
-                              </button>
-                              <button 
-                                onClick={() => handleDeleteContract(c.id)}
-                                className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
-                                title="Excluir contrato"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-
-            </div>
-          )}
+            )}
 
           {/* TAB 3: GESTÃO DE FROTA */}
           {activeTab === "frota" && (
             <div className="space-y-6 animate-in fade-in duration-150">
               
-              {/* KPIs */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Dashboard de Frota Multimodal - KPIs */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs text-center md:text-left flex flex-col justify-between">
+                  <div>
+                    <span className="text-2xl font-black text-slate-900 font-mono block">{viaturasNaoBaixadas.length}</span>
+                    <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Total de Veículos</span>
+                  </div>
+                  <div className="mt-3 flex gap-2 text-[10px] font-bold text-slate-500">
+                    <span className="flex items-center gap-1"><Car className="w-3 h-3" /> {terrestres} Terrestres</span>
+                    <span className="flex items-center gap-1"><Droplet className="w-3 h-3" /> {aquaviarios} Aquaviários</span>
+                  </div>
+                </div>
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs text-center md:text-left">
                   <span className="text-2xl font-black text-slate-900 font-mono block">{formatCurrency(custoMedioManutencao)}</span>
-                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Custo Médio de Manutenção / Viatura</span>
+                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Custo Méd. Manutenção</span>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs text-center md:text-left">
                   <span className="text-2xl font-black text-slate-900 font-mono block">{eficienciaMedia.toFixed(1)} km/L</span>
-                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Eficiência Média da Frota</span>
+                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Eficiência Terrestre</span>
                 </div>
                 <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs text-center md:text-left">
                   <span className={`text-2xl font-black font-mono block ${viaturasAlertaKm.length > 0 ? "text-amber-600 animate-pulse font-bold" : "text-slate-900"}`}>{viaturasAlertaKm.length}</span>
-                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Viaturas em Alerta de Revisão (&lt;1000 km)</span>
+                  <span className="text-[10px] font-black uppercase text-slate-400 mt-1 block tracking-wider">Em Alerta de Revisão (&lt;1000 km)</span>
                 </div>
               </div>
 
@@ -1285,7 +1093,7 @@ export default function SRTEDetailView({ sr, onBack, acordaos, comunicacoes, tce
                                 </td>
                                 <td className="p-4 align-middle">
                                   <div>{v.marca} {v.modelo}</div>
-                                  <span className="text-[9px] text-slate-400 font-mono block">Chassi: {v.chassi} | Ano: {v.anoFabricacao}</span>
+                                  <span className="text-[9px] text-slate-400 font-mono block">Chassi: {v.chassi} | Ano: {v.ano}</span>
                                 </td>
                                 <td className="p-4 align-middle">
                                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${

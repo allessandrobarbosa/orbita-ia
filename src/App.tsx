@@ -35,7 +35,8 @@ import {
   X,
   User,
   Plane,
-  ArrowUp
+  ArrowUp,
+  FileText
 } from "lucide-react";
 
 // User Access Profile Management Schema
@@ -47,6 +48,7 @@ export interface UserProfile {
   unidade?: string;
   role: string;
   email: string;
+  siape?: string;
   register: string;
   clearance: "ADMIN" | "ETHICS" | "AUDITOR" | "SRTE" | "PUBLIC" | "PENDING";
   allowedModules?: string[];
@@ -125,6 +127,7 @@ import EticaModule from "./components/EticaModule";
 import SrteModule from "./components/SrteModule";
 import CguModule from "./components/CguModule";
 import ScdpModule from "./components/ScdpModule";
+import ContratosModule from "./components/ContratosModule";
 // import logoImg from "./assets/images/orbita_logo.png";
 
 import {
@@ -234,7 +237,8 @@ export default function App() {
       rol: "ROL",
       srte: "SRTE",
       bi: "BI",
-      scdp: "SCDP"
+      scdp: "SCDP",
+      contratos: "CONTRATOS"
     };
 
     const mod = idToMod[tabId];
@@ -256,7 +260,7 @@ export default function App() {
   };
 
   // Checks privileges against active user context on actions
-  const checkPermission = (module: "TCU" | "ROL" | "ETHICS" | "SRTE" | "CGU"): boolean => {
+  const checkPermission = (module: "TCU" | "ROL" | "ETHICS" | "SRTE" | "CGU" | "CONTRATOS"): boolean => {
     if (currentUser.clearance === "ADMIN") return true;
 
     if (currentUser.allowedModules) {
@@ -1189,6 +1193,7 @@ export default function App() {
               { id: "dashboard", label: "INÍCIO", icon: LayoutDashboard, title: "Painel de Controle e Monitoramento" },
               { id: "tcu", label: "TCU", icon: Database, title: "Tribunal de Contas da União" },
               { id: "cgu", label: "CGU", icon: ShieldCheck, title: "Controladoria-Geral da União" },
+              { id: "contratos", label: "CONTRATOS", icon: FileText, title: "Gestão de Contratos Gerais" },
               { id: "rol", label: "ROL", icon: Users, title: "Gestão do Rol de Responsáveis" },
               { id: "scdp", label: "SCDP", icon: Plane, title: "Diárias e Passagens (SCDP)" },
               { id: "srte", label: "SRTEs", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
@@ -1464,6 +1469,10 @@ export default function App() {
 
                   {renderedTab === "scdp" && (
                     <ScdpModule />
+                  )}
+
+                  {renderedTab === "contratos" && (
+                    <ContratosModule />
                   )}
                 </>
               )}
@@ -2856,6 +2865,7 @@ export function AdminPanelModal({
                           { id: "BI", label: "BI & IA Preditiva" },
                           { id: "TCU", label: "TCU (Controle Externo)" },
                           { id: "CGU", label: "CGU (Controle Interno)" },
+                          { id: "CONTRATOS", label: "Contratos Gerais" },
                           { id: "ETHICS", label: "Comissão de Ética" },
                           { id: "ROL", label: "Rol de Responsáveis" },
                           { id: "SRTE", label: "Superintendências Regionais" }

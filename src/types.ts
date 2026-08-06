@@ -258,63 +258,140 @@ export interface CguPublishedReport {
   ultimaAtualizacao?: string; // YYYY-MM-DD HH:MM
 }
 
-// Interfaces para Gestão de Contratos e Consumo (SRTE)
+// Interfaces para Gestão de Contratos (SRTE) - Lei 14.133 e PNCP
 export interface Contrato {
   id: string;
-  srteId: string; // Referência para SuperintendenciaRegional.uf (ex: 'RJ', 'SP')
-  numero: string; // Ex: '12/2024'
-  tipo: string; // Ex: 'Vigilância', 'Limpeza', 'TI'
-  fornecedor: string;
-  valorTotal: number;
-  valorMensal: number;
-  inicioVigencia: string; // YYYY-MM-DD
-  fimVigencia: string; // YYYY-MM-DD
-  status: "Ativo" | "Encerrado" | "Suspenso";
+  uf: string; // Referência para SuperintendenciaRegional.uf (ex: 'RJ', 'SP')
+  numeroContrato: string;
+  empresa: string;
+  cnpj: string;
   objeto: string;
+  valorGlobal: number;
+  valorMensal: number;
+  dataInicio: string; // YYYY-MM-DD
+  dataFim: string; // YYYY-MM-DD
+  modalidade: string;
+  pncpId: string;
+  uasg: string;
+  linkPncp: string;
+  status: "Ativo" | "Encerrado" | "Suspenso" | string;
 }
 
 export interface ContratoConsumoMensal {
   id: string;
   contratoId: string;
-  mesAno: string; // MM/YYYY
-  valor: number;
-  variacao: number; // percentual de variação em relação ao mês anterior (ex: 5.4 ou -2.1)
+  mes: string; // YYYY-MM
+  valorConsumido: number;
+  faturaUrl: string;
 }
 
-// Interfaces para Gestão de Frota (SRTE)
+export interface ContratoFiscal {
+  id: string;
+  contratoId: string;
+  nome: string;
+  cpf: string;
+  tipo: string; // Gestor, Fiscal Técnico, Administrativo
+  portariaDesignacao: string;
+  dataInicio: string;
+  dataFim: string;
+  status: string;
+}
+
+export interface ContratoAditivo {
+  id: string;
+  contratoId: string;
+  numero: string;
+  tipo: string; // Acréscimo, Supressão, Prorrogação
+  valorAdicionado: number;
+  novaDataFim: string;
+  justificativa: string;
+  dataAssinatura: string;
+}
+
+export interface ContratoEmpenho {
+  id: string;
+  contratoId: string;
+  numeroEmpenho: string;
+  valorEmpenhado: number;
+  dataEmissao: string;
+  ptres: string;
+  fonteRecurso: string;
+}
+
+// Interfaces para Gestão de Frota Multimodal (SRTE)
 export interface Viatura {
   id: string;
-  srteId: string; // Referência para SuperintendenciaRegional.uf (ex: 'RJ', 'SP')
+  uf: string;
   placa: string;
   marca: string;
   modelo: string;
-  anoFabricacao: number;
-  chassi: string;
-  renavam: string;
-  alocacao: "Fiscalização" | "Administração";
+  ano: number;
+  tipo: string;
   kmAtual: number;
   proximaRevisaoKm: number;
-  status: "Ativo" | "Manutenção" | "Inativo" | "Baixado";
-  destinacaoBaixa?: string; // Preenchido se status for 'Baixado'
+  status: "Ativo" | "Manutenção" | "Inativo" | "Baixado" | string;
+  categoria: string; // Terrestre, Aquaviário
+  renavamChassi: string;
+  numeroMotor: string;
+  alocacao: string;
+  destinacaoBaixa?: string;
+}
+
+export interface FrotaCondutor {
+  id: string;
+  uf: string;
+  nome: string;
+  cpf: string;
+  cnhCategoria: string;
+  cnhVencimento: string;
+  arraisAmadorVencimento: string;
+  status: string;
+}
+
+export interface FrotaDiarioBordo {
+  id: string;
+  viaturaId: string;
+  condutorId: string;
+  condutorNome?: string;
+  dataSaida: string;
+  dataChegada: string;
+  odometroSaida: number;
+  odometroChegada: number;
+  missaoDestino: string;
+  observacoes: string;
+}
+
+export interface FrotaInfracao {
+  id: string;
+  viaturaId: string;
+  condutorId: string;
+  condutorNome?: string;
+  dataInfracao: string;
+  tipoInfracao: string;
+  valor: number;
+  statusPagamento: string;
+  prazoRecurso: string;
 }
 
 export interface ViaturaAbastecimento {
   id: string;
   viaturaId: string;
-  data: string; // YYYY-MM-DD
+  dataAbastecimento: string; // YYYY-MM-DD
   litros: number;
   km: number;
-  custo: number;
+  valorTotal: number;
+  posto: string;
 }
 
 export interface ViaturaManutencao {
   id: string;
   viaturaId: string;
-  tipo: string; // Ex: 'Preventiva', 'Corretiva'
-  data: string; // YYYY-MM-DD
-  custo: number;
+  tipoManutencao: string; // Ex: 'Preventiva', 'Corretiva'
+  dataManutencao: string; // YYYY-MM-DD
+  valor: number;
   kmManutencao: number;
   proximaRevisaoKm?: number;
+  descricao: string;
 }
 
 // ======================================================

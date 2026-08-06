@@ -1,0 +1,3 @@
+- [x] 1. Alterar `fetchContratosPncp` em `pncpService.ts` para usar a API `/api/search/`.
+- [x] 2. Criar função `fetchDetalheContratoPncp` em `pncpService.ts` para buscar o Fornecedor via API de Detalhes.
+- [x] 3. Atualizar `contratosRoutes.ts` para usar o novo formato do PncpContrato e chamar a API de Detalhes apenas para os contratos novos que serão inseridos no banco.
