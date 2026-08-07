@@ -12,6 +12,11 @@ export const pool = new pg.Pool({
   connectionTimeoutMillis: 2000,
 });
 
+// Trata desconexões ou reinícios do servidor PostgreSQL sem derrubar a aplicação Node.js
+pool.on("error", (err) => {
+  console.error("Conexão do PostgreSQL encerrada ou reconectando:", err.message);
+});
+
 import * as Seeds from "../data/seed_db";
 import { SEED_COMUNICACOES } from "../data/seed_comunicacoes";
 import { SEED_CGU } from "../data/seed_cgu";
