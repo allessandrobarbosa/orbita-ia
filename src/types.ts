@@ -275,7 +275,29 @@ export interface Contrato {
   uasg: string;
   linkPncp: string;
   status: "Ativo" | "Encerrado" | "Suspenso" | string;
+  municipio?: string;
+  numeroProcesso?: string;
+  categoriaProcesso?: string;
+  tipoContrato?: string;
+  receitaDespesa?: string;
+  dataAssinatura?: string;
+  dataDivulgacaoPncp?: string;
+  pncpContratacaoId?: string;
+  frutoAdesao?: boolean;
+  temRemanejamento?: boolean;
+  fonteDados?: string;
+  tipoFornecedor?: string;
 }
+
+export interface ContratoArquivo {
+  id: string;
+  contratoId: string;
+  nomeArquivo: string;
+  tipoDocumento?: string;
+  urlDownload: string;
+  dataPublicacao?: string;
+}
+
 
 export interface ContratoConsumoMensal {
   id: string;

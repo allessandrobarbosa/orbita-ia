@@ -250,23 +250,147 @@ export async function fetchContratosPncpPorUG(cnpjOrgao: string, codigoUg: strin
   }
 }
 
-export async function fetchDetalheContratoPncp(cnpjOrgao: string, ano: string, sequencial: string): Promise<{nome: string, cnpj: string}> {
+export interface PncpDetalheContrato {
+  nome: string;
+  cnpj: string;
+  tipoPessoaFornecedor?: string;
+  numeroProcesso?: string;
+  categoriaProcesso?: string;
+  tipoContrato?: string;
+  receitaDespesa?: string;
+  dataAssinatura?: string;
+  dataDivulgacaoPncp?: string;
+  pncpContratacaoId?: string;
+  frutoAdesao?: boolean;
+  temRemanejamento?: boolean;
+  municipio?: string;
+  fonteDados?: string;
+}
+
+async function safeJsonFetch(url: string): Promise<any> {
   try {
-    const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}`;
     const response = await fetch(url, {
       method: "GET",
       headers: { "Accept": "application/json" }
     });
-    if (!response.ok) return { nome: "Não informado", cnpj: "" };
-    const data = await response.json() as any;
+    if (!response.ok) return null;
+    const text = await response.text();
+    if (!text || !text.trim()) return null;
+    return JSON.parse(text);
+  } catch (e) {
+    return null;
+  }
+}
+
+export async function fetchDetalheContratoPncp(cnpjOrgao: string, ano: string | number, sequencial: string | number): Promise<PncpDetalheContrato> {
+  try {
+    const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}`;
+    const data = await safeJsonFetch(url);
+    if (!data) return { nome: "Não informado", cnpj: "" };
+    
     return {
       nome: data.nomeRazaoSocialFornecedor || "Não informado",
-      cnpj: data.niFornecedor || ""
+      cnpj: data.niFornecedor || "",
+      tipoPessoaFornecedor: data.tipoPessoaFornecedor === "PF" ? "Pessoa física" : data.tipoPessoaFornecedor === "PJ" ? "Pessoa jurídica" : (data.tipoPessoaFornecedor || ""),
+      numeroProcesso: data.numeroProcesso || "",
+      categoriaProcesso: data.categoriaProcesso?.nome || data.categoriaProcesso || "",
+      tipoContrato: data.tipoContrato?.nome || data.tipoContrato || "",
+      receitaDespesa: data.receitaDespesa || "Despesa",
+      dataAssinatura: data.dataAssinatura || "",
+      dataDivulgacaoPncp: data.dataPublicacaoPncp || data.dataDivulgacaoPncp || "",
+      pncpContratacaoId: data.numeroContratacaoPncp || "",
+      frutoAdesao: Boolean(data.frutoAdesao),
+      temRemanejamento: Boolean(data.temRemanejamento),
+      municipio: data.unidadeOrgao?.municipioNome || data.orgaoEntidade?.municipioNome || "",
+      fonteDados: "Contratos.gov.br"
     };
   } catch (e) {
     return { nome: "Erro ao buscar fornecedor", cnpj: "" };
   }
 }
+
+export async function fetchArquivosContratoPncp(cnpjOrgao: string, ano: string | number, sequencial: string | number): Promise<any[]> {
+  try {
+    const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}/arquivos`;
+    const data = await safeJsonFetch(url);
+    if (!Array.isArray(data)) return [];
+    return data.map((item: any, idx: number) => ({
+      id: item.id || `ARQ-${idx}-${Date.now()}`,
+      nomeArquivo: item.titulo || item.nomeArquivo || `Documento_${idx + 1}.pdf`,
+      tipoDocumento: item.tipoDocumento?.nome || item.tipoDocumento || "Contrato Anexo",
+      urlDownload: item.url || `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}/arquivos/${item.sequencialDocumento || item.id}/download`,
+      dataPublicacao: item.dataPublicacao || item.dataInclusao || ""
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function fetchEmpenhosContratoPncp(cnpjOrgao: string, ano: string | number, sequencial: string | number): Promise<any[]> {
+  try {
+    const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}/empenhos`;
+    const res = await safeJsonFetch(url);
+    if (!res) return [];
+    const list = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+    return list.map((item: any, idx: number) => ({
+      id: item.id || `EMP-${idx}-${Date.now()}`,
+      numeroEmpenho: item.numeroEmpenho || item.numero || `NE-${idx + 1}`,
+      valorEmpenhado: parseFloat(item.valorTotal || item.valorEmpenhado || item.valor || 0),
+      dataEmissao: item.dataEmissaoEmpenho || item.dataEmissao || item.dataSituacaoEmpenho || "",
+      ptres: item.numeroPlanoInterno || item.ptres || "",
+      fonteRecurso: item.codigoNaturezaDespesa || item.fonteRecurso || item.fonte || "",
+      indicadorEmenda: Boolean(item.codigoEmenda || item.indicadorEmenda),
+      situacao: item.situacaoEmpenhoNome || item.situacao || "Empenhado"
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function fetchAditivosContratoPncp(cnpjOrgao: string, ano: string | number, sequencial: string | number): Promise<any[]> {
+  try {
+    let res = await safeJsonFetch(`https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}/termos`);
+    if (!res) {
+      res = await safeJsonFetch(`https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}/termos-aditivos`);
+    }
+    if (!res) return [];
+    const list = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+    return list.map((item: any, idx: number) => ({
+      id: item.id || `ADT-${idx}-${Date.now()}`,
+      numero: item.numeroTermoAditivo || item.numeroTermoContrato || item.numero || `${idx + 1}º Termo Aditivo`,
+      tipo: item.tipoTermoAditivo?.nome || item.tipoTermoAditivo || item.tipoTermoContratoNome || item.objeto || "Aditivo de Contrato",
+      valorAdicionado: parseFloat(item.valorAdicionado || item.valorGlobalNovo || item.valorGlobal || 0),
+      novaDataFim: item.dataFimVigencia || "",
+      justificativa: item.justificativa || item.objeto || "",
+      dataAssinatura: item.dataAssinatura || ""
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function fetchHistoricoContratoPncp(cnpjOrgao: string, ano: string | number, sequencial: string | number): Promise<any[]> {
+  try {
+    const url = `https://pncp.gov.br/api/pncp/v1/orgaos/${cnpjOrgao}/contratos/${ano}/${sequencial}/historico`;
+    const res = await safeJsonFetch(url);
+    if (!res) return [];
+    const list = Array.isArray(res) ? res : (Array.isArray(res.data) ? res.data : []);
+    return list.map((item: any, idx: number) => ({
+      id: `HIST-${idx}-${Date.now()}`,
+      evento: item.tipoLogManutencaoNome ? `${item.tipoLogManutencaoNome} - ${item.categoriaLogManutencaoNome || ''}` : (item.descricao || "Evento no PNCP"),
+      nome: item.tituloDocumentoContrato || item.tituloDocumentoTermoContrato || item.usuarioNome || "Sistema PNCP",
+      dataHora: item.logManutencaoDataInclusao || item.dataInclusao || "",
+      justificativa: item.justificativa || "Exigência Legal"
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
+
+
+
+
 function extractUf(nome: string): string {
   const ufMatches = nome.match(/NO ESTADO D[OEA]\s+([A-Z]{2})\b/i) || nome.match(/\b([A-Z]{2})\b/);
   if (ufMatches && ufMatches[1] && ufMatches[1].length === 2 && ufMatches[1].toUpperCase() !== 'DO' && ufMatches[1].toUpperCase() !== 'DA') {
@@ -373,7 +497,7 @@ export async function fetchAllContratosSraParaMte(): Promise<PncpContrato[]> {
         }
 
         // Renomeia a unidade orçamentária para ficar claro no painel que é um contrato da SRA
-        contrato.unidadeOrcamentaria = contrato.unidadeOrcamentaria || {};
+        contrato.unidadeOrcamentaria = contrato.unidadeOrcamentaria || { codigoUnidade: "", nomeUnidade: "" };
         contrato.unidadeOrcamentaria.nomeUnidade = `SRA/${ufContrato} (MGI p/ MTE)`;
         
         contratosValidos.push(contrato);

@@ -344,8 +344,26 @@ CREATE TABLE IF NOT EXISTS contratos (
   pncp_id VARCHAR(255),
   uasg VARCHAR(50),
   link_pncp TEXT,
-  status VARCHAR(100) DEFAULT 'Ativo'
+  status VARCHAR(100) DEFAULT 'Ativo',
+  municipio VARCHAR(255),
+  numero_processo VARCHAR(100),
+  categoria_processo VARCHAR(100),
+  tipo_contrato VARCHAR(100),
+  receita_despesa VARCHAR(50),
+  data_assinatura VARCHAR(50),
+  data_divulgacao_pncp VARCHAR(50),
+  pncp_contratacao_id VARCHAR(255),
+  fruto_adesao BOOLEAN DEFAULT FALSE,
+  tem_remanejamento BOOLEAN DEFAULT FALSE,
+  fonte_dados VARCHAR(100),
+  tipo_fornecedor VARCHAR(50)
 );
+
+CREATE INDEX IF NOT EXISTS idx_contratos_numero ON contratos(numero_contrato);
+CREATE INDEX IF NOT EXISTS idx_contratos_empresa ON contratos(empresa);
+CREATE INDEX IF NOT EXISTS idx_contratos_uf ON contratos(uf);
+CREATE INDEX IF NOT EXISTS idx_contratos_status ON contratos(status);
+CREATE INDEX IF NOT EXISTS idx_contratos_datainicio ON contratos(data_inicio);
 
 CREATE TABLE IF NOT EXISTS contratos_fiscais (
   id VARCHAR(255) PRIMARY KEY,
@@ -377,7 +395,9 @@ CREATE TABLE IF NOT EXISTS contratos_empenhos (
   valor_empenhado NUMERIC(15, 2),
   data_emissao VARCHAR(50),
   ptres VARCHAR(50),
-  fonte_recurso VARCHAR(50)
+  fonte_recurso VARCHAR(50),
+  indicador_emenda BOOLEAN DEFAULT FALSE,
+  situacao VARCHAR(100)
 );
 
 CREATE TABLE IF NOT EXISTS contratos_consumo_mensal (
@@ -387,6 +407,16 @@ CREATE TABLE IF NOT EXISTS contratos_consumo_mensal (
   valor_consumido NUMERIC(15, 2),
   fatura_url TEXT
 );
+
+CREATE TABLE IF NOT EXISTS contratos_arquivos (
+  id VARCHAR(255) PRIMARY KEY,
+  contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+  nome_arquivo VARCHAR(255),
+  tipo_documento VARCHAR(100),
+  url_download TEXT,
+  data_publicacao VARCHAR(50)
+);
+
 
 -- MÓDULO VIATURAS E FROTA MULTIMODAL
 CREATE TABLE IF NOT EXISTS viaturas (
