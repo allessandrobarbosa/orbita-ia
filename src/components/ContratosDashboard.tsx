@@ -18,8 +18,11 @@ interface DashboardData {
   graficoModalidade?: { modalidade: string; count: string; total_valor: string }[];
   graficoTipoServico?: { tipo_servico: string; count: string; total_valor: string }[];
 }
+interface ContratosDashboardProps {
+  onFilterClick?: (faixaVencimento: string) => void;
+}
 
-export default function ContratosDashboard() {
+export default function ContratosDashboard({ onFilterClick }: ContratosDashboardProps = {}) {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -200,14 +203,15 @@ export default function ContratosDashboard() {
             return (
               <div 
                 key={idx} 
-                className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
+                onClick={() => onFilterClick && onFilterClick(item.faixa_vencimento)}
+                className={`p-4 rounded-xl border flex flex-col justify-between transition-all cursor-pointer hover:shadow-md ${
                   isCritico 
-                    ? 'bg-rose-50/60 border-rose-200 hover:border-rose-300' 
+                    ? 'bg-rose-50/60 border-rose-200 hover:border-rose-400' 
                     : isAtencao 
-                    ? 'bg-amber-50/60 border-amber-200 hover:border-amber-300' 
+                    ? 'bg-amber-50/60 border-amber-200 hover:border-amber-400' 
                     : isPlan 
-                    ? 'bg-blue-50/60 border-blue-200 hover:border-blue-300' 
-                    : 'bg-slate-50 border-slate-200'
+                    ? 'bg-blue-50/60 border-blue-200 hover:border-blue-400' 
+                    : 'bg-slate-50 border-slate-200 hover:border-slate-400'
                 }`}
               >
                 <div>

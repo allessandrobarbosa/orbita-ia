@@ -92,7 +92,7 @@ router.get("/contratos", async (req, res) => {
     const {
       page, limit, sort = "data_inicio", order = "DESC",
       numeroContrato, empresa, cnpj, objeto, modalidade, status, uf, origem, uasg, ano,
-      periodoInicio, periodoFim, numeroProcesso, categoriaProcesso
+      periodoInicio, periodoFim, numeroProcesso, categoriaProcesso, faixaVencimento
     } = req.query;
 
     let q = "SELECT * FROM contratos WHERE 1=1";
@@ -128,6 +128,45 @@ router.get("/contratos", async (req, res) => {
     if (ano) { q += ` AND LEFT(data_inicio, 4) = $${paramIdx++}`; params.push(String(ano)); }
     if (periodoInicio) { q += ` AND data_inicio >= $${paramIdx++}`; params.push(periodoInicio); }
     if (periodoFim) { q += ` AND data_inicio <= $${paramIdx++}`; params.push(periodoFim); }
+
+    if (faixaVencimento) {
+      const condition = `
+        CASE 
+          WHEN data_fim IS NULL OR data_fim = '' THEN 'Sem Data Fim'
+          WHEN (
+            CASE 
+              WHEN data_fim ~ '^\\d{4}-\\d{2}-\\d{2}' THEN data_fim::date
+              WHEN data_fim ~ '^\\d{2}/\\d{2}/\\d{4}' THEN to_date(data_fim, 'DD/MM/YYYY')
+              ELSE NULL
+            END
+          ) < CURRENT_DATE THEN 'Vencidos'
+          WHEN (
+            CASE 
+              WHEN data_fim ~ '^\\d{4}-\\d{2}-\\d{2}' THEN data_fim::date
+              WHEN data_fim ~ '^\\d{2}/\\d{2}/\\d{4}' THEN to_date(data_fim, 'DD/MM/YYYY')
+              ELSE NULL
+            END
+          ) <= CURRENT_DATE + INTERVAL '30 days' THEN 'Até 30 dias (Crítico)'
+          WHEN (
+            CASE 
+              WHEN data_fim ~ '^\\d{4}-\\d{2}-\\d{2}' THEN data_fim::date
+              WHEN data_fim ~ '^\\d{2}/\\d{2}/\\d{4}' THEN to_date(data_fim, 'DD/MM/YYYY')
+              ELSE NULL
+            END
+          ) <= CURRENT_DATE + INTERVAL '90 days' THEN '31 a 90 dias (Atenção)'
+          WHEN (
+            CASE 
+              WHEN data_fim ~ '^\\d{4}-\\d{2}-\\d{2}' THEN data_fim::date
+              WHEN data_fim ~ '^\\d{2}/\\d{2}/\\d{4}' THEN to_date(data_fim, 'DD/MM/YYYY')
+              ELSE NULL
+            END
+          ) <= CURRENT_DATE + INTERVAL '180 days' THEN '91 a 180 dias (Planejamento)'
+          ELSE 'Mais de 180 dias (Vigente)'
+        END = $${paramIdx++}
+      `;
+      q += ` AND (${condition})`;
+      params.push(faixaVencimento);
+    }
 
     const countRes = await pool.query(`SELECT COUNT(*) FROM (${q}) as sub`, params);
     const total = parseInt(countRes.rows[0].count, 10);

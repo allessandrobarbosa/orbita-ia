@@ -133,6 +133,17 @@ export default function DashboardOverview({
       accent: "border-t-4 border-l-0 border-purple-600",
       bg: "bg-white",
       hoverRing: "hover:ring-2 hover:ring-purple-500/20"
+    },
+    {
+      id: "contratos",
+      title: "Gestão de Contratos",
+      acronym: "CONTRATOS",
+      desc: "Painel centralizado de contratos gerais do Ministério, integração com o PNCP e alertas de vencimento/prorrogação.",
+      indicator: "Contratos Integrados",
+      icon: FileText,
+      accent: "border-t-4 border-l-0 border-amber-600",
+      bg: "bg-white",
+      hoverRing: "hover:ring-2 hover:ring-amber-500/20"
     }
   ].filter(module => hasModulePermission(module.id));
 

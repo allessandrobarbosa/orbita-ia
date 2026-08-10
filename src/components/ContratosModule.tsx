@@ -11,6 +11,7 @@ import ContratoDetailModal from './ContratoDetailModal';
 export default function ContratosModule() {
   const [activeSubTab, setActiveSubTab] = useState<"contratos" | "dashboard">("contratos");
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
+  const [initialListFilter, setInitialListFilter] = useState<string | undefined>(undefined);
 
   const [isSyncingPncp, setIsSyncingPncp] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -211,7 +212,14 @@ export default function ContratosModule() {
 
       {/* RENDERIZAÇÃO CONTEÚDO SUB-ABAS */}
       <div key={refreshKey}>
-        {activeSubTab === "dashboard" && <ContratosDashboard />}
+        {activeSubTab === "dashboard" && (
+          <ContratosDashboard 
+            onFilterClick={(faixaVencimento) => {
+              setInitialListFilter(faixaVencimento);
+              setActiveSubTab("contratos");
+            }} 
+          />
+        )}
         
         {activeSubTab === "contratos" && (
           <ContratosList
@@ -220,6 +228,7 @@ export default function ContratosModule() {
             onDeleteContract={handleDeleteContract}
             onSyncPncp={handleSyncPncp}
             isSyncingPncp={isSyncingPncp}
+            initialFaixaVencimento={initialListFilter}
           />
         )}
       </div>

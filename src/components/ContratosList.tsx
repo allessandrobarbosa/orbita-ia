@@ -12,6 +12,7 @@ interface ContratosListProps {
   onDeleteContract: (id: string) => void;
   onSyncPncp: () => void;
   isSyncingPncp: boolean;
+  initialFaixaVencimento?: string;
 }
 
 export default function ContratosList({
@@ -19,7 +20,8 @@ export default function ContratosList({
   onEditContract,
   onDeleteContract,
   onSyncPncp,
-  isSyncingPncp
+  isSyncingPncp,
+  initialFaixaVencimento
 }: ContratosListProps) {
 
   const [data, setData] = useState<Contrato[]>([]);
@@ -42,10 +44,11 @@ export default function ContratosList({
     periodoInicio: "",
     periodoFim: "",
     numeroProcesso: "",
-    categoriaProcesso: ""
+    categoriaProcesso: "",
+    faixaVencimento: initialFaixaVencimento || ""
   });
 
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(!!initialFaixaVencimento);
 
   const fetchContratos = useCallback(async () => {
     setLoading(true);
@@ -122,7 +125,8 @@ export default function ContratosList({
       periodoInicio: "",
       periodoFim: "",
       numeroProcesso: "",
-      categoriaProcesso: ""
+      categoriaProcesso: "",
+      faixaVencimento: ""
     });
   };
 
@@ -293,6 +297,23 @@ export default function ContratosList({
                 placeholder="Busca no objeto..."
                 className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Faixa de Vencimento</label>
+              <select
+                name="faixaVencimento"
+                value={filters.faixaVencimento}
+                onChange={handleFilterChange}
+                className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">TODAS AS FAIXAS</option>
+                <option value="Mais de 180 dias (Vigente)">Mais de 180 dias (Vigente)</option>
+                <option value="91 a 180 dias (Planejamento)">91 a 180 dias (Planejamento)</option>
+                <option value="31 a 90 dias (Atenção)">31 a 90 dias (Atenção)</option>
+                <option value="Até 30 dias (Crítico)">Até 30 dias (Crítico)</option>
+                <option value="Vencidos">Vencidos</option>
+              </select>
             </div>
 
 
