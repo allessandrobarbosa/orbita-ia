@@ -250,26 +250,7 @@ export function loadDatabase() {
       dataModified = true;
     }
 
-    if (data.viagensScdp && Array.isArray(data.viagensScdp)) {
-      data.viagensScdp.forEach((item: any) => {
-        let modified = false;
-        if (!item.siapeViajante) {
-          item.siapeViajante = getSiapeAndEmail(item.nomeViajante).siape;
-          modified = true;
-        }
-        if (!item.emailViajante || item.emailViajante.includes("@mte.gov.br")) {
-          item.emailViajante = getSiapeAndEmail(item.nomeViajante).email;
-          modified = true;
-        }
-        if (!item.motivoViagem) {
-          item.motivoViagem = "Fiscalização em campo de denúncias trabalhistas e verificação de conformidade de jornadas.";
-          modified = true;
-        }
-        if (modified) {
-          dataModified = true;
-        }
-      });
-    }
+
 
     if (dataModified) {
       fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), "utf-8");

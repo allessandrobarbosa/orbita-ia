@@ -325,7 +325,12 @@ CREATE TABLE IF NOT EXISTS scdp_viagens (
   siafi_detalhes_status VARCHAR(255),
   siafi_confirmado BOOLEAN,
   siafi_scdp_divergencia BOOLEAN,
-  ultima_atualizacao VARCHAR(50)
+  ultima_atualizacao VARCHAR(50),
+  siafi_empenho VARCHAR(255),
+  siafi_ob VARCHAR(255),
+  sigepe_lotacao VARCHAR(255),
+  score_risco_ia VARCHAR(50),
+  justificativa_ia TEXT
 );
 
 -- MÓDULO CONTRATOS (Atualizado Lei 14.133 e PNCP)
