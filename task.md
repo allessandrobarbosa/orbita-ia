@@ -6,11 +6,11 @@
 - [x] Inicializar projeto frontend em Vue 3 + Vite (`orbita-csharp-vue/frontend`).
 
 ## Passo 2: Refatoração Piloto - Módulo Viaturas
-- [ ] Backend: Configurar Entity Framework Core e Models para Viaturas.
-- [ ] Backend: Criar Repository e Controller de Viaturas (unificando lógica comum).
-- [ ] Frontend: Configurar Vue Router, Pinia e layout base (Tailwind).
-- [ ] Frontend: Criar views e componentes de Viaturas.
+- [x] Backend: Configurar Entity Framework Core e Models para Viaturas.
+- [x] Backend: Criar Repository e Controller de Viaturas (unificando lógica comum).
+- [x] Frontend: Configurar Vue Router, Pinia e layout base (Tailwind).
+- [x] Frontend: Criar views e componentes de Viaturas.
 
 ## Passo 3: Validação
-- [ ] Testar API do piloto localmente.
-- [ ] Confirmar integridade com o banco de dados.
+- [x] Testar API do piloto localmente.
+- [x] Confirmar integridade com o banco de dados.
