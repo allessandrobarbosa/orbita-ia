@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -2282,9 +2282,9 @@ export default function TcuComunicacoes({
  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors no-print cursor-pointer hover: transition-colors w-10"></th>
  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Ofício / Comunicação</th>
  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Destinatário MTE</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Expedição</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Situação</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors text-center">Processo</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors text-center">Expedição</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors text-center">Situação</th>
  </tr>
  </thead>
  <tbody className="divide-y divide-slate-100 text-xs">

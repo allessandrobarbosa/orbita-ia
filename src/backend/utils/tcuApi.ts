@@ -77,20 +77,21 @@ export async function fetchAcordaoCompleto(
     }
 
     const { Readable } = await import("stream");
+    const { pipeline } = await import("stream/promises");
     const fileStream = fs.createWriteStream(inProgressPath);
 
-    await new Promise<void>((resolve, reject) => {
-      Readable.fromWeb(response.body as any)
-        .pipe(fileStream)
-        .on("finish", () => {
-          fileStream.close();
-          resolve();
-        })
-        .on("error", (err: Error) => {
-          fileStream.close();
-          reject(err);
-        });
-    });
+    try {
+      await pipeline(
+        Readable.fromWeb(response.body as any),
+        fileStream
+      );
+    } catch (err) {
+      fileStream.close();
+      if (fs.existsSync(inProgressPath)) {
+        fs.unlinkSync(inProgressPath);
+      }
+      throw err;
+    }
 
     fs.renameSync(inProgressPath, tempPath);
 

@@ -26,6 +26,14 @@ export default function RolReportsModal({
 
   // Gera dados tabulares baseados no tipo e filtros
   const generateData = () => {
+    const safeFormat = (dStr: string | null | undefined, defaultText = "-") => {
+      if (!dStr) return defaultText;
+      const parts = dStr.split("T")[0].split("-").map(Number);
+      if (parts.length < 3 || parts.some(isNaN)) return defaultText;
+      const [y, m, d] = parts;
+      return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+    };
+
     let data: any[] = [];
 
     if (reportType === "dirigentes") {
@@ -39,8 +47,8 @@ export default function RolReportsModal({
         "Cargo": m.nome_cargo,
         "Unidade": m.sigla_unidade,
         "Vínculo": m.is_substituto ? "Substituto" : "Titular",
-        "Início": m.data_inicio ? new Date(m.data_inicio).toLocaleDateString("pt-BR") : "-",
-        "Fim": m.data_fim ? new Date(m.data_fim).toLocaleDateString("pt-BR") : "Atual",
+        "Início": safeFormat(m.data_inicio),
+        "Fim": safeFormat(m.data_fim, "Atual"),
       }));
     } else if (reportType === "afastamentos") {
       let filtered = afastamentos;
@@ -58,8 +66,8 @@ export default function RolReportsModal({
           "Dirigente": m ? m.nome_completo : "Desconhecido",
           "Unidade": m ? m.sigla_unidade : "-",
           "Motivo": a.motivo,
-          "Início": new Date(a.data_inicio).toLocaleDateString("pt-BR"),
-          "Fim": new Date(a.data_fim).toLocaleDateString("pt-BR"),
+          "Início": safeFormat(a.data_inicio),
+          "Fim": safeFormat(a.data_fim),
           "Ato Autorização": a.ato_autorizacao || "-",
         };
       });
@@ -78,8 +86,8 @@ export default function RolReportsModal({
         return {
           "Tipo/Motivo": a.motivo,
           "Dirigente": m ? m.nome_completo : "Desconhecido",
-          "Início": new Date(a.data_inicio).toLocaleDateString("pt-BR"),
-          "Fim": new Date(a.data_fim).toLocaleDateString("pt-BR"),
+          "Início": safeFormat(a.data_inicio),
+          "Fim": safeFormat(a.data_fim),
         };
       });
     } else if (reportType === "tcu") {
@@ -87,12 +95,17 @@ export default function RolReportsModal({
       const yearStart = new Date(parseInt(ano), 0, 1);
       const yearEnd = new Date(parseInt(ano), 11, 31);
 
-      const parseDate = (dStr: string) => {
-        if (!dStr) return new Date();
-        const [y, m, d] = dStr.split("T")[0].split("-").map(Number);
+      const parseDate = (dStr: string | null | undefined, defaultDate?: Date) => {
+        if (!dStr) return defaultDate || new Date();
+        const parts = dStr.split("T")[0].split("-").map(Number);
+        if (parts.length < 3 || parts.some(isNaN)) return defaultDate || new Date();
+        const [y, m, d] = parts;
         return new Date(y, m - 1, d);
       };
-      const fmtManual = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      const fmtManual = (d: Date) => {
+        if (isNaN(d.getTime())) return "-";
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+      };
 
       const activeInYear = (inicioStr: string, fimStr: string | null) => {
         const inicio = parseDate(inicioStr);
@@ -418,10 +431,10 @@ export default function RolReportsModal({
             {reportData.length > 0 ? (
               <div className="flex-1 overflow-auto border border-slate-200 rounded-xl bg-white min-h-[300px] shadow-inner">
                 <table className="w-full text-left border-collapse text-sm text-slate-800">
-                  <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244]">
-                    <tr>
+                  <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+                    <tr className="font-semibold backdrop-blur-sm border-b border-[#002244]">
                       {Object.keys(reportData[0]).map((h, i) => (
-                        <th key={h} className="p-3 font-bold text-slate-600 uppercase tracking-wider" style={{ width: [100, 150, 100, 150, 150, 250, 120][i] || 'auto' }}>
+                        <th key={h} className="p-4 font-semibold hover:bg-[#002244] transition-colors uppercase tracking-wider" style={{ width: [100, 150, 100, 150, 150, 250, 120][i] || 'auto' }}>
                           {h}
                         </th>
                       ))}

@@ -2047,7 +2047,6 @@ export default function TcuMonitoramento({
  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
  <span className="font-semibold text-slate-700 uppercase tracking-wide">Monitoramento de Acórdãos: {filteredAcordaos.length} registros</span>
  </div>
- <span className="text-slate-400 text-xs uppercase tracking-wider">Rolagem Vertical Contínua & Rolagem Lateral Ativas</span>
  </div>
 
  <div className="overflow-x-auto overflow-y-auto max-h-[550px] custom-com-scroll-container bg-slate-50/20">
@@ -2058,8 +2057,7 @@ export default function TcuMonitoramento({
  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Título do Acórdão</th>
  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Processo TCU</th>
  <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Sessão / Data</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Status / Resumo</th>
- <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors">Ações</th>
+ <th className="p-4 font-semibold hover:bg-[#002244] transition-colors cursor-pointer hover: transition-colors text-center">Ações</th>
  </tr>
  </thead>
 
@@ -2180,19 +2178,6 @@ export default function TcuMonitoramento({
  {/* Session Date */}
  <td className="p-4 align-middle text-slate-600 text-sm">{ac.DATASESSAO}</td>
 
- {/* Status / Resumo */}
- <td className="px-4 py-3 align-middle">
- {ac.STATUS_MONITORAMENTO === "Cumprido" ? (
- <span className="badge-gov badge-gov-success">Cumprido</span>
- ) : isLate ? (
- <span className="badge-gov badge-gov-danger">Em Atraso</span>
- ) : ac.STATUS_MONITORAMENTO === "Em Análise" ? (
- <span className="badge-gov badge-gov-info">{ac.STATUS_MONITORAMENTO}</span>
- ) : (
- <span className="badge-gov badge-gov-warning">{ac.STATUS_MONITORAMENTO || "Pendente"}</span>
- )}
- </td>
-
  {/* Ações */}
  <td className="px-4 py-3 align-middle text-center">
  <button
@@ -2211,7 +2196,7 @@ export default function TcuMonitoramento({
  {/* Detail panel expansion */}
  {isExpanded && (
  <tr>
- <td colSpan={6} className="bg-slate-50/25 px-8 py-6 border-b border-slate-200">
+ <td colSpan={5} className="bg-slate-50/25 px-8 py-6 border-b border-slate-200">
  <div className="space-y-4">
                   {editRowId === ac.KEY && (
                     <div className="mb-4 animate-slide-down border border-slate-200 rounded-xl overflow-hidden shadow-sm">

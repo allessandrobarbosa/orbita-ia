@@ -46,41 +46,49 @@ router.post("/comunicacoes/sync-local", async (req, res) => {
       const commaCount = (headerLine.match(/,/g) || []).length;
       const tabCount = (headerLine.match(/\t/g) || []).length;
       let delimiter = ",";
+      let isDoubleQuoteDelimiter = false;
       if (semiCount > commaCount && semiCount > tabCount) delimiter = ";";
       else if (tabCount > commaCount && tabCount > semiCount) delimiter = "\t";
+      else if (semiCount === 0 && commaCount === 0 && tabCount === 0 && content.includes('""')) {
+        isDoubleQuoteDelimiter = true;
+      }
 
       // Parse CSV Robust (same logic as frontend)
-      const rows: string[][] = [];
-      let currentField = "";
-      let currentRow: string[] = [];
-      let inQuotes = false;
-      for (let i = 0; i < content.length; i++) {
-        const char = content[i];
-        const nextChar = content[i + 1];
-        if (inQuotes) {
-          if (char === '"' && nextChar === '"') { currentField += '"'; i++; }
-          else if (char === '"') {
-            const isEndOfField = nextChar === delimiter || nextChar === '\r' || nextChar === '\n' || nextChar === undefined;
-            if (isEndOfField) inQuotes = false;
-            else currentField += '"';
-          } else { currentField += char; }
-        } else {
-          if (char === '"') inQuotes = true;
-          else if (char === delimiter) { currentRow.push(currentField.trim()); currentField = ""; }
-          else if (char === '\r' && nextChar === '\n') {
-            currentRow.push(currentField.trim());
-            if (currentRow.length > 0) rows.push(currentRow);
-            currentRow = []; currentField = ""; i++;
-          } else if (char === '\n') {
-            currentRow.push(currentField.trim());
-            if (currentRow.length > 0) rows.push(currentRow);
-            currentRow = []; currentField = "";
-          } else { currentField += char; }
+      let rows: string[][] = [];
+      if (isDoubleQuoteDelimiter) {
+        rows = content.split(/\r?\n/).filter(l => l.trim()).map(l => l.split('""').map(p => p.replace(/^"|"$/g, "").trim()));
+      } else {
+        let currentField = "";
+        let currentRow: string[] = [];
+        let inQuotes = false;
+        for (let i = 0; i < content.length; i++) {
+          const char = content[i];
+          const nextChar = content[i + 1];
+          if (inQuotes) {
+            if (char === '"' && nextChar === '"') { currentField += '"'; i++; }
+            else if (char === '"') {
+              const isEndOfField = nextChar === delimiter || nextChar === '\r' || nextChar === '\n' || nextChar === undefined;
+              if (isEndOfField) inQuotes = false;
+              else currentField += '"';
+            } else { currentField += char; }
+          } else {
+            if (char === '"') inQuotes = true;
+            else if (char === delimiter) { currentRow.push(currentField.trim()); currentField = ""; }
+            else if (char === '\r' && nextChar === '\n') {
+              currentRow.push(currentField.trim());
+              if (currentRow.length > 0) rows.push(currentRow);
+              currentRow = []; currentField = ""; i++;
+            } else if (char === '\n') {
+              currentRow.push(currentField.trim());
+              if (currentRow.length > 0) rows.push(currentRow);
+              currentRow = []; currentField = "";
+            } else { currentField += char; }
+          }
         }
-      }
-      if (currentRow.length > 0 || currentField !== "") {
-        currentRow.push(currentField.trim());
-        rows.push(currentRow);
+        if (currentRow.length > 0 || currentField !== "") {
+          currentRow.push(currentField.trim());
+          rows.push(currentRow);
+        }
       }
 
       // Process parsed rows

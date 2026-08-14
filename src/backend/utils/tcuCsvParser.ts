@@ -100,9 +100,13 @@ export function parsearCsvFiltrado(filePath: string): AcordaoFiltrado[] {
     const linha = linhas[i].trim();
     if (!linha) continue;
 
-    // O TCU exporta o CSV filtrado colando aspas duplas: "Campo1""Campo2""Campo3"
-    // Não há vírgulas ou ponto-e-vírgula entre os campos.
-    const partes = linha.split('""').map((p) => p.replace(/^"|"$/g, "").trim());
+    // Tenta primeiro parsear com ponto e vírgula (formato Excel/atual)
+    let partes = parsearLinhaCsvRobusta(linha, ";");
+    
+    // Se não encontrou partes suficientes, tenta o formato original (campos colados com aspas)
+    if (partes.length < 2) {
+      partes = linha.split('""').map((p) => p.replace(/^"|"$/g, "").trim());
+    }
 
     if (partes.length < 2) continue;
 

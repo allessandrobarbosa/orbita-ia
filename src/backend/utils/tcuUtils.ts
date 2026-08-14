@@ -102,20 +102,25 @@ export function extractDocumentText(docHtml: string): string {
 }
 
 export async function downloadTempCsv(url: string, tempPath: string): Promise<void> {
+  const { pipeline } = await import("stream/promises");
+
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(tempPath);
-    https.get(url, (response) => {
+    https.get(url, async (response) => {
       if (response.statusCode !== 200) {
-        fs.unlink(tempPath, () => {});
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
         return reject(new Error(`Failed to download CSV, status code: ${response.statusCode}`));
       }
-      response.pipe(file);
-      file.on("finish", () => {
-        file.close();
+
+      const file = fs.createWriteStream(tempPath);
+      try {
+        await pipeline(response, file);
         resolve();
-      });
+      } catch (err) {
+        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        reject(err);
+      }
     }).on("error", (err) => {
-      fs.unlink(tempPath, () => {});
+      if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
       reject(err);
     });
   });
