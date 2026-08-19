@@ -330,7 +330,10 @@ CREATE TABLE IF NOT EXISTS scdp_viagens (
   siafi_ob VARCHAR(255),
   sigepe_lotacao VARCHAR(255),
   score_risco_ia VARCHAR(50),
-  justificativa_ia TEXT
+  justificativa_ia TEXT,
+  sobreposicao_ferias BOOLEAN,
+  sobreposicao_licenca BOOLEAN,
+  inconsistencia_vinculo BOOLEAN
 );
 
 -- MÓDULO CONTRATOS (Atualizado Lei 14.133 e PNCP)

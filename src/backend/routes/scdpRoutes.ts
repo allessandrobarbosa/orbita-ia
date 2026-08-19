@@ -10,14 +10,10 @@ router.get("/scdp/viagens", async (req, res) => {
     const { dataIdaDe, dataIdaAte, maxPages, forceRefresh } = req.query;
     const apiKey = req.headers["chave-api-dados"] as string;
 
-    // Se solicitado forceRefresh, sincroniza os dados via Portal da Transparência
-    if (forceRefresh === "true" && apiKey) {
-      await scdpSyncService.syncWithCgu({
-        dataIdaDe: dataIdaDe as string || "01/01/2026",
-        dataIdaAte: dataIdaAte as string || "31/12/2026",
-        apiKey,
-        maxPages: maxPages ? parseInt(maxPages as string, 10) : 50
-      });
+    // Se solicitado forceRefresh, sincroniza via Datalake para fugir do rate limit
+    if (forceRefresh === "true") {
+      // Baixa os dados consolidados do ano inteiro (2024)
+      await scdpSyncService.syncViaDatalake("2024");
     }
 
     const result = await pool.query('SELECT * FROM scdp_viagens ORDER BY data_inicio DESC');
@@ -25,17 +21,27 @@ router.get("/scdp/viagens", async (req, res) => {
     // Mapeamento para o frontend
     const mapped = result.rows.map(r => ({
       id: r.id,
+      numeroViagem: r.id,
       nomeViajante: r.nome_viajante,
       cpfViajante: r.cpf_viajante,
       siapeViajante: r.siape_viajante,
       emailViajante: r.email_viajante,
-      dataInicio: r.data_inicio,
-      dataFim: r.data_fim,
       destino: r.destino,
       motivoViagem: r.motivo_viagem,
+      cargo: r.cargo,
+      situacao: r.situacao,
+      viagemUrgente: r.viagem_urgente,
+      justificativaUrgencia: r.justificativa_urgencia,
+      orgaoSolicitante: r.orgao_solicitante,
+      orgaoSuperior: r.orgao_superior,
+      dataInicio: r.data_inicio,
+      dataFim: r.data_fim,
       valorPassagem: parseFloat(r.valor_passagem) || 0,
       valorDiarias: parseFloat(r.valor_diarias) || 0,
       valorTotal: (parseFloat(r.valor_passagem) || 0) + (parseFloat(r.valor_diarias) || 0),
+      statusPrestacao: r.status_prestacao || (r.siafi_gru_devolucao_confirmada ? "No Prazo" : "Pendente"),
+      scoreRiscoIa: r.score_risco_ia,
+      justificativaIa: r.justificativa_ia,
       siafiGruDevolucaoConfirmada: r.siafi_gru_devolucao_confirmada,
       siafiDetalhesStatus: r.siafi_detalhes_status,
       siafiConfirmado: r.siafi_confirmado,
@@ -43,10 +49,9 @@ router.get("/scdp/viagens", async (req, res) => {
       siafiEmpenho: r.siafi_empenho,
       siafiOb: r.siafi_ob,
       sigepeLotacao: r.sigepe_lotacao,
-      scoreRiscoIa: r.score_risco_ia,
-      justificativaIa: r.justificativa_ia,
-      ultimaAtualizacao: r.ultima_atualizacao,
-      statusPrestacao: r.siafi_gru_devolucao_confirmada ? "No Prazo" : "Pendente" // Simples lógica fallback
+      sobreposicaoFerias: r.sobreposicao_ferias,
+      sobreposicaoLicenca: r.sobreposicao_licenca,
+      inconsistenciaVinculo: r.inconsistencia_vinculo
     }));
     
     res.json({ success: true, data: mapped, isSimulated: !apiKey });

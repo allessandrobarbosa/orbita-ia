@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Plane, Search, RefreshCw, AlertCircle, CheckCircle2, Info, Sliders, Eye, EyeOff } from "lucide-react";
+import { Plane, Search, RefreshCw, AlertCircle, CheckCircle2, Info, Sliders, Eye, EyeOff, Scale, Briefcase, MapPin, AlertTriangle, Building } from "lucide-react";
 import { ScdpKpiCards } from "./scdp/ScdpKpiCards";
 import { ScdpDataTable } from "./scdp/ScdpDataTable";
 import { ScdpAiInsights } from "./scdp/ScdpAiInsights";
@@ -174,25 +174,11 @@ export default function ScdpModule() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <ScdpDataTable viagens={filteredViagens} onSelectViagem={setSelectedViagem} />
-
-        {selectedViagem && (
-          <div className="mt-6 border-t border-slate-200 pt-6">
-            <h4 className="font-bold text-slate-800 mb-2">Detalhes da Viagem Selecionada: {selectedViagem.nomeViajante}</h4>
-            <div className="grid grid-cols-2 gap-4 text-xs text-slate-600">
-              <p><strong>Motivo:</strong> {selectedViagem.motivoViagem}</p>
-              <p><strong>Destino:</strong> {selectedViagem.destino}</p>
-              <p><strong>Empenho (SIAFI):</strong> {selectedViagem.siafiEmpenho || "Não localizado"}</p>
-              <p><strong>Lotação (SIGEPE):</strong> {selectedViagem.sigepeLotacao || "Não localizado"}</p>
-            </div>
-            
-            <ScdpAiInsights 
-              viagemId={selectedViagem.id} 
-              scoreRiscoIa={selectedViagem.scoreRiscoIa}
-              justificativaIa={selectedViagem.justificativaIa}
-            />
-          </div>
-        )}
+        <ScdpDataTable 
+          viagens={filteredViagens} 
+          onSelectViagem={setSelectedViagem} 
+          selectedViagem={selectedViagem}
+        />
       </div>
     </div>
   );
