@@ -24,10 +24,20 @@ router.get("/superintendencias", async (req, res) => {
         COALESCE(v.demandas_cgu, 0)             AS view_cgu,
         COALESCE(v.demandas_comunicacoes, 0)    AS demandas_comunicacoes,
         COALESCE(v.demandas_tces, 0)            AS demandas_tces,
+        COALESCE(v.contratos_ativos, 0)         AS contratos_ativos,
+        COALESCE(v.despesa_mensal_contratos, 0) AS despesa_mensal_contratos,
         (SELECT json_agg(acordao_key)    FROM srte_acordao     WHERE uf = s.uf) AS acordao_ids,
         (SELECT json_agg(comunicacao_key) FROM srte_comunicacao WHERE uf = s.uf) AS comunicacao_ids,
         (SELECT json_agg(tce_id)         FROM srte_tce          WHERE uf = s.uf) AS tce_ids,
-        (SELECT json_agg(cgu_id)         FROM srte_cgu          WHERE uf = s.uf) AS cgu_ids
+        (SELECT json_agg(cgu_id)         FROM srte_cgu          WHERE uf = s.uf) AS cgu_ids,
+        (SELECT json_agg(json_build_object(
+          'id', id,
+          'numero', numero_contrato,
+          'empresa', empresa,
+          'objeto', objeto,
+          'valorMensal', valor_mensal,
+          'status', status
+        )) FROM contratos WHERE uf = s.uf) AS contratos_list
       FROM superintendencias s
       LEFT JOIN vw_srte_dashboard_metrics v ON s.uf = v.uf
     `);
@@ -49,12 +59,15 @@ router.get("/superintendencias", async (req, res) => {
       demandasCGU:          parseInt(row.view_cgu)              || 0,
       demandasComunicacoes: parseInt(row.demandas_comunicacoes) || 0,
       demandasTces:         parseInt(row.demandas_tces)         || 0,
+      contratosAtivos:      parseInt(row.contratos_ativos)      || 0,
+      despesaMensalContratos: parseFloat(row.despesa_mensal_contratos) || 0,
       demandasEtica:        row.demandas_etica,
       statusGeral:          row.status_geral,
       acordaoIds:           row.acordao_ids     || [],
       comunicacaoIds:       row.comunicacao_ids || [],
       tceIds:               row.tce_ids         || [],
       cguIds:               row.cgu_ids         || [],
+      contratosList:        row.contratos_list  || [],
     }));
 
     res.json(mapped);

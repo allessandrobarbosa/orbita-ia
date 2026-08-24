@@ -10,7 +10,7 @@ export default function ScdpModule() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem(STORAGE_KEY) || "");
   const [showApiKey, setShowApiKey] = useState(false);
   
-  const [dateStart, setDateStart] = useState("2026-01-01");
+  const [dateStart, setDateStart] = useState("2024-01-01");
   const [dateEnd, setDateEnd] = useState(() => new Date().toISOString().split("T")[0]);
   const [maxPages, setMaxPages] = useState(500);
 
@@ -23,6 +23,14 @@ export default function ScdpModule() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedViagem, setSelectedViagem] = useState<any | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Filtros avançados
+  const [filterViajante, setFilterViajante] = useState("");
+  const [filterNumeroViagem, setFilterNumeroViagem] = useState("");
+  const [filterOrigem, setFilterOrigem] = useState("");
+  const [filterDestino, setFilterDestino] = useState("");
+  const [filterMeioTransporte, setFilterMeioTransporte] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const handleFetchData = async (forceRefresh?: boolean, silent?: boolean) => {
     setIsLoading(true);
@@ -44,7 +52,12 @@ export default function ScdpModule() {
       const queryParams = new URLSearchParams({
         dataIdaDe: formatDate(dateStart),
         dataIdaAte: formatDate(dateEnd),
-        maxPages: String(maxPages)
+        maxPages: String(maxPages),
+        viajante: filterViajante,
+        numeroViagem: filterNumeroViagem,
+        origem: filterOrigem,
+        destino: filterDestino,
+        meioTransporte: filterMeioTransporte
       });
       if (forceRefresh) queryParams.append("forceRefresh", "true");
 
@@ -77,13 +90,31 @@ export default function ScdpModule() {
     else localStorage.removeItem(STORAGE_KEY);
   };
 
+  const handleApplyFilters = () => {
+    handleFetchData(false, false);
+  };
+
+  const handleClearFilters = () => {
+    setFilterViajante("");
+    setFilterNumeroViagem("");
+    setFilterOrigem("");
+    setFilterDestino("");
+    setFilterMeioTransporte("");
+    setDateStart("2024-01-01");
+    setDateEnd(new Date().toISOString().split("T")[0]);
+    setTimeout(() => {
+      handleFetchData(false, false);
+    }, 50);
+  };
+
   const filteredViagens = useMemo(() => {
     return viagens.filter((v) => {
       const term = searchTerm.toLowerCase();
       return (
         v.nomeViajante?.toLowerCase().includes(term) ||
         v.cpfViajante?.toLowerCase().includes(term) ||
-        v.destino?.toLowerCase().includes(term)
+        v.destino?.toLowerCase().includes(term) ||
+        v.id?.toLowerCase().includes(term)
       );
     });
   }, [viagens, searchTerm]);
@@ -136,7 +167,7 @@ export default function ScdpModule() {
               <Sliders className="w-4 h-4" /> Configurações de API
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="flex flex-col md:col-span-2">
+              <div className="flex flex-col md:col-span-3">
                 <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Chave API (Portal da Transparência)</label>
                 <div className="relative flex rounded-lg">
                   <input
@@ -152,12 +183,13 @@ export default function ScdpModule() {
                 </div>
               </div>
               <div className="flex flex-col">
-                <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Data Início</label>
-                <input type="date" className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Data Fim</label>
-                <input type="date" className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
+                <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Limite de Páginas</label>
+                <input 
+                  type="number" 
+                  className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                  value={maxPages} 
+                  onChange={(e) => setMaxPages(parseInt(e.target.value) || 500)} 
+                />
               </div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -181,19 +213,140 @@ export default function ScdpModule() {
 
       <ScdpKpiCards metrics={metrics} />
 
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs relative">
-        <div className="mb-4 relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-            <Search size={14} />
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs relative space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+          <div className="relative w-full max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <Search size={14} />
+            </div>
+            <input
+              type="text"
+              className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Filtro rápido na lista (Viajante, CPF, Destino, ID)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-          <input
-            type="text"
-            className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
-            placeholder="Pesquisar por Servidor, CPF, Destino..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`px-4 py-2 border rounded-xl font-bold text-xs flex items-center gap-2 transition duration-205 cursor-pointer shadow-4xs ${
+              showFilters 
+                ? "bg-[#003366]/8 border-[#003366]/20 text-[#003366]"
+                : "bg-white border-slate-200 text-slate-650 hover:bg-slate-50"
+            }`}
+          >
+            <Sliders size={14} />
+            {showFilters ? "Ocultar Filtros Avançados" : "Filtros Avançados (Banco)"}
+          </button>
         </div>
+
+        {showFilters && (
+          <div className="bg-slate-50/50 border border-slate-200/60 rounded-xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              
+              <div className="flex flex-col">
+                <label className="text-[10px] font-black text-[#003366] uppercase mb-1">Período De</label>
+                <input 
+                  type="date" 
+                  className="w-full p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                  value={dateStart} 
+                  onChange={(e) => setDateStart(e.target.value)} 
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[10px] font-black text-[#003366] uppercase mb-1">Período Até</label>
+                <input 
+                  type="date" 
+                  className="w-full p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                  value={dateEnd} 
+                  onChange={(e) => setDateEnd(e.target.value)} 
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[10px] font-black text-[#003366] uppercase mb-1">Viajante (Nome/CPF)</label>
+                <input 
+                  type="text" 
+                  className="w-full p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                  placeholder="Nome ou CPF..."
+                  value={filterViajante}
+                  onChange={(e) => setFilterViajante(e.target.value)} 
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[10px] font-black text-[#003366] uppercase mb-1">Nº Proposta (SCDP)</label>
+                <input 
+                  type="text" 
+                  className="w-full p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                  placeholder="Ex: 000003/24..."
+                  value={filterNumeroViagem}
+                  onChange={(e) => setFilterNumeroViagem(e.target.value)} 
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[10px] font-black text-[#003366] uppercase mb-1">Origem</label>
+                <input 
+                  type="text" 
+                  className="w-full p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                  placeholder="Ex: Brasília..."
+                  value={filterOrigem}
+                  onChange={(e) => setFilterOrigem(e.target.value)} 
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[10px] font-black text-[#003366] uppercase mb-1">Destino</label>
+                <input 
+                  type="text" 
+                  className="w-full p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" 
+                  placeholder="Ex: Rio de Janeiro..."
+                  value={filterDestino}
+                  onChange={(e) => setFilterDestino(e.target.value)} 
+                />
+              </div>
+
+              <div className="flex flex-col sm:col-span-2">
+                <label className="text-[10px] font-black text-[#003366] uppercase mb-1">Meio de Transporte</label>
+                <select 
+                  className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer font-medium text-slate-700"
+                  value={filterMeioTransporte}
+                  onChange={(e) => setFilterMeioTransporte(e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  <option value="Aéreo">Aéreo</option>
+                  <option value="Terrestre">Terrestre</option>
+                  <option value="Veículo Oficial">Veículo Oficial</option>
+                  <option value="Veículo Próprio">Veículo Próprio</option>
+                  <option value="Naval">Naval / Fluvial</option>
+                </select>
+              </div>
+
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-200 pt-3 mt-2">
+              <button 
+                onClick={handleClearFilters} 
+                disabled={isLoading}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition"
+              >
+                Limpar Filtros
+              </button>
+              <button 
+                onClick={handleApplyFilters} 
+                disabled={isLoading}
+                className="px-4 py-2 bg-[#003366] hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 cursor-pointer transition shadow-3xs"
+              >
+                <Search size={13} />
+                Filtrar Registros
+              </button>
+            </div>
+          </div>
+        )}
+
         <ScdpDataTable 
           viagens={filteredViagens} 
           onSelectViagem={setSelectedViagem} 

@@ -5,9 +5,28 @@ import { scdpAiAgent } from "../services/ScdpAiAgent.js";
 
 const router = express.Router();
 
+const convertToDbDate = (dateStr?: string) => {
+  if (!dateStr) return null;
+  if (dateStr.includes("/")) {
+    const [d, m, y] = dateStr.split("/");
+    return `${y}-${m}-${d}`;
+  }
+  return dateStr;
+};
+
 router.get("/scdp/viagens", async (req, res) => {
   try {
-    const { dataIdaDe, dataIdaAte, maxPages, forceRefresh } = req.query;
+    const { 
+      dataIdaDe, 
+      dataIdaAte, 
+      maxPages, 
+      forceRefresh,
+      viajante,
+      numeroViagem,
+      origem,
+      destino,
+      meioTransporte
+    } = req.query;
     const apiKey = req.headers["chave-api-dados"] as string;
 
     // Se solicitado forceRefresh, sincroniza via Datalake para fugir do rate limit
@@ -16,7 +35,59 @@ router.get("/scdp/viagens", async (req, res) => {
       await scdpSyncService.syncViaDatalake("2024");
     }
 
-    const result = await pool.query('SELECT * FROM scdp_viagens ORDER BY data_inicio DESC');
+    const queryParts = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (dataIdaDe) {
+      const dbDate = convertToDbDate(dataIdaDe as string);
+      if (dbDate) {
+        queryParts.push(`data_inicio >= $${paramIndex++}`);
+        values.push(dbDate);
+      }
+    }
+
+    if (dataIdaAte) {
+      const dbDate = convertToDbDate(dataIdaAte as string);
+      if (dbDate) {
+        queryParts.push(`data_inicio <= $${paramIndex++}`);
+        values.push(dbDate);
+      }
+    }
+
+    if (viajante) {
+      queryParts.push(`(nome_viajante ILIKE $${paramIndex} OR cpf_viajante ILIKE $${paramIndex})`);
+      paramIndex++;
+      values.push(`%${viajante}%`);
+    }
+
+    if (numeroViagem) {
+      queryParts.push(`id ILIKE $${paramIndex++}`);
+      values.push(`%${numeroViagem}%`);
+    }
+
+    if (origem) {
+      queryParts.push(`origem ILIKE $${paramIndex++}`);
+      values.push(`%${origem}%`);
+    }
+
+    if (destino) {
+      queryParts.push(`destino ILIKE $${paramIndex++}`);
+      values.push(`%${destino}%`);
+    }
+
+    if (meioTransporte) {
+      queryParts.push(`meio_transporte ILIKE $${paramIndex++}`);
+      values.push(`%${meioTransporte}%`);
+    }
+
+    let sql = 'SELECT * FROM scdp_viagens';
+    if (queryParts.length > 0) {
+      sql += ' WHERE ' + queryParts.join(' AND ');
+    }
+    sql += ' ORDER BY data_inicio DESC';
+
+    const result = await pool.query(sql, values);
     
     // Mapeamento para o frontend
     const mapped = result.rows.map(r => ({
@@ -27,6 +98,8 @@ router.get("/scdp/viagens", async (req, res) => {
       siapeViajante: r.siape_viajante,
       emailViajante: r.email_viajante,
       destino: r.destino,
+      origem: r.origem,
+      meioTransporte: r.meio_transporte,
       motivoViagem: r.motivo_viagem,
       cargo: r.cargo,
       situacao: r.situacao,

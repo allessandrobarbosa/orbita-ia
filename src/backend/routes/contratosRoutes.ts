@@ -5,6 +5,7 @@ import {
   fetchEmpenhosContratoPncp, fetchAditivosContratoPncp, fetchHistoricoContratoPncp,
   fetchAllContratosMte, fetchAllContratosSraParaMte 
 } from "../services/pncpService.js";
+import { triggerSrteRecalcIfIdle } from "../services/srteRecalcService.js";
 
 const router = express.Router();
 
@@ -594,6 +595,7 @@ router.post("/contratos", async (req, res) => {
       ]
     );
     res.status(201).json(c);
+    triggerSrteRecalcIfIdle("CONTRATO_CREATE").catch(err => console.error("[SRTE-AUTO] Erro ao recalcular SRTE pós-cadastro:", err));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro ao criar contrato" });
@@ -624,6 +626,7 @@ router.put("/contratos/:id", async (req, res) => {
       ]
     );
     res.json({ success: true });
+    triggerSrteRecalcIfIdle("CONTRATO_UPDATE").catch(err => console.error("[SRTE-AUTO] Erro ao recalcular SRTE pós-update:", err));
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro ao atualizar contrato" });
@@ -635,6 +638,7 @@ router.delete("/contratos/:id", async (req, res) => {
     const { id } = req.params;
     await pool.query("DELETE FROM contratos WHERE id = $1", [id]);
     res.json({ success: true });
+    triggerSrteRecalcIfIdle("CONTRATO_DELETE").catch(err => console.error("[SRTE-AUTO] Erro ao recalcular SRTE pós-delete:", err));
   } catch (error) {
     res.status(500).json({ error: "Erro ao deletar contrato" });
   }
@@ -651,6 +655,7 @@ router.post("/contratos/reset", async (req, res) => {
     await pool.query("DELETE FROM contratos_consumo_mensal");
     await pool.query("DELETE FROM contratos");
     res.json({ success: true, message: "Base de contratos zerada com sucesso." });
+    triggerSrteRecalcIfIdle("CONTRATO_RESET").catch(err => console.error("[SRTE-AUTO] Erro ao recalcular SRTE pós-reset:", err));
   } catch (error) {
     console.error("Erro ao zerar base de contratos:", error);
     res.status(500).json({ error: "Erro ao zerar base de contratos" });
@@ -819,6 +824,7 @@ router.post("/contratos/sync-pncp", async (req, res) => {
 
     }
     res.json({ success: true, imported, updated, total: contratosPncp.length });
+    triggerSrteRecalcIfIdle("CONTRATO_SYNC_PNCP").catch(err => console.error("[SRTE-AUTO] Erro ao recalcular SRTE pós-sync:", err));
   } catch (error) {
     console.error("Erro na sincronização PNCP:", error);
     res.status(500).json({ error: "Erro na sincronização" });

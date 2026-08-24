@@ -35,6 +35,8 @@ export async function initDatabaseSchema() {
     await pool.query(`ALTER TABLE scdp_viagens ADD COLUMN IF NOT EXISTS justificativa_urgencia TEXT`);
     await pool.query(`ALTER TABLE scdp_viagens ADD COLUMN IF NOT EXISTS orgao_solicitante VARCHAR(255)`);
     await pool.query(`ALTER TABLE scdp_viagens ADD COLUMN IF NOT EXISTS orgao_superior VARCHAR(255)`);
+    await pool.query(`ALTER TABLE scdp_viagens ADD COLUMN IF NOT EXISTS origem VARCHAR(255)`);
+    await pool.query(`ALTER TABLE scdp_viagens ADD COLUMN IF NOT EXISTS meio_transporte VARCHAR(255)`);
 
     // Auto-seed para tabelas vazias (Superintendências, Rol, Contratos, etc.)
     await autoSeedIfEmpty();
@@ -114,7 +116,8 @@ async function autoSeedIfEmpty() {
       }
     }
 
-    // 6. TCU Acórdãos (se tabela estiver vazia)
+    // 6. TCU Acórdãos (Desativado)
+    /*
     const acCount = await pool.query("SELECT COUNT(*) FROM tcu_acordaos");
     if (parseInt(acCount.rows[0].count, 10) === 0) {
       console.log("[DB] Populando tcu_acordaos com seeds...");
@@ -135,8 +138,10 @@ async function autoSeedIfEmpty() {
         );
       }
     }
+    */
 
-    // 7. TCU Comunicações (se tabela estiver vazia)
+    // 7. TCU Comunicações (Desativado)
+    /*
     const comCount = await pool.query("SELECT COUNT(*) FROM tcu_comunicacoes");
     if (parseInt(comCount.rows[0].count, 10) === 0) {
       console.log("[DB] Populando tcu_comunicacoes com seeds...");
@@ -155,8 +160,10 @@ async function autoSeedIfEmpty() {
         );
       }
     }
+    */
 
-    // 8. TCU TCEs (se tabela estiver vazia)
+    // 8. TCU TCEs (Desativado)
+    /*
     const tceCount = await pool.query("SELECT COUNT(*) FROM tcu_tce");
     if (parseInt(tceCount.rows[0].count, 10) === 0) {
       console.log("[DB] Populando tcu_tce com seeds...");
@@ -193,8 +200,10 @@ async function autoSeedIfEmpty() {
         );
       }
     }
+    */
 
-    // 9. CGU Demandas (se tabela estiver vazia)
+    // 9. CGU Demandas (Desativado)
+    /*
     const cguCount = await pool.query("SELECT COUNT(*) FROM cgu_demands");
     if (parseInt(cguCount.rows[0].count, 10) === 0) {
       console.log("[DB] Populando cgu_demands com seeds...");
@@ -216,6 +225,7 @@ async function autoSeedIfEmpty() {
         );
       }
     }
+    */
   } catch (seedErr) {
     console.error("[DB] Erro no auto-seeding:", seedErr);
   }

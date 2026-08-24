@@ -53,6 +53,9 @@ export class ScdpSyncService {
           const siafiEmpenho = siafiData.empenho;
           const updatedAt = new Date().toISOString();
           
+          const origem = (viagem as any).origem || "Brasília/DF";
+          const meioTransporte = (viagem as any).meioTransporte || "Aéreo";
+          
           await client.query(
               `INSERT INTO scdp_viagens (
                id, nome_viajante, cpf_viajante, siape_viajante, email_viajante,
@@ -61,8 +64,9 @@ export class ScdpSyncService {
                siafi_gru_devolucao_confirmada, siafi_detalhes_status,
                siafi_confirmado, siafi_scdp_divergencia,
                siafi_empenho, siafi_ob, sigepe_lotacao,
-               ultima_atualizacao, sobreposicao_ferias, inconsistencia_vinculo
-             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+               ultima_atualizacao, sobreposicao_ferias, inconsistencia_vinculo,
+               origem, meio_transporte
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
              ON CONFLICT (id) DO UPDATE SET
                nome_viajante               = EXCLUDED.nome_viajante,
                data_inicio                 = EXCLUDED.data_inicio,
@@ -77,6 +81,8 @@ export class ScdpSyncService {
                siafi_scdp_divergencia      = EXCLUDED.siafi_scdp_divergencia,
                sobreposicao_ferias         = EXCLUDED.sobreposicao_ferias,
                inconsistencia_vinculo      = EXCLUDED.inconsistencia_vinculo,
+               origem                      = EXCLUDED.origem,
+               meio_transporte             = EXCLUDED.meio_transporte,
                ultima_atualizacao          = EXCLUDED.ultima_atualizacao`,
             [
               id,
@@ -99,7 +105,9 @@ export class ScdpSyncService {
               sigepeLotacao,
               updatedAt,
               siapeData.sobreposicaoFerias,
-              siapeData.inconsistenciaVinculo
+              siapeData.inconsistenciaVinculo,
+              origem,
+              meioTransporte
             ]
           );
           recordsUpdated++;
@@ -170,15 +178,18 @@ export class ScdpSyncService {
           return [
             {
               id: "VI-MOCK-1", nome: "JOÃO DA SILVA", cpf: "***.123.456-**", dataInicio: "2026-01-10", dataFim: "2026-01-15",
-              destino: "Brasília/DF", motivo: "Reunião de Alinhamento", valorPassagem: 1500, valorDiarias: 2000, valorDevolucao: 0
+              destino: "Brasília/DF", motivo: "Reunião de Alinhamento", valorPassagem: 1500, valorDiarias: 2000, valorDevolucao: 0,
+              origem: "Rio de Janeiro/RJ", meioTransporte: "Aéreo"
             },
             {
               id: "VI-MOCK-2", nome: "MARIA DE SOUZA", cpf: "***.987.654-**", dataInicio: "2026-02-05", dataFim: "2026-02-08",
-              destino: "Rio de Janeiro/RJ", motivo: "Fiscalização In Loco", valorPassagem: 800, valorDiarias: 1200, valorDevolucao: 400
+              destino: "Rio de Janeiro/RJ", motivo: "Fiscalização In Loco", valorPassagem: 800, valorDiarias: 1200, valorDevolucao: 400,
+              origem: "Brasília/DF", meioTransporte: "Terrestre"
             },
             {
               id: "VI-MOCK-3", nome: "CARLOS PEREIRA", cpf: "***.555.444-**", dataInicio: "2026-03-20", dataFim: "2026-04-05",
-              destino: "São Paulo/SP", motivo: "Capacitação", valorPassagem: 1200, valorDiarias: 5000, valorDevolucao: 1000
+              destino: "São Paulo/SP", motivo: "Capacitação", valorPassagem: 1200, valorDiarias: 5000, valorDevolucao: 1000,
+              origem: "Belo Horizonte/MG", meioTransporte: "Aéreo"
             }
           ];
         } else {
@@ -297,6 +308,50 @@ export class ScdpSyncService {
       // O governo utiliza enconding Windows-1252 / Latin1 para seus arquivos CSV
       const csvData = viagemEntry.getData().toString('latin1');
       
+      // Busca pelo CSV de "Trecho" dentro do ZIP (ex: 202401_Trecho.csv)
+      const trechoEntry = zipEntries.find(e => e.entryName.toLowerCase().includes('trecho.csv'));
+      const trechosMap = new Map<string, { origem: string, meios: string[] }>();
+      
+      if (trechoEntry) {
+        try {
+          console.log(`[Datalake] Extraindo e processando o arquivo de trechos ${trechoEntry.entryName}...`);
+          const csvTrechoData = trechoEntry.getData().toString('latin1');
+          const trechoRecords = parse(csvTrechoData, {
+            columns: true,
+            skip_empty_lines: true,
+            delimiter: ';',
+            trim: true,
+            relax_column_count: true
+          });
+          
+          console.log(`[Datalake] Processando ${trechoRecords.length} trechos...`);
+          for (const t of trechoRecords) {
+            const processId = t["Identificador do processo de viagem"];
+            if (!processId) continue;
+            
+            const cidadeOrigem = t["Origem - Cidade"] || "";
+            const ufOrigem = t["Origem - UF"] || "";
+            const meio = t["Meio de transporte"] || "";
+            
+            const origemStr = ufOrigem ? `${cidadeOrigem}/${ufOrigem}` : cidadeOrigem;
+            
+            if (!trechosMap.has(processId)) {
+              trechosMap.set(processId, {
+                origem: origemStr || "Não informada",
+                meios: meio ? [meio] : []
+              });
+            } else {
+              const entry = trechosMap.get(processId)!;
+              if (meio && !entry.meios.includes(meio)) {
+                entry.meios.push(meio);
+              }
+            }
+          }
+        } catch (e: any) {
+          console.warn("[Datalake] Erro ao parsear Trecho.csv. Ignorando e continuando com viagem.csv:", e.message);
+        }
+      }
+
       // Fazer o parse do CSV
       const records = parse(csvData, {
         columns: true,
@@ -367,6 +422,13 @@ export class ScdpSyncService {
           const valorDiarias = parseFloat(valorDiariasStr) || 0;
           const valorDevolucaoEsperado = parseFloat(valorDevolucaoStr) || 0;
 
+          const processId = viagem["Identificador do processo de viagem"] || "";
+          const trechoInfo = trechosMap.get(processId);
+          const origem = trechoInfo ? trechoInfo.origem : "Não informada";
+          const meioTransporte = (trechoInfo && trechoInfo.meios.length > 0)
+            ? trechoInfo.meios.join(", ")
+            : "Não informado";
+
           // Sem auditoria pesada por viagem no datalake (pode estourar API de Férias e SIAFI se rodar 1000 de uma vez)
           // Aqui faríamos auditorias em lote real. 
           const sobreposicaoFerias = false; // Em um datalake, faremos cruzamento via BD, não API por API
@@ -381,20 +443,24 @@ export class ScdpSyncService {
                cargo, situacao, viagem_urgente, justificativa_urgencia, orgao_solicitante, orgao_superior,
                valor_passagem, valor_diarias,
                siafi_confirmado, siafi_scdp_divergencia,
-               ultima_atualizacao, sobreposicao_ferias, inconsistencia_vinculo
-             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+               ultima_atualizacao, sobreposicao_ferias, inconsistencia_vinculo,
+               origem, meio_transporte
+             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
              ON CONFLICT (id) DO UPDATE SET
                nome_viajante = EXCLUDED.nome_viajante,
                valor_passagem = EXCLUDED.valor_passagem,
                valor_diarias = EXCLUDED.valor_diarias,
                cargo = EXCLUDED.cargo,
                situacao = EXCLUDED.situacao,
+               origem = EXCLUDED.origem,
+               meio_transporte = EXCLUDED.meio_transporte,
                ultima_atualizacao = EXCLUDED.ultima_atualizacao`,
             [
               id, nome, cpf, dataInicio, dataFim, destino, motivo,
               cargo, situacao, viagemUrgente, justificativaUrgencia, orgaoSolicitante, orgaoSuperior,
               valorPassagem, valorDiarias,
-              true, false, updatedAt, sobreposicaoFerias, inconsistenciaVinculo
+              true, false, updatedAt, sobreposicaoFerias, inconsistenciaVinculo,
+              origem, meioTransporte
             ]
           );
           recordsUpdated++;

@@ -34,6 +34,8 @@ interface ViagemData {
   sigepeLotacao?: string;
   scoreRiscoIa?: string;
   justificativaIa?: string;
+  origem?: string;
+  meioTransporte?: string;
 }
 
 interface ScdpDataTableProps {
@@ -119,7 +121,13 @@ export const ScdpDataTable: React.FC<ScdpDataTableProps> = ({ viagens, onSelectV
                         <Calendar size={12} className="text-slate-400" />
                         {formatDate(v.dataInicio)} ➔ {formatDate(v.dataFim)}
                       </div>
-                      <div className="text-[10px] text-slate-500 font-sans mt-0.5 font-medium">{v.destino}</div>
+                      <div className="text-[10px] text-slate-550 font-sans mt-1 font-medium flex items-center gap-1.5 flex-wrap">
+                        <span className="text-slate-400">Origem:</span>
+                        <span className="text-slate-700 font-semibold">{v.origem || "Não informada"}</span>
+                        <span className="text-slate-350">➔</span>
+                        <span className="text-slate-400">Destino:</span>
+                        <span className="text-slate-700 font-semibold">{v.destino}</span>
+                      </div>
                     </td>
                     <td className="p-4 align-middle text-right font-mono">
                       <div className="font-extrabold text-[#003366]">{formatCurrency(v.valorTotal)}</div>
@@ -221,15 +229,27 @@ export const ScdpDataTable: React.FC<ScdpDataTableProps> = ({ viagens, onSelectV
                                   )}
                                 </div>
                                 <div className="space-y-3 text-xs">
-                                  <div className="flex gap-4 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-100/60">
-                                    <div className="flex-1">
-                                      <span className="block text-slate-400 font-bold mb-0.5 text-[9px] uppercase tracking-wider">Período</span>
-                                      <strong className="text-slate-700 font-mono">{formatDate(v.dataInicio)} a {formatDate(v.dataFim)}</strong>
+                                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-100/60 space-y-2.5">
+                                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                      <div>
+                                        <span className="block text-slate-400 font-bold mb-0.5 text-[9px] uppercase tracking-wider">Período</span>
+                                        <strong className="text-slate-700 font-mono">{formatDate(v.dataInicio)} a {formatDate(v.dataFim)}</strong>
+                                      </div>
+                                      <div>
+                                        <span className="block text-slate-400 font-bold mb-0.5 text-[9px] uppercase tracking-wider">Meio de Transporte</span>
+                                        <strong className="text-slate-700">{v.meioTransporte || "Não informado"}</strong>
+                                      </div>
                                     </div>
-                                    <div className="w-px h-8 bg-slate-200"></div>
-                                    <div className="flex-1">
-                                      <span className="block text-slate-400 font-bold mb-0.5 text-[9px] uppercase tracking-wider">Destino</span>
-                                      <strong className="text-slate-700">{v.destino}</strong>
+                                    <div className="w-full h-px bg-slate-200/60 my-1"></div>
+                                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                      <div>
+                                        <span className="block text-slate-400 font-bold mb-0.5 text-[9px] uppercase tracking-wider">Origem</span>
+                                        <strong className="text-slate-700">{v.origem || "Não informada"}</strong>
+                                      </div>
+                                      <div>
+                                        <span className="block text-slate-400 font-bold mb-0.5 text-[9px] uppercase tracking-wider">Destino</span>
+                                        <strong className="text-slate-700">{v.destino}</strong>
+                                      </div>
                                     </div>
                                   </div>
                                   <div>

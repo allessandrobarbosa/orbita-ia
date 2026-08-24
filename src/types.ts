@@ -184,6 +184,9 @@ export interface SuperintendenciaRegional {
   comunicacaoIds?: string[];
   tceIds?: string[];
   cguIds?: string[];
+  contratosAtivos?: number;
+  despesaMensalContratos?: number;
+  contratosList?: { id: string; numero: string; empresa: string; objeto: string; valorMensal: number; status: string }[];
 }
 
 // Tomada de Contas Especial (TCE)

@@ -80,9 +80,9 @@ export default function SrteModule({ superintendencias, onUpdateSrte, onRefreshS
   const [selectedComunicacao, setSelectedComunicacao] = useState<ComunicacaoDemand | null>(null);
   const [selectedCguItem, setSelectedCguItem] = useState<CguDemand | null>(null);
   const [loadingAcordaoKey, setLoadingAcordaoKey] = useState<string | null>(null);
-  const [detailsModal, setDetailsModal] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' } | null>(null);
+  const [detailsModal, setDetailsModal] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' | 'contratos' } | null>(null);
   // Context: tracks which list panel opened the current detail modal, enabling "return" button
-  const [detailReturnContext, setDetailReturnContext] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' } | null>(null);
+  const [detailReturnContext, setDetailReturnContext] = useState<{ sr: SuperintendenciaRegional; type: 'tcu' | 'cgu' | 'comunicacoes' | 'tces' | 'contratos' } | null>(null);
 
   const handleReturnToList = () => {
     if (detailReturnContext) setDetailsModal(detailReturnContext);
@@ -461,6 +461,23 @@ export default function SrteModule({ superintendencias, onUpdateSrte, onRefreshS
                           <span className="text-sm font-bold text-slate-800 mt-0.5 flex items-center gap-1">
                             {sr.demandasTces}
                             <ExternalLink className="w-3 h-3 text-blue-600" />
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={() => setDetailsModal({ sr, type: 'contratos' })}
+                          className="col-span-2 bg-blue-50/20 hover:bg-blue-50/40 p-2 border border-blue-200 rounded-xl flex flex-row items-center justify-between px-3 transition cursor-pointer text-left"
+                          title="Clique para ver os Contratos vinculados a esta regional"
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-[10px] font-semibold text-blue-900">Contratos Ativos</span>
+                            <span className="text-[9px] text-slate-500 font-sans">
+                              Despesa Mensal: {formatCurrency(sr.despesaMensalContratos || 0)}
+                            </span>
+                          </div>
+                          <span className="text-sm font-bold text-slate-800 flex items-center gap-1">
+                            {sr.contratosAtivos || 0}
+                            <ExternalLink className="w-3.5 h-3.5 text-blue-600" />
                           </span>
                         </button>
                       </div>
@@ -1021,6 +1038,49 @@ export default function SrteModule({ superintendencias, onUpdateSrte, onRefreshS
                           >
                             <FileText className="w-3 h-3" /> Ver Detalhes
                           </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
+        
+        if (type === "contratos") {
+          title = `Contratos Vinculados — SRTE / ${sr.capital} (${sr.uf})`;
+          const matched = sr.contratosList || [];
+          contentElement = matched.length === 0 ? (
+            <p className="text-center py-8 text-slate-400 font-semibold">Nenhum contrato localizado para esta regional.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm text-slate-800">
+                <thead className="bg-[#003366] text-white font-semibold text-sm border-b border-[#002244] sticky top-0 z-10">
+                  <tr>
+                    <th className="p-4 w-1/4">Número do Contrato</th>
+                    <th className="p-4 w-1/4">Fornecedor / Empresa</th>
+                    <th className="p-4 w-2/5">Objeto do Contrato</th>
+                    <th className="p-4 text-right">Valor Mensal</th>
+                    <th className="p-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs">
+                  {matched.map(c => (
+                    <tr key={c.id} className="hover:bg-slate-50/50">
+                      <td className="p-4 align-middle font-mono font-semibold text-blue-900">
+                        {c.numero || "Sem Número"}
+                      </td>
+                      <td className="p-4 align-middle text-slate-700 font-medium">{c.empresa}</td>
+                      <td className="p-4 align-middle text-slate-500 max-w-sm truncate" title={c.objeto}>{c.objeto}</td>
+                      <td className="p-4 align-middle text-right font-mono font-bold text-slate-900">{formatCurrency(c.valorMensal)}</td>
+                      <td className="p-4 align-middle text-center">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase inline-block ${
+                          (c.status || "").toLowerCase().includes("ativo")
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-100 text-slate-600"
+                        }`}>
+                          {c.status || "Ativo"}
+                        </span>
                       </td>
                     </tr>
                   ))}

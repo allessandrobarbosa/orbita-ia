@@ -129,12 +129,15 @@ export async function ensureSrteLinkingTables(): Promise<void> {
         COUNT(DISTINCT sa.acordao_key)      AS demandas_tcu,
         COUNT(DISTINCT sc.comunicacao_key)  AS demandas_comunicacoes,
         COUNT(DISTINCT st.tce_id)           AS demandas_tces,
-        COUNT(DISTINCT sg.cgu_id)           AS demandas_cgu
+        COUNT(DISTINCT sg.cgu_id)           AS demandas_cgu,
+        COUNT(DISTINCT c.id)                AS contratos_ativos,
+        COALESCE(SUM(DISTINCT c.valor_mensal), 0) AS despesa_mensal_contratos
       FROM superintendencias s
       LEFT JOIN srte_acordao     sa ON sa.uf = s.uf
       LEFT JOIN srte_comunicacao sc ON sc.uf = s.uf
       LEFT JOIN srte_tce         st ON st.uf = s.uf
       LEFT JOIN srte_cgu         sg ON sg.uf = s.uf
+      LEFT JOIN contratos        c  ON c.uf = s.uf AND c.status = 'Ativo'
       GROUP BY s.uf
     `);
 
@@ -163,7 +166,6 @@ function buildUfRegexClause(field: string, uf: string, params: any[], startIdx: 
 async function vincularAcordaos(uf: string, capitals: string[], states: string[]): Promise<number> {
   await pool.query(`DELETE FROM srte_acordao WHERE uf = $1`, [uf]);
   const allText = `(titulo || ' ' || COALESCE(interessados,'') || ' ' || COALESCE(assunto,'') || ' ' || COALESCE(sumario,'') || ' ' || COALESCE(decisao,''))`;
-  const lowerText = `LOWER(${allText})`;
 
   let p1: any[] = [uf];
   await pool.query(`
@@ -173,18 +175,23 @@ async function vincularAcordaos(uf: string, capitals: string[], states: string[]
     ON CONFLICT (uf, acordao_key) DO NOTHING
   `, p1);
 
-  const ctxPatterns = ['%srte%', '%superintend%', '%gerencia regional%', '%gerência regional%'];
-  const locPatterns = [...capitals.map(c => `%${c}%`), ...states.map(s => `%${s}%`)];
-  for (const loc of locPatterns) {
-    let p2: any[] = [uf, loc];
-    const ctx = buildLikeOrClause(lowerText, ctxPatterns, p2, 3);
+  const locTerms = [...capitals, ...states].map(term => {
+    const words = term.trim().split(/[\s-]+/).filter(Boolean).map(w => `${w}:*`);
+    return words.length > 0 ? `(${words.join(" & ")})` : "";
+  }).filter(Boolean).join(" | ");
+
+  if (locTerms) {
+    const contextQuery = `(srte | superintend:* | gerenci:*)`;
+    const ftsQuery = `(${locTerms}) & ${contextQuery}`;
+
     await pool.query(`
       INSERT INTO srte_acordao (uf, acordao_key, motivo_vinculo)
       SELECT $1, key, 'LOCALIZACAO' FROM tcu_acordaos
-      WHERE ${lowerText} LIKE $2 AND ${ctx}
+      WHERE to_tsvector('portuguese', COALESCE(titulo,'') || ' ' || COALESCE(assunto,'') || ' ' || COALESCE(sumario,'')) @@ to_tsquery('portuguese', $2)
       ON CONFLICT (uf, acordao_key) DO NOTHING
-    `, p2);
+    `, [uf, ftsQuery]);
   }
+
   const r = await pool.query(`SELECT COUNT(*) FROM srte_acordao WHERE uf = $1`, [uf]);
   return parseInt(r.rows[0].count);
 }
@@ -308,25 +315,23 @@ async function vincularCgu(uf: string, capitals: string[], states: string[]): Pr
     ON CONFLICT (uf, cgu_id) DO NOTHING
   `, p3);
 
-  // ── NÍVEL 4: Nome da capital/estado + contexto de auditoria/trabalho ─────
-  // Combinação: localização E termos que indicam relação com trabalho/MTE
-  const ctxPatterns = [
-    '%ministerio do trabalho%', '%ministério do trabalho%',
-    '%mte%', '%srte%', '%superintend%', '%fiscal%trabalho%',
-    '%auditoria%fiscal%', '%inspecao%trabalho%', '%inspeção%trabalho%',
-    '%caged%', '%rais%', '%sine%', '%fgts%',
-  ];
-  const locPatterns = [...capitals.map(c => `%${c}%`), ...states.map(s => `%${s}%`)];
-  for (const loc of locPatterns) {
-    let p4: any[] = [uf, loc];
-    const ctx = buildLikeOrClause(lowerFull, ctxPatterns, p4, 3);
+  // ── NÍVEL 4: Nome da capital/estado + contexto de auditoria/trabalho (FTS) ──
+  const locTerms = [...capitals, ...states].map(term => {
+    const words = term.trim().split(/[\s-]+/).filter(Boolean).map(w => `${w}:*`);
+    return words.length > 0 ? `(${words.join(" & ")})` : "";
+  }).filter(Boolean).join(" | ");
+
+  if (locTerms) {
+    const contextQuery = `(ministér:* & trabalh:* | MTE | srte | superintend:* | fiscal:* & trabalh:* | auditoria & fiscal | inspec:* & trabalh:* | caged | rais | sine | fgts)`;
+    const ftsQuery = `(${locTerms}) & ${contextQuery}`;
+
     await pool.query(`
       INSERT INTO srte_cgu (uf, cgu_id, motivo_vinculo)
       SELECT $1, id_tarefa, 'LOCALIZACAO_CONTEXTO'
       FROM cgu_demands
-      WHERE ${lowerFull} LIKE $2 AND ${ctx}
+      WHERE to_tsvector('portuguese', COALESCE(titulo_tarefa,'') || ' ' || COALESCE(texto_monitoramento,'')) @@ to_tsquery('portuguese', $2)
       ON CONFLICT (uf, cgu_id) DO NOTHING
-    `, p4);
+    `, [uf, ftsQuery]);
   }
 
   const r = await pool.query(`SELECT COUNT(*) FROM srte_cgu WHERE uf = $1`, [uf]);

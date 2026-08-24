@@ -133,9 +133,17 @@ ORDER BY modulo, ano_referencia, id DESC;
 CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_num_ano ON tcu_acordaos(num_acordao, ano_acordao);
 CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_colegiado ON tcu_acordaos(colegiado);
 CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_status ON tcu_acordaos(status_monitoramento);
+CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_order ON tcu_acordaos(ano_acordao DESC, num_acordao DESC);
+CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_relator ON tcu_acordaos(relator);
+CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_proc ON tcu_acordaos(proc);
+CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_fts ON tcu_acordaos USING gin(to_tsvector('portuguese', COALESCE(titulo,'') || ' ' || COALESCE(assunto,'') || ' ' || COALESCE(sumario,'')));
 CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_ano ON tcu_comunicacoes(ano);
 CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_proc ON tcu_comunicacoes(processo);
+CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_destinatario ON tcu_comunicacoes(destinatario);
+CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_sei ON tcu_comunicacoes(processo_sei);
 CREATE INDEX IF NOT EXISTS idx_tcu_tce_numero_ano ON tcu_tce(numero_ano_tce);
+CREATE INDEX IF NOT EXISTS idx_tcu_tce_proc_adm ON tcu_tce(processo_administrativo);
+CREATE INDEX IF NOT EXISTS idx_tcu_tce_estado_sit ON tcu_tce(estado_processo, situacao_processo);
 CREATE INDEX IF NOT EXISTS idx_tcu_import_control_mod_ano ON tcu_import_control(modulo, ano_referencia);
 
 -- ==========================================
@@ -266,6 +274,16 @@ CREATE TABLE IF NOT EXISTS cgu_auditorias (
 CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_idauditoria ON cgu_auditorias(id_auditoria);
 CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_datapublicacao ON cgu_auditorias(data_publicacao);
 CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_siglaunidade ON cgu_auditorias(sigla_unidade_auditada);
+CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_uf_mun ON cgu_auditorias(uf, municipio);
+CREATE INDEX IF NOT EXISTS idx_cgu_auditorias_tipo_serv ON cgu_auditorias(tipo_servico);
+
+-- Índices adicionais CGU Demandas e Relatórios
+CREATE INDEX IF NOT EXISTS idx_cgu_demands_ano_id ON cgu_demands(ano DESC, id_tarefa DESC);
+CREATE INDEX IF NOT EXISTS idx_cgu_demands_unidade ON cgu_demands(unidade_auditada);
+CREATE INDEX IF NOT EXISTS idx_cgu_demands_sei ON cgu_demands(processo_sei);
+CREATE INDEX IF NOT EXISTS idx_cgu_demands_fts ON cgu_demands USING gin(to_tsvector('portuguese', COALESCE(titulo_tarefa,'') || ' ' || COALESCE(texto_monitoramento,'')));
+CREATE INDEX IF NOT EXISTS idx_cgu_reports_ano_pub ON cgu_reports(ano DESC, data_publicacao DESC);
+CREATE INDEX IF NOT EXISTS idx_cgu_reports_uf_mun ON cgu_reports(uf, municipio);
 
 -- MÓDULO SUPERINTENDÊNCIAS
 CREATE TABLE IF NOT EXISTS superintendencias (
@@ -394,7 +412,9 @@ CREATE TABLE IF NOT EXISTS scdp_viagens (
   justificativa_ia TEXT,
   sobreposicao_ferias BOOLEAN,
   sobreposicao_licenca BOOLEAN,
-  inconsistencia_vinculo BOOLEAN
+  inconsistencia_vinculo BOOLEAN,
+  origem VARCHAR(255),
+  meio_transporte VARCHAR(255)
 );
 
 -- MÓDULO CONTRATOS (Atualizado Lei 14.133 e PNCP)
