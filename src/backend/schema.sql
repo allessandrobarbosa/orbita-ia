@@ -88,6 +88,47 @@ CREATE TABLE IF NOT EXISTS tcu_tce_acordao_mapping (
     PRIMARY KEY (numero_ano_tce, acordao_key)
 );
 
+CREATE TABLE IF NOT EXISTS tcu_import_control (
+    id SERIAL PRIMARY KEY,
+    modulo VARCHAR(100) NOT NULL,
+    ano_referencia INTEGER NOT NULL,
+    tipo_arquivo VARCHAR(100) NOT NULL,
+    url_fonte TEXT,
+    nome_arquivo VARCHAR(255),
+    tamanho_bytes BIGINT,
+    hash_arquivo VARCHAR(64),
+    quantidade_linhas_csv INTEGER,
+    quantidade_inseridos INTEGER DEFAULT 0,
+    quantidade_atualizados INTEGER DEFAULT 0,
+    quantidade_ignorados INTEGER DEFAULT 0,
+    quantidade_erros INTEGER DEFAULT 0,
+    status VARCHAR(50) NOT NULL DEFAULT 'INICIADO',
+    eh_historico BOOLEAN DEFAULT FALSE,
+    data_fechamento_historico TIMESTAMP,
+    forcado_por_usuario VARCHAR(255),
+    erro_detalhe TEXT,
+    observacoes TEXT,
+    data_inicio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    data_fim TIMESTAMP
+);
+
+CREATE OR REPLACE VIEW vw_import_status AS
+SELECT DISTINCT ON (modulo, ano_referencia)
+    id,
+    modulo,
+    ano_referencia,
+    tipo_arquivo,
+    nome_arquivo,
+    quantidade_inseridos,
+    quantidade_atualizados,
+    quantidade_erros,
+    status,
+    eh_historico,
+    data_inicio,
+    data_fim
+FROM tcu_import_control
+ORDER BY modulo, ano_referencia, id DESC;
+
 -- Índices de Alta Performance (TCU)
 CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_num_ano ON tcu_acordaos(num_acordao, ano_acordao);
 CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_colegiado ON tcu_acordaos(colegiado);
@@ -95,6 +136,7 @@ CREATE INDEX IF NOT EXISTS idx_tcu_acordaos_status ON tcu_acordaos(status_monito
 CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_ano ON tcu_comunicacoes(ano);
 CREATE INDEX IF NOT EXISTS idx_tcu_comunicacoes_proc ON tcu_comunicacoes(processo);
 CREATE INDEX IF NOT EXISTS idx_tcu_tce_numero_ano ON tcu_tce(numero_ano_tce);
+CREATE INDEX IF NOT EXISTS idx_tcu_import_control_mod_ano ON tcu_import_control(modulo, ano_referencia);
 
 -- ==========================================
 -- 2. MÓDULO: ROL (Rol de Responsáveis - IN 84/2020 TCU)
@@ -149,7 +191,8 @@ CREATE TABLE IF NOT EXISTS rol_responsaveis_legado (
     fim_exercicio VARCHAR(50),
     ato_nomeacao TEXT,
     status VARCHAR(50),
-    observacoes TEXT
+    observacoes TEXT,
+    is_substituto BOOLEAN DEFAULT FALSE
 );
 
 -- MÓDULO CGU
@@ -245,6 +288,18 @@ CREATE TABLE IF NOT EXISTS superintendencias (
 );
 
 -- MÓDULO ETICA
+CREATE TABLE IF NOT EXISTS etica_membros (
+  id VARCHAR(255) PRIMARY KEY,
+  nome VARCHAR(255),
+  cpf VARCHAR(50),
+  email VARCHAR(255),
+  cargo VARCHAR(255),
+  mandato_inicio VARCHAR(50),
+  mandato_fim VARCHAR(50),
+  status VARCHAR(50) DEFAULT 'Ativo',
+  ativo BOOLEAN DEFAULT TRUE
+);
+
 CREATE TABLE IF NOT EXISTS etica_processos (
   id VARCHAR(255) PRIMARY KEY,
   tipo VARCHAR(50),
@@ -319,6 +374,12 @@ CREATE TABLE IF NOT EXISTS scdp_viagens (
   data_fim VARCHAR(50),
   destino VARCHAR(255),
   motivo_viagem TEXT,
+  cargo VARCHAR(255),
+  situacao VARCHAR(255),
+  viagem_urgente VARCHAR(50),
+  justificativa_urgencia TEXT,
+  orgao_solicitante VARCHAR(255),
+  orgao_superior VARCHAR(255),
   valor_passagem NUMERIC(15, 2),
   valor_diarias NUMERIC(15, 2),
   siafi_gru_devolucao_confirmada BOOLEAN,

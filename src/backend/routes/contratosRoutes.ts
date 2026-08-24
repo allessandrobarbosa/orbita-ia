@@ -13,6 +13,41 @@ const router = express.Router();
 
 async function ensureContratosSchema() {
   try {
+    // 1. Garante que a tabela principal 'contratos' exista
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contratos (
+        id VARCHAR(255) PRIMARY KEY,
+        numero_contrato VARCHAR(255),
+        empresa VARCHAR(255),
+        cnpj VARCHAR(50),
+        objeto TEXT,
+        valor_global NUMERIC(15, 2),
+        valor_mensal NUMERIC(15, 2) DEFAULT 0,
+        valor_anual NUMERIC(15, 2) DEFAULT 0,
+        data_inicio VARCHAR(50),
+        data_fim VARCHAR(50),
+        uf VARCHAR(10),
+        modalidade VARCHAR(100),
+        pncp_id VARCHAR(255),
+        uasg VARCHAR(50),
+        link_pncp TEXT,
+        status VARCHAR(100) DEFAULT 'Ativo',
+        municipio VARCHAR(255),
+        numero_processo VARCHAR(100),
+        categoria_processo VARCHAR(100),
+        tipo_contrato VARCHAR(100),
+        receita_despesa VARCHAR(50),
+        data_assinatura VARCHAR(50),
+        data_divulgacao_pncp VARCHAR(50),
+        pncp_contratacao_id VARCHAR(255),
+        fruto_adesao BOOLEAN DEFAULT FALSE,
+        tem_remanejamento BOOLEAN DEFAULT FALSE,
+        fonte_dados VARCHAR(100),
+        tipo_fornecedor VARCHAR(50)
+      )
+    `);
+
+    // 2. Garante que as colunas adicionais existam em bancos já criados anteriormente
     await pool.query(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS valor_mensal NUMERIC(15, 2) DEFAULT 0`);
     await pool.query(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS valor_anual NUMERIC(15, 2) DEFAULT 0`);
     await pool.query(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS status VARCHAR(100) DEFAULT 'Ativo'`);
@@ -33,8 +68,60 @@ async function ensureContratosSchema() {
     await pool.query(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS fonte_dados VARCHAR(100)`);
     await pool.query(`ALTER TABLE contratos ADD COLUMN IF NOT EXISTS tipo_fornecedor VARCHAR(50)`);
 
+    // 3. Garante tabelas filhas/relacionadas
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contratos_fiscais (
+        id VARCHAR(255) PRIMARY KEY,
+        contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+        nome VARCHAR(255),
+        cpf VARCHAR(50),
+        tipo VARCHAR(100),
+        portaria_designacao VARCHAR(255),
+        data_inicio VARCHAR(50),
+        data_fim VARCHAR(50),
+        status VARCHAR(50) DEFAULT 'Ativo'
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contratos_aditivos (
+        id VARCHAR(255) PRIMARY KEY,
+        contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+        numero VARCHAR(50),
+        tipo VARCHAR(100),
+        valor_adicionado NUMERIC(15, 2) DEFAULT 0,
+        nova_data_fim VARCHAR(50),
+        justificativa TEXT,
+        data_assinatura VARCHAR(50)
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contratos_empenhos (
+        id VARCHAR(255) PRIMARY KEY,
+        contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+        numero_empenho VARCHAR(100),
+        valor_empenhado NUMERIC(15, 2),
+        data_emissao VARCHAR(50),
+        ptres VARCHAR(50),
+        fonte_recurso VARCHAR(50),
+        indicador_emenda BOOLEAN DEFAULT FALSE,
+        situacao VARCHAR(100)
+      )
+    `);
+
     await pool.query(`ALTER TABLE contratos_empenhos ADD COLUMN IF NOT EXISTS indicador_emenda BOOLEAN DEFAULT FALSE`);
     await pool.query(`ALTER TABLE contratos_empenhos ADD COLUMN IF NOT EXISTS situacao VARCHAR(100)`);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contratos_consumo_mensal (
+        id VARCHAR(255) PRIMARY KEY,
+        contrato_id VARCHAR(255) REFERENCES contratos(id) ON DELETE CASCADE,
+        mes VARCHAR(50),
+        valor_consumido NUMERIC(15, 2),
+        fatura_url TEXT
+      )
+    `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS contratos_arquivos (

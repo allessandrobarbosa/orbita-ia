@@ -61,9 +61,9 @@ router.get("/scdp/viagens", async (req, res) => {
   }
 });
 
-router.post("/scdp/viagens/:id/analyze", async (req, res) => {
+const handleAnalyze = async (req: any, res: any) => {
   try {
-    const { id } = req.params;
+    const id = req.params.subId ? `${req.params.id}/${req.params.subId}` : req.params.id;
     const result = await pool.query('SELECT * FROM scdp_viagens WHERE id = $1', [id]);
     
     if (result.rowCount === 0) {
@@ -91,11 +91,11 @@ router.post("/scdp/viagens/:id/analyze", async (req, res) => {
     console.error("Erro na análise IA:", error);
     res.status(500).json({ error: "Erro interno" });
   }
-});
+};
 
-router.post("/scdp/viagens/:id/confirm-gru", async (req, res) => {
+const handleConfirmGru = async (req: any, res: any) => {
   try {
-    const { id } = req.params;
+    const id = req.params.subId ? `${req.params.id}/${req.params.subId}` : req.params.id;
     const result = await pool.query(
       "UPDATE scdp_viagens SET siafi_gru_devolucao_confirmada = true, siafi_detalhes_status = $1, siafi_confirmado = true WHERE id = $2 RETURNING *",
       ["Conciliado (Com Devolução GRU)", id]
@@ -106,7 +106,13 @@ router.post("/scdp/viagens/:id/confirm-gru", async (req, res) => {
     console.error("Error confirming GRU:", error);
     res.status(500).json({ error: "Erro interno" });
   }
-});
+};
+
+router.post("/scdp/viagens/:id/analyze", handleAnalyze);
+router.post("/scdp/viagens/:id/:subId/analyze", handleAnalyze);
+
+router.post("/scdp/viagens/:id/confirm-gru", handleConfirmGru);
+router.post("/scdp/viagens/:id/:subId/confirm-gru", handleConfirmGru);
 
 // Importação Local (Fallback) mantida para compatibilidade
 router.post("/scdp/import-local-files", async (req, res) => {

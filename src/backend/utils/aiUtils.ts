@@ -92,7 +92,7 @@ Retorne APENAS um JSON válido. Exemplo de estrutura esperada:
   "constatacoes": [
     {
       "titulo": "Pagamentos indevidos a fornecedores",
-      "descricao": "Foram identificados pagamentos em duplicidade...",
+      "descricao": "Foram identificados pagamentos indevidos...",
       "risco_impacto": "Prejuízo financeiro de R$ 50.000,00"
     }
   ]
@@ -116,6 +116,80 @@ Retorne APENAS um JSON válido. Exemplo de estrutura esperada:
     return JSON.parse(cleanText);
   } catch (error) {
     console.error("Erro na extração via Gemini (CGU):", error);
+    throw error;
+  }
+}
+
+export async function analyzeScdpViagemWithGemini(viagem: {
+  id: string;
+  nome_viajante: string;
+  data_inicio: string;
+  data_fim: string;
+  destino: string;
+  motivo_viagem: string;
+  valor_total: number;
+}): Promise<{
+  scoreRisco: 'Baixo' | 'Médio' | 'Alto';
+  justificativa: string;
+  sugereNotificacao: boolean;
+}> {
+  const prompt = `
+Você é um auditor de controle interno especializado na auditoria de Diárias e Passagens (SCDP) do Governo Federal Brasileiro.
+Sua missão é analisar uma solicitação de viagem sob a ótica da economicidade, razoabilidade e moralidade administrativa (Decreto nº 5.992/2006 e diretrizes da CGU).
+
+Analise os dados desta viagem e forneça uma avaliação de risco em formato JSON ESTRITO.
+
+Dados da Viagem:
+- ID/Processo: ${viagem.id}
+- Viajante: ${viagem.nome_viajante}
+- Período: ${viagem.data_inicio} até ${viagem.data_fim}
+- Destino: ${viagem.destino}
+- Motivo da Viagem: "${viagem.motivo_viagem}"
+- Valor Total (Passagens + Diárias): R$ ${viagem.valor_total.toFixed(2)}
+
+Critérios de Risco a Considerar:
+1. **Justificativa Insuficiente**: Motivos vagos, extremamente curtos (ex: "A serviço", "Reunião de trabalho", "Viagem administrativa") ou sem detalhes mínimos sobre a agenda geram Risco Médio ou Alto.
+2. **Valor Elevado**: Viagens com custo desproporcional ou muito alto (geralmente acima de R$ 5.000,00) merecem maior escrutínio (Risco Médio ou Alto).
+3. **Incoerência de Destino/Motivo**: Incompatibilidade visível entre o cargo/viajante, o destino e o motivo apresentado.
+4. **Viagem em Finais de Semana**: Viagens iniciadas ou finalizadas em finais de semana ou feriados que não tenham justificativa de relevância evidente geram maior risco de desconformidade.
+
+Retorne APENAS um JSON válido. Exemplo de estrutura esperada:
+{
+  "scoreRisco": "Baixo", // Deve ser exatamente "Baixo", "Médio" ou "Alto"
+  "justificativa": "Análise detalhada do auditor explicando os motivos do risco ou a conformidade da solicitação...",
+  "sugereNotificacao": false // true se houver indício forte de irregularidade ou falta grave de informação que justifique intimar o servidor (notificação/minuta SEI)
+}
+`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        responseMimeType: 'application/json',
+        temperature: 0.2,
+      }
+    });
+
+    const text = response.text;
+    if (!text) {
+      throw new Error("Resposta vazia da IA.");
+    }
+
+    const cleanText = text.replace(/^```json\s*/, '').replace(/\s*```$/, '').trim();
+    const result = JSON.parse(cleanText);
+
+    // Validações básicas de tipo para evitar quebras no frontend
+    const score = result.scoreRisco;
+    const finalScore = (score === 'Baixo' || score === 'Médio' || score === 'Alto') ? score : 'Baixo';
+
+    return {
+      scoreRisco: finalScore,
+      justificativa: result.justificativa || "Viagem analisada.",
+      sugereNotificacao: !!result.sugereNotificacao
+    };
+  } catch (error) {
+    console.error("Erro na análise via Gemini (SCDP):", error);
     throw error;
   }
 }

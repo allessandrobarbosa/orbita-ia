@@ -22,6 +22,7 @@ export default function ScdpModule() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedViagem, setSelectedViagem] = useState<any | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleFetchData = async (forceRefresh?: boolean, silent?: boolean) => {
     setIsLoading(true);
@@ -105,51 +106,67 @@ export default function ScdpModule() {
   return (
     <div className="space-y-6 font-sans text-slate-800">
       <div className="sticky top-0 z-40 bg-slate-100 pt-6 pb-4 -mx-6 px-6 mb-4 rounded-b-xl border-b border-slate-200/50 shadow-sm">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg text-white">
-            <Plane size={20} className="transform -rotate-45" />
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-3">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#003366] to-blue-800 flex items-center justify-center shadow-lg text-white">
+              <Plane size={20} className="transform -rotate-45" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Auditoria de Diárias e Passagens (SCDP)</h1>
+              <p className="text-sm text-slate-500 font-medium mt-1">Conformidade Decreto nº 5.992/2006 — Integração CGU, SIAFI e SIGEPE</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">Auditoria de Diárias e Passagens (SCDP)</h1>
-            <p className="text-sm text-slate-500 font-medium mt-1">Conformidade Decreto nº 5.992/2006 — Integração CGU, SIAFI e SIGEPE</p>
-          </div>
+
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className={`px-4 py-2 border rounded-xl font-bold text-xs flex items-center gap-2 transition duration-200 cursor-pointer shadow-3xs ${
+              showSettings 
+                ? "bg-[#003366]/8 border-[#003366]/20 text-[#003366]"
+                : "bg-white border-slate-200 text-slate-650 hover:bg-slate-50"
+            }`}
+          >
+            <Sliders size={14} className={showSettings ? "animate-pulse" : ""} />
+            {showSettings ? "Ocultar Painel de API" : "Configurações de API"}
+          </button>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs">
-          <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider mb-4 flex items-center gap-1.5">
-            <Sliders className="w-4 h-4" /> Configurações de API
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="flex flex-col md:col-span-2">
-              <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Chave API (Portal da Transparência)</label>
-              <div className="relative flex rounded-lg">
-                <input
-                  type={showApiKey ? "text" : "password"}
-                  className="w-full pl-3 pr-10 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl"
-                  placeholder="Insira seu Token..."
-                  value={apiKey}
-                  onChange={(e) => handleSaveApiKey(e.target.value)}
-                />
-                <button type="button" onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-2 text-slate-400">
-                  {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+        {showSettings && (
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs mt-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            <h3 className="text-xs font-black text-[#003366] uppercase tracking-wider mb-4 flex items-center gap-1.5">
+              <Sliders className="w-4 h-4" /> Configurações de API
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="flex flex-col md:col-span-2">
+                <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Chave API (Portal da Transparência)</label>
+                <div className="relative flex rounded-lg">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    className="w-full pl-3 pr-10 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    placeholder="Insira seu Token..."
+                    value={apiKey}
+                    onChange={(e) => handleSaveApiKey(e.target.value)}
+                  />
+                  <button type="button" onClick={() => setShowApiKey(!showApiKey)} className="absolute right-3 top-2 text-slate-400">
+                    {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Data Início</label>
+                <input type="date" className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Data Fim</label>
+                <input type="date" className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
               </div>
             </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Data Início</label>
-              <input type="date" className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl" value={dateStart} onChange={(e) => setDateStart(e.target.value)} />
-            </div>
-            <div className="flex flex-col">
-              <label className="text-[10px] font-extrabold text-[#003366] uppercase mb-1">Data Fim</label>
-              <input type="date" className="w-full p-2 text-xs bg-slate-50 border border-slate-200 rounded-xl" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => handleFetchData(true, false)} disabled={isLoading} className="px-5 py-2.5 bg-[#003366] hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition">
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} /> Sincronizar Bases
+              </button>
             </div>
           </div>
-          <div className="mt-4 flex justify-end">
-            <button onClick={() => handleFetchData(true, false)} disabled={isLoading} className="px-5 py-2.5 bg-[#003366] hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center gap-2">
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} /> Sincronizar Bases
-            </button>
-          </div>
-        </div>
+        )}
       </div>
 
       {errorMessage && (
@@ -165,10 +182,13 @@ export default function ScdpModule() {
       <ScdpKpiCards metrics={metrics} />
 
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-3xs relative">
-        <div className="mb-4">
+        <div className="mb-4 relative max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+            <Search size={14} />
+          </div>
           <input
             type="text"
-            className="w-full max-w-md pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-xl"
+            className="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
             placeholder="Pesquisar por Servidor, CPF, Destino..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
