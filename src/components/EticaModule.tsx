@@ -68,6 +68,7 @@ interface EticaModuleProps {
   onAddEticaProcesso: (newProcesso: any) => Promise<boolean>;
   onUpdateEticaProcesso: (id: string, updated: any) => Promise<boolean>;
   onDeleteEticaProcesso: (id: string) => Promise<boolean>;
+  showToast?: (message: string, type?: "success" | "error" | "info") => void;
 }
 
 export default function EticaModule({
@@ -89,10 +90,19 @@ export default function EticaModule({
   onSaveEticaAta,
   onAddEticaProcesso,
   onUpdateEticaProcesso,
-  onDeleteEticaProcesso
+  onDeleteEticaProcesso,
+  showToast
 }: EticaModuleProps) {
   // Navigation Tabs
   const [activeSubTab, setActiveSubTab] = useState<"dashboard" | "membros" | "reunioes" | "atas" | "processos" | "bi">("dashboard");
+
+  const alertUser = (msg: string, type: "success" | "error" | "info" = "error") => {
+    if (showToast) {
+      showToast(msg, type);
+    } else {
+      alert(msg);
+    }
+  };
 
   // Search & Filter states
   const [membroSearch, setMembroSearch] = useState("");
@@ -122,6 +132,7 @@ export default function EticaModule({
 
   // Print Preview state
   const [printingAtaId, setPrintingAtaId] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Process modal state
   const [showAddProcessoModal, setShowAddProcessoModal] = useState(false);
@@ -285,7 +296,24 @@ export default function EticaModule({
 
   const handleSaveMembro = async () => {
     if (!mFormNome || !mFormCPF || !mFormEmail || !mFormDispositivo) {
-      alert("Por favor, preencha os campos obrigatórios (Nome, CPF, E-mail, Portaria/Dispositivo e Datas).");
+      alertUser("Por favor, preencha os campos obrigatórios (Nome, CPF, E-mail, Portaria/Dispositivo e Datas).", "error");
+      return;
+    }
+
+    const cleanCpf = mFormCPF.replace(/\D/g, "");
+    if (cleanCpf.length !== 11) {
+      alertUser("O CPF deve conter exatamente 11 dígitos numéricos.", "error");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(mFormEmail)) {
+      alertUser("Por favor, informe um endereço de e-mail válido.", "error");
+      return;
+    }
+
+    if (mFormInicio && mFormFim && new Date(mFormFim) < new Date(mFormInicio)) {
+      alertUser("A data de término do mandato não pode ser anterior à data de início.", "error");
       return;
     }
 
@@ -316,8 +344,29 @@ export default function EticaModule({
       setEditingMembro(null);
       resetMembroForm();
       addLog(`Membro ${data.nome} ${editingMembro ? 'atualizado' : 'cadastrado'} com sucesso.`);
+      alertUser(`Membro ${data.nome} salvo com sucesso!`, "success");
     } else {
-      alert("Erro ao salvar cadastro do membro.");
+      alertUser("Erro ao salvar cadastro do membro.", "error");
+    }
+  };
+
+  const handleResetDatabase = async () => {
+    try {
+      const res = await fetch("/api/etica/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (res.ok) {
+        alertUser("Base de dados da comissão de ética zerada com sucesso!", "success");
+        window.location.reload();
+      } else {
+        alertUser("Falha ao zerar base de dados da comissão de ética.", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      alertUser("Erro ao tentar conectar ao servidor.", "error");
+    } finally {
+      setShowResetConfirm(false);
     }
   };
 
@@ -348,7 +397,7 @@ export default function EticaModule({
 
   const handleSaveReuniao = async () => {
     if (!rFormDataHora || !rFormPauta) {
-      alert("Por favor, informe a Data/Hora e os Assuntos da Pauta.");
+      alertUser("Por favor, informe a Data/Hora e os Assuntos da Pauta.", "error");
       return;
     }
 
@@ -371,8 +420,9 @@ export default function EticaModule({
       setEditingReuniao(null);
       resetReuniaoForm();
       addLog(`Reunião ${rFormTipo} do dia ${formatDate(rFormDataHora.split('T')[0])} salva com sucesso.`);
+      alertUser(`Reunião salva com sucesso!`, "success");
     } else {
-      alert("Erro ao agendar reunião.");
+      alertUser("Erro ao agendar reunião.", "error");
     }
   };
 
@@ -407,7 +457,7 @@ export default function EticaModule({
 
   const addGuestToDraft = () => {
     if (!gFormNome || !gFormEmail) {
-      alert("Informe pelo menos Nome e E-mail do convidado.");
+      alertUser("Informe pelo menos Nome e E-mail do convidado.", "error");
       return;
     }
     const newGuest: EticaConvidado = {
@@ -435,7 +485,7 @@ export default function EticaModule({
       addLog(`[E-mail simulado] Convites de ${title} enviados para convidados da reunião ${r?.tipo} (${formatDate(r?.dataHora.split('T')[0])}).`);
       addLog(`[Resposta simulada] Recebida atualização de presenças de convidados no portal.`);
     } else {
-      alert("Falha no simulador de disparo de notificações.");
+      alertUser("Falha no simulador de disparo de notificações.", "error");
     }
   };
 
@@ -454,7 +504,7 @@ export default function EticaModule({
   const handleSaveAta = async () => {
     if (!activeAtaForm) return;
     if (!activeAtaForm.relatos || !activeAtaForm.decisoes) {
-      alert("Redija o relato dos fatos e as deliberações oficiais antes de fechar a ata.");
+      alertUser("Redija o relato dos fatos e as deliberações oficiais antes de fechar a ata.", "error");
       return;
     }
 
@@ -462,8 +512,9 @@ export default function EticaModule({
     if (success) {
       setActiveAtaForm(null);
       addLog(`Ata da reunião arquivada e registrada no Órbita.`);
+      alertUser("Ata arquivada com sucesso!", "success");
     } else {
-      alert("Falha ao salvar a ata.");
+      alertUser("Falha ao salvar a ata.", "error");
     }
   };
 
@@ -484,7 +535,7 @@ export default function EticaModule({
 
   const handleSaveProcesso = async () => {
     if (!pFormSei || !pFormDataInicio) {
-      alert("Preencha o Número SEI e a Data de Início.");
+      alertUser("Preencha o Número SEI e a Data de Início.", "error");
       return;
     }
 
@@ -520,8 +571,9 @@ export default function EticaModule({
       setEditingProcesso(null);
       resetProcessoForm();
       addLog(`Processo ${pFormTipo} nº ${data.processoSei} ${editingProcesso ? 'atualizado' : 'cadastrado'} com sucesso.`);
+      alertUser(`Processo ${data.processoSei} salvo com sucesso!`, "success");
     } else {
-      alert("Erro ao salvar processo.");
+      alertUser("Erro ao salvar processo.", "error");
     }
   };
 
@@ -635,7 +687,7 @@ export default function EticaModule({
       addLog("Planilha Excel compilada gerada para download com sucesso.");
     } catch (err) {
       console.error(err);
-      alert("Ocorreu uma falha ao gerar a planilha Excel.");
+      alertUser("Ocorreu uma falha ao gerar a planilha Excel.", "error");
     }
   };
 
@@ -922,6 +974,47 @@ export default function EticaModule({
                   ))
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Admin Panel for Reset (Zerar Base) */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-slate-800 font-display flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-rose-500" />
+                Painel Administrativo da Comissão de Ética
+              </h4>
+              <p className="text-xs text-slate-500 max-w-2xl leading-relaxed text-left">
+                Área restrita para redefinição de dados. O reset apagará permanentemente todos os processos éticos cadastrados, atas de reuniões, agendamentos e membros.
+              </p>
+            </div>
+            <div className="shrink-0 w-full md:w-auto">
+              {!showResetConfirm ? (
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="w-full md:w-auto px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-xl text-xs shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Zerar Base de Dados
+                </button>
+              ) : (
+                <div className="bg-rose-50 border border-rose-200 p-3 rounded-xl flex items-center gap-3 text-xs animate-fade-in">
+                  <span className="font-extrabold text-rose-950">⚠️ Confirmar limpeza?</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleResetDatabase}
+                      className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white font-black rounded-lg text-[10px] cursor-pointer"
+                    >
+                      Sim, Zerar
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm(false)}
+                      className="px-3 py-1 bg-white border border-slate-200 text-slate-600 font-bold rounded-lg text-[10px] cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

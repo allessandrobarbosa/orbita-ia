@@ -94,6 +94,7 @@ export interface EticaMembro {
   telefone: string;
   email: string;
   ativo: boolean; // soft delete / desativação
+  status?: string;
   ultimaAtualizacao?: string;
 }
 
@@ -271,6 +272,7 @@ export interface Contrato {
   objeto: string;
   valorGlobal: number;
   valorMensal: number;
+  valorAnual?: number;
   dataInicio: string; // YYYY-MM-DD
   dataFim: string; // YYYY-MM-DD
   modalidade: string;

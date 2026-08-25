@@ -6,10 +6,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const pool = new pg.Pool({
-  connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://postgres:postgres@localhost:5432/postgres",
+  connectionString: process.env.GOVHUB_DATABASE_URL || "postgres://postgres:postgres@127.0.0.1:5432/postgres",
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  connectionTimeoutMillis: 5000,
 });
 
 // Trata desconexões ou reinícios do servidor PostgreSQL sem derrubar a aplicação Node.js
@@ -75,7 +75,8 @@ async function autoSeedIfEmpty() {
       }
     }
 
-    // 3. Membros Ética
+    // 3. Membros Ética (Auto-seed desativado para permitir limpar a base de dados completamente)
+    /*
     const eticaCount = await pool.query("SELECT COUNT(*) FROM etica_membros");
     if (parseInt(eticaCount.rows[0].count, 10) === 0) {
       console.log("[DB] Populando etica_membros...");
@@ -87,6 +88,7 @@ async function autoSeedIfEmpty() {
         );
       }
     }
+    */
 
     // 4. Contratos
     const contCount = await pool.query("SELECT COUNT(*) FROM contratos");

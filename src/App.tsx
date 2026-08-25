@@ -191,6 +191,15 @@ export default function App() {
   const [controlOrgsOpen, setControlOrgsOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  const [toasts, setToasts] = useState<{ id: string; message: string; type: "success" | "error" | "info" }[]>([]);
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
+    const id = Date.now().toString() + Math.random().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
   // Dynamic user profiles state with local persistence
   const [profiles, setProfiles] = useState<UserProfile[]>(() => {
     const saved = localStorage.getItem("orbita_user_profiles");
@@ -1190,7 +1199,6 @@ export default function App() {
           {/* 2. Middle/Left: Integrated Navigation Menu (aligned next to logo on desktop, rounded pills) */}
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 flex-1 w-full md:w-auto">
             {[
-              { id: "dashboard", label: "INÍCIO", icon: LayoutDashboard, title: "Painel de Controle e Monitoramento" },
               { id: "tcu", label: "TCU", icon: Database, title: "Tribunal de Contas da União" },
               { id: "cgu", label: "CGU", icon: ShieldCheck, title: "Controladoria-Geral da União" },
               { id: "contratos", label: "CONTRATOS", icon: FileText, title: "Gestão de Contratos Gerais" },
@@ -1199,6 +1207,7 @@ export default function App() {
               { id: "srte", label: "SRTEs", icon: Building2, title: "Superintendências Regionais do Trabalho e Emprego" },
               { id: "etica", label: "ÉTICA", icon: ShieldAlert, title: "Comissão de Ética Coletiva" },
               { id: "bi", label: "BI & IA", icon: TrendingUp, title: "Análise BI & IA Preditiva" },
+              { id: "dashboard", label: "INÍCIO", icon: LayoutDashboard, title: "Painel de Controle e Monitoramento" },
             ].filter(link => hasModulePermission(link.id)).map((moduleLink) => {
               const ModuleIcon = moduleLink.icon;
               const isSelected = activeTab === moduleLink.id;
@@ -1439,6 +1448,7 @@ export default function App() {
                   onAddEticaProcesso={handleAddEticaProcesso}
                   onUpdateEticaProcesso={handleUpdateEticaProcesso}
                   onDeleteEticaProcesso={handleDeleteEticaProcesso}
+                  showToast={showToast}
                 />
               )}
 
@@ -1581,6 +1591,33 @@ export default function App() {
           </button>
         </div>
       )}
+
+      {/* Floating Toast Notifications */}
+      <div className="fixed bottom-6 right-6 z-[99999] flex flex-col gap-2 pointer-events-none">
+        {toasts.map(t => (
+          <div
+            key={t.id}
+            className={`px-4 py-3 rounded-2xl shadow-2xl text-white text-xs font-bold pointer-events-auto transition-all duration-300 transform translate-y-0 flex items-center gap-3 border ${
+              t.type === "success" ? "bg-emerald-650 border-emerald-500" :
+              t.type === "error" ? "bg-rose-650 border-rose-500" :
+              "bg-[#1351b4] border-blue-500"
+            }`}
+          >
+            <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+              {t.type === "success" && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              {t.type === "error" && <AlertCircle className="w-3.5 h-3.5 stroke-[3]" />}
+              {t.type === "info" && <Building2 className="w-3.5 h-3.5 stroke-[3]" />}
+            </div>
+            <span>{t.message}</span>
+            <button
+              onClick={() => setToasts(prev => prev.filter(item => item.id !== t.id))}
+              className="ml-auto text-white/70 hover:text-white shrink-0 font-bold focus:outline-none"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
 
     </div>
   );
